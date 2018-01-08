@@ -32,3 +32,6 @@ sysinfo.txt
 # Builds
 *.apk
 *.unitypackage
+
+# experimental ignore of meta files for this submodule
+*.meta
