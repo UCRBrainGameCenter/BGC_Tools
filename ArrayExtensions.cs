@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace BGCTools
+namespace BGC.Extensions
 {
     public static class ArrayExtensions
     {

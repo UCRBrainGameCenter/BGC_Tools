@@ -1,7 +1,7 @@
 ﻿using UnityEngine.UI;
 using UnityEngine;
 
-namespace BGCTools
+namespace BGC.Extensions
 {
     /// <summary>
     /// Set of extensions to image that allow for easy modification of the

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
+using BGC.Extensions;
 
-namespace BGCTools
+namespace BGC.DataStructures.Generic
 {
     /// <summary>
     /// Bag implemnetation: https://algs4.cs.princeton.edu/13stacks/

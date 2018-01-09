@@ -2,7 +2,7 @@
 using System.Collections;
 using UnityEngine;
 
-namespace BGCTools
+namespace BGC.Extensions
 {
     /// <summary>
     /// Set of extensions for a list for easier use of ILists
