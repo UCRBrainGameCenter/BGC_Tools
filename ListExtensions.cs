@@ -75,7 +75,13 @@ namespace BGCTools
             return (T)list[list.LastIndex()];
         }
 
-
+        /// <summary>
+        /// swap elements in a list
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="indexA"></param>
+        /// <param name="indexB"></param>
         public static void Swap<T>(this IList list, int indexA, int indexB)
         {
             T tmp = (T)list[indexA];
