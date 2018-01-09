@@ -35,3 +35,6 @@ sysinfo.txt
 
 # experimental ignore of meta files for this submodule
 *.meta
+
+# ignore doxygen generated directory
+out
