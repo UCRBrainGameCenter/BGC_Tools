@@ -17,6 +17,11 @@ namespace BGC.Extensions
         /// <returns></returns>
         public static int RandomIndex(this IList list)
         {
+            if (list.Count <= 0)
+            {
+                return -1;
+            }
+
             return Random.Range(0, list.Count);
         }
 
