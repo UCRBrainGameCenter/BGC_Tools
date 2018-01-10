@@ -4,15 +4,16 @@ using BGC.Extensions;
 namespace BGC.DataStructures.Generic
 {
     /// <summary>
-    /// Bag implemnetation: https://algs4.cs.princeton.edu/13stacks/
-    /// 
-    /// @note: this class is okay but not perfect. My particular issue with it is 
-    //         that I cannot clone the templates given. Cloning the templates 
-    //         would be ideal because we can keep the clean list safe from outside
-    //         damage through modification. Inherently the code is less safe with
-    //         this data structure if the programmer is not paying attention and 
-    //         making sure to program in cloning after a Pull and also not modifying
-    //         the passed in list.
+    /// Implementation of bag data structure. Refer to https://algs4.cs.princeton.edu/13stacks/
+    /// for notes on how it suspposed to function and how this class can be improved 
+    ///
+    /// \remark{This class is okay but not perfect. My particular issue with it is 
+    //        that I cannot clone the templates given. Cloning the templates 
+    //        would be ideal because we can keep the clean list safe from outside
+    //        damage through modification. Inherently the code is less safe with
+    //        this data structure if the programmer is not paying attention and 
+    //        making sure to program in cloning after a Pull and also not modifying
+    //        the passed in list.}
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class Bag<T>
