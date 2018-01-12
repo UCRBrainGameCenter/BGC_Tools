@@ -117,5 +117,13 @@ namespace BGC.DataStructures.Generic
         {
             return bag.Count <= 0;
         }
+
+        /// <summary>
+        /// Empty the cleanlist so the bag will be empty.
+        /// </summary>
+        public void EmptyBag()
+        {
+            cleanList.Clear();
+        }
     }
 }
