@@ -39,7 +39,7 @@ namespace BGC.Utility.Math
             copyIndexes.Shuffle();
 
             for (int i = 0; i < indexes.Length; ++i)
-            {
+            { 
                 Node<int> child;
                 TreeOfAllCombinations(indexes, outputSize - 1, out child);
                 child.Value = copyIndexes[i];

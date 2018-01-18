@@ -137,5 +137,22 @@ namespace BGC.Extensions
                 return hash;
             }
         }
+
+        /// <summary>
+        /// Get a list of all the valid indexes in the list
+        /// </summary>
+        /// <param name="list"></param>
+        /// <returns></returns>
+        public static int[] Indexes(this IList list)
+        {
+            int[] indexes = new int[list.Count];
+
+            for (int i = 0; i < list.Count; ++i)
+            {
+                indexes[i] = i;
+            }
+
+            return indexes;
+        }
     }
 }
