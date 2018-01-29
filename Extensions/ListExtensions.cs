@@ -154,5 +154,45 @@ namespace BGC.Extensions
 
             return indexes;
         }
+
+        /// <summary>
+        /// Add an item to a list if it is not already in the list.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="item"></param>
+        /// <returns>True if the item was not present and added to the list</returns>
+        public static bool SetAdd<T>(this List<T> list, T item)
+        {
+            bool added = false;
+
+            if (list.Contains(item) == false)
+            {
+                list.Add(item);
+                added = true;
+            }
+
+            return added;
+        }
+
+        /// <summary>
+        /// Remove all occurrences of item in list
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="item"></param>
+        /// <returns>if item was found at all in list and removed</returns>
+        public static bool SetSub<T>(this List<T> list, T item)
+        {
+            bool removed = false;
+
+            while (list.Contains(item))
+            {
+                list.Remove(item);
+                removed = true;
+            }
+
+            return removed;
+        }
     }
 }
