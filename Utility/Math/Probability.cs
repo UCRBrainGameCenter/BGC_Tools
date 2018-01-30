@@ -1,3 +1,6 @@
+using BGC.Extensions;
+using UnityEngine;
+
 namespace BGC.Utility.Math
 {
     public static class Probability
@@ -22,8 +25,8 @@ namespace BGC.Utility.Math
             float lowProbability = 1f / (2f * arrayLength);
             float lowSelectProbability = 1f / (arrayLength - 1f);
 
-            float requriedProbForHighSelect = UnityEngine.Random.value;
-            float requiredProbForLowSelect  = UnityEngine.Random.value;
+            float requriedProbForHighSelect = Random.value;
+            float requiredProbForLowSelect  = Random.value;
 
             float cumulativeHighProbSelect = 0f;
             float cumulativeLowProbSelect  = 0f;
@@ -60,6 +63,57 @@ namespace BGC.Utility.Math
             if (index == -1)
             {
                 index = ((int) arrayLength) - 1;
+            }
+
+            return index;
+        }
+
+        /// <summary>
+        /// Given an array of weights for each index of the array, return
+        /// a random index based on said weights.
+        /// </summary>
+        /// <param name="weights"></param>
+        /// <returns></returns>
+        public static int GetRandomIndexBasedOnWeights(float[] weights, bool verbose=false)
+        {
+            if (weights == null || weights.Length <= 0)
+            {
+                if (verbose && weights == null)
+                {
+                    Debug.LogError("Array is null and this function returned -1.");
+                }
+                else if (verbose)
+                {
+                    Debug.LogError("Array is <= 0 and this function returned -1.");
+                }
+
+                return -1;
+            }
+
+            int index   = 0;
+            float total = 0;
+
+            for (int i = 0; i < weights.Length; ++i)
+            {
+                total += weights[i];
+            }
+
+            if (total <= 0)
+            {
+                index = weights.RandomIndex();
+            }
+            else
+            {
+                float x = 1f / total;
+
+                float random = Random.value;
+                float cumulative = weights[0] * x;
+
+                while (cumulative < random)
+                {
+                    ++index;
+                    cumulative += weights[index] * x;
+                }
             }
 
             return index;
