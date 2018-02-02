@@ -117,10 +117,17 @@ namespace BGC.Utility
         /// <returns></returns>
         public static void RunFunctionAfterTime(float timeInSeconds, Action callback)
         {
-            Mono.StartCoroutine(runTimedCoroutine(timeInSeconds, callback));
+            Mono.StartCoroutine(TimedCoroutine(timeInSeconds, callback));
         }
 
-        private static IEnumerator runTimedCoroutine(float timeInSeconds, Action callback)
+        /// <summary>
+        /// Create a timed coroutine that will call a callback after the given
+        /// time in seconds
+        /// </summary>
+        /// <param name="timeInSeconds"></param>
+        /// <param name="callback"></param>
+        /// <returns></returns>
+        public static IEnumerator TimedCoroutine(float timeInSeconds, Action callback)
         {
             float endTime = Time.time + timeInSeconds;
             do
@@ -130,6 +137,52 @@ namespace BGC.Utility
             while (Time.time < endTime);
 
             callback();
+        }
+
+        /// <summary>
+        /// Run for a given period of time in seconds and provide a call back that will
+        /// be called for each tick of yield return null. This function will provide the
+        /// time backwards (meaning 60, 59, 58, ...)
+        /// </summary>
+        /// <param name="timeInSeconds"></param>
+        /// <param name="callbackOnTick"></param>
+        /// <param name="completedCallback"></param>
+        /// <returns></returns>
+        public static IEnumerator TimedCoroutineBackwardsTime(float timeInSeconds, Action<float> callbackOnTick, Action completedCallback)
+        {
+            do
+            {
+                yield return null;
+                timeInSeconds -= Time.deltaTime;
+                callbackOnTick(timeInSeconds);
+            }
+            while (timeInSeconds > 0);
+
+            completedCallback();
+        }
+
+        /// <summary>
+        /// Run for a given period of time in seconds and provide a call back that will
+        /// be called for each tick of yield return null. This function will provide the
+        /// time forwards (meaning 0, 1, 2, ...)
+        /// </summary>
+        /// <param name="timeInSeconds"></param>
+        /// <param name="callbackOnTick"></param>
+        /// <param name="completedCallback"></param>
+        /// <returns></returns>
+        public static IEnumerator TimedCoroutineForwardTime(float timeInSeconds, Action<float> callbackOnTick, Action completedCallback)
+        {
+            float time = 0f;
+
+            do
+            {
+                yield return null;
+                time += Time.deltaTime;
+                callbackOnTick(time);
+            }
+            while (time < timeInSeconds);
+
+            completedCallback();
         }
     }
 }
