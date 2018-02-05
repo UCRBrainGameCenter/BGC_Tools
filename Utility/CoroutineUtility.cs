@@ -8,7 +8,7 @@ namespace BGC.Utility
     public static class CoroutineUtility
     {
         private static MonoBehaviour mono = null;
-        private static MonoBehaviour Mono
+        public static MonoBehaviour Mono
         {
             get
             {
