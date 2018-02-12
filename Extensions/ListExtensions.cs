@@ -194,5 +194,83 @@ namespace BGC.Extensions
 
             return removed;
         }
+
+        /// <summary>
+        /// Get the maximum value of a list. Best to only use with a list of numbers
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="verbose"></param>
+        /// <returns></returns>
+        public static T Max<T>(this List<T> list, bool verbose = false)
+        {
+            if (list.Count <= 0)
+            {
+                if (verbose)
+                {
+                    Debug.LogError("List size is less than or equal to 0.");
+                }
+
+                return default(T);
+            }
+
+            T max = list[0];
+            for (int i = 1; i < list.Count; ++i)
+            {
+                if (Comparer<T>.Default.Compare(max, list[i]) < 0)
+                {
+                    max = list[i];
+                }
+            }
+
+            return max;
+        }
+
+        /// <summary>
+        /// Get the minimum value of a list. Best to only use with a list of numbers
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="verbose"></param>
+        /// <returns></returns>
+        public static T Min<T>(this List<T> list, bool verbose = false)
+        {
+            if (list.Count <= 0)
+            {
+                if (verbose)
+                {
+                    Debug.LogError("List size is less than or equal to 0.");
+                }
+
+                return default(T);
+            }
+
+            T min = list[0];
+            for (int i = 1; i < list.Count; ++i)
+            {
+                if (Comparer<T>.Default.Compare(min, list[i]) > 0)
+                {
+                    min = list[i];
+                }
+            }
+
+            return min;
+        }
+
+        /// <summary>
+        /// Create a shallow copy of the list
+        /// 
+        /// src: https://stackoverflow.com/questions/222598/how-do-i-clone-a-generic-list-in-c
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <returns></returns>
+        public static List<T> ShallowClone<T>(this List<T> list)
+        {
+            List<T> newList = new List<T>(list.Capacity);
+            newList.AddRange(list);
+
+            return newList;
+        }
     }
 }
