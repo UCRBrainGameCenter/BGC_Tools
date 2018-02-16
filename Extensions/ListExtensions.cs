@@ -272,5 +272,18 @@ namespace BGC.Extensions
 
             return newList;
         }
+
+        /// <summary>
+        /// Debug.Log to print out all values of the array
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        public static void PrintSelf<T>(this List<T> list)
+        {
+            for (int i = 0; i < list.Count; ++i)
+            {
+                Debug.Log(i + ") " + list[i]);
+            }
+        }
     }
 }
