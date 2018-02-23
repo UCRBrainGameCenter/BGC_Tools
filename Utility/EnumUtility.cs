@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using LightJson;
 
 namespace BGC.Utility
 {
@@ -17,13 +18,28 @@ namespace BGC.Utility
 
             foreach (T t in Enum.GetValues(typeof(T)))
             {
-                if (ignoreMax == true && t.ToString().ToLower() != "max")
+                if (ignoreMax == true && t.ToString().ToLower().Equals("max") == false)
                 {
                     list.Add(t);
                 }
             }
 
             return list;
+        }
+
+        public static JsonObject ToJsonObject<T>(bool ignoreMax = true)
+        {
+            JsonObject jo = new JsonObject();
+
+            foreach (T t in Enum.GetValues(typeof(T)))
+            {
+                if (ignoreMax == true && t.ToString().ToLower().Equals("max") == false)
+                {
+                    jo.Add(((int)(object)t).ToString(), t.ToString());
+                }
+            }
+
+            return jo;
         }
     }
 }
