@@ -31,6 +31,7 @@ namespace BGC.DataStructures.Generic
             {
                 cleanList.Add(startingCleanList[i]);
             }
+            cleanList.Shuffle();
 
             Reset();
         }
