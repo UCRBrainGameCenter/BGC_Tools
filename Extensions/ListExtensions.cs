@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Collections;
 using UnityEngine;
+using LightJson;
 
 namespace BGC.Extensions
 {
@@ -284,6 +285,22 @@ namespace BGC.Extensions
             {
                 Debug.Log(i + ") " + list[i]);
             }
+        }
+
+        /// <summary>
+        /// Converts a List to a JsonArray
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <returns></returns>
+        private static JsonArray toJsonArray<T>(this List<T> list)
+        {
+            JsonArray arr = new JsonArray();
+            foreach (T val in list)
+            {
+                arr.Add(val.ToString());
+            }
+            return arr;
         }
     }
 }
