@@ -1,12 +1,11 @@
-﻿using System.IO;
-
-namespace BGC.IO
+﻿namespace BGC.IO
 {
-    public static class Extensions
+    public static class FileExtensions
     {
         public const string JSON = ".json";
         public const string CSV  = ".csv";
         public const string XML  = ".xml";
+        public const string BGC  = ".bgc";
 
         /// <summary>
         /// Add json extension to string
@@ -39,7 +38,17 @@ namespace BGC.IO
         }
 
         /// <summary>
-        /// Return true if the string ends with json extension
+        /// Add bgc extension to string
+        /// </summary>
+        /// <param name="str"></param>
+        /// <returns></returns>
+        public static string AddBgcExtension(string str)
+        {
+            return addExtension(str, BGC);
+        }
+
+        /// <summary>
+        /// Return true if the string ends with the json extension
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>
@@ -49,7 +58,7 @@ namespace BGC.IO
         }
 
         /// <summary>
-        /// Return true if the string ends with csv extension
+        /// Return true if the string ends with the csv extension
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>
@@ -59,13 +68,23 @@ namespace BGC.IO
         }
 
         /// <summary>
-        /// Return true if the string ends with xml extension
+        /// Return true if the string ends with the xml extension
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>
         public static bool HasXmlExtension(string str)
         {
             return str.EndsWith(XML);
+        }
+
+        /// <summary>
+        /// Return true if the string ends with the bgc extension
+        /// </summary>
+        /// <param name="str"></param>
+        /// <returns></returns>
+        public static bool HasBgcExtension(string str)
+        {
+            return str.EndsWith(BGC);
         }
 
         private static string addExtension(string str, string extension)
