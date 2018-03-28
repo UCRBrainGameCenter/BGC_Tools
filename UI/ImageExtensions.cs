@@ -15,7 +15,7 @@ namespace BGC.UI
         /// <param name="a"></param>
         public static void SetA(this Image image, float a)
         {
-            image.color.SetA(a);
+            image.color = image.color.SetA(a);
         }
 
         /// <summary>
@@ -25,7 +25,7 @@ namespace BGC.UI
         /// <param name="r"></param>
         public static void SetR(this Image image, float r)
         {
-            image.color.SetR(r);
+            image.color = image.color.SetR(r);
         }
 
         /// <summary>
@@ -35,7 +35,7 @@ namespace BGC.UI
         /// <param name="g"></param>
         public static void SetG(this Image image, float g)
         {
-            image.color.SetG(g);
+            image.color = image.color.SetG(g);
         }
 
         /// <summary>
@@ -45,7 +45,7 @@ namespace BGC.UI
         /// <param name="b"></param>
         public static void SetB(this Image image, float b)
         {
-            image.color.SetB(b);
+            image.color = image.color.SetB(b);
         }
 
         /// <summary>
@@ -56,7 +56,7 @@ namespace BGC.UI
         /// <param name="b"></param>
         public static void SetRB(this Image image, float r, float b)
         {
-            image.color.SetRB(r, b);
+            image.color = image.color.SetRB(r, b);
         }
 
         /// <summary>
@@ -67,7 +67,7 @@ namespace BGC.UI
         /// <param name="g"></param>
         public static void SetRG(this Image image, float r, float g)
         {
-            image.color.SetRG(r, g);
+            image.color = image.color.SetRG(r, g);
         }
 
         /// <summary>
@@ -78,7 +78,7 @@ namespace BGC.UI
         /// <param name="a"></param>
         public static void SetRA(this Image image, float r, float a)
         {
-            image.color.SetRA(r, a);
+            image.color = image.color.SetRA(r, a);
         }
 
         /// <summary>
@@ -89,7 +89,7 @@ namespace BGC.UI
         /// <param name="g"></param>
         public static void SetGB(this Image image, float g, float b)
         {
-            image.color.SetGB(g, b);
+            image.color = image.color.SetGB(g, b);
         }
 
         /// <summary>
@@ -100,7 +100,7 @@ namespace BGC.UI
         /// <param name="a"></param>
         public static void SetGA(this Image image, float g, float a)
         {
-            image.color.SetGA(g, a);
+            image.color = image.color.SetGA(g, a);
         }
 
         /// <summary>
@@ -111,7 +111,7 @@ namespace BGC.UI
         /// <param name="a"></param>
         public static void SetBA(this Image image, float b, float a)
         {
-            image.color.SetBA(b, a);
+            image.color = image.color.SetBA(b, a);
         }
 
         /// <summary>
@@ -123,7 +123,7 @@ namespace BGC.UI
         /// <param name="b"></param>
         public static void SetRGB(this Image image, float r, float g, float b)
         {
-            image.color.SetRGB(r, g, b);
+            image.color = image.color.SetRGB(r, g, b);
         }
 
         /// <summary>
@@ -135,7 +135,7 @@ namespace BGC.UI
         /// <param name="a"></param>
         public static void SetRGA(this Image image, float r, float g, float a)
         {
-            image.color.SetRGA(r, g, a);
+            image.color = image.color.SetRGA(r, g, a);
         }
 
         /// <summary>
@@ -147,7 +147,7 @@ namespace BGC.UI
         /// <param name="a"></param>
         public static void SetRBA(this Image image, float r, float b, float a)
         {
-            image.color.SetRBA(r, b, a);
+            image.color = image.color.SetRBA(r, b, a);
         }
 
         /// <summary>
@@ -159,7 +159,7 @@ namespace BGC.UI
         /// <param name="a"></param>
         public static void SetGBA(this Image image, float g, float b, float a)
         {
-            image.color.SetGBA(g, b, a);
+            image.color = image.color.SetGBA(g, b, a);
         }
 
         /// <summary>
@@ -172,7 +172,7 @@ namespace BGC.UI
         /// <param name="a"></param>
         public static void SetRGBA(this Image image, float r, float g, float b, float a)
         {
-            image.color.SetRGBA(r, g, b, a);
+            image.color = image.color.SetRGBA(r, g, b, a);
         }
     }
 }

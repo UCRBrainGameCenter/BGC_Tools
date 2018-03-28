@@ -14,10 +14,12 @@ namespace BGC.UI
         /// </summary>
         /// <param name="color"></param>
         /// <param name="r"></param>
-        public static void SetR(this Color color, float r)
+        public static Color SetR(this Color color, float r)
         {
             updateColorValue(ref r, red);
-            color.r = r;
+            Color c = color;
+            c.r = r;
+            return c;
         }
 
         /// <summary>
@@ -25,10 +27,12 @@ namespace BGC.UI
         /// </summary>
         /// <param name="color"></param>
         /// <param name="g"></param>
-        public static void SetG(this Color color, float g)
+        public static Color SetG(this Color color, float g)
         {
             updateColorValue(ref g, red);
-            color.g = g;
+            Color c = color;
+            c.g = g;
+            return c;
         }
 
 
@@ -37,10 +41,12 @@ namespace BGC.UI
         /// </summary>
         /// <param name="color"></param>
         /// <param name="b"></param>
-        public static void SetB(this Color color, float b)
+        public static Color SetB(this Color color, float b)
         {
             updateColorValue(ref b, red);
+            Color c = color;
             color.a = b;
+            return c;
         }
 
         /// <summary>
@@ -48,10 +54,12 @@ namespace BGC.UI
         /// </summary>
         /// <param name="color"></param>
         /// <param name="a"></param>
-        public static void SetA(this Color color, float a)
+        public static Color SetA(this Color color, float a)
         {
             updateColorValue(ref a, red);
-            color.a = a;
+            Color c = color;
+            c.a = a;
+            return c;
         }
 
         /// <summary>
@@ -60,10 +68,9 @@ namespace BGC.UI
         /// <param name="color"></param>
         /// <param name="r"></param>
         /// <param name="g"></param>
-        public static void SetRG(this Color color, float r, float g)
+        public static Color SetRG(this Color color, float r, float g)
         {
-            color.SetR(r);
-            color.SetG(g);
+            return color.SetR(r).SetG(g);
         }
 
         /// <summary>
@@ -72,10 +79,9 @@ namespace BGC.UI
         /// <param name="color"></param>
         /// <param name="r"></param>
         /// <param name="b"></param>
-        public static void SetRB(this Color color, float r, float b)
+        public static Color SetRB(this Color color, float r, float b)
         {
-            color.SetR(r);
-            color.SetB(b);
+            return color.SetR(r).SetB(b);
         }
 
         /// <summary>
@@ -84,10 +90,9 @@ namespace BGC.UI
         /// <param name="color"></param>
         /// <param name="r"></param>
         /// <param name="a"></param>
-        public static void SetRA(this Color color, float r, float a)
+        public static Color SetRA(this Color color, float r, float a)
         {
-            color.SetR(r);
-            color.SetA(a);
+            return color.SetR(r).SetA(a);
         }
 
         /// <summary>
@@ -96,10 +101,9 @@ namespace BGC.UI
         /// <param name="color"></param>
         /// <param name="g"></param>
         /// <param name="b"></param>
-        public static void SetGB(this Color color, float g, float b)
+        public static Color SetGB(this Color color, float g, float b)
         {
-            color.SetG(g);
-            color.SetB(b);
+            return color.SetG(g).SetB(b);
         }
 
         /// <summary>
@@ -108,10 +112,9 @@ namespace BGC.UI
         /// <param name="color"></param>
         /// <param name="g"></param>
         /// <param name="a"></param>
-        public static void SetGA(this Color color, float g, float a)
+        public static Color SetGA(this Color color, float g, float a)
         {
-            color.SetG(g);
-            color.SetA(a);
+            return color.SetG(g).SetA(a);
         }
 
         /// <summary>
@@ -120,10 +123,9 @@ namespace BGC.UI
         /// <param name="color"></param>
         /// <param name="b"></param>
         /// <param name="a"></param>
-        public static void SetBA(this Color color, float b, float a)
+        public static Color SetBA(this Color color, float b, float a)
         {
-            color.SetB(b);
-            color.SetA(a);
+            return color.SetB(b).SetA(a);
         }
 
         /// <summary>
@@ -133,11 +135,9 @@ namespace BGC.UI
         /// <param name="r"></param>
         /// <param name="g"></param>
         /// <param name="b"></param>
-        public static void SetRGB(this Color color, float r, float g, float b)
+        public static Color SetRGB(this Color color, float r, float g, float b)
         {
-            color.SetR(r);
-            color.SetG(g);
-            color.SetB(b);
+            return color.SetR(r).SetG(g).SetB(b);
         }
 
         /// <summary>
@@ -147,11 +147,9 @@ namespace BGC.UI
         /// <param name="r"></param>
         /// <param name="g"></param>
         /// <param name="a"></param>
-        public static void SetRGA(this Color color, float r, float g, float a)
+        public static Color SetRGA(this Color color, float r, float g, float a)
         {
-            color.SetR(r);
-            color.SetG(g);
-            color.SetA(a);
+            return color.SetR(r).SetG(g).SetA(a);
         }
 
         /// <summary>
@@ -161,11 +159,9 @@ namespace BGC.UI
         /// <param name="r"></param>
         /// <param name="b"></param>
         /// <param name="a"></param>
-        public static void SetRBA(this Color color, float r, float b, float a)
+        public static Color SetRBA(this Color color, float r, float b, float a)
         {
-            color.SetR(r);
-            color.SetB(b);
-            color.SetA(a);
+            return color.SetR(r).SetB(b).SetA(a);
         }
 
         /// <summary>
@@ -175,11 +171,9 @@ namespace BGC.UI
         /// <param name="g"></param>
         /// <param name="b"></param>
         /// <param name="a"></param>
-        public static void SetGBA(this Color color, float g, float b, float a)
+        public static Color SetGBA(this Color color, float g, float b, float a)
         {
-            color.SetG(g);
-            color.SetB(b);
-            color.SetA(a);
+            return color.SetG(g).SetB(b).SetA(a);
         }
 
         /// <summary>
@@ -190,12 +184,9 @@ namespace BGC.UI
         /// <param name="g"></param>
         /// <param name="b"></param>
         /// <param name="a"></param>
-        public static void SetRGBA(this Color color, float r, float g, float b, float a)
+        public static Color SetRGBA(this Color color, float r, float g, float b, float a)
         {
-            color.SetR(r);
-            color.SetG(g);
-            color.SetB(b);
-            color.SetA(a);
+            return color.SetR(r).SetG(g).SetB(b).SetA(a);
         }
 
         /// <summary>
