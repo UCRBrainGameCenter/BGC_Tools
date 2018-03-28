@@ -8,7 +8,7 @@ namespace BGC.IO
 {
     public static class FileReader
     {
-        public const string errorLogExtension = "_error.txt";
+        public const string ErrorLogExtension = "_error.txt";
 
         /// <summary>
         /// Gives two callbacks for when a file is not found and for when a file has
@@ -78,7 +78,7 @@ namespace BGC.IO
             File.Move(path, newFilePath);
 
             string newFileErrLog = Path.Combine(
-                DataManagement.PathForDataDirectory(errorDirectory), fileName + errorLogExtension);
+                DataManagement.PathForDataDirectory(errorDirectory), fileName + ErrorLogExtension);
 
             if (File.Exists(newFileErrLog))
             {
