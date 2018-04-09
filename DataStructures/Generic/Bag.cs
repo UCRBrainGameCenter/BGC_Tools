@@ -16,6 +16,7 @@ namespace BGC.DataStructures.Generic
     //        the passed in list.}
     /// </summary>
     /// <typeparam name="T"></typeparam>
+    [System.Obsolete("Bag<T> class is obsolete - use DepletableBag<T>")]
     public class Bag<T>
     {
         private List<T> cleanList = new List<T>();
