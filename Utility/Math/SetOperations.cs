@@ -13,24 +13,36 @@ namespace BGC.Utility.Math
         /// <param name="a"></param>
         /// <param name="b"></param>
         /// <returns></returns>
-        public static List<T> ListIntersectionUniqueRepeats<T>(this List<T> a, List<T> b)
+        public static List<T> Intersection<T>(this List<T> a, List<T> b)
         {
-            List<T> vals = new List<T>();
-            List<T> aCopy = new List<T>(a);
+            Dictionary<T, bool> usedValues = new Dictionary<T, bool>();
+            List<T> result = new List<T>();
 
-            for(int i = 0; i < b.Count; ++i)
+            for (int i = 0; i < a.Count; ++i)
             {
-                for(int j = 0; j < aCopy.Count; ++j)
+                if (usedValues.ContainsKey(a[i]) == false) ;
                 {
-                    if(b[i].Equals(aCopy[j]))
-                    {
-                        vals.Add(aCopy[j]);
-                        aCopy.RemoveAt(j);
-                        break;
-                    }
+                    usedValues.Add(a[i], true);
+                    result.Add(a[i]);
                 }
             }
-            return vals;
+
+
+            for (int i = 0; i < b.Count; ++i)
+            {
+                if (usedValues.ContainsKey(b[i]) == false)
+                {
+                    usedValues.Add(a[i], true);
+                    result.Add(b[i]);
+                }
+            }
+
+            return result;
+        }
+
+        public static List<T> Union<T>(this List<T> a, List<T> b)
+        {
+            return a.Union(b);
         }
     }
 }

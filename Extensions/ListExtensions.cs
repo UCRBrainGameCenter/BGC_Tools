@@ -44,6 +44,13 @@ namespace BGC.Extensions
             return (T)list[list.RandomIndex()];
         }
 
+        /// <summary>
+        /// Get a random value from the list
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="excludeIndex"></param>
+        /// <returns></returns>
         public static T RandomValue<T>(this IList list, int excludeIndex)
         {
             if (list.Count == 0)
@@ -51,6 +58,7 @@ namespace BGC.Extensions
                 Debug.LogError(
                     "Received list of length 0 which doesn't allow for random value, " +
                     "returning default value");
+
                 return default(T);
             }
 
@@ -59,6 +67,7 @@ namespace BGC.Extensions
             {
                 index++;
             }
+
             return (T)list[index];
         }
 
@@ -304,6 +313,13 @@ namespace BGC.Extensions
             }
         }
 
+        /// <summary>
+        /// Finds all instances of an object within a list and returns them
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
         public static List<T> FindAllInstancesOf<T>(this List<T> list, T value)
         {
             List<T> instances = new List<T>();
@@ -314,6 +330,7 @@ namespace BGC.Extensions
                     instances.Add(list[i]);
                 }
             }
+
             return instances;
         }
     }
