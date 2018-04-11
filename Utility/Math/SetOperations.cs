@@ -8,6 +8,7 @@ namespace BGC.Utility.Math
     {
         /// <summary>
         /// Finds the list intersection between two lists where each repeated value is unique
+        /// Intersection is the Or operation
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="a"></param>
@@ -40,6 +41,14 @@ namespace BGC.Utility.Math
             return result;
         }
 
+        /// <summary>
+        /// Finds the list union between two lists where each repeated value is unique
+        /// Union is the And operation
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
+        /// <returns></returns>
         public static List<T> Union<T>(this List<T> a, List<T> b)
         {
             return a.Union(b);
