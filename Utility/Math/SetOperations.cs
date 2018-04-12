@@ -28,7 +28,6 @@ namespace BGC.Utility.Math
                 }
             }
 
-
             for (int i = 0; i < b.Count; ++i)
             {
                 if (usedValues.ContainsKey(b[i]) == false)
