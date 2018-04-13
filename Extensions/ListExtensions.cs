@@ -62,6 +62,7 @@ namespace BGC.Extensions
                 return default(T);
             }
 
+            //Range for ints is exclusive high-bound inclusive low-bound
             int index = Random.Range(0, list.Count - 1);
             if (index >= excludeIndex)
             {
