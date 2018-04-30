@@ -21,7 +21,7 @@ namespace BGC.Utility.Math
 
             for (int i = 0; i < a.Count; ++i)
             {
-                if (usedValues.ContainsKey(a[i]) == false) ;
+                if (usedValues.ContainsKey(a[i]) == false)
                 {
                     usedValues.Add(a[i], true);
                     result.Add(a[i]);
