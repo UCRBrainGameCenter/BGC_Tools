@@ -1,4 +1,6 @@
-﻿public static class Conversion
+﻿using UnityEngine;
+
+public static class Conversion
 {
     public static float SecondsToMS(float seconds)
     {
@@ -18,5 +20,14 @@
     public static double MSToSeconds(double ms)
     {
         return ms * 0.001;
+    }
+
+    public static Vector2 WorldToScreen(Vector3 worldPos, RectTransform screenRect)
+    {
+        Vector2 localPoint;
+        Vector3 screenPoint = Camera.main.WorldToScreenPoint(worldPos);
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(screenRect, screenPoint, Camera.main, out localPoint);
+
+        return localPoint;
     }
 }
