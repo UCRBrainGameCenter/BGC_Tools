@@ -32,7 +32,7 @@ namespace BGC.IO
                 };
 
                 File.WriteAllLines(
-                    Path.Combine(DataManagement.PathForDataDirectory(errorDirectory), fileName + FileReader.ErrorLogExtension), 
+                    Path.Combine(LogManagement.PathForDataDirectory(errorDirectory), fileName + FileReader.ErrorLogExtension), 
                     errorLog);
             }
 
