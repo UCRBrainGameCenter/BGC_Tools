@@ -1,32 +1,26 @@
 ﻿using System.Collections.Generic;
-using System.Collections;
-using System;
-using BGC.Utility;
-using UnityEngine;
 using UnityEngine.Networking;
+using System.Collections;
+using BGC.Utility;
 using System.Text;
+using System;
 
 namespace BGC.Web.Utility
 {
-    public struct HttpResponse
-    {
-        public int StatusCode;
-        public string Message;
-
-        public HttpResponse(int status, string message)
-        {
-            StatusCode = status;
-            Message    = message;
-        }
-    }
-
     public static class Rest
     {
+        /// <summary>
+        /// Send a post request
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="headers"></param>
+        /// <param name="body"></param>
+        /// <param name="callBack">Takes in a boolean for whether or not there was a network error</param>
         public static void PostRequest(
             string url, 
             Dictionary<string, string> headers, 
             string body, 
-            Func<HttpResponse> callBack = null)
+            Action<bool> callBack = null)
         {
             CoroutineUtility.Mono.StartCoroutine(runPost(
                 url,
@@ -35,11 +29,19 @@ namespace BGC.Web.Utility
                 callBack));
         }
 
+        /// <summary>
+        /// Run post request
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="headers"></param>
+        /// <param name="body"></param>
+        /// <param name="callBack"></param>
+        /// <returns></returns>
         private static IEnumerator runPost(
             string url, 
             Dictionary<string, string> headers, 
             string body,
-            Func<HttpResponse> callBack)
+            Action<bool> callBack)
         {
             UnityWebRequest request = new UnityWebRequest(url, "POST");
             request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
@@ -50,13 +52,9 @@ namespace BGC.Web.Utility
 
             yield return request.Send();
 
-            if (request.isNetworkError)
+            if(callBack != null)
             {
-                Debug.LogError("error");
-            }
-            else
-            {
-                Debug.Log("successfully uploaded this file!!!!");
+                callBack(!request.isNetworkError);
             }
         }
     }
