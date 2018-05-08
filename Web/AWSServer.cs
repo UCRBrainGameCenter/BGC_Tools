@@ -26,7 +26,7 @@ namespace BGC.Web
         public const string ApiUrl = "https://kukp0cevff.execute-api.us-east-2.amazonaws.com/prod/post_file_to_s3";
         public const string ApiKey = "eQtoU42BkJ697U9t74dQH73fjxdfcy7p70Rvs1Ft";
         public const string CacheControl = "no-cache";
-        public const string BGCExtension = "bgc";
+        public const string BGCExtension = ".bgc";
 
         private const char extensionSplitter = '.';
 
@@ -34,7 +34,6 @@ namespace BGC.Web
             string filePath,
             string bucket,
             string serverPath,
-            string fileContents,
             Action<bool> callBack = null)
         {
             if (File.Exists(filePath) == false)
@@ -43,7 +42,7 @@ namespace BGC.Web
 
                 if (callBack != null)
                 {
-                    callBack(false);
+                    callBack(true);
                 }
 
                 return;
@@ -51,11 +50,11 @@ namespace BGC.Web
 
             if (containsBGCExtension(filePath) == false)
             {
-                Debug.LogError(filePath + " must have the bgc extension.");
+                Debug.LogError("file " + filePath + " must have the bgc extension.");
 
                 if (callBack != null)
                 {
-                    callBack(false);
+                    callBack(true);
                 }
 
                 return;
@@ -79,20 +78,20 @@ namespace BGC.Web
         /// <param name="bucket"></param>
         /// <param name="serverPath"></param>
         /// <param name="fileContents"></param>
-        /// <param name="callBack">Takes in a boolean for whether or not there was a network error</param>
+        /// <param name="callBack">True means there was an error</param>
         public static void PostToAWS(
             string fileContents,
             string bucket,
             string serverPath,
             Action<bool> callBack = null)
         {
-            if (containsBGCExtension(serverPath))
+            if (containsBGCExtension(serverPath) == false)
             {
-                Debug.LogError(serverPath + " must have a bgc extension \".bgc\"");
+                Debug.LogError("server path " + serverPath + " must have a bgc extension \".bgc\"");
 
                 if (callBack != null)
                 {
-                    callBack(false);
+                    callBack(true);
                 }
 
                 return;
@@ -116,7 +115,7 @@ namespace BGC.Web
 
         private static bool containsBGCExtension(string path)
         {
-            return path.Split(extensionSplitter).LastVal<string>().Equals(BGCExtension) == false;
+            return Path.HasExtension(BGCExtension);
         }
     }
 }

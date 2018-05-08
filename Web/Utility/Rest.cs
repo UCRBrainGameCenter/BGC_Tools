@@ -15,7 +15,7 @@ namespace BGC.Web.Utility
         /// <param name="url"></param>
         /// <param name="headers"></param>
         /// <param name="body"></param>
-        /// <param name="callBack">Takes in a boolean for whether or not there was a network error</param>
+        /// <param name="callBack">true means there was an error</param>
         public static void PostRequest(
             string url, 
             Dictionary<string, string> headers, 
@@ -35,7 +35,7 @@ namespace BGC.Web.Utility
         /// <param name="url"></param>
         /// <param name="headers"></param>
         /// <param name="body"></param>
-        /// <param name="callBack"></param>
+        /// <param name="callBack">boolean true means there was an error</param>
         /// <returns></returns>
         private static IEnumerator runPost(
             string url, 
@@ -54,7 +54,7 @@ namespace BGC.Web.Utility
 
             if(callBack != null)
             {
-                callBack(!request.isNetworkError);
+                callBack(request.isNetworkError);
             }
         }
     }

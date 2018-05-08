@@ -7,12 +7,14 @@ namespace BGC.IO
     {
         public const string LogsDirectory = "Logs";
         public const string S3StagingDirectory = "Staging";
+        public const string ExceptionsDirectory = "Exceptions";
         public const string S3PermanentDirectory = "Permanent";
 
         private static string logDirectory = null;
         private static string rootDirectory = null;
         private static string stagingDirectory = null;
         private static string permanentDirectory = null;
+        private static string exceptionDirectory = null;
 
         /// <summary>
         /// Root directory for all users data
@@ -98,6 +100,28 @@ namespace BGC.IO
                 }
 
                 return permanentDirectory;
+            }
+        }
+
+        /// <summary>
+        /// Get path for exceptions directory. Creates directory if it does not
+        /// exist
+        /// </summary>
+        public static string ExceptionDirectory
+        {
+            get
+            {
+                if (exceptionDirectory == null)
+                {
+                    exceptionDirectory = Path.Combine(LogDirectory, ExceptionsDirectory);
+
+                    if (Directory.Exists(exceptionDirectory) == false)
+                    {
+                        Directory.CreateDirectory(exceptionDirectory);
+                    }
+                }
+
+                return exceptionDirectory;
             }
         }
 
