@@ -8,37 +8,38 @@ namespace BGC.IO
 {
     public static class FileWriter
     {
-        public static bool WriteJson(string path, string errorDirectory, Func<JsonObject> createJson, bool pretty = false)
-        {
-            bool wroteToFile = false;
+        // @todo: implement this
+        //public static bool WriteJson(string path, string errorDirectory, Func<JsonObject> createJson, bool pretty = false)
+        //{
+        //    bool wroteToFile = false;
 
-            try
-            {
-                File.WriteAllText(path, createJson().ToString(pretty));
-                wroteToFile = true;
-            }
-            catch(JsonSerializationException excp)
-            {
-                Debug.LogError(string.Format("JSON error serializing Protocols at {0}: {1}",
-                    path, excp.Message));
+        //    try
+        //    {
+        //        File.WriteAllText(path, createJson().ToString(pretty));
+        //        wroteToFile = true;
+        //    }
+        //    catch(JsonSerializationException excp)
+        //    {
+        //        Debug.LogError(string.Format("JSON error serializing Protocols at {0}: {1}",
+        //            path, excp.Message));
 
-                string fileName = Path.GetFileName(path);
+        //        string fileName = Path.GetFileName(path);
 
-                string[] errorLog = new string[]
-                {
-                    "JSON serialization error.",
-                    "",
-                    excp.Message
-                };
+        //        string[] errorLog = new string[]
+        //        {
+        //            "JSON serialization error.",
+        //            "",
+        //            excp.Message
+        //        };
 
-                File.WriteAllLines(
-                    Path.Combine(
-                        Path.Combine(LogManagement.GetDataRootDir(), errorDirectory), 
-                        fileName + FileReader.ErrorLogExtension),
-                    errorLog);
-            }
+        //        File.WriteAllLines(
+        //            Path.Combine(
+        //                Path.Combine(LogManagement.GetDataRootDir(), errorDirectory), 
+        //                fileName + FileReader.ErrorLogExtension),
+        //            errorLog);
+        //    }
 
-            return wroteToFile;
-        }
+        //    return wroteToFile;
+        //}
     }
 }
