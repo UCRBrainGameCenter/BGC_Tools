@@ -1,8 +1,8 @@
 ﻿using LightJson.Serialization;
+using UnityEngine;
 using LightJson;
 using System.IO;
 using System;
-using UnityEngine;
 
 namespace BGC.IO
 {
@@ -66,10 +66,9 @@ namespace BGC.IO
 
         private static void parseException(string path, string errorDirectory, string[] errorMessage)
         {
-            string fileName = Path.GetFileName(path);
-
-            string newFilePath = Path.Combine(
-                DataManagement.PathForDataDirectory(errorDirectory), fileName);
+            string fileName    = Path.GetFileName(path);
+            string errorDir    = Path.Combine(LogManagement.LogDirectory, errorDirectory);
+            string newFilePath = Path.Combine(errorDir, fileName);
 
             if (File.Exists(newFilePath))
             {
@@ -77,8 +76,7 @@ namespace BGC.IO
             }
             File.Move(path, newFilePath);
 
-            string newFileErrLog = Path.Combine(
-                DataManagement.PathForDataDirectory(errorDirectory), fileName + ErrorLogExtension);
+            string newFileErrLog = Path.Combine(errorDir, fileName + ErrorLogExtension);
 
             if (File.Exists(newFileErrLog))
             {
