@@ -14,9 +14,7 @@ namespace BGC.IO
         /// been succesfully parsed into a json object. With the latter, you can use 
         /// the parsed object to build out whatever you need. 
         /// 
-        /// There are also two functions where you return an array of strings for 
-        /// error message that will be placed into your defined error directory for
-        /// logging.
+        /// There is also an optional override for exception handling.
         /// </summary>
         /// <param name="path"></param>
         /// <param name="errorLogDirectory"></param>
