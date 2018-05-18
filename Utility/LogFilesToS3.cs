@@ -14,7 +14,7 @@ namespace BGC.Utility
         /// <param name="serverPath"></param>
         public static void MigrateFiles(string bucketName, string serverPath)
         {
-            string[] users = Directory.GetDirectories(LogManagement.StagingDirectory);
+            string[] users = Directory.GetDirectories(LogDirectories.StagingDirectory);
 
             for (int i = 0; i < users.Length; ++i)
             {
@@ -30,8 +30,8 @@ namespace BGC.Utility
         /// <param name="serverPath"></param>
         private static void migrateUser(string userName, string bucket, string serverPath)
         {
-            string stagingPath   = Path.Combine(LogManagement.StagingDirectory, userName);
-            string permanentPath = Path.Combine(LogManagement.PermanentDirectory, userName);
+            string stagingPath = Path.Combine(LogDirectories.StagingDirectory, userName);
+            string permanentPath = Path.Combine(LogDirectories.PermanentDirectory, userName);
             string[] files = Directory.GetFiles(stagingPath);
 
             if(Directory.Exists(permanentPath) == false)
@@ -43,6 +43,13 @@ namespace BGC.Utility
             {
                 string stagingFile = Path.Combine(stagingPath, files[i]);
                 string fileName = Path.GetFileName(stagingFile);
+
+                // skip files in use
+                if (ReservedFiles.IsFileReserved(stagingFile))
+                {
+                    UnityEngine.Debug.Log("skipping: " + stagingFile);
+                    continue;
+                }
 
                 AWSServer.PostFileToAWS(
                     stagingFile,

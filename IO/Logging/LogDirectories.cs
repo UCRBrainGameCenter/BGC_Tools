@@ -1,44 +1,19 @@
-﻿using UnityEngine;
-using System.IO;
+﻿using System.IO;
 
 namespace BGC.IO
 {
-    public class LogManagement
+    public class LogDirectories
     {
-        public const string LogsDirectory = "Logs";
-        public const string S3StagingDirectory = "Staging";
-        public const string ExceptionsDirectory = "Exceptions";
+        public const string LogsDirectory        = "Logs";
+        public const string S3StagingDirectory   = "Staging";
+        public const string ExceptionsDirectory  = "Exceptions";
         public const string S3PermanentDirectory = "Permanent";
 
-        private static string logDirectory = null;
-        private static string rootDirectory = null;
-        private static string stagingDirectory = null;
+        private static string logDirectory       = null;
+        private static string stagingDirectory   = null;
         private static string permanentDirectory = null;
         private static string exceptionDirectory = null;
-
-        /// <summary>
-        /// Root directory for all users data
-        /// </summary>
-        public static string RootDirectory
-        {
-            get
-            {
-                if (rootDirectory == null)
-                {
-                    rootDirectory = Application.persistentDataPath;
-
-                    if (Application.platform != RuntimePlatform.IPhonePlayer &&
-                        Application.platform != RuntimePlatform.Android)
-                    {
-                        rootDirectory = Application.dataPath;
-                        rootDirectory = rootDirectory.Substring(0, rootDirectory.LastIndexOf('/'));
-                    }
-                }
-
-                return rootDirectory;
-            }
-        }
-
+        
         /// <summary>
         /// Logs directory for all users
         /// </summary>
@@ -48,8 +23,7 @@ namespace BGC.IO
             {
                 if (logDirectory == null)
                 {
-                    logDirectory = Path.Combine(RootDirectory, LogsDirectory);
-
+                    logDirectory = Path.Combine(DataManagement.RootDirectory, LogsDirectory);
                     if (Directory.Exists(logDirectory) == false)
                     {
                         Directory.CreateDirectory(logDirectory);
@@ -71,7 +45,6 @@ namespace BGC.IO
                 if (stagingDirectory == null)
                 {
                     stagingDirectory = Path.Combine(LogDirectory, S3StagingDirectory);
-
                     if (Directory.Exists(stagingDirectory) == false)
                     {
                         Directory.CreateDirectory(stagingDirectory);
@@ -92,7 +65,6 @@ namespace BGC.IO
                 if (permanentDirectory == null)
                 {
                     permanentDirectory = Path.Combine(LogDirectory, S3PermanentDirectory);
-
                     if (Directory.Exists(permanentDirectory) == false)
                     {
                         Directory.CreateDirectory(permanentDirectory);
@@ -114,7 +86,6 @@ namespace BGC.IO
                 if (exceptionDirectory == null)
                 {
                     exceptionDirectory = Path.Combine(LogDirectory, ExceptionsDirectory);
-
                     if (Directory.Exists(exceptionDirectory) == false)
                     {
                         Directory.CreateDirectory(exceptionDirectory);

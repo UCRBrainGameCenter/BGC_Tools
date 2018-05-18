@@ -6,6 +6,31 @@ namespace BGC.IO
 {
     public class DataManagement
     {
+        private static string rootDirectory = null;
+
+        /// <summary>
+        /// Root directory for all users data
+        /// </summary>
+        public static string RootDirectory
+        {
+            get
+            {
+                if (rootDirectory == null)
+                {
+                    rootDirectory = Application.persistentDataPath;
+
+                    if (Application.platform != RuntimePlatform.IPhonePlayer &&
+                        Application.platform != RuntimePlatform.Android)
+                    {
+                        rootDirectory = Application.dataPath;
+                        rootDirectory = rootDirectory.Substring(0, rootDirectory.LastIndexOf('/'));
+                    }
+                }
+
+                return rootDirectory;
+            }
+        }
+
         /// <summary>
         /// Get a list of all data files in sub directory of os data directory
         /// </summary>
