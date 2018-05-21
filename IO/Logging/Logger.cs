@@ -134,14 +134,12 @@ namespace BGC.IO.Logging
 
         public void CloseFile()
         {
-            if (logger == null)
+            if (logger != null)
             {
-                throw new InvalidOperationException("Cannot close file that has not be opened");
+                logger.Close();
+                ReservedFiles.UnReserveFile(path);
+                logger = null;
             }
-
-            logger.Close();
-            ReservedFiles.UnReserveFile(path);
-            logger = null;
         }
 
         protected string GetNewLogName(string userName, int runNumber, int session)
