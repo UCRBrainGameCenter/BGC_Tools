@@ -1,7 +1,8 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System;
+﻿using System.Collections.Generic;
+using System.Collections;
+using BGC.MonoUtility;
 using UnityEngine;
+using System;
 
 namespace BGC.Utility
 {
@@ -15,6 +16,7 @@ namespace BGC.Utility
                 if (mono == null)
                 {
                     mono = new GameObject().AddComponent<EmptyMonobehaviour>();
+                    mono.gameObject.AddComponent<DestroyOnDestroy>();
                 }
 
                 return mono;
