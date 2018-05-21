@@ -17,7 +17,7 @@ namespace BGC.Web.Utility
         /// <param name="body"></param>
         /// <param name="callBack">true means there was an error</param>
         public static void PostRequest(
-            string url, 
+            string url,
             Dictionary<string, string> headers, 
             string body, 
             Action<bool> callBack = null)
@@ -51,11 +51,7 @@ namespace BGC.Web.Utility
             }
 
             yield return request.Send();
-
-            if(callBack != null)
-            {
-                callBack(request.isNetworkError);
-            }
+            callBack?.Invoke(request.isNetworkError);
         }
     }
 }

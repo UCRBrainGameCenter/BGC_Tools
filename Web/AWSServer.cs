@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using BGC.Web.Utility;
-using BGC.Extensions;
 using UnityEngine;
 using System.IO;
 using LightJson;
@@ -39,11 +38,7 @@ namespace BGC.Web
             if (File.Exists(filePath) == false)
             {
                 Debug.LogError(filePath + " is not a file.");
-
-                if (callBack != null)
-                {
-                    callBack(true);
-                }
+                callBack?.Invoke(true);
 
                 return;
             }
@@ -51,11 +46,7 @@ namespace BGC.Web
             if (containsBGCExtension(filePath) == false)
             {
                 Debug.LogError("file " + filePath + " must have the bgc extension.");
-
-                if (callBack != null)
-                {
-                    callBack(true);
-                }
+                callBack?.Invoke(true);
 
                 return;
             }
@@ -88,11 +79,7 @@ namespace BGC.Web
             if (containsBGCExtension(serverPath) == false)
             {
                 Debug.LogError("server path " + serverPath + " must have a bgc extension \".bgc\"");
-
-                if (callBack != null)
-                {
-                    callBack(true);
-                }
+                callBack?.Invoke(true);
 
                 return;
             }

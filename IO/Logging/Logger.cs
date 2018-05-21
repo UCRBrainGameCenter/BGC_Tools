@@ -52,12 +52,12 @@ namespace BGC.IO.Logging
 
         ~Logger()
         {
-            ReservedFiles.UnReserveFile(path);
-
             if(logger != null)
             {
                 logger.Close();
             }
+
+            ReservedFiles.UnReserveFile(path);
         }
 
         protected abstract JsonObject ConstructColumnMapping();
@@ -140,6 +140,19 @@ namespace BGC.IO.Logging
                 ReservedFiles.UnReserveFile(path);
                 logger = null;
             }
+        }
+
+        public void CloseFile(string userName, string bucket, string serverPath)
+        {
+            if (logger == null)
+            {
+                throw new InvalidOperationException("Cannot close file that has not be opened");
+            }
+
+            logger.Close();
+            logger = null;
+
+            ReservedFiles.UnReserveFile(path, userName, bucket, serverPath);
         }
 
         protected string GetNewLogName(string userName, int runNumber, int session)

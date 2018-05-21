@@ -47,7 +47,6 @@ namespace BGC.Utility
                 // skip files in use
                 if (ReservedFiles.IsFileReserved(stagingFile))
                 {
-                    UnityEngine.Debug.Log("skipping: " + stagingFile);
                     continue;
                 }
 
