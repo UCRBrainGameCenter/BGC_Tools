@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# clone required repos
+git clone https://github.com/UCRBrainGameCenter/BGC_Tools.wiki.git
+git clone https://github.com/UCRBrainGameCenter/UCRBrainGameCenter.github.io.git
+
+# generate documentation
 doxygen doxygen.conf
 
 # update html
@@ -18,3 +23,8 @@ cd BGC_Tools.wiki
 git add Home.md
 git commit -m "new api commit"
 git push
+cd ..
+
+# Delete wikis
+rm -r BGC_Tools.wiki
+rm -r UCRBrainGameCenter.github.io
