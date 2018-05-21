@@ -51,32 +51,33 @@ namespace BGC.Utility
         {
             bool removed = UnReserveFile(path);
 
-            // @todo: #if !Unity-edadf
-            AWSServer.PostFileToAWS(
-                path, 
-                bucket, 
-                serverPath + "/" + Path.GetFileName(path),
-                (bool error) => {
-                    // move file from staging to permament on no error
-                    if(error == false)
-                    {
-                        // @note: duplicate code from LogFilesToS3
-                        string permanentPath = Path.Combine(LogDirectories.PermanentDirectory, userName);
-                        if (Directory.Exists(permanentPath))
+            #if !UNITY_EDITOR
+                AWSServer.PostFileToAWS(
+                    path, 
+                    bucket, 
+                    serverPath + "/" + Path.GetFileName(path),
+                    (bool error) => {
+                        // move file from staging to permament on no error
+                        if(error == false)
                         {
-                            Directory.CreateDirectory(permanentPath);
+                            // @note: duplicate code from LogFilesToS3
+                            string permanentPath = Path.Combine(LogDirectories.PermanentDirectory, userName);
+                            if (Directory.Exists(permanentPath))
+                            {
+                                Directory.CreateDirectory(permanentPath);
+                            }
+
+                            permanentPath = Path.Combine(permanentPath, Path.GetFileName(path));
+
+                            if (File.Exists(permanentPath))
+                            {
+                                File.Delete(permanentPath);
+                            }
+
+                            File.Move(path, permanentPath);
                         }
-
-                        permanentPath = Path.Combine(permanentPath, Path.GetFileName(path));
-
-                        if (File.Exists(permanentPath))
-                        {
-                            File.Delete(permanentPath);
-                        }
-
-                        File.Move(path, permanentPath);
-                    }
-                });
+                    });
+            #endif
 
             return removed;
         }

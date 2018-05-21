@@ -144,7 +144,7 @@ namespace BGC.IO.Logging
 
         public void CloseFile(string userName, string bucket, string serverPath)
         {
-            if (logger == null)
+            if (logger != null)
             {
                 logger.Close();
                 logger = null;
