@@ -2,17 +2,16 @@
 {
     public static class StaticIdManager
     {
-        private static int count = -1;
+        private static IdManager idManager = new IdManager();
 
         public static void Reset()
         {
-            count = -1;
+            idManager.Reset();
         }
 
         public static int GetId()
         {
-            ++count;
-            return count;
+            return idManager.GetId();
         }
     }
 }
