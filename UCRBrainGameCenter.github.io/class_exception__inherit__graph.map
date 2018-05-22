@@ -1,0 +1,5 @@
+<map id="Exception" name="Exception">
+<area shape="rect" id="node2" href="$class_b_g_c_1_1_i_o_1_1_parsing_exception.html" title="BGC.IO.ParsingException" alt="" coords="135,5,310,32"/>
+<area shape="rect" id="node3" href="$class_light_json_1_1_serialization_1_1_json_parse_exception.html" title="The exception that is thrown when a JSON message cannot be parsed. " alt="" coords="144,57,301,98"/>
+<area shape="rect" id="node4" href="$class_light_json_1_1_serialization_1_1_json_serialization_exception.html" title="The exception that is thrown when a JSON value cannot be serialized. " alt="" coords="133,122,312,163"/>
+</map>

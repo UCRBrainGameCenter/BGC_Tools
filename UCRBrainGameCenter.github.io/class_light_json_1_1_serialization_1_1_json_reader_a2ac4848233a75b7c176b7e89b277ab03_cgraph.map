@@ -1,0 +1,4 @@
+<map id="LightJson.Serialization.JsonReader.ReadBoolean" name="LightJson.Serialization.JsonReader.ReadBoolean">
+<area shape="rect" id="node2" href="$class_light_json_1_1_serialization_1_1_text_scanner.html#a188dbfe6bf38640fe99cf63c70d57bbb" title="Verifies that the given character matches the next character in the stream. If the characters do not ..." alt="" coords="228,5,385,47"/>
+<area shape="rect" id="node3" href="$class_light_json_1_1_serialization_1_1_text_scanner.html#ae3dcba6bac7152398498a57be9f327f9" title="Reads the next character in the stream without changing the current position. " alt="" coords="228,71,385,112"/>
+</map>

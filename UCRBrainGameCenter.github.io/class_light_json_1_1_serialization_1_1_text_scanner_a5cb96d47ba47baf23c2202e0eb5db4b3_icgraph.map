@@ -1,0 +1,10 @@
+<map id="LightJson.Serialization.TextScanner.SkipWhitespace" name="LightJson.Serialization.TextScanner.SkipWhitespace">
+<area shape="rect" id="node2" href="$class_light_json_1_1_serialization_1_1_json_reader.html#a4a2f0692bf9dec28417fe83924ac7380" title="LightJson.Serialization.\lJsonReader.Parse" alt="" coords="263,64,421,105"/>
+<area shape="rect" id="node7" href="$class_light_json_1_1_serialization_1_1_json_reader.html#ab295d9a5035ee7935bdaaba08270f1bd" title="LightJson.Serialization.\lJsonReader.ReadArray" alt="" coords="263,129,421,171"/>
+<area shape="rect" id="node8" href="$class_light_json_1_1_serialization_1_1_json_reader.html#abd62f714b0ce55859dabb2820fbd6211" title="LightJson.Serialization.\lJsonReader.ReadJsonValue" alt="" coords="248,195,436,236"/>
+<area shape="rect" id="node9" href="$class_light_json_1_1_serialization_1_1_json_reader.html#a78418f68dd5d787d4ba1e473f60a7a8a" title="LightJson.Serialization.\lJsonReader.ReadObject" alt="" coords="259,260,425,301"/>
+<area shape="rect" id="node3" href="$class_light_json_1_1_serialization_1_1_json_reader.html#aad2988e1ffdc33d25ee8e9cdc6c6f1e5" title="Creates a JsonValue by using the given TextReader. " alt="" coords="496,5,653,47"/>
+<area shape="rect" id="node4" href="$struct_light_json_1_1_json_value.html#a393b65df7ad4dc774a6eb5cdea26aecb" title="Returns a JsonValue by parsing the given string. " alt="" coords="484,71,665,98"/>
+<area shape="rect" id="node5" href="$class_light_json_1_1_serialization_1_1_json_reader.html#a95a87d70bbe7763caab326c72317cfb5" title="Creates a JsonValue by reading the given file. " alt="" coords="496,123,653,164"/>
+<area shape="rect" id="node6" href="$class_b_g_c_1_1_i_o_1_1_file_reader.html#ab92af1798c24dc57622a6d22faabc095" title="Gives two callbacks for when a file is not found and for when a file has been succesfully parsed into..." alt="" coords="713,130,933,157"/>
+</map>

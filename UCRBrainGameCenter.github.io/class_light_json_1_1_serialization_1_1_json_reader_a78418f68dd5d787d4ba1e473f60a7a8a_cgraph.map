@@ -1,0 +1,8 @@
+<map id="LightJson.Serialization.JsonReader.ReadObject" name="LightJson.Serialization.JsonReader.ReadObject">
+<area shape="rect" id="node2" href="$class_light_json_1_1_json_object.html#a6e1c73338d5bc119f44b49b15bbedd87" title="Adds a key with a null value to this collection. " alt="" coords="245,5,419,32"/>
+<area shape="rect" id="node3" href="$class_light_json_1_1_serialization_1_1_text_scanner.html#a188dbfe6bf38640fe99cf63c70d57bbb" title="Verifies that the given character matches the next character in the stream. If the characters do not ..." alt="" coords="253,57,411,98"/>
+<area shape="rect" id="node4" href="$class_light_json_1_1_json_object.html#a5d89b8efa4d1c8671cdeccb0008597bd" title="Determines whether this collection contains an item assosiated with the given key. " alt="" coords="219,123,445,149"/>
+<area shape="rect" id="node5" href="$class_light_json_1_1_serialization_1_1_text_scanner.html#ae3dcba6bac7152398498a57be9f327f9" title="Reads the next character in the stream without changing the current position. " alt="" coords="253,174,411,215"/>
+<area shape="rect" id="node6" href="$class_light_json_1_1_serialization_1_1_text_scanner.html#af240c088f37c2b70d9f898964e4e155f" title="Reads the next character in the stream, advancing the text position. " alt="" coords="253,239,411,281"/>
+<area shape="rect" id="node7" href="$class_light_json_1_1_serialization_1_1_text_scanner.html#a5cb96d47ba47baf23c2202e0eb5db4b3" title="Advances the scanner to next non&#45;whitespace character. " alt="" coords="235,305,429,346"/>
+</map>

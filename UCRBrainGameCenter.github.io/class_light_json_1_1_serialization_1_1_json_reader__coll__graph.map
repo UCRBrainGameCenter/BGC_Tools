@@ -1,0 +1,4 @@
+<map id="LightJson.Serialization.JsonReader" name="LightJson.Serialization.JsonReader">
+<area shape="rect" id="node2" href="$class_light_json_1_1_serialization_1_1_text_scanner.html" title="Represents a text scanner that reads one character at a time. " alt="" coords="27,213,184,255"/>
+<area shape="rect" id="node4" href="$struct_light_json_1_1_serialization_1_1_text_position.html" title="Represents a position within a plain text resource. " alt="" coords="120,109,277,151"/>
+</map>

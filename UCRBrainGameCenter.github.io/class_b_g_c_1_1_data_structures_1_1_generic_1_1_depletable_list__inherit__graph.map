@@ -1,0 +1,5 @@
+<map id="BGC.DataStructures.Generic.DepletableList&lt; T &gt;" name="BGC.DataStructures.Generic.DepletableList&lt; T &gt;">
+<area shape="rect" id="node2" href="$interface_b_g_c_1_1_data_structures_1_1_generic_1_1_i_depletable.html" title="An interface for a collection that tracks and retains underlying values, allowing values to be popped..." alt="" coords="81,80,201,107"/>
+<area shape="rect" id="node3" href="$class_i_enumerable.html" title="IEnumerable\&lt; T \&gt;" alt="" coords="5,5,132,32"/>
+<area shape="rect" id="node4" href="$class_i_collection.html" title="ICollection\&lt; T \&gt;" alt="" coords="156,5,272,32"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="BGC.IO.Logging.Logger.CloseFile" name="BGC.IO.Logging.Logger.CloseFile">
+<area shape="rect" id="node2" href="$class_b_g_c_1_1_web_1_1_a_w_s_server.html#a8363083c67a1171e239868a63cfd6c16" title="Combine two strings to form a path in AWS " alt="" coords="273,5,484,32"/>
+<area shape="rect" id="node3" href="$class_b_g_c_1_1_web_1_1_a_w_s_server.html#a08d83fdb062a820b3756e67739ba0fba" title="BGC.Web.AWSServer.PostFile\lToAWS" alt="" coords="275,57,482,98"/>
+<area shape="rect" id="node4" href="$class_b_g_c_1_1_i_o_1_1_utility.html#aff369145371dd43d57834c819fbf4407" title="Move file from the source path to the destination path. " alt="" coords="293,123,464,149"/>
+<area shape="rect" id="node5" href="$class_b_g_c_1_1_utility_1_1_reserved_files.html#ab9eb4428a3a153e79b3cebd7642de20a" title="UnReserve a file if found " alt="" coords="288,174,469,215"/>
+<area shape="rect" id="node6" href="$class_b_g_c_1_1_i_o_1_1_log_directories.html#adeec8252558186fe559feb87fe2b9c26" title="Get the path to the user in the permanent directory. This automatically creates a directory if it doe..." alt="" coords="284,239,473,281"/>
+</map>
