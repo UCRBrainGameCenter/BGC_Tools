@@ -30,14 +30,9 @@ namespace BGC.Utility
         /// <param name="serverPath"></param>
         private static void migrateUser(string userName, string bucket, string serverPath)
         {
-            string stagingPath = Path.Combine(LogDirectories.StagingDirectory, userName);
-            string permanentPath = Path.Combine(LogDirectories.PermanentDirectory, userName);
+            string stagingPath = LogDirectories.UserStagingDirectory(userName);
+            string permanentPath = LogDirectories.UserPermanentDirectory(userName);
             string[] files = Directory.GetFiles(stagingPath);
-
-            if(Directory.Exists(permanentPath) == false)
-            {
-                Directory.CreateDirectory(permanentPath);
-            }
 
             for (int i = 0; i < files.Length; ++i)
             {
@@ -53,17 +48,11 @@ namespace BGC.Utility
                 AWSServer.PostFileToAWS(
                     stagingFile,
                     bucket,
-                    serverPath + "/" + fileName,
+                    AWSServer.Combine(serverPath, fileName),
                     (bool error) => {
                         if (error == false)
                         {
-                            string permanentFile = Path.Combine(permanentPath, fileName);
-                            if (File.Exists(permanentFile))
-                            {
-                                File.Delete(permanentFile);
-                            }
-
-                            File.Move(stagingFile, permanentFile);
+                            IO.Utility.SafeMove(stagingFile, Path.Combine(permanentPath, fileName));
                         }
                     });
             }

@@ -50,7 +50,7 @@ namespace BGC.Web.Utility
                 request.SetRequestHeader(pair.Key, pair.Value);
             }
 
-            yield return request.Send();
+            yield return request.SendWebRequest();
             callBack?.Invoke(request.isNetworkError);
         }
     }

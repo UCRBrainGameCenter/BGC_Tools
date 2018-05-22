@@ -1,8 +1,9 @@
 ﻿using BGC.Utility;
 using UnityEngine;
-using LightJson;
 using System.Linq;
+using LightJson;
 using System.IO;
+using BGC.Web;
 using System;
 
 namespace BGC.IO.Logging
@@ -148,8 +149,22 @@ namespace BGC.IO.Logging
             {
                 logger.Close();
                 logger = null;
+                ReservedFiles.UnReserveFile(path);
 
-                ReservedFiles.UnReserveFile(path, userName, bucket, serverPath);
+                #if UNITY_EDITOR
+                    AWSServer.PostFileToAWS(
+                        path, 
+                        bucket, 
+                        AWSServer.Combine(serverPath, Path.GetFileName(path)),
+                        (bool error) => {
+                            if(error == false)
+                            {
+                                Utility.SafeMove(path, Path.Combine(
+                                    LogDirectories.UserPermanentDirectory(userName),
+                                    Path.GetFileName(path)));
+                            }
+                        });
+                #endif
             }
         }
 

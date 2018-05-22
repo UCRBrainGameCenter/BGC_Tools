@@ -22,6 +22,7 @@ namespace BGC.Web
             public const string Content = "content";
         }
 
+        public const string PathSeparator = "/";
         public const string ApiUrl = "https://kukp0cevff.execute-api.us-east-2.amazonaws.com/prod/post_file_to_s3";
         public const string ApiKey = "eQtoU42BkJ697U9t74dQH73fjxdfcy7p70Rvs1Ft";
         public const string CacheControl = "no-cache";
@@ -98,6 +99,16 @@ namespace BGC.Web
                 headers,
                 body.ToString(),
                 callBack);
+        }
+
+        /// <summary>
+        /// Combine two strings to form a path in AWS
+        /// </summary>
+        /// <param name="str"></param>
+        /// <returns>a + "/" + b</returns>
+        public static string Combine(string a, string b)
+        {
+            return a + PathSeparator + b;
         }
 
         private static bool containsBGCExtension(string path)

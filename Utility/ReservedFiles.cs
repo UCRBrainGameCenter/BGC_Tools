@@ -42,47 +42,6 @@ namespace BGC.Utility
         }
 
         /// <summary>
-        /// Unreserve a file and push it to the server
-        /// </summary>
-        /// <param name="path"></param>
-        /// <param name=""></param>
-        /// <returns></returns>
-        public static bool UnReserveFile(string path, string userName, string bucket, string serverPath)
-        {
-            bool removed = UnReserveFile(path);
-
-            #if !UNITY_EDITOR
-                AWSServer.PostFileToAWS(
-                    path, 
-                    bucket, 
-                    serverPath + "/" + Path.GetFileName(path),
-                    (bool error) => {
-                        // move file from staging to permament on no error
-                        if(error == false)
-                        {
-                            // @note: duplicate code from LogFilesToS3
-                            string permanentPath = Path.Combine(LogDirectories.PermanentDirectory, userName);
-                            if (Directory.Exists(permanentPath))
-                            {
-                                Directory.CreateDirectory(permanentPath);
-                            }
-
-                            permanentPath = Path.Combine(permanentPath, Path.GetFileName(path));
-
-                            if (File.Exists(permanentPath))
-                            {
-                                File.Delete(permanentPath);
-                            }
-
-                            File.Move(path, permanentPath);
-                        }
-                    });
-            #endif
-
-            return removed;
-        }
-
-        /// <summary>
         /// Returns if the path is currently reserved
         /// </summary>
         /// <param name="path"></param>
