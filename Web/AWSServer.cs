@@ -4,6 +4,7 @@ using UnityEngine;
 using System.IO;
 using LightJson;
 using System;
+using UnityEngine.Networking;
 
 namespace BGC.Web
 {
@@ -34,12 +35,12 @@ namespace BGC.Web
             string filePath,
             string bucket,
             string serverPath,
-            Action<bool> callBack = null)
+            Action<UnityWebRequest> callBack = null)
         {
             if (File.Exists(filePath) == false)
             {
                 Debug.LogError(filePath + " is not a file.");
-                callBack?.Invoke(true);
+                callBack?.Invoke(null);
 
                 return;
             }
@@ -47,7 +48,7 @@ namespace BGC.Web
             if (containsBGCExtension(filePath) == false)
             {
                 Debug.LogError("file " + filePath + " must have the bgc extension.");
-                callBack?.Invoke(true);
+                callBack?.Invoke(null);
 
                 return;
             }
@@ -75,12 +76,12 @@ namespace BGC.Web
             string fileContents,
             string bucket,
             string serverPath,
-            Action<bool> callBack = null)
+            Action<UnityWebRequest> callBack = null)
         {
             if (containsBGCExtension(serverPath) == false)
             {
                 Debug.LogError("server path " + serverPath + " must have a bgc extension \".bgc\"");
-                callBack?.Invoke(true);
+                callBack?.Invoke(null);
 
                 return;
             }

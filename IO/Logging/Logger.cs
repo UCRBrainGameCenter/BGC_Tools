@@ -151,7 +151,7 @@ namespace BGC.IO.Logging
                 logger = null;
                 ReservedFiles.UnReserveFile(path);
 
-                #if UNITY_EDITOR
+                #if !UNITY_EDITOR
                     AWSServer.PostFileToAWS(
                         path, 
                         bucket, 

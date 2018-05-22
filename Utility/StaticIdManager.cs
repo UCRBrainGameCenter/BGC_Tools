@@ -1,15 +1,15 @@
 ﻿namespace BGC.Utility
 {
-    public class IdManager
+    public static class StaticIdManager
     {
-        private int count = -1;
+        private static int count = -1;
 
-        public void Reset()
+        public static void Reset()
         {
             count = -1;
         }
 
-        public int GetId()
+        public static int GetId()
         {
             ++count;
             return count;

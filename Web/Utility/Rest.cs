@@ -20,7 +20,7 @@ namespace BGC.Web.Utility
             string url,
             Dictionary<string, string> headers, 
             string body, 
-            Action<bool> callBack = null)
+            Action<UnityWebRequest> callBack = null)
         {
             CoroutineUtility.Mono.StartCoroutine(runPost(
                 url,
@@ -41,7 +41,7 @@ namespace BGC.Web.Utility
             string url, 
             Dictionary<string, string> headers, 
             string body,
-            Action<bool> callBack)
+            Action<UnityWebRequest> callBack)
         {
             UnityWebRequest request = new UnityWebRequest(url, "POST");
             request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
@@ -51,7 +51,7 @@ namespace BGC.Web.Utility
             }
 
             yield return request.SendWebRequest();
-            callBack?.Invoke(request.isNetworkError);
+            callBack?.Invoke(request);
         }
     }
 }

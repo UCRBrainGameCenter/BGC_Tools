@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using BGC.Web;
 using BGC.IO;
+using UnityEngine.Networking;
 
 namespace BGC.Utility
 {
@@ -37,20 +38,18 @@ namespace BGC.Utility
             for (int i = 0; i < files.Length; ++i)
             {
                 string stagingFile = Path.Combine(stagingPath, files[i]);
-                string fileName = Path.GetFileName(stagingFile);
-
-                // skip files in use
                 if (ReservedFiles.IsFileReserved(stagingFile))
                 {
                     continue;
                 }
 
+                string fileName = Path.GetFileName(stagingFile);
                 AWSServer.PostFileToAWS(
                     stagingFile,
                     bucket,
                     AWSServer.Combine(serverPath, fileName),
-                    (bool error) => {
-                        if (error == false)
+                    (UnityWebRequest request) => {
+                        if (request.responseCode == 200)
                         {
                             IO.Utility.SafeMove(stagingFile, Path.Combine(permanentPath, fileName));
                         }
