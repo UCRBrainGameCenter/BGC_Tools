@@ -1,4 +1,5 @@
 ﻿using System;
+using UnityEngine;
 
 namespace BGC.StateMachine
 {
@@ -150,7 +151,7 @@ namespace BGC.StateMachine
         {
             if (verbose)
             {
-                Console.WriteLine(Name + " entered.");
+                Debug.Log(Name + " entered.");
             }
         }
 
@@ -161,7 +162,7 @@ namespace BGC.StateMachine
         {
             if (verbose)
             {
-                Console.WriteLine(Name + " left.");
+                Debug.Log(Name + " left.");
             }
         }
     }

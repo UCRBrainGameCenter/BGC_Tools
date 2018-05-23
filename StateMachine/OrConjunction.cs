@@ -2,7 +2,7 @@
 
 namespace BGC.StateMachine
 {
-    class OrConjunction : TransitionCondition
+    public class OrConjunction : TransitionCondition
     {
         private TransitionCondition[] conditions;
 

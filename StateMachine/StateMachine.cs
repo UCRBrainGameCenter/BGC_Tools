@@ -3,7 +3,7 @@ using System;
 
 namespace BGC.StateMachine
 {
-    class StateMachine
+    public class StateMachine
     {
         private enum TransitionType
         {
@@ -103,6 +103,7 @@ namespace BGC.StateMachine
 
         /// <summary>
         /// Get a boolean that can affect transitions
+        /// Warning: Should only be called from State!
         /// </summary>
         /// <param name="key"></param>
         /// <returns>Value of the key. False is default if value is not found.</returns>
@@ -112,7 +113,7 @@ namespace BGC.StateMachine
         }
 
         /// <summary>
-        /// Add a triggerthat can cause the state machine to go to the next state
+        /// Add a trigger that can cause the state machine to go to the next state
         /// </summary>
         /// <param name="key"></param>
         /// <returns>True if the trigger was added</returns>
@@ -123,6 +124,7 @@ namespace BGC.StateMachine
 
         /// <summary>
         /// Activate a trigger to move the state machine forward
+        /// Warning: Should only be called from State!
         /// </summary>
         /// <param name="key"></param>
         /// <returns>True if the trigger was succesfully activated</returns>
@@ -134,6 +136,7 @@ namespace BGC.StateMachine
 
         /// <summary>
         /// Set a boolean that can affect transitions
+        /// Warning: Should only be called from State!
         /// </summary>
         /// <param name="key"></param>
         /// <param name="value"></param>
@@ -144,6 +147,12 @@ namespace BGC.StateMachine
             transition();
         }
 
+        /// <summary>
+        /// Gets a trigger value
+        /// Warning: Should only be called from State!
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
         public bool GetTrigger(string key)
         {
             return stateData.GetTrigger(key);
