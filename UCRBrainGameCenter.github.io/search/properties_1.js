@@ -1,5 +1,0 @@
-var searchData=
-[
-  ['count',['Count',['../class_b_g_c_1_1_data_structures_1_1_generic_1_1_depletable_bag.html#a48f22518db5eaf6841875ad2a9a41dc7',1,'BGC.DataStructures.Generic.DepletableBag.Count()'],['../class_b_g_c_1_1_data_structures_1_1_generic_1_1_depletable_list.html#ac3e78b6862bb4546cf6b65a489738f52',1,'BGC.DataStructures.Generic.DepletableList.Count()'],['../class_b_g_c_1_1_data_structures_1_1_generic_1_1_ring_buffer.html#a67e0d490b9e5591eb7b55d9571772065',1,'BGC.DataStructures.Generic.RingBuffer.Count()'],['../class_light_json_1_1_json_array.html#ab23c268b4e69a1b07ef2199fe9530dab',1,'LightJson.JsonArray.Count()'],['../class_light_json_1_1_json_object.html#a3fbfb46689b9921e984fb3496129964d',1,'LightJson.JsonObject.Count()']]],
-  ['current',['Current',['../class_b_g_c_1_1_data_structures_1_1_generic_1_1_ring_buffer_enum.html#a3e4c52beec4abf12e76726ecb44dd901',1,'BGC.DataStructures.Generic.RingBufferEnum.Current()'],['../class_b_g_c_1_1_data_structures_1_1_generic_1_1_ring_buffer_enum.html#a26bac8acfefd62b9785f5018ef404cb7',1,'BGC.DataStructures.Generic.RingBufferEnum.Current()']]]
-];

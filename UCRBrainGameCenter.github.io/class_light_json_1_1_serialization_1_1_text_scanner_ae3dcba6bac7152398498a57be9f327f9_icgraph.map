@@ -1,8 +1,0 @@
-<map id="LightJson.Serialization.TextScanner.Peek" name="LightJson.Serialization.TextScanner.Peek">
-<area shape="rect" id="node2" href="$class_light_json_1_1_serialization_1_1_json_reader.html#ab295d9a5035ee7935bdaaba08270f1bd" title="LightJson.Serialization.\lJsonReader.ReadArray" alt="" coords="225,5,384,47"/>
-<area shape="rect" id="node3" href="$class_light_json_1_1_serialization_1_1_json_reader.html#a2ac4848233a75b7c176b7e89b277ab03" title="LightJson.Serialization.\lJsonReader.ReadBoolean" alt="" coords="217,71,392,112"/>
-<area shape="rect" id="node4" href="$class_light_json_1_1_serialization_1_1_json_reader.html#ad4916156263a48664d6f4777eec6d89e" title="LightJson.Serialization.\lJsonReader.ReadDigits" alt="" coords="224,136,385,177"/>
-<area shape="rect" id="node5" href="$class_light_json_1_1_serialization_1_1_json_reader.html#abd62f714b0ce55859dabb2820fbd6211" title="LightJson.Serialization.\lJsonReader.ReadJsonValue" alt="" coords="211,201,399,243"/>
-<area shape="rect" id="node6" href="$class_light_json_1_1_serialization_1_1_json_reader.html#af4a896938f914c06abc67949e966451e" title="LightJson.Serialization.\lJsonReader.ReadNumber" alt="" coords="218,267,391,308"/>
-<area shape="rect" id="node7" href="$class_light_json_1_1_serialization_1_1_json_reader.html#a78418f68dd5d787d4ba1e473f60a7a8a" title="LightJson.Serialization.\lJsonReader.ReadObject" alt="" coords="222,332,387,373"/>
-</map>

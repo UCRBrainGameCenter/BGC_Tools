@@ -1,6 +1,0 @@
-<map id="BGC.DataStructures.Generic.IDepletable&lt; T &gt;" name="BGC.DataStructures.Generic.IDepletable&lt; T &gt;">
-<area shape="rect" id="node4" href="$class_b_g_c_1_1_data_structures_1_1_generic_1_1_depletable_bag.html" title="An unstable&#45;sort set structure that acts as a select&#45;without&#45;replace bag. " alt="" coords="424,5,624,47"/>
-<area shape="rect" id="node5" href="$class_b_g_c_1_1_data_structures_1_1_generic_1_1_depletable_list.html" title="A depletable/refillable set with an underlying list and defined order. " alt="" coords="425,71,623,112"/>
-<area shape="rect" id="node2" href="$class_i_enumerable.html" title="IEnumerable\&lt; T \&gt;" alt="" coords="5,21,132,47"/>
-<area shape="rect" id="node3" href="$class_i_collection.html" title="ICollection\&lt; T \&gt;" alt="" coords="11,71,127,98"/>
-</map>

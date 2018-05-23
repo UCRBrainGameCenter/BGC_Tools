@@ -1,5 +1,0 @@
-<map id="BGC.Web.AWSServer.PostToAWS" name="BGC.Web.AWSServer.PostToAWS">
-<area shape="rect" id="node2" href="$class_light_json_1_1_json_object.html#a6e1c73338d5bc119f44b49b15bbedd87" title="Adds a key with a null value to this collection. " alt="" coords="299,5,473,32"/>
-<area shape="rect" id="node3" href="$class_b_g_c_1_1_web_1_1_utility_1_1_rest.html#aec647e4911e112f3ba049a93d4e87002" title="Send a post request " alt="" coords="295,57,477,98"/>
-<area shape="rect" id="node4" href="$class_light_json_1_1_json_object.html#a6fb02c496d1126ea498b0061c0ec2ace" title="Returns a JSON string representing the state of the object. " alt="" coords="285,123,487,149"/>
-</map>

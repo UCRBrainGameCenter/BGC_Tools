@@ -1,8 +1,0 @@
-var searchData=
-[
-  ['value',['Value',['../struct_b_g_c_1_1_data_structures_1_1_generic_1_1_node.html#ae14312160354d6aca38e1894ec2d28d4',1,'BGC.DataStructures.Generic.Node.Value()'],['../class_light_json_1_1_json_object_1_1_json_object_debug_view_1_1_key_value_pair.html#a46812e5e9eab7ce4577f10d604cd6fa8',1,'LightJson.JsonObject.JsonObjectDebugView.KeyValuePair.value()'],['../struct_light_json_1_1_json_value.html#a3a87987b706dcef7d797afb456d0ec99',1,'LightJson.JsonValue.value()']]],
-  ['valuedepleted',['valueDepleted',['../class_b_g_c_1_1_data_structures_1_1_generic_1_1_depletable_list.html#a4440d079ee95f5d24ef65ef88a9adcb7',1,'BGC::DataStructures::Generic::DepletableList']]],
-  ['valuemapping',['ValueMapping',['../class_b_g_c_1_1_i_o_1_1_logging_1_1_logging_keys.html#aeb0f7b104b5725799dbb5514ac321227',1,'BGC::IO::Logging::LoggingKeys']]],
-  ['values',['values',['../class_b_g_c_1_1_data_structures_1_1_generic_1_1_depletable_bag.html#a0dbf26ad9db841cb8029feacf2112a8e',1,'BGC.DataStructures.Generic.DepletableBag.values()'],['../class_b_g_c_1_1_data_structures_1_1_generic_1_1_depletable_list.html#a9f6871b3fed8430f280f1403e64ad379',1,'BGC.DataStructures.Generic.DepletableList.values()'],['../class_b_g_c_1_1_data_structures_1_1_generic_1_1_ring_buffer.html#a19845a730bda6ff074bf6faaa5f64747',1,'BGC.DataStructures.Generic.RingBuffer.values()'],['../class_b_g_c_1_1_data_structures_1_1_generic_1_1_ring_buffer_enum.html#aced3719f973c32a92dd47c99a314312c',1,'BGC.DataStructures.Generic.RingBufferEnum.values()']]],
-  ['version',['Version',['../class_b_g_c_1_1_i_o_1_1_logging_1_1_logging_keys.html#a6ef397c5e00c48aa31a397609d1df1ab',1,'BGC::IO::Logging::LoggingKeys']]]
-];

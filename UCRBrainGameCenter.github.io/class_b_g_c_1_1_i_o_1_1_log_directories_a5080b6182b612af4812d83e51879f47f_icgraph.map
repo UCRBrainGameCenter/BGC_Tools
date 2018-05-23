@@ -1,4 +1,0 @@
-<map id="BGC.IO.LogDirectories.UserStagingDirectory" name="BGC.IO.LogDirectories.UserStagingDirectory">
-<area shape="rect" id="node2" href="$class_b_g_c_1_1_utility_1_1_log_files_tos3.html#ae3a4bfecf89694962efbf727904b8e13" title="Migrate user logs from staging to permanent on succesful upload to s3 " alt="" coords="243,5,489,32"/>
-<area shape="rect" id="node3" href="$class_b_g_c_1_1_i_o_1_1_logging_1_1_logger.html#a8e3d2b4713248800d39bda7b2a782c7e" title="BGC.IO.Logging.Logger.Path\lForLogFile" alt="" coords="270,57,462,98"/>
-</map>

@@ -1,6 +1,0 @@
-<map id="LightJson.Serialization.JsonReader.Parse" name="LightJson.Serialization.JsonReader.Parse">
-<area shape="rect" id="node2" href="$class_light_json_1_1_serialization_1_1_json_reader.html#aad2988e1ffdc33d25ee8e9cdc6c6f1e5" title="Creates a JsonValue by using the given TextReader. " alt="" coords="223,5,380,47"/>
-<area shape="rect" id="node3" href="$struct_light_json_1_1_json_value.html#a393b65df7ad4dc774a6eb5cdea26aecb" title="Returns a JsonValue by parsing the given string. " alt="" coords="211,71,392,98"/>
-<area shape="rect" id="node4" href="$class_light_json_1_1_serialization_1_1_json_reader.html#a95a87d70bbe7763caab326c72317cfb5" title="Creates a JsonValue by reading the given file. " alt="" coords="223,123,380,164"/>
-<area shape="rect" id="node5" href="$class_b_g_c_1_1_i_o_1_1_file_reader.html#ab92af1798c24dc57622a6d22faabc095" title="Gives two callbacks for when a file is not found and for when a file has been succesfully parsed into..." alt="" coords="440,130,660,157"/>
-</map>
