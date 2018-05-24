@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System;
+using UnityEngine;
 
 namespace BGC.StateMachine
 {
@@ -229,7 +230,7 @@ namespace BGC.StateMachine
         {
             if (verbose)
             {
-                Console.WriteLine(str);
+                Debug.Log(str);
             }
         }
     }

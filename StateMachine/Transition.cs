@@ -14,13 +14,7 @@ namespace BGC.StateMachine
         /// <summary>
         /// Get name of the state this transition goes to
         /// </summary>
-        public string TargetState
-        {
-            get
-            {
-                return targetState.Name;
-            }
-        }
+        public string TargetState => targetState.Name;
 
         /// <summary>
         /// Construct abstract transtion to define path
