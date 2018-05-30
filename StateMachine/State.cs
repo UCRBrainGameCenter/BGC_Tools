@@ -80,17 +80,17 @@ namespace BGC.StateMachine
 
             if (this.getTrigger == null)
             {
-                throw new ArgumentNullException("getTrigger function cannot be null");
+                throw new ArgumentNullException("getTrigger function cannot be null.");
             }
 
             if (this.setBool == null)
             {
-                throw new ArgumentNullException("setBool function cannot be null");
+                throw new ArgumentNullException("setBool function cannot be null.");
             }
 
             if (this.getBool == null)
             {
-                throw new ArgumentNullException("getBool function cannot be null");
+                throw new ArgumentNullException("getBool function cannot be null.");
             }
         }
 

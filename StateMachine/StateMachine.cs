@@ -182,6 +182,11 @@ namespace BGC.StateMachine
             currentState = entryState;
         }
 
+        public string CurrentState()
+        {
+            return currentState;
+        }
+
         private Transition shouldTransition()
         {
             for (int i = 0; i < anyStateTransitions.Count; ++i)
