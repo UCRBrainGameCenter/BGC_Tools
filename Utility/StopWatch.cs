@@ -44,12 +44,12 @@ namespace BGC.Utility
         {
             if (startTimes.ContainsKey(id) == false)
             {
-                throw new ArgumentException(id + " did not have a timer started.");
+                throw new ArgumentException($"{id} did not have a timer started.");
             }
 
             if (endTimes.ContainsKey(id) == false)
             {
-                throw new ArgumentException(id + " did not have a timer ended.");
+                throw new ArgumentException($"{id} did not have a timer ended.");
             }
 
             return endTimes[id] - startTimes[id];
@@ -75,11 +75,11 @@ namespace BGC.Utility
 
             if (startTimes.ContainsKey(id) == false)
             {
-                throw new ArgumentOutOfRangeException(id + " did not have a timer started.");
+                throw new ArgumentOutOfRangeException($"{id} did not have a timer started.");
             }
             else if (endTimes.ContainsKey(id))
             {
-                throw new ArgumentException(id + " has already had its timer ended.");
+                throw new ArgumentException($"{id} has already had its timer ended.");
             }
 
             endTimes.Add(id, endTime);

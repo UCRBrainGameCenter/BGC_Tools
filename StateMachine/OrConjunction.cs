@@ -17,7 +17,7 @@ namespace BGC.StateMachine
             {
                 if (conditions[i] == null)
                 {
-                    throw new ArgumentNullException("OrConjunction conditions element " + i + " is null and should not be.");
+                    throw new ArgumentNullException($"OrConjunction conditions element {i} is null and should not be.");
                 }
             }
 

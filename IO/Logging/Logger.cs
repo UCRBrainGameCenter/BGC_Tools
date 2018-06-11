@@ -110,7 +110,7 @@ namespace BGC.IO.Logging
         {
             if (logger != null)
             {
-                throw new InvalidOperationException("Must close the current file before opening a new one for: " + path);
+                throw new InvalidOperationException("Must close the current file before opening a new one for: {path}.");
             }
 
             switch (type)
@@ -125,7 +125,7 @@ namespace BGC.IO.Logging
                     path = GetExceptionFileName();
                     break;
                 default:
-                    throw new InvalidDataException("Log type " + type + " is invalid");
+                    throw new InvalidDataException($"Log type {type} is invalid.");
             }
 
             ReservedFiles.ReserveFile(path);
@@ -191,10 +191,9 @@ namespace BGC.IO.Logging
 
         protected string GetExceptionFileName()
         {
-            return Path.Combine(LogDirectories.ExceptionDirectory, string.Format(
-                "{0}_{1}" + bgcExtension,
-                "Exception",
-                DateTime.Now.ToString(dateTimeFormat)));
+            return Path.Combine(
+                LogDirectories.ExceptionDirectory,
+                $"Exception_{DateTime.Now.ToString(dateTimeFormat)}{bgcExtension}");
         }
 
         protected string PathForLogFile(string userName, string filename)

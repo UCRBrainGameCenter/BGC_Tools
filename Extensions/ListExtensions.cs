@@ -310,7 +310,7 @@ namespace BGC.Extensions
         {
             for (int i = 0; i < list.Count; ++i)
             {
-                Debug.Log(i + ") " + list[i]);
+                Debug.Log($"{i}) {list[i]}");
             }
         }
 

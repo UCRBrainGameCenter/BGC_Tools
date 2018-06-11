@@ -151,7 +151,7 @@ namespace BGC.StateMachine
         {
             if (verbose)
             {
-                Debug.Log(Name + " entered.");
+                Debug.Log($"{Name} entered.");
             }
         }
 
@@ -162,7 +162,7 @@ namespace BGC.StateMachine
         {
             if (verbose)
             {
-                Debug.Log(Name + " left.");
+                Debug.Log($"{Name} left.");
             }
         }
     }

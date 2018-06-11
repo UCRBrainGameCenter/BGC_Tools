@@ -198,7 +198,7 @@ namespace BGC.UI
         {
             if (color > 1f || color < 0f)
             {
-                Debug.LogWarning(colorType + " should be set between 0 and 1");
+                Debug.LogWarning($"{colorType} should be set between 0 and 1");
                 Mathf.Clamp(color, 0f, 1f);
             }
         }

@@ -36,7 +36,7 @@ namespace BGC.StateMachine
             {
                 if (transitionConditions[i] == null)
                 {
-                    throw new ArgumentNullException("Transition conditions element " + i + " is null and should not be.");
+                    throw new ArgumentNullException($"Transition conditions element {i} is null and should not be.");
                 }
             }
 

@@ -54,8 +54,8 @@ namespace BGC.StateMachine
             if (entryState != null)
             {
                 throw new ArgumentException(
-                    state.Name + " cannot be made the entry state because " +
-                    entryState + " was already defined as the entry state.");
+                    $"{state.Name} cannot be made the entry state because " +
+                    $"{entryState} was already defined as the entry state.");
             }
 
             AddState(state);

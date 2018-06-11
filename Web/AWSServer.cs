@@ -39,15 +39,15 @@ namespace BGC.Web
         {
             if (File.Exists(filePath) == false)
             {
-                Debug.LogError(filePath + " is not a file.");
+                Debug.LogError($"{filePath} is not a file.");
                 callBack?.Invoke(null);
 
                 return;
             }
 
-            if (containsBGCExtension(filePath) == false)
+            if (ContainsBGCExtension(filePath) == false)
             {
-                Debug.LogError("file " + filePath + " must have the bgc extension.");
+                Debug.LogError($"file {filePath} must have the bgc extension.");
                 callBack?.Invoke(null);
 
                 return;
@@ -78,9 +78,9 @@ namespace BGC.Web
             string serverPath,
             Action<UnityWebRequest> callBack = null)
         {
-            if (containsBGCExtension(serverPath) == false)
+            if (ContainsBGCExtension(serverPath) == false)
             {
-                Debug.LogError("server path " + serverPath + " must have a bgc extension \".bgc\"");
+                Debug.LogError($"server path {serverPath} must have a bgc extension \".bgc\"");
                 callBack?.Invoke(null);
 
                 return;
@@ -109,10 +109,10 @@ namespace BGC.Web
         /// <returns>a + "/" + b</returns>
         public static string Combine(string a, string b)
         {
-            return a + PathSeparator + b;
+            return $"{a}{PathSeparator}{b}";
         }
 
-        private static bool containsBGCExtension(string path)
+        private static bool ContainsBGCExtension(string path)
         {
             return Path.HasExtension(BGCExtension);
         }
