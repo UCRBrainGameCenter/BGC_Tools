@@ -1,4 +1,5 @@
-﻿using BGC.Utility;
+﻿using UnityEngine.Networking;
+using BGC.Utility;
 using UnityEngine;
 using System.Linq;
 using LightJson;
@@ -156,8 +157,8 @@ namespace BGC.IO.Logging
                         path, 
                         bucket, 
                         AWSServer.Combine(serverPath, Path.GetFileName(path)),
-                        (bool error) => {
-                            if(error == false)
+                        (UnityWebRequest request) => {
+                            if(request.isNetworkError == false)
                             {
                                 Utility.SafeMove(path, Path.Combine(
                                     LogDirectories.UserPermanentDirectory(userName),
