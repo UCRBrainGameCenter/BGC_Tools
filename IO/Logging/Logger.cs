@@ -31,6 +31,7 @@ namespace BGC.IO.Logging
         private readonly string userName;
         private readonly int sessionNumber;
         private readonly int runNumber;
+        private readonly bool pushToServer;
 
         public abstract string Name { get; }
 
@@ -41,6 +42,7 @@ namespace BGC.IO.Logging
             string userName,
             int sessionNumber,
             int runNumber,
+            bool pushToServer,
             string delimiter = "|")
         {
             this.type               = type;
@@ -49,6 +51,7 @@ namespace BGC.IO.Logging
             this.userName           = userName;
             this.sessionNumber      = sessionNumber;
             this.runNumber          = runNumber;
+            this.pushToServer       = pushToServer;
             this.delimiter          = delimiter;
         }
 
@@ -152,7 +155,9 @@ namespace BGC.IO.Logging
                 logger = null;
                 ReservedFiles.UnReserveFile(path);
 
-                #if !UNITY_EDITOR
+                #if UNITY_EDITOR
+                if(pushToServer == true)
+                {
                     AWSServer.PostFileToAWS(
                         path, 
                         bucket, 
@@ -165,6 +170,7 @@ namespace BGC.IO.Logging
                                     Path.GetFileName(path)));
                             }
                         });
+                }
                 #endif
             }
         }
