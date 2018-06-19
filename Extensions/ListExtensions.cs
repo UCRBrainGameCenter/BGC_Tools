@@ -51,7 +51,7 @@ namespace BGC.Extensions
         /// <param name="list"></param>
         /// <param name="excludeIndex"></param>
         /// <returns></returns>
-        public static T RandomValue<T>(this IList list, int excludeIndex)
+        public static T RandomValue<T>(this IList list, params int[] excludeIndex)
         {
             if (list.Count == 0)
             {
@@ -63,10 +63,13 @@ namespace BGC.Extensions
             }
 
             //Range for ints is exclusive high-bound inclusive low-bound
-            int index = Random.Range(0, list.Count - 1);
-            if (index >= excludeIndex)
+            int index = Random.Range(0, list.Count - excludeIndex.Length);
+            for(int i = 0; i < excludeIndex.Length; ++i)
             {
-                index++;
+                if(index >= excludeIndex[i])
+                {
+                    index++;
+                }
             }
 
             return (T)list[index];
