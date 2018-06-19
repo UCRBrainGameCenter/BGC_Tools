@@ -58,30 +58,29 @@ namespace BGC.Extensions
                 Debug.LogError(
                     "Received list of length 0 which doesn't allow for random value, " +
                     "returning default value");
-
                 return default(T);
             }
 
-            if(list.Count <= excludeIndicies.Length)
+            List<int> indexes = new List<int>();
+            for (int i = 0; i < list.Count; ++i)
             {
-                Debug.LogError
-                    ("Recieved array of indicies that is equal to or greater than the number of values in the list, "
-                    + "return default value");
-
-                return default(T);
-            }
-
-            //Range for ints is exclusive high-bound inclusive low-bound
-            int index = Random.Range(0, list.Count - excludeIndicies.Length);
-            for(int i = 0; i < excludeIndicies.Length; ++i)
-            {
-                if(index >= excludeIndicies[i])
+                if (excludeIndicies.Contains(i) == false)
                 {
-                    ++index;
+                    indexes.Add(i);
                 }
             }
+        
+            if(indexes.Count == 0)
+            {
+                Debug.LogError(
+                    "Recieved array of excludedIndicies that does not allow for any values to be returned, " +
+                    "returning default value");
 
-            return (T)list[index];
+                return default(T);
+            }
+
+            return (T)list[indexes.RandomValue<int>()];
+
         }
 
         /// <summary>
