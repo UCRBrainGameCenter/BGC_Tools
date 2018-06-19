@@ -62,6 +62,15 @@ namespace BGC.Extensions
                 return default(T);
             }
 
+            if(list.Count <= excludeIndicies.Length)
+            {
+                Debug.LogError
+                    ("Recieved array of indicies that is equal to or greater than the number of values in the list, "
+                    + "return default value");
+
+                return default(T);
+            }
+
             //Range for ints is exclusive high-bound inclusive low-bound
             int index = Random.Range(0, list.Count - excludeIndicies.Length);
             for(int i = 0; i < excludeIndicies.Length; ++i)
