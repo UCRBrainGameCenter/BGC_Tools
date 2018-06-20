@@ -49,27 +49,37 @@ namespace BGC.Extensions
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="list"></param>
-        /// <param name="excludeIndex"></param>
+        /// <param name="excludeIndicies"></param>
         /// <returns></returns>
-        public static T RandomValue<T>(this IList list, int excludeIndex)
+        public static T RandomValue<T>(this IList list, params int[] excludeIndicies)
         {
             if (list.Count == 0)
             {
                 Debug.LogError(
                     "Received list of length 0 which doesn't allow for random value, " +
                     "returning default value");
+                return default(T);
+            }
+
+            List<int> indexes = new List<int>();
+            for (int i = 0; i < list.Count; ++i)
+            {
+                if (excludeIndicies.Contains(i) == false)
+                {
+                    indexes.Add(i);
+                }
+            }
+        
+            if(indexes.Count == 0)
+            {
+                Debug.LogError(
+                    "Recieved array of excludedIndicies that does not allow for any values to be returned, " +
+                    "returning default value");
 
                 return default(T);
             }
 
-            //Range for ints is exclusive high-bound inclusive low-bound
-            int index = Random.Range(0, list.Count - 1);
-            if (index >= excludeIndex)
-            {
-                index++;
-            }
-
-            return (T)list[index];
+            return (T)list[indexes.RandomValue<int>()];
         }
 
         /// <summary>
