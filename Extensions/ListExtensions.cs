@@ -80,7 +80,6 @@ namespace BGC.Extensions
             }
 
             return (T)list[indexes.RandomValue<int>()];
-
         }
 
         /// <summary>
