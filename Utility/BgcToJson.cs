@@ -147,6 +147,18 @@ public static class BgcToJson
             {
                 jsonData.Add(columnMapping[i], data[i]);
             }
+
+            JsonObject valueMapping = metaData[RequiredFields.ValueMapping];
+            if (valueMapping.ContainsKey(columnMapping[i]))
+            {
+                JsonObject mapping = valueMapping[columnMapping[i]];
+                string key = jsonData[columnMapping[i]].AsInteger.ToString();
+
+                if (mapping.ContainsKey(key))
+                {
+                    jsonData[columnMapping[i]] = mapping[key];
+                }
+            }
         }
 
         return jsonData;
