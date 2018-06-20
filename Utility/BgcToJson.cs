@@ -51,6 +51,7 @@ public static class BgcToJson
             data.Add(ConvertLine(metaData, delimiter, bgc[i]));
         }
 
+        RemoveRedundantMetaData(metaData);
         json.Add(RequiredFields.MetaData, metaData);
         json.Add(RequiredFields.Data, data);
 
