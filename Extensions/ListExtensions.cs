@@ -344,5 +344,51 @@ namespace BGC.Extensions
 
             return instances;
         }
+
+        /// <summary>
+        /// Join a list into a string with a separator of the users choice
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="separator"></param>
+        /// <returns></returns>
+        public static string Join<T>(this List<T> list, string separator)
+        {
+            if (list.Count == 0)
+            {
+                return "";
+            }
+
+            string result = list[0].ToString(); ;
+            for (int i = 1; i < list.Count; ++i)
+            {
+                result = $"{result}{separator}{list[i].ToString()}";
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        ///  Join an array into a string with a separator of the users choice
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="arr"></param>
+        /// <param name="separator"></param>
+        /// <returns></returns>
+        public static string Join<T>(this T[] arr, string separator)
+        {
+            if(arr.Length == 0)
+            {
+                return "";
+            }
+
+            string result = arr[0].ToString(); ;
+            for (int i = 1; i < arr.Length; ++i)
+            {
+                result = $"{result}{separator}{arr[i].ToString()}";
+            }
+
+            return result;
+        }
     }
 }
