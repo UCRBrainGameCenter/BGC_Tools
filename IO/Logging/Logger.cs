@@ -57,12 +57,7 @@ namespace BGC.IO.Logging
 
         ~Logger()
         {
-            if(logger != null)
-            {
-                logger.Close();
-            }
-
-            ReservedFiles.UnReserveFile(path);
+            CloseFile();
         }
 
         protected abstract JsonObject ConstructColumnMapping();
