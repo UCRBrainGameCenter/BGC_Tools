@@ -30,10 +30,10 @@ namespace BGC.IO.Logging
         private readonly string applicationVersion;
         private readonly string userName;
         private readonly int sessionNumber;
-        private readonly int runNumber;
         private readonly bool pushToServer;
 
         public abstract string Name { get; }
+        protected abstract int RunNumber { get; }
 
         public Logger(
             LogType type,
@@ -50,7 +50,6 @@ namespace BGC.IO.Logging
             this.applicationVersion = applicationVersion;
             this.userName           = userName;
             this.sessionNumber      = sessionNumber;
-            this.runNumber          = runNumber;
             this.pushToServer       = pushToServer;
             this.delimiter          = delimiter;
         }
@@ -120,7 +119,7 @@ namespace BGC.IO.Logging
             switch (type)
             {
                 case LogType.Regular:
-                    path = GetNewLogName(userName, runNumber, sessionNumber);
+                    path = GetNewLogName(userName, RunNumber, sessionNumber);
                     break;
                 case LogType.Summary:
                     path = GetSummaryFileName(userName, sessionNumber);
@@ -215,7 +214,7 @@ namespace BGC.IO.Logging
             jo.Add(LoggingKeys.UserName,  userName);
             jo.Add(LoggingKeys.DeviceID,  SystemInfo.deviceUniqueIdentifier);
             jo.Add(LoggingKeys.Session,   sessionNumber);
-            jo.Add(LoggingKeys.RunNumber, runNumber);
+            jo.Add(LoggingKeys.RunNumber, RunNumber);
             jo.Add(LoggingKeys.Delimiter, delimiter);
         }
 
