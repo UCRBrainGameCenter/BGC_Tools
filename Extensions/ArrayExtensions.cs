@@ -56,5 +56,17 @@ namespace BGC.Extensions
 
             return newArray;
         }
+
+        public static int[] Indexes<T>(this T[] arr)
+        {
+            int[] indexes = new int[arr.Length];
+
+            for (int i = 0; i < arr.Length; ++i)
+            {
+                indexes[i] = i;
+            }
+
+            return indexes;
+        }
     }
 }
