@@ -10,6 +10,37 @@ namespace BGC.UI
         private const string alpha = "Alpha";
 
         /// <summary>
+        /// Formats to Hex with undercase char and 2-digit place
+        /// </summary>
+        private const string HexFormat = "x2";
+
+        public static string ColorToHex(this Color color)
+        {
+            string hex = "0x";
+            hex += color.r.ToString(HexFormat);
+            hex += color.g.ToString(HexFormat);
+            hex += color.b.ToString(HexFormat);
+            hex += color.a.ToString(HexFormat);
+
+            return hex;
+        }
+
+        public static Color HexToColor(string hex)
+        {
+            Color color = new Color();
+            hex.Remove(0, 2);
+            color.r = int.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
+            hex.Remove(0, 2);
+            color.g = int.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
+            hex.Remove(0, 2);
+            color.b = int.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
+            hex.Remove(0, 2);
+            color.a = int.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
+
+            return color;
+        }
+
+        /// <summary>
         /// Set Red of the color
         /// </summary>
         /// <param name="color"></param>

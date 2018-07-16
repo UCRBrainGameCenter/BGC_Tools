@@ -1,7 +1,11 @@
-﻿namespace BGC.IO
+﻿using BGC.Extensions;
+
+namespace BGC.IO
 {
     public static class FilePath
     {
+        private const string ResourcesDirectory = "Resources";
+        private const char FileDelimiter = '/';
         /// <summary>
         /// Replace all invalid characters for a file with an empty value unless you 
         /// specificy otherwise
@@ -16,6 +20,23 @@
             {
                 path = path.Replace(invalidCharacters[i].ToString(), replacementValue);
             }
+        }
+
+        public static bool GetValidResourcePath(ref string path)
+        {
+            string[] Dirs = path.Split(FileDelimiter);
+            for(int i = 0; i < Dirs.Length; ++i)
+            {
+                if(Dirs[i].Equals(ResourcesDirectory))
+                {
+                    Dirs = Dirs.GetRange(i, Dirs.Length);
+                    path = Dirs.Join(FileDelimiter.ToString());
+
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

@@ -56,5 +56,30 @@ namespace BGC.Extensions
 
             return newArray;
         }
+
+        /// <summary>
+        /// Get a Range of Elements in an Array.
+        /// endIndex is NOT INCLUSIVE
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="array"></param>
+        /// <param name="startIndex"></param>
+        /// <param name="endIndex"></param>
+        /// <returns></returns>
+        public static T[] GetRange<T>(this T[] array, int startIndex, int endIndex = -1)
+        {
+            if(endIndex == -1)
+            {
+                endIndex = array.Length;
+            }
+
+            T[] arr = new T[endIndex - startIndex];
+            for(int i = startIndex; i < endIndex; ++i)
+            {
+                arr[i - startIndex] = array[i];
+            }
+
+            return arr;
+        }
     }
 }
