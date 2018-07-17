@@ -78,7 +78,7 @@ namespace BGC.IO.Logging
         /// a file
         /// </summary>
         /// <param name="line"></param>
-        public void PushLine(params IConvertible[] strings)
+        protected void PushLine(params IConvertible[] strings)
         {
             if (logger == null)
             {
@@ -94,7 +94,7 @@ namespace BGC.IO.Logging
         /// hasn't been opened
         /// </summary>
         /// <param name="str"></param>
-        public void PushString(string str)
+        protected void PushString(string str)
         {
             if (logger == null)
             {
@@ -109,7 +109,7 @@ namespace BGC.IO.Logging
         {
             if (logger != null)
             {
-                throw new InvalidOperationException("Must close the current file before opening a new one for: {path}.");
+                throw new InvalidOperationException($"Must close the current file before opening a new one for \"{path}\"");
             }
 
             switch (type)
