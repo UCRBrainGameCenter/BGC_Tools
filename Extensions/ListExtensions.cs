@@ -390,5 +390,27 @@ namespace BGC.Extensions
 
             return result;
         }
+
+        /// <summary>
+        /// Checks if the list contains the defined value
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="val"></param>
+        /// <returns>True if the list has the defined value</returns>
+        public static bool Conains<T>(IList list, T val)
+        {
+            bool found = false;
+            for (int i = 0; i < list.Count; ++i)
+            {
+                if (list[i].Equals(val))
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            return found;
+        }
     }
 }
