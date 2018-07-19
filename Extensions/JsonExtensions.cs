@@ -39,6 +39,11 @@ namespace BGC.Extensions
 
         public static JsonArray TryGetArray(this JsonObject json, string key)
         {
+            if(json == null)
+            {
+                json = new JsonObject();
+            }
+
             if(json.ContainsKey(key) && json[key].IsJsonArray)
             {
                 return json[key].AsJsonArray;
@@ -49,6 +54,11 @@ namespace BGC.Extensions
 
         public static JsonValue TryGetValue(this JsonObject json, string key)
         {
+            if(json == null)
+            {
+                json = new JsonObject();
+            }
+
             if(json.ContainsKey(key) == false)
             {
                 json.Add(key);

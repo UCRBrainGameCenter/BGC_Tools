@@ -113,6 +113,11 @@ namespace BGC.Utility
                 UnityEngine.Debug.LogError("Enum was not passed");
                 val = default(T);
             }
+            catch(ArgumentNullException)
+            {
+                UnityEngine.Debug.LogWarning("String Empty");
+                val = default(T);
+            }
 
             return val;
         }

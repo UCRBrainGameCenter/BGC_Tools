@@ -390,5 +390,44 @@ namespace BGC.Extensions
 
             return result;
         }
+
+        /// <summary>
+        /// Attempts to get an element from an array and returns it. If not, returns default.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="index"></param>
+        /// <param name="element"></param>
+        /// <returns></returns>
+        public static T TryGetElement<T>(this List<T> list, int index)
+        {
+            if (index < list.Count)
+            {
+                return list[index];
+            }
+            return default(T);
+        }
+
+        /// <summary>
+        /// Attempts to get an element from an array and returns it. If not, returns default.
+        /// Outputs the result to the out parameter
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="index"></param>
+        /// <param name="result"></param>
+        /// <returns></returns>
+        public static T TryGetElement<T>(this List<T> list, int index, out bool result)
+        {
+            if(index < list.Count)
+            {
+                result = true;
+
+                return list[index];
+            }
+            result = false;
+
+            return default(T);
+        }
     }
 }
