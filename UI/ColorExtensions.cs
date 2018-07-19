@@ -12,10 +12,12 @@ namespace BGC.UI
         /// <summary>
         /// Formats to Hex with undercase char and 2-digit place
         /// </summary>
-        private const string HexFormat = "x2";
+        private const string HexFormat = "X";
 
-        public static string ColorToHex(this Color color)
+        public static string ColorToHex(this Color colorBase)
         {
+            Color32 color = colorBase;
+
             string hex = "0x";
             hex += color.r.ToString(HexFormat);
             hex += color.g.ToString(HexFormat);
@@ -27,17 +29,17 @@ namespace BGC.UI
 
         public static Color HexToColor(string hex)
         {
-            Color color = new Color();
+            Color32 color = new Color32();
             hex.Remove(0, 2);
-            color.r = int.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
+            color.r = byte.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
             hex.Remove(0, 2);
-            color.g = int.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
+            color.g = byte.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
             hex.Remove(0, 2);
-            color.b = int.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
+            color.b = byte.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
             hex.Remove(0, 2);
-            color.a = int.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
+            color.a = byte.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
 
-            return color;
+            return (Color)color;
         }
 
         /// <summary>
