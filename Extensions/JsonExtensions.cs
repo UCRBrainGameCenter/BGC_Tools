@@ -40,7 +40,9 @@ namespace BGC.Extensions
         public static JsonArray ConvertToJsonArray<T>(this List<T> list, Func<T, JsonValue> convertToJsonValue)
         {
             JsonArray array = new JsonArray();
-            for(int i = 0; i < list.Count; i++)
+            int length = list.Count;
+
+            for(int i = 0; i < length; i++)
             {
                 array.Add(convertToJsonValue(list[i]));
             }
