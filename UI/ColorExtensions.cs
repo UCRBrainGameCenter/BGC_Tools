@@ -31,13 +31,13 @@ namespace BGC.UI
         {
             Color32 color = new Color32();
             hex = hex.Remove(0, 2);
-            color.r = (byte)int.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
+            color.r = byte.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
             hex = hex.Remove(0, 2);
-            color.g = (byte)int.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
+            color.g = byte.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
             hex = hex.Remove(0, 2);
-            color.b = (byte)int.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
+            color.b = byte.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
             hex = hex.Remove(0, 2);
-            color.a = (byte)int.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
+            color.a = byte.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
 
             return (Color)color;
         }
