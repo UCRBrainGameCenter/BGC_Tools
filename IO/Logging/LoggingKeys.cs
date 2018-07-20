@@ -10,8 +10,9 @@
         public const string RunNumber = "run_number";
         public const string Delimiter = "delimiter";
 
-        public const string ColumnMapping = "column_mapping";
-        public const string DefaultColumn = "default";
-        public const string ValueMapping  = "value_mapping";
+        public const string DefaultColumn     = "default";
+        public const string ValueMapping      = "value_mapping";
+        public const string ColumnMapping     = "column_mapping";
+        public const string AdditionalHeaders = "additional_headers";
     }
 }

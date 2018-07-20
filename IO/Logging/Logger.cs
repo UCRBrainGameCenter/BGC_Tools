@@ -60,16 +60,20 @@ namespace BGC.IO.Logging
             CloseFile();
         }
 
+        protected abstract JsonObject ConstructAdditionalHeaders();
         protected abstract JsonObject ConstructColumnMapping();
         protected abstract JsonObject ConstructValueMapping();
 
         protected void ApplyHeaders()
         {
-            JsonObject header = new JsonObject();
-            ApplyRequiredFields(header);
-            header.Add(LoggingKeys.ColumnMapping, ConstructColumnMapping());
-            header.Add(LoggingKeys.ValueMapping, ConstructValueMapping());
+            JsonObject header = new JsonObject
+            {
+                { LoggingKeys.AdditionalHeaders, ConstructAdditionalHeaders() },
+                { LoggingKeys.ColumnMapping, ConstructColumnMapping() },
+                { LoggingKeys.ValueMapping, ConstructValueMapping() }
+            };
 
+            ApplyRequiredFields(header);
             PushLine(header.ToString());
         }
         
