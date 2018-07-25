@@ -23,6 +23,11 @@ namespace BGC.IO
             }
         }
 
+        /// <summary>
+        /// Checks path and returns true if a valid resource path was found
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
         public static bool GetValidResourcePath(ref string path)
         {
             string[] Dirs = path.Split(FileDelimiter);

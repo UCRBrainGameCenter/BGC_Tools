@@ -81,6 +81,13 @@ namespace BGC.Extensions
 
             return arr;
         }
+
+        /// <summary>
+        /// Gets an array of all the indexes
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="arr"></param>
+        /// <returns></returns>
         public static int[] Indexes<T>(this T[] arr)
         {
             int[] indexes = new int[arr.Length];
