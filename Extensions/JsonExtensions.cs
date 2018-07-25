@@ -14,27 +14,18 @@ namespace BGC.Extensions
         /// <returns></returns>
         public static List<int> JsonArrayToIntList(this JsonArray jsons)
         {
-            List<int> list = new List<int>();
-
-            for(int i = 0; i < jsons.Count; ++i)
+            return jsons.JsonArrayToList((JsonValue val) =>
             {
-                list.Add(jsons[i].AsInteger);
-            }
-
-            return list;
+                return val.AsInteger;
+            });
         }
 
         public static List<T> JsonArrayToEnumList<T>(this JsonArray jsons)
         {
-            List<T> list = new List<T>();
-
-            for (int i = 0; i < jsons.Count; ++i)
+            return jsons.JsonArrayToList((JsonValue val) =>
             {
-                T val = Utility.EnumUtility.StringToEnum<T>(jsons[i].AsString);
-                list.Add(val);
-            }
-
-            return list;
+                return Utility.EnumUtility.StringToEnum<T>(val.AsString);
+            });
         }
 
         public static JsonArray TryGetArray(this JsonObject json, string key)
@@ -80,7 +71,6 @@ namespace BGC.Extensions
             });
         }
 
-
         /// <summary>
         /// Converts a float list to a Json Array of float values
         /// </summary>
@@ -116,12 +106,23 @@ namespace BGC.Extensions
         public static JsonArray ConvertToJsonArray<T>(this List<T> list, Func<T, JsonValue> convertToJsonValue)
         {
             JsonArray array = new JsonArray();
-            for(int i = 0; i < list.Count; i++)
+            for(int i = 0; i < list.Count; ++i)
             {
                 array.Add(convertToJsonValue(list[i]));
             }
 
             return array;
+        }
+
+        public static List<T> JsonArrayToList<T>(this JsonArray jsons, Func<JsonValue, T> convertToObj)
+        {
+            List<T> list = new List<T>();
+            for(int i = 0; i < jsons.Count; ++i)
+            {
+                list.Add(convertToObj(jsons[i]));
+            }
+
+            return list;
         }
     }
 }
