@@ -1,4 +1,6 @@
-﻿namespace BGC.IO
+﻿using BGC.Extensions;
+
+namespace BGC.IO
 {
     public static class FilePath
     {

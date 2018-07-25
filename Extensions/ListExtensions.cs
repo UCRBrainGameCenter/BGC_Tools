@@ -53,7 +53,8 @@ namespace BGC.Extensions
         /// <returns></returns>
         public static T RandomValue<T>(this IList list, params int[] excludeIndicies)
         {
-            if (list.Count == 0)
+            int length = list.Count;
+            if (length == 0)
             {
                 Debug.LogError(
                     "Received list of length 0 which doesn't allow for random value, " +
@@ -62,7 +63,7 @@ namespace BGC.Extensions
             }
 
             List<int> indexes = new List<int>();
-            for (int i = 0; i < list.Count; ++i)
+            for (int i = 0; i < length; ++i)
             {
                 if (excludeIndicies.Contains(i) == false)
                 {
@@ -88,7 +89,8 @@ namespace BGC.Extensions
         /// <param name="list"></param>
         public static void Shuffle(this IList list)
         {
-            for (int i = 0; i < list.Count; ++i)
+            int length = list.Count;
+            for (int i = 0; i < length; ++i)
             {
                 int randomIndex = Random.Range(i, list.Count);
                 object temp = list[i];
@@ -140,12 +142,13 @@ namespace BGC.Extensions
         /// <returns></returns>
         public static bool ListsEquivalent<T>(List<T> a, List<T> b)
         {
-            if (a.Count != b.Count)
+            int length = a.Count;
+            if (length != b.Count)
             {
                 return false;
             }
 
-            for (int i = 0; i < a.Count; ++i)
+            for (int i = 0; i < length; ++i)
             {
                 if (a[i].Equals(b[i]) == false)
                 {
@@ -185,7 +188,8 @@ namespace BGC.Extensions
         {
             int[] indexes = new int[list.Count];
 
-            for (int i = 0; i < list.Count; ++i)
+            int length = list.Count;
+            for (int i = 0; i < length; ++i)
             {
                 indexes[i] = i;
             }
@@ -253,7 +257,8 @@ namespace BGC.Extensions
             }
 
             T max = list[0];
-            for (int i = 1; i < list.Count; ++i)
+            int length = list.Count;
+            for (int i = 1; i < length; ++i)
             {
                 if (Comparer<T>.Default.Compare(max, list[i]) < 0)
                 {
@@ -284,7 +289,8 @@ namespace BGC.Extensions
             }
 
             T min = list[0];
-            for (int i = 1; i < list.Count; ++i)
+            int length = list.Count;
+            for (int i = 1; i < length; ++i)
             {
                 if (Comparer<T>.Default.Compare(min, list[i]) > 0)
                 {
@@ -318,7 +324,8 @@ namespace BGC.Extensions
         /// <param name="list"></param>
         public static void PrintSelf<T>(this List<T> list)
         {
-            for (int i = 0; i < list.Count; ++i)
+            int length = list.Count;
+            for (int i = 0; i < length; ++i)
             {
                 Debug.Log($"{i}) {list[i]}");
             }
@@ -334,7 +341,9 @@ namespace BGC.Extensions
         public static List<T> FindAllInstancesOf<T>(this List<T> list, T value)
         {
             List<T> instances = new List<T>();
-            for(int i = 0; i < list.Count; ++i)
+
+            int length = list.Count;
+            for(int i = 0; i < length; ++i)
             {
                 if(list[i].Equals(value))
                 {
@@ -354,13 +363,14 @@ namespace BGC.Extensions
         /// <returns></returns>
         public static string Join<T>(this List<T> list, string separator)
         {
-            if (list.Count == 0)
+            int length = list.Count;
+            if (length == 0)
             {
                 return "";
             }
 
-            string result = list[0].ToString(); ;
-            for (int i = 1; i < list.Count; ++i)
+            string result = list[0].ToString();
+            for (int i = 1; i < length; ++i)
             {
                 result = $"{result}{separator}{list[i].ToString()}";
             }
@@ -377,13 +387,14 @@ namespace BGC.Extensions
         /// <returns></returns>
         public static string Join<T>(this T[] arr, string separator)
         {
-            if(arr.Length == 0)
+            int length = arr.Length;
+            if(length == 0)
             {
                 return "";
             }
 
             string result = arr[0].ToString(); ;
-            for (int i = 1; i < arr.Length; ++i)
+            for (int i = 1; i < length; ++i)
             {
                 result = $"{result}{separator}{arr[i].ToString()}";
             }
@@ -419,7 +430,7 @@ namespace BGC.Extensions
         /// <returns></returns>
         public static T TryGetElement<T>(this List<T> list, int index, out bool result)
         {
-            if(index < list.Count)
+            if (index < list.Count)
             {
                 result = true;
 
@@ -428,6 +439,28 @@ namespace BGC.Extensions
             result = false;
 
             return default(T);
+        }
+
+        /// Checks if the list contains the defined value
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="val"></param>
+        /// <returns>True if the list has the defined value</returns>
+        public static bool Conains<T>(IList list, T val)
+        {
+            bool found = false;
+            int length = list.Count;
+            for (int i = 0; i < length; ++i)
+            {
+                if (list[i].Equals(val))
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            return found;
         }
     }
 }

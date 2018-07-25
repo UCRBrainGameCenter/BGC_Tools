@@ -68,18 +68,29 @@ namespace BGC.Extensions
         /// <returns></returns>
         public static T[] GetRange<T>(this T[] array, int startIndex, int endIndex = -1)
         {
-            if(endIndex == -1)
+            if (endIndex == -1)
             {
                 endIndex = array.Length;
             }
 
             T[] arr = new T[endIndex - startIndex];
-            for(int i = startIndex; i < endIndex; ++i)
+            for (int i = startIndex; i < endIndex; ++i)
             {
                 arr[i - startIndex] = array[i];
             }
 
             return arr;
+        }
+        public static int[] Indexes<T>(this T[] arr)
+        {
+            int[] indexes = new int[arr.Length];
+
+            for (int i = 0; i < arr.Length; ++i)
+            {
+                indexes[i] = i;
+            }
+
+            return indexes;
         }
     }
 }
