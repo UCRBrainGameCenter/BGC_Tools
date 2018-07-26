@@ -1,34 +1,43 @@
 ﻿using System.Collections.Generic;
 using LightJson;
 using System;
+using UnityEngine.Assertions;
 
 namespace BGC.Extensions
 {
     public static class JsonExtensions
     {
+        /// <summary>
+        /// Tries to get array and returns an empty array if not found
+        /// </summary>
+        /// <param name="json"></param>
+        /// <param name="key"></param>
+        /// <returns></returns>
         public static JsonArray TryGetArray(this JsonObject json, string key)
         {
-            if(json == null)
+            JsonArray jsonArr = json.TryGetValue(key);
+
+            if(jsonArr == null)
             {
-                json = new JsonObject();
+                return new JsonArray();
             }
 
-            if(json.ContainsKey(key) && json[key].IsJsonArray)
-            {
-                return json[key].AsJsonArray;
-            }
-
-            return new JsonArray();
+            return jsonArr;
         }
 
+        /// <summary>
+        /// Try and get value, if key is not there it adds the key
+        /// </summary>
+        /// <param name="json"></param>
+        /// <param name="key"></param>
+        /// <returns></returns>
         public static JsonValue TryGetValue(this JsonObject json, string key)
         {
-            if(json == null)
-            {
-                json = new JsonObject();
-            }
+            Assert.IsNotNull(json);
+            Assert.IsNotNull(key);
+            Assert.IsFalse(key.Equals(""));
 
-            if(json.ContainsKey(key) == false)
+            if (json.ContainsKey(key) == false)
             {
                 json.Add(key);
             }
@@ -47,6 +56,19 @@ namespace BGC.Extensions
             return jsons.JsonArrayToList((JsonValue val) =>
             {
                 return val.AsInteger;
+            });
+        }
+
+        /// <summary>
+        /// Converts a Json Array to a List of floats
+        /// </summary>
+        /// <param name="jsons"></param>
+        /// <returns></returns>
+        public static List<float> JsonArrayToFloatList(this JsonArray jsons)
+        {
+            return jsons.JsonArrayToList((JsonValue val) =>
+            {
+                return (float)val.AsNumber;
             });
         }
 
@@ -89,6 +111,22 @@ namespace BGC.Extensions
             {
                 return new JsonValue(val);
             });
+        }
+
+        /// <summary>
+        /// Converts an int arr to a Json Array of Int Values
+        /// </summary>
+        /// <param name="arr"></param>
+        /// <returns></returns>
+        public static JsonArray IntArrayToJsonArray(this int[] arr)
+        {
+            JsonArray jsonArr = new JsonArray();
+            for(int i = 0; i < arr.Length; ++i)
+            {
+                jsonArr.Add(arr[i]);
+            }
+
+            return jsonArr;
         }
 
         /// <summary>

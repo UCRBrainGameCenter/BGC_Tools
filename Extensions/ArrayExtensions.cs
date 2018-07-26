@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace BGC.Extensions
 {
@@ -26,6 +27,13 @@ namespace BGC.Extensions
             return array[array.RandomIndex()];
         }
 
+        /// <summary>
+        /// Check if an array contains a target
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="array"></param>
+        /// <param name="target"></param>
+        /// <returns></returns>
         public static bool Contains<T>(this T[] array, T target)
         {
             for (int i = 0; i < array.Length; i++)
@@ -68,6 +76,12 @@ namespace BGC.Extensions
         /// <returns></returns>
         public static T[] GetRange<T>(this T[] array, int startIndex, int endIndex = -1)
         {
+            Assert.IsNotNull(array);
+            Assert.IsTrue(startIndex > -1);
+            Assert.IsTrue(endIndex - startIndex > -1);
+            Assert.IsFalse(startIndex > array.Length);
+            Assert.IsFalse(endIndex > array.Length);
+
             if (endIndex == -1)
             {
                 endIndex = array.Length;

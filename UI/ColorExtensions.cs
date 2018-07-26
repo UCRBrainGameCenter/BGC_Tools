@@ -14,6 +14,11 @@ namespace BGC.UI
         /// </summary>
         private const string HexFormat = "X2";
 
+        /// <summary>
+        /// Converts Color to HexString in format 0xFFFFFFFF
+        /// </summary>
+        /// <param name="colorBase"></param>
+        /// <returns></returns>
         public static string ColorToHex(this Color colorBase)
         {
             Color32 color = colorBase;
@@ -27,6 +32,11 @@ namespace BGC.UI
             return hex;
         }
 
+        /// <summary>
+        /// Converts HexString of format 0xFFFFFFFF to Color
+        /// </summary>
+        /// <param name="hex"></param>
+        /// <returns></returns>
         public static Color HexToColor(string hex)
         {
             Color32 color = new Color32();
