@@ -63,6 +63,11 @@ namespace BGC.Utility
             return array;
         }
 
+        /// <summary>
+        /// Conver json array to array of integers
+        /// </summary>
+        /// <param name="jsonArray"></param>
+        /// <returns></returns>
         public static int[] ToIntArray(this JsonArray jsonArray)
         {
             int[] array = new int[jsonArray.Count];
@@ -72,6 +77,24 @@ namespace BGC.Utility
             }
 
             return array;
+        }
+
+        public static JsonObject CombineJsonObjects(JsonObject a, JsonObject b)
+        {
+            JsonObject combined = new JsonObject();
+
+            foreach (KeyValuePair<string, JsonValue> json in a)
+            {
+                combined.Add(json.Key, json.Value);
+            }
+
+            foreach (KeyValuePair<string, JsonValue> json in b)
+            {
+                Assert.IsFalse(combined.ContainsKey(json.Key));
+                combined.Add(json.Key, json.Value);
+            }
+
+            return combined;
         }
     }
 }

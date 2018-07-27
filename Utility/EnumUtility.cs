@@ -1,6 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using UnityEngine.Assertions;
 using LightJson;
+using System;
 
 namespace BGC.Utility
 {
@@ -28,21 +29,31 @@ namespace BGC.Utility
         }
 
         /// <summary>
-        /// Converts EnumList to a JsonObject
+        /// Convert json boject to string.
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="ignoreMax"></param>
+        /// <param name="prependString">Set this if you want there be a value before every key</param>
+        /// <param name="ignoreMax">Set this to true to not add any key that is max</param>
         /// <returns></returns>
-        public static JsonObject ToJsonObject<T>(bool ignoreMax = true)
+        public static JsonObject ToJsonObject<T>(string prependString = "", bool ignoreMax = true)
         {
-            JsonObject jo = new JsonObject();
+            Assert.IsNotNull(prependString);
 
-            foreach (T t in Enum.GetValues(typeof(T)))
+            JsonObject jo = new JsonObject();
+            Array enumValues = Enum.GetValues(typeof(T));
+
+            int length = enumValues.Length;
+            for(int i = 0; i < length; ++i)
             {
-                if (ignoreMax == true && t.ToString().ToLower().Equals("max") == false)
+                T t = (T) enumValues.GetValue(i);
+                string tName = t.ToString();
+
+                if (ignoreMax == true && tName.ToLower().Equals("max"))
                 {
-                    jo.Add(((int)(object)t).ToString(), t.ToString());
+                    continue;
                 }
+
+                jo.Add($"{prependString}{((int)(object)t).ToString()}", tName);
             }
 
             return jo;
