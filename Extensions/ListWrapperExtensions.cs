@@ -1,46 +1,74 @@
-﻿using System.Collections;
+﻿using LightJson;
 using System.Collections.Generic;
-using UnityEngine;
 
-public static class ListWrapperExtensions
+namespace BGC.Extensions
 {
-    /// <summary>
-    /// Remove all values in array below certain count
-    /// </summary>
-    public static void RemoveValuesBelowValue(this ListWrapper wrapper, int value)
+    public static class ListWrapperExtensions
     {
-        List<int> removeValues = new List<int>();
-        for (int i = 0; i < wrapper.Count; ++i)
+        /// <summary>
+        /// Remove all values in array below certain count
+        /// </summary>
+        public static void RemoveValuesBelowValue(this IntListContainer wrapper, int value)
         {
-            if (wrapper[i] < value)
+            List<int> removeValues = new List<int>();
+            for (int i = 0; i < wrapper.Count; ++i)
             {
-                removeValues.Add(wrapper[i]);
+                if (wrapper[i] < value)
+                {
+                    removeValues.Add(wrapper[i]);
+                }
+            }
+
+            for (int i = 0; i < removeValues.Count; ++i)
+            {
+                wrapper.Remove(removeValues[i]);
             }
         }
 
-        for (int i = 0; i < removeValues.Count; ++i)
+        /// <summary>
+        /// Remove all values in array below certain count
+        /// </summary>
+        public static void RemoveValuesAboveValue(this IntListContainer wrapper, int value)
         {
-            wrapper.Remove(removeValues[i]);
-        }
-    }
-
-    /// <summary>
-    /// Remove all values in array below certain count
-    /// </summary>
-    public static void RemoveValuesAboveValue(this ListWrapper wrapper, int value)
-    {
-        List<int> removeValues = new List<int>();
-        for (int i = 0; i < wrapper.Count; ++i)
-        {
-            if (wrapper[i] > value)
+            List<int> removeValues = new List<int>();
+            for (int i = 0; i < wrapper.Count; ++i)
             {
-                removeValues.Add(wrapper[i]);
+                if (wrapper[i] > value)
+                {
+                    removeValues.Add(wrapper[i]);
+                }
+            }
+
+            for (int i = 0; i < removeValues.Count; ++i)
+            {
+                wrapper.Remove(removeValues[i]);
             }
         }
 
-        for (int i = 0; i < removeValues.Count; ++i)
+        /// <summary>
+        /// Converts any JsonArray to a List of IntListContainer
+        /// </summary>
+        /// <param name="jsons"></param>
+        /// <returns></returns>
+        public static List<IntListContainer> JsonArrayToListListWrapper(this JsonArray jsons)
         {
-            wrapper.Remove(removeValues[i]);
+            return jsons.JsonArrayToList((JsonValue val) =>
+            {
+                return new IntListContainer(val);
+            });
+        }
+
+        /// <summary>
+        /// Converts a IntListContainer list to a json array of arrays
+        /// </summary>
+        /// <param name="list"></param>
+        /// <returns></returns>
+        public static JsonArray ListWrapperListToJsonArray(this List<IntListContainer> list)
+        {
+            return list.ConvertToJsonArray((IntListContainer listWrapper) =>
+            {
+                return listWrapper.Serialize();
+            });
         }
     }
 }

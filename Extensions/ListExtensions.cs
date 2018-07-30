@@ -318,7 +318,7 @@ namespace BGC.Extensions
         }
 
         /// <summary>
-        /// Debug.Log to print out all values of the array
+        /// Debug.Log to print out all values of the lists=
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="list"></param>
@@ -404,23 +404,6 @@ namespace BGC.Extensions
 
         /// <summary>
         /// Attempts to get an element from an array and returns it. If not, returns default.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="list"></param>
-        /// <param name="index"></param>
-        /// <param name="element"></param>
-        /// <returns></returns>
-        public static T TryGetElement<T>(this List<T> list, int index)
-        {
-            if (index < list.Count)
-            {
-                return list[index];
-            }
-            return default(T);
-        }
-
-        /// <summary>
-        /// Attempts to get an element from an array and returns it. If not, returns default.
         /// Outputs the result to the out parameter
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -428,17 +411,16 @@ namespace BGC.Extensions
         /// <param name="index"></param>
         /// <param name="result"></param>
         /// <returns></returns>
-        public static T TryGetElement<T>(this List<T> list, int index, out bool result)
+        public static bool TryGetElement<T>(this List<T> list, int index, out T value)
         {
             if (index < list.Count)
             {
-                result = true;
-
-                return list[index];
+                value = list[index];
+                return true;
             }
-            result = false;
 
-            return default(T);
+            value = default(T);
+            return false;
         }
 
         /// Checks if the list contains the defined value

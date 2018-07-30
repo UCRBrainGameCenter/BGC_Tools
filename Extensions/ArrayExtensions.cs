@@ -76,16 +76,17 @@ namespace BGC.Extensions
         /// <returns></returns>
         public static T[] GetRange<T>(this T[] array, int startIndex, int endIndex = -1)
         {
-            Assert.IsNotNull(array);
-            Assert.IsTrue(startIndex > -1);
-            Assert.IsTrue(endIndex - startIndex > -1);
-            Assert.IsFalse(startIndex > array.Length);
-            Assert.IsFalse(endIndex > array.Length);
-
             if (endIndex == -1)
             {
                 endIndex = array.Length;
             }
+
+            Assert.IsNotNull(array);
+            Assert.IsTrue(startIndex > -1);
+            Assert.IsTrue(endIndex >= startIndex);
+            Assert.IsFalse(startIndex > array.Length);
+            Assert.IsFalse(endIndex > array.Length);
+
 
             T[] arr = new T[endIndex - startIndex];
             for (int i = startIndex; i < endIndex; ++i)

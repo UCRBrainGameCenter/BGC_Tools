@@ -3,8 +3,11 @@ using BGC.Extensions;
 using UnityEngine;
 using LightJson;
 
+/// <summary>
+/// A Serializeable List<int> for 2D Lists
+/// </summary>
 [System.Serializable]
-public class ListWrapper
+public class IntListContainer
 {
     [SerializeField]
     public List<int> list = new List<int>();
@@ -21,41 +24,70 @@ public class ListWrapper
         }
     }
 
-    public ListWrapper Clone => new ListWrapper(new List<int>(list));
+    public IntListContainer Clone => new IntListContainer(new List<int>(list));
     public int RandomValue => list.RandomValue<int>();
     public int Count => list.Count;
 
-    public ListWrapper(List<int> list)
+    /// <summary>
+    /// Constructor from a List
+    /// </summary>
+    /// <param name="list"></param>
+    public IntListContainer(List<int> list)
     {
         this.list = new List<int>(list);
     }
 
-    public ListWrapper(JsonArray json)
+    /// <summary>
+    /// Constructor from a JsonArray
+    /// </summary>
+    /// <param name="json"></param>
+    public IntListContainer(JsonArray json)
     {
         Deserialize(json);
     }
 
-    public ListWrapper()
+    /// <summary>
+    /// Default constructor
+    /// </summary>
+    public IntListContainer()
     {
         list = new List<int>();
     }
 
+    /// <summary>
+    /// Adds an element to a list
+    /// </summary>
+    /// <param name="element"></param>
     public void Add(int element)
     {
         list.Add(element);
     }
 
+    /// <summary>
+    /// Removes an element at specified index
+    /// </summary>
+    /// <param name="index"></param>
     public void RemoveAt(int index)
     {
         list.RemoveAt(index);
     }
 
+    /// <summary>
+    /// Remove an element from a list
+    /// </summary>
+    /// <param name="element"></param>
+    /// <returns></returns>
     public bool Remove(int element)
     {
         return list.Remove(element);
     }
 
-    public bool Remove(ListWrapper lw)
+    /// <summary>
+    /// Remove all elements from another IntListContainer
+    /// </summary>
+    /// <param name="lw"></param>
+    /// <returns></returns>
+    public bool Remove(IntListContainer lw)
     {
         bool removed = true;
 
@@ -67,36 +99,65 @@ public class ListWrapper
         return removed;
     }
 
+    /// <summary>
+    /// Set contained list
+    /// </summary>
+    /// <param name="list"></param>
     public void Set(List<int> list)
     {
         this.list = list;
     }
 
+    /// <summary>
+    /// Check if two IntListWrappers are equal
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <returns></returns>
     public override bool Equals(object obj)
     {
-        return ListExtension.ListsEquivalent(list, ((ListWrapper)obj).list);
+        return ListExtension.ListsEquivalent(list, ((IntListContainer)obj).list);
     }
 
+    /// <summary>
+    /// Returns HashCode
+    /// </summary>
+    /// <returns></returns>
     public override int GetHashCode()
     {
         return list.GetSequenceHashCode();
     }
 
+    /// <summary>
+    /// Debug.Log to print out all values of the list
+    /// </summary>
     public void PrintSelf()
     {
         list.PrintSelf();
     }
 
+    /// <summary>
+    /// Check if the list Contains an item
+    /// </summary>
+    /// <param name="item"></param>
+    /// <returns></returns>
     public bool Contains(int item)
     {
         return list.Contains(item);
     }
 
+    /// <summary>
+    /// Serializes the list into a json array
+    /// </summary>
+    /// <returns></returns>
     public JsonArray Serialize()
     {
         return list.IntListToJsonArray();
     }
 
+    /// <summary>
+    /// Sets the list to a deserialized JsonArray
+    /// </summary>
+    /// <param name="array"></param>
     public void Deserialize(JsonArray array)
     {
         this.list = array.JsonArrayToIntList();

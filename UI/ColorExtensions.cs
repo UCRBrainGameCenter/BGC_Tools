@@ -23,11 +23,11 @@ namespace BGC.UI
         {
             Color32 color = colorBase;
 
-            string hex = "0x";
-            hex += color.r.ToString(HexFormat);
-            hex += color.g.ToString(HexFormat);
-            hex += color.b.ToString(HexFormat);
-            hex += color.a.ToString(HexFormat);
+            string hex = string.Format("0x{0}{1}{2}{3}", 
+                color.r.ToString(HexFormat), 
+                color.g.ToString(HexFormat), 
+                color.b.ToString(HexFormat), 
+                color.a.ToString(HexFormat));
 
             return hex;
         }

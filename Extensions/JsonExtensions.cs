@@ -15,6 +15,9 @@ namespace BGC.Extensions
         /// <returns></returns>
         public static JsonArray TryGetArray(this JsonObject json, string key)
         {
+            Assert.IsNotNull(json);
+            Assert.IsFalse(string.IsNullOrEmpty(key));
+
             JsonArray jsonArr = json.TryGetValue(key);
 
             if(jsonArr == null)
@@ -34,8 +37,7 @@ namespace BGC.Extensions
         public static JsonValue TryGetValue(this JsonObject json, string key)
         {
             Assert.IsNotNull(json);
-            Assert.IsNotNull(key);
-            Assert.IsFalse(key.Equals(""));
+            Assert.IsFalse(string.IsNullOrEmpty(key));
 
             if (json.ContainsKey(key) == false)
             {
@@ -85,20 +87,6 @@ namespace BGC.Extensions
                 return Utility.EnumUtility.StringToEnum<T>(val.AsString);
             });
         }
-
-        /// <summary>
-        /// Converts any JsonArray to a List of ListWrapper
-        /// </summary>
-        /// <param name="jsons"></param>
-        /// <returns></returns>
-        public static List<ListWrapper> JsonArrayToListListWrapper(this JsonArray jsons)
-        {
-            return jsons.JsonArrayToList((JsonValue val) =>
-            {
-                return new ListWrapper(val);
-            });
-        }
-
 
         /// <summary>
         /// Converts an int list to a Json Array of Int Values
@@ -153,19 +141,6 @@ namespace BGC.Extensions
             return list.ConvertToJsonArray((T val) => 
             {
                 return new JsonValue(val.ToString());
-            });
-        }
-
-        /// <summary>
-        /// Converts a ListWrapper list to a json array of arrays
-        /// </summary>
-        /// <param name="list"></param>
-        /// <returns></returns>
-        public static JsonArray ListWrapperListToJsonArray(this List<ListWrapper> list)
-        {
-            return list.ConvertToJsonArray((ListWrapper listWrapper) =>
-            {
-                return listWrapper.Serialize();
             });
         }
 
