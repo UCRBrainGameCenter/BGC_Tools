@@ -3,45 +3,45 @@ using System.Collections.Generic;
 
 namespace BGC.Extensions
 {
-    public static class ListWrapperExtensions
+    public static class IntListContainerExtensions
     {
         /// <summary>
         /// Remove all values in array below certain count
         /// </summary>
-        public static void RemoveValuesBelowValue(this IntListContainer wrapper, int value)
+        public static void RemoveValuesBelowValue(this IntListContainer container, int value)
         {
             List<int> removeValues = new List<int>();
-            for (int i = 0; i < wrapper.Count; ++i)
+            for (int i = 0; i < container.Count; ++i)
             {
-                if (wrapper[i] < value)
+                if (container[i] < value)
                 {
-                    removeValues.Add(wrapper[i]);
+                    removeValues.Add(container[i]);
                 }
             }
 
             for (int i = 0; i < removeValues.Count; ++i)
             {
-                wrapper.Remove(removeValues[i]);
+                container.Remove(removeValues[i]);
             }
         }
 
         /// <summary>
         /// Remove all values in array below certain count
         /// </summary>
-        public static void RemoveValuesAboveValue(this IntListContainer wrapper, int value)
+        public static void RemoveValuesAboveValue(this IntListContainer container, int value)
         {
             List<int> removeValues = new List<int>();
-            for (int i = 0; i < wrapper.Count; ++i)
+            for (int i = 0; i < container.Count; ++i)
             {
-                if (wrapper[i] > value)
+                if (container[i] > value)
                 {
-                    removeValues.Add(wrapper[i]);
+                    removeValues.Add(container[i]);
                 }
             }
 
             for (int i = 0; i < removeValues.Count; ++i)
             {
-                wrapper.Remove(removeValues[i]);
+                container.Remove(removeValues[i]);
             }
         }
 
@@ -50,7 +50,7 @@ namespace BGC.Extensions
         /// </summary>
         /// <param name="jsons"></param>
         /// <returns></returns>
-        public static List<IntListContainer> JsonArrayToListListWrapper(this JsonArray jsons)
+        public static List<IntListContainer> JsonArrayToListIntListContainer(this JsonArray jsons)
         {
             return jsons.JsonArrayToList((JsonValue val) =>
             {
@@ -63,11 +63,11 @@ namespace BGC.Extensions
         /// </summary>
         /// <param name="list"></param>
         /// <returns></returns>
-        public static JsonArray ListWrapperListToJsonArray(this List<IntListContainer> list)
+        public static JsonArray IntListContainerListToJsonArray(this List<IntListContainer> list)
         {
-            return list.ConvertToJsonArray((IntListContainer listWrapper) =>
+            return list.ConvertToJsonArray((IntListContainer container) =>
             {
-                return listWrapper.Serialize();
+                return container.Serialize();
             });
         }
     }

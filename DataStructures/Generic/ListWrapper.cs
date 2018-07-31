@@ -109,7 +109,7 @@ public class IntListContainer
     }
 
     /// <summary>
-    /// Check if two IntListWrappers are equal
+    /// Check if two IntListContainers are equal
     /// </summary>
     /// <param name="obj"></param>
     /// <returns></returns>

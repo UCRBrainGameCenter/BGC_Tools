@@ -1,4 +1,7 @@
-﻿using UnityEngine;
+﻿using BGC.Extensions;
+using LightJson;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace BGC.UI
 {
@@ -50,6 +53,32 @@ namespace BGC.UI
             color.a = byte.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
 
             return (Color)color;
+        }
+
+        /// <summary>
+        /// Converts a JsonArray of Hex values to List<Color>
+        /// </summary>
+        /// <param name="arr"></param>
+        /// <returns></returns>
+        public static List<Color> JsonArrayToColorList(this JsonArray arr)
+        {
+            return arr.JsonArrayToList((JsonValue val) =>
+            {
+                return HexToColor(val);
+            });
+        }
+
+        /// <summary>
+        /// Converts a List<Color> to a JsonArray of Hex values
+        /// </summary>
+        /// <param name="list"></param>
+        /// <returns></returns>
+        public static JsonArray ColorListToJsonArray(this List<Color> list)
+        {
+            return list.ConvertToJsonArray((Color color) =>
+            {
+                return ColorToHex(color);
+            });
         }
 
         /// <summary>

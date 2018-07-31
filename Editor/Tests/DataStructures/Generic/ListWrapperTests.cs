@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using NUnit.Framework;
 
-public class ListWrapperTests 
+public class IntListContainerTests 
 {
     [Test]
     public void TestBracketAccess()
