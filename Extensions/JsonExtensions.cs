@@ -84,7 +84,7 @@ namespace BGC.Extensions
         {
             return jsons.JsonArrayToList((JsonValue val) =>
             {
-                return Utility.EnumUtility.StringToEnum<T>(val.AsString);
+                return Utility.EnumSerialization.Instance.StringToEnum<T>(val.AsString);
             });
         }
 

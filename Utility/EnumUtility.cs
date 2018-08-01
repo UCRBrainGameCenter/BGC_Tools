@@ -27,6 +27,12 @@ namespace BGC.Utility
             return list;
         }
 
+        /// <summary>
+        /// Converts EnumList to a JsonObject
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="ignoreMax"></param>
+        /// <returns></returns>
         public static JsonObject ToJsonObject<T>(bool ignoreMax = true)
         {
             JsonObject jo = new JsonObject();
