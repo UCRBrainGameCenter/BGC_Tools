@@ -50,7 +50,7 @@ namespace BGC.Extensions
         /// </summary>
         /// <param name="jsons"></param>
         /// <returns></returns>
-        public static List<IntListContainer> JsonArrayToListIntListContainer(this JsonArray jsons)
+        public static List<IntListContainer> JsonArrayToIntListContainerList(this JsonArray jsons)
         {
             return jsons.JsonArrayToList((JsonValue val) =>
             {
