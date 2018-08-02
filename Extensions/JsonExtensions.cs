@@ -2,6 +2,7 @@
 using LightJson;
 using System;
 using UnityEngine.Assertions;
+using BGC.Utility;
 
 namespace BGC.Extensions
 {
@@ -80,11 +81,11 @@ namespace BGC.Extensions
         /// <typeparam name="T"></typeparam>
         /// <param name="jsons"></param>
         /// <returns></returns>
-        public static List<T> JsonArrayToEnumList<T>(this JsonArray jsons)
+        public static List<T> JsonArrayToEnumList<T>(this JsonArray jsons, EnumSerialization enumSerialization)
         {
             return jsons.JsonArrayToList((JsonValue val) =>
             {
-                return Utility.EnumSerialization.Instance.StringToEnum<T>(val.AsString);
+                return enumSerialization.StringToEnum<T>(val.AsString);
             });
         }
 

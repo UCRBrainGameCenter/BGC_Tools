@@ -6,20 +6,6 @@ namespace BGC.Utility
 {
     public class EnumSerialization
     {
-        private static EnumSerialization instance = null;
-        public static EnumSerialization Instance
-        {
-            get
-            {
-                if(instance == null)
-                {
-                    instance = new EnumSerialization();
-                }
-
-                return instance;
-            }
-        }
-
         private List<Dictionary<string, int>> enumStringValuePairs;
         private List<Dictionary<string, int>> EnumStringValuePairs
         {
