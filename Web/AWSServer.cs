@@ -12,29 +12,39 @@ namespace BGC.Web
     {
         public static class HeaderKeys
         {
-            public const string ApiKey       = "x-api-key";
+            public const string ApiKey = "x-api-key";
             public const string CacheControl = "Cache-Control";
         }
 
         public static class BodyKeys
         {
-            public const string Bucket  = "bucket";
-            public const string Path    = "key";
+            public const string Oganization = "organization";
+            public const string FileName = "file_name";
             public const string Content = "content";
+            public const string Study = "study";
+            public const string Game = "game";
         }
 
         public const string PathSeparator = "/";
-        public const string ApiUrl = "https://kukp0cevff.execute-api.us-east-2.amazonaws.com/prod/post_file_to_s3";
-        public const string ApiKey = "eQtoU42BkJ697U9t74dQH73fjxdfcy7p70Rvs1Ft";
+        public const string ApiUrl = "https://84cje3rj4j.execute-api.us-east-1.amazonaws.com/Production/to-s3";
+        public const string ApiKey = "3Hz6KpZXBb2aFY57wCo137fm9OWmmyOo9D7TJCsx";
         public const string CacheControl = "no-cache";
         public const string BGCExtension = ".bgc";
 
         private const char extensionSplitter = '.';
 
+        /// <summary>
+        /// Post a file to s3.
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="bucket"></param>
+        /// <param name="serverPath"></param>
+        /// <param name="callBack"></param>
         public static void PostFileToAWS(
             string filePath,
-            string bucket,
-            string serverPath,
+            string organization,
+            string study,
+            string game,
             Action<UnityWebRequest> callBack = null)
         {
             if (File.Exists(filePath) == false)
@@ -62,6 +72,16 @@ namespace BGC.Web
                 bucket,
                 serverPath,
                 callBack);
+        }
+
+        public static void PostBGCToJSonToAWS(
+            string filePath,
+            string organization,
+            string study,
+            string game,
+            Action<UnityWebRequest> callBack = null)
+        {
+
         }
 
         /// <summary>
