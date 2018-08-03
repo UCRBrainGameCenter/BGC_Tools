@@ -22,7 +22,7 @@ namespace BGC.Web.Utility
             string body, 
             Action<UnityWebRequest> callBack = null)
         {
-            CoroutineUtility.Mono.StartCoroutine(runPost(
+            CoroutineUtility.Mono.StartCoroutine(RunPost(
                 url,
                 headers,
                 body,
@@ -37,14 +37,15 @@ namespace BGC.Web.Utility
         /// <param name="body"></param>
         /// <param name="callBack">boolean true means there was an error</param>
         /// <returns></returns>
-        private static IEnumerator runPost(
+        private static IEnumerator RunPost(
             string url, 
             Dictionary<string, string> headers, 
             string body,
             Action<UnityWebRequest> callBack)
         {
-            UnityWebRequest request = new UnityWebRequest(url, "POST");
+            UnityWebRequest request = UnityWebRequest.Post(url, "");
             request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
+
             foreach (KeyValuePair<string, string> pair in headers)
             {
                 request.SetRequestHeader(pair.Key, pair.Value);
