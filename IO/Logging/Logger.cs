@@ -142,7 +142,7 @@ namespace BGC.IO.Logging
             }
         }
 
-        public void CloseFile(string userName, string bucket, string serverPath)
+        public void CloseFile(string userName, string organization, string study)
         {
             if (logger != null)
             {
@@ -153,16 +153,21 @@ namespace BGC.IO.Logging
                 #if UNITY_EDITOR
                 if(pushToServer == true)
                 {
-                    AWSServer.PostFileToAWS(
-                        path, 
-                        bucket, 
-                        AWSServer.Combine(serverPath, Path.GetFileName(path)),
+                    AWSServer.PostBGCToJSonToAWS(
+                        path,
+                        organization,
+                        study,
+                        applicationName,
                         (UnityWebRequest request) => {
-                            if(request.isNetworkError == false)
+                            if (request.isNetworkError == false)
                             {
                                 Utility.SafeMove(path, Path.Combine(
                                     LogDirectories.UserPermanentDirectory(userName),
                                     Path.GetFileName(path)));
+                            }
+                            else
+                            {
+                                Debug.LogError(request.ToString());
                             }
                         });
                 }

@@ -1,10 +1,11 @@
 ﻿using System.Collections.Generic;
+using UnityEngine.Networking;
+using UnityEngine.Assertions;
 using BGC.Web.Utility;
 using UnityEngine;
 using System.IO;
 using LightJson;
 using System;
-using UnityEngine.Networking;
 
 namespace BGC.Web
 {
@@ -30,49 +31,43 @@ namespace BGC.Web
         public const string ApiKey = "3Hz6KpZXBb2aFY57wCo137fm9OWmmyOo9D7TJCsx";
         public const string CacheControl = "no-cache";
         public const string BGCExtension = ".bgc";
+        public const string JSONExtension = ".json";
 
         private const char extensionSplitter = '.';
 
-        /// <summary>
-        /// Post a file to s3.
-        /// </summary>
-        /// <param name="filePath"></param>
-        /// <param name="bucket"></param>
-        /// <param name="serverPath"></param>
-        /// <param name="callBack"></param>
-        public static void PostFileToAWS(
-            string filePath,
-            string organization,
-            string study,
-            string game,
-            Action<UnityWebRequest> callBack = null)
-        {
-            if (File.Exists(filePath) == false)
-            {
-                Debug.LogError($"{filePath} is not a file.");
-                callBack?.Invoke(null);
+        // @note: this is currently not used, but will be used in the future
+        ///// <summary>
+        ///// Post a file to s3.
+        ///// </summary>
+        ///// <param name="filePath"></param>
+        ///// <param name="bucket"></param>
+        ///// <param name="serverPath"></param>
+        ///// <param name="callBack"></param>
+        //public static void PostFileToAWS(
+        //    string filePath,
+        //    string organization,
+        //    string study,
+        //    string game,
+        //    Action<UnityWebRequest> callBack = null)
+        //{
+        //    Assert.IsFalse(String.IsNullOrEmpty(filePath));
+        //    Assert.IsFalse(String.IsNullOrEmpty(organization));
+        //    Assert.IsFalse(String.IsNullOrEmpty(study));
+        //    Assert.IsFalse(String.IsNullOrEmpty(game));
+        //    Assert.IsTrue(File.Exists(filePath));
 
-                return;
-            }
+        //    StreamReader reader = new StreamReader(filePath);
+        //    string content = reader.ReadToEnd();
+        //    reader.Close();
 
-            if (ContainsBGCExtension(filePath) == false)
-            {
-                Debug.LogError($"file {filePath} must have the bgc extension.");
-                callBack?.Invoke(null);
-
-                return;
-            }
-
-            StreamReader reader = new StreamReader(filePath);
-            string content = reader.ReadToEnd();
-            reader.Close();
-
-            PostToAWS(
-                content,
-                bucket,
-                serverPath,
-                callBack);
-        }
+        //    PostToAWS(
+        //        Path.GetFileName(filePath),
+        //        organization,
+        //        study,
+        //        game,
+        //        content,
+        //        callBack);
+        //}
 
         public static void PostBGCToJSonToAWS(
             string filePath,
@@ -81,39 +76,69 @@ namespace BGC.Web
             string game,
             Action<UnityWebRequest> callBack = null)
         {
+            Assert.IsFalse(String.IsNullOrEmpty(filePath));
+            Assert.IsFalse(String.IsNullOrEmpty(organization));
+            Assert.IsFalse(String.IsNullOrEmpty(study));
+            Assert.IsFalse(String.IsNullOrEmpty(game));
+            Assert.IsTrue(ContainsBGCExtension(filePath));
+            Assert.IsTrue(File.Exists(filePath));
 
+            StreamReader reader = new StreamReader(filePath);
+            string content = reader.ReadToEnd();
+            reader.Close();
+
+            JsonObject jsonContent = BGC.Utility.BgcToJson.ConvertBgcToJson(content);
+            PostToAWS(
+                Path.GetFileName(filePath).Replace(BGCExtension, JSONExtension),
+                organization,
+                study,
+                game,
+                jsonContent,
+                callBack);
         }
 
         /// <summary>
-        /// Post a string to Aws
+        /// Post to aws
         /// </summary>
-        /// <param name="url"></param>
-        /// <param name="bucket"></param>
-        /// <param name="serverPath"></param>
-        /// <param name="fileContents"></param>
-        /// <param name="callBack">True means there was an error</param>
+        /// <param name="filePath"></param>
+        /// <param name="organization"></param>
+        /// <param name="study"></param>
+        /// <param name="game"></param>
+        /// <param name="callBack"></param>
         public static void PostToAWS(
-            string fileContents,
-            string bucket,
-            string serverPath,
+            string fileName,
+            string organization,
+            string study,
+            string game,
+            JsonObject content,
             Action<UnityWebRequest> callBack = null)
         {
-            if (ContainsBGCExtension(serverPath) == false)
+            Assert.IsFalse(String.IsNullOrEmpty(fileName));
+            Assert.IsFalse(String.IsNullOrEmpty(organization));
+            Assert.IsFalse(String.IsNullOrEmpty(study));
+            Assert.IsFalse(String.IsNullOrEmpty(game));
+            Assert.IsTrue(ContainsJSONExtension(fileName));
+
+            Dictionary<string, string> headers = new Dictionary<string, string>
             {
-                Debug.LogError($"server path {serverPath} must have a bgc extension \".bgc\"");
-                callBack?.Invoke(null);
+                { HeaderKeys.ApiKey, ApiKey },
+                { "Content-Type", "application/x-www-form-urlencoded" }
+            };
 
-                return;
-            }
-
-            Dictionary<string, string> headers = new Dictionary<string, string>();
-            headers.Add(HeaderKeys.ApiKey, ApiKey);
-            headers.Add(HeaderKeys.CacheControl, CacheControl);
-
-            JsonObject body = new JsonObject();
-            body.Add(BodyKeys.Bucket, bucket);
-            body.Add(BodyKeys.Path, serverPath);
-            body.Add(BodyKeys.Content, fileContents);
+            JsonObject body = new JsonObject
+            {
+                {
+                    "body",
+                    new JsonObject
+                    {
+                        { BodyKeys.Oganization, organization },
+                        { BodyKeys.Study, study },
+                        { BodyKeys.Game, game },
+                        { BodyKeys.FileName, fileName },
+                        { BodyKeys.Content, content.ToString() }
+                    }
+                }
+            };
 
             Rest.PostRequest(
                 ApiUrl,
@@ -135,6 +160,11 @@ namespace BGC.Web
         private static bool ContainsBGCExtension(string path)
         {
             return Path.HasExtension(BGCExtension);
+        }
+
+        private static bool ContainsJSONExtension(string fileName)
+        {
+            return Path.HasExtension(JSONExtension);
         }
     }
 }

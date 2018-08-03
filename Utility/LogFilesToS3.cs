@@ -1,7 +1,9 @@
-﻿using System.IO;
+﻿using UnityEngine.Networking;
+using UnityEngine.Assertions;
+using UnityEngine;
+using System.IO;
 using BGC.Web;
 using BGC.IO;
-using UnityEngine.Networking;
 
 namespace BGC.Utility
 {
@@ -13,13 +15,17 @@ namespace BGC.Utility
         /// </summary>
         /// <param name="bucketName"></param>
         /// <param name="serverPath"></param>
-        public static void MigrateFiles(string bucketName, string serverPath)
+        public static void MigrateFiles(string organization, string study, string game)
         {
+            Assert.IsFalse(System.String.IsNullOrEmpty(organization));
+            Assert.IsFalse(System.String.IsNullOrEmpty(study));
+            Assert.IsFalse(System.String.IsNullOrEmpty(game));
+
             string[] users = Directory.GetDirectories(LogDirectories.StagingDirectory);
 
             for (int i = 0; i < users.Length; ++i)
             {
-                migrateUser(Path.GetFileName(users[i]), bucketName, serverPath);
+                MigrateUser(Path.GetFileName(users[i]), organization, study, game);
             }
         }
 
@@ -29,10 +35,10 @@ namespace BGC.Utility
         /// <param name="userName"></param>
         /// <param name="bucket"></param>
         /// <param name="serverPath"></param>
-        private static void migrateUser(string userName, string bucket, string serverPath)
+        private static void MigrateUser(string userName, string organization, string study, string game)
         {
-            string stagingPath = LogDirectories.UserStagingDirectory(userName);
             string permanentPath = LogDirectories.UserPermanentDirectory(userName);
+            string stagingPath = LogDirectories.UserStagingDirectory(userName);
             string[] files = Directory.GetFiles(stagingPath);
 
             for (int i = 0; i < files.Length; ++i)
@@ -43,15 +49,19 @@ namespace BGC.Utility
                     continue;
                 }
 
-                string fileName = Path.GetFileName(stagingFile);
-                AWSServer.PostFileToAWS(
+                AWSServer.PostBGCToJSonToAWS(
                     stagingFile,
-                    bucket,
-                    AWSServer.Combine(serverPath, fileName),
+                    organization,
+                    study, 
+                    game,
                     (UnityWebRequest request) => {
                         if (request.responseCode == 200)
                         {
-                            IO.Utility.SafeMove(stagingFile, Path.Combine(permanentPath, fileName));
+                            IO.Utility.SafeMove(stagingFile, Path.Combine(permanentPath, Path.GetFileName(stagingFile)));
+                        }
+                        else
+                        {
+                            Debug.LogError(request);
                         }
                     });
             }
