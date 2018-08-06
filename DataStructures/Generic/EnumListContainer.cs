@@ -90,6 +90,7 @@ namespace BGC.DataStructures
 
         /// <summary>
         /// Remove all elements in another EnumListContainer
+        /// Returns false if failed to remove one element
         /// </summary>
         /// <param name="elc"></param>
         /// <returns></returns>
@@ -133,6 +134,15 @@ namespace BGC.DataStructures
             }
 
             return ListExtension.ListsEquivalent(list, ((EnumListContainer<TEnum>)obj).list);
+        }
+
+        /// <summary>
+        /// Returns HashCode
+        /// </summary>
+        /// <returns></returns>
+        public override int GetHashCode()
+        {
+            return list.GetSequenceHashCode();
         }
 
         /// <summary>

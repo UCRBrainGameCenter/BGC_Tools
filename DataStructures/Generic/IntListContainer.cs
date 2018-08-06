@@ -86,6 +86,7 @@ namespace BGC.DataStructures
 
         /// <summary>
         /// Remove all elements in another IntListContainer
+        /// Returns false if failed to remove one element
         /// </summary>
         /// <param name="lw"></param>
         /// <returns></returns>
