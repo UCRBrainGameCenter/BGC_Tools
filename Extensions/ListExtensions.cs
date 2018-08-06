@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace BGC.Extensions
 {
@@ -413,14 +414,20 @@ namespace BGC.Extensions
         /// <returns></returns>
         public static bool TryGetElement<T>(this List<T> list, int index, out T value)
         {
-            if (index < list.Count)
+            Assert.IsNotNull(list);
+            bool result = false;
+
+            if (index < list.Count && index > -1)
             {
                 value = list[index];
-                return true;
+                result = true;
+            }
+            else
+            {
+                value = default(T);
             }
 
-            value = default(T);
-            return false;
+            return result;
         }
 
         /// Checks if the list contains the defined value

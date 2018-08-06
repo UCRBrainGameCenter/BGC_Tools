@@ -5,16 +5,16 @@ namespace BGC.Utility
 {
     public class ResourceUtility
     {
-        private const string ResourcesDirectory = "Resources";
-        private const char FileDelimiter = '/';
-        private const char Extension = '.';
+        public const string ResourcesDirectory = "Resources";
+        public const char FileDelimiter = '/';
+        public const char Extension = '.';
 
         /// <summary>
         /// Checks path and returns true if a valid resource path was found
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
-        public static bool GetValidResourcePath(ref string path)
+        public static bool ConvertToValidResourcePath(ref string path)
         {
             string[] Dirs = path.Split(FileDelimiter);
             for (int i = 0; i < Dirs.Length; ++i)

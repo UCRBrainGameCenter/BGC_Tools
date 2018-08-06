@@ -52,11 +52,11 @@ namespace BGC.Extensions
         /// Converts a Json Array to a List of generic type T
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="jsons"></param>
+        /// <param name="jsonArray"></param>
         /// <returns></returns>
-        public static List<int> JsonArrayToIntList(this JsonArray jsons)
+        public static List<int> JsonArrayToIntList(this JsonArray jsonArray)
         {
-            return jsons.JsonArrayToList((JsonValue val) =>
+            return jsonArray.JsonArrayToList((JsonValue val) =>
             {
                 return val.AsInteger;
             });
@@ -65,11 +65,11 @@ namespace BGC.Extensions
         /// <summary>
         /// Converts a Json Array to a List of floats
         /// </summary>
-        /// <param name="jsons"></param>
+        /// <param name="jsonArray"></param>
         /// <returns></returns>
-        public static List<float> JsonArrayToFloatList(this JsonArray jsons)
+        public static List<float> JsonArrayToFloatList(this JsonArray jsonArray)
         {
-            return jsons.JsonArrayToList((JsonValue val) =>
+            return jsonArray.JsonArrayToList((JsonValue val) =>
             {
                 return (float)val.AsNumber;
             });
@@ -79,11 +79,11 @@ namespace BGC.Extensions
         /// Converts Any Json Array to a List of Enums
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="jsons"></param>
+        /// <param name="jsonArray"></param>
         /// <returns></returns>
-        public static List<T> JsonArrayToEnumList<T>(this JsonArray jsons, EnumSerialization enumSerialization)
+        public static List<T> JsonArrayToEnumList<T>(this JsonArray jsonArray, EnumSerialization enumSerialization)
         {
-            return jsons.JsonArrayToList((JsonValue val) =>
+            return jsonArray.JsonArrayToList((JsonValue val) =>
             {
                 return enumSerialization.StringToEnum<T>(val.AsString);
             });
@@ -168,15 +168,15 @@ namespace BGC.Extensions
         /// Converts any JsonArray to List of user defined values
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="jsons"></param>
+        /// <param name="jsonArray"></param>
         /// <param name="convertToObj"></param>
         /// <returns></returns>
-        public static List<T> JsonArrayToList<T>(this JsonArray jsons, Func<JsonValue, T> convertToObj)
+        public static List<T> JsonArrayToList<T>(this JsonArray jsonArray, Func<JsonValue, T> convertToObj)
         {
             List<T> list = new List<T>();
-            for(int i = 0; i < jsons.Count; ++i)
+            for(int i = 0; i < jsonArray.Count; ++i)
             {
-                list.Add(convertToObj(jsons[i]));
+                list.Add(convertToObj(jsonArray[i]));
             }
 
             return list;

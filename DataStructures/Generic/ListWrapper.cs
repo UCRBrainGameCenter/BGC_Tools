@@ -2,6 +2,7 @@
 using BGC.Extensions;
 using UnityEngine;
 using LightJson;
+using UnityEngine.Assertions;
 
 /// <summary>
 /// A Serializeable List<int> for 2D Lists
@@ -115,6 +116,21 @@ public class IntListContainer
     /// <returns></returns>
     public override bool Equals(object obj)
     {
+        if(obj == null)
+        {
+            return false;
+        }
+
+        if (obj.GetType() != this.GetType())
+        {
+            if(obj.GetType() == typeof(List<int>))
+            {
+                return ListExtension.ListsEquivalent(list, (List<int>)obj);
+            }
+
+            return false;
+        }
+
         return ListExtension.ListsEquivalent(list, ((IntListContainer)obj).list);
     }
 

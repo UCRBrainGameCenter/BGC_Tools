@@ -87,7 +87,6 @@ namespace BGC.Extensions
             Assert.IsFalse(startIndex > array.Length);
             Assert.IsFalse(endIndex > array.Length);
 
-
             T[] arr = new T[endIndex - startIndex];
             for (int i = startIndex; i < endIndex; ++i)
             {

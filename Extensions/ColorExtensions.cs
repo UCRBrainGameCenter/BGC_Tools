@@ -1,9 +1,8 @@
-﻿using BGC.Extensions;
-using LightJson;
+﻿using LightJson;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace BGC.UI
+namespace BGC.Extensions
 {
     public static class ColorExtensions
     {

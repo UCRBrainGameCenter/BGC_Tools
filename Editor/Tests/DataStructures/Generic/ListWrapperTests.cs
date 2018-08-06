@@ -28,10 +28,12 @@ public class IntListContainerTests
         IntListContainer lw2 = new IntListContainer(new List<int>() { 0, 6, 7 });
         Assert.AreNotEqual(lw1.list, lw2.list);
         Assert.AreNotEqual(lw1, lw2);
+        Assert.IsFalse(lw1.Equals(lw2));
 
         lw1 = new IntListContainer(new List<int>() { 0, 1, 2, 3, 3, 4, 5, 5, 6, 7 });
         lw2 = new IntListContainer(new List<int>() { 0, 1, 2, 3, 3, 4, 5, 5, 6, 7 });
         Assert.AreEqual(lw1.list, lw2.list);
         Assert.AreEqual(lw1, lw2);
+        Assert.IsTrue(lw1.Equals(lw2));
     }
 }
