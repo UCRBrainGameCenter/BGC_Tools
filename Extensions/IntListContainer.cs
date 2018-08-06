@@ -1,4 +1,5 @@
 ﻿using LightJson;
+using BGC.DataStructures;
 using System.Collections.Generic;
 
 namespace BGC.Extensions
