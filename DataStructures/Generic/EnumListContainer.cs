@@ -6,7 +6,11 @@ using BGC.Utility;
 
 namespace BGC.DataStructures
 {
-    //@todo: When updated to C# 7.3 Remove all System Checks and add where TEnum : Enum
+    //@todo: When updated to C# 7.3 Remove all System type Checks and add where TEnum : Enum
+    /// <summary>
+    /// A Serializeable List<EnumType> for 2D lists
+    /// </summary>
+    /// <typeparam name="TEnum"></typeparam>
     [Serializable]
     public class EnumListContainer<TEnum> : IntListContainer
     {
@@ -25,7 +29,16 @@ namespace BGC.DataStructures
         public new EnumListContainer<TEnum> Clone => new EnumListContainer<TEnum>(new List<int>(list));
         public new TEnum RandomValue => (TEnum)Convert.ChangeType(list.RandomValue<int>(), typeof(TEnum));
 
+        /// <summary>
+        /// Constructor from raw int enum values
+        /// </summary>
+        /// <param name="list"></param>
         public EnumListContainer(List<int> list) : base(list) { }
+
+        /// <summary>
+        /// Constructor from List of enum values
+        /// </summary>
+        /// <param name="list"></param>
         public EnumListContainer(List<TEnum> list)
         {
             CheckIfEnumType();
@@ -39,27 +52,47 @@ namespace BGC.DataStructures
             this.list = temp;
         }
 
-
+        /// <summary>
+        /// Constructor from a JsonArray
+        /// </summary>
+        /// <param name="json"></param>
         public EnumListContainer(JsonArray json)
         {
             Deserialize(json);
         }
 
+        /// <summary>
+        /// Default constructor
+        /// </summary>
         public EnumListContainer()
         {
             list = new List<int>();
         }
 
+        /// <summary>
+        /// Adds an element of type TEnum to a list
+        /// </summary>
+        /// <param name="element"></param>
         public void Add(TEnum element)
         {
             list.Add((int)Convert.ChangeType(element, typeof(int)));
         }
 
+        /// <summary>
+        /// Removes an element of type TEnum from a list
+        /// </summary>
+        /// <param name="element"></param>
+        /// <returns></returns>
         public bool Remove(TEnum element)
         {
             return list.Remove((int)Convert.ChangeType(element, typeof(int)));
         }
 
+        /// <summary>
+        /// Remove all elements in another EnumListContainer
+        /// </summary>
+        /// <param name="elc"></param>
+        /// <returns></returns>
         public bool Remove(EnumListContainer<TEnum> elc)
         {
             bool removed = true;
@@ -72,6 +105,10 @@ namespace BGC.DataStructures
             return removed;
         }
 
+        /// <summary>
+        /// Set contained list
+        /// </summary>
+        /// <param name="list"></param>
         public void Set(List<TEnum> list)
         {
             List<int> temp = new List<int>();
@@ -83,26 +120,45 @@ namespace BGC.DataStructures
             this.list = temp;
         }
 
+        /// <summary>
+        /// Check if two EnumListContainers are equal
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
         public override bool Equals(object obj)
         {
+            if (obj == null || obj.GetType() != this.GetType())
+            {
+                return false;
+            }
+
             return ListExtension.ListsEquivalent(list, ((EnumListContainer<TEnum>)obj).list);
         }
 
-        public override int GetHashCode()
-        {
-            return list.GetSequenceHashCode();
-        }
-
+        /// <summary>
+        /// Check if the list contains an item
+        /// </summary>
+        /// <param name="item"></param>
+        /// <returns></returns>
         public bool Contains(TEnum item)
         {
             return list.Contains((int)Convert.ChangeType(item, typeof(int)));
         }
 
+        /// <summary>
+        /// Serializes the list into a json array
+        /// </summary>
+        /// <returns></returns>
         public new JsonArray Serialize()
         {
             return list.AnyListToStringJsonArray();
         }
 
+        /// <summary>
+        /// Sets the list to a deserialized JsonArray
+        /// </summary>
+        /// <param name="array"></param>
+        /// <param name="serialization"></param>
         public void Deserialize(JsonArray array, EnumSerialization serialization)
         {
             List<TEnum> list = array.JsonArrayToEnumList<TEnum>(serialization);
@@ -115,7 +171,10 @@ namespace BGC.DataStructures
             this.list = temp;
         }
 
-        public void CheckIfEnumType()
+        /// <summary>
+        /// Checks if the container is a valid enum type
+        /// </summary>
+        private void CheckIfEnumType()
         {
             if (!typeof(TEnum).IsEnum)
             {
@@ -123,6 +182,10 @@ namespace BGC.DataStructures
             }
         }
 
+        /// <summary>
+        /// Returns the enum type
+        /// </summary>
+        /// <returns></returns>
         public Type GetEnumType()
         {
             return typeof(TEnum);
