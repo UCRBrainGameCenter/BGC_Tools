@@ -1,5 +1,4 @@
 ﻿using UnityEngine.UI;
-using UnityEngine;
 
 namespace BGC.UI
 {
