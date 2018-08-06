@@ -84,7 +84,7 @@ namespace BGC.Utility
             T val;
             try
             {
-                val = (T)Convert.ChangeType(EnumStringValuePairs[index][str], typeof(T));
+                val = (T)Enum.ToObject(typeof(T), EnumStringValuePairs[index][str]);
             }
             catch (InvalidCastException)
             {
