@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace BGC.Extensions
 {
@@ -26,6 +27,13 @@ namespace BGC.Extensions
             return array[array.RandomIndex()];
         }
 
+        /// <summary>
+        /// Check if an array contains a target
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="array"></param>
+        /// <param name="target"></param>
+        /// <returns></returns>
         public static bool Contains<T>(this T[] array, T target)
         {
             for (int i = 0; i < array.Length; i++)
@@ -57,6 +65,43 @@ namespace BGC.Extensions
             return newArray;
         }
 
+        /// <summary>
+        /// Get a Range of Elements in an Array.
+        /// endIndex is NOT INCLUSIVE
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="array"></param>
+        /// <param name="startIndex"></param>
+        /// <param name="endIndex"></param>
+        /// <returns></returns>
+        public static T[] GetRange<T>(this T[] array, int startIndex, int endIndex = -1)
+        {
+            if (endIndex == -1)
+            {
+                endIndex = array.Length;
+            }
+
+            Assert.IsNotNull(array);
+            Assert.IsTrue(startIndex > -1);
+            Assert.IsTrue(endIndex >= startIndex);
+            Assert.IsFalse(startIndex > array.Length);
+            Assert.IsFalse(endIndex > array.Length);
+
+            T[] arr = new T[endIndex - startIndex];
+            for (int i = startIndex; i < endIndex; ++i)
+            {
+                arr[i - startIndex] = array[i];
+            }
+
+            return arr;
+        }
+
+        /// <summary>
+        /// Gets an array of all the indexes
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="arr"></param>
+        /// <returns></returns>
         public static int[] Indexes<T>(this T[] arr)
         {
             int[] indexes = new int[arr.Length];

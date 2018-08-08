@@ -1,12 +1,14 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace BGC.UI
 {
-    public static class ColorExtensions
+    public static class ColorUIExtensions
     {
-        private const string red   = "Red";
+        private const string red = "Red";
         private const string green = "Green";
-        private const string blue  = "Blue";
+        private const string blue = "Blue";
         private const string alpha = "Alpha";
 
         /// <summary>

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace BGC.Extensions
 {
@@ -318,7 +319,7 @@ namespace BGC.Extensions
         }
 
         /// <summary>
-        /// Debug.Log to print out all values of the array
+        /// Debug.Log to print out all values of the lists=
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="list"></param>
@@ -403,6 +404,32 @@ namespace BGC.Extensions
         }
 
         /// <summary>
+        /// Attempts to get an element from an array and returns it. If not, returns default.
+        /// Outputs the result to the out parameter
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="index"></param>
+        /// <param name="result"></param>
+        /// <returns></returns>
+        public static bool TryGetElement<T>(this List<T> list, int index, out T value)
+        {
+            Assert.IsNotNull(list);
+            bool result = false;
+
+            if (index < list.Count && index > -1)
+            {
+                value = list[index];
+                result = true;
+            }
+            else
+            {
+                value = default(T);
+            }
+
+            return result;
+        }
+
         /// Checks if the list contains the defined value
         /// </summary>
         /// <typeparam name="T"></typeparam>
