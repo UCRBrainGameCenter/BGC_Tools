@@ -1,6 +1,7 @@
 ﻿using LightJson;
 using BGC.DataStructures;
 using System.Collections.Generic;
+using BGC.Utility;
 
 namespace BGC.Extensions
 {
@@ -14,11 +15,11 @@ namespace BGC.Extensions
             });
         }
 
-        public static List<EnumListContainer<T>> JsonArrayToEnumListContainerList<T>(this JsonArray arr)
+        public static List<EnumListContainer<T>> JsonArrayToEnumListContainerList<T>(this JsonArray arr, EnumSerialization serialization)
         {
             return arr.JsonArrayToList((JsonValue val) =>
             {
-                return new EnumListContainer<T>(val);
+                return new EnumListContainer<T>(val, serialization);
             });
         }
     }

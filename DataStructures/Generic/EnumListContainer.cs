@@ -53,12 +53,22 @@ namespace BGC.DataStructures
         }
 
         /// <summary>
-        /// Constructor from a JsonArray
+        /// Constructor from a JsonArray of Ints
         /// </summary>
         /// <param name="json"></param>
         public EnumListContainer(JsonArray json)
         {
             Deserialize(json);
+        }
+
+        /// <summary>
+        /// Constructor from a JsonArray of EnumStrings
+        /// </summary>
+        /// <param name="json"></param>
+        /// <param name="serialization"></param>
+        public EnumListContainer(JsonArray json, EnumSerialization serialization)
+        {
+            Deserialize(json, serialization);
         }
 
         /// <summary>
@@ -161,7 +171,13 @@ namespace BGC.DataStructures
         /// <returns></returns>
         public new JsonArray Serialize()
         {
-            return list.AnyListToStringJsonArray();
+            List<TEnum> enumList = new List<TEnum>();
+            for(int i = 0; i < list.Count; ++i)
+            {
+                enumList.Add((TEnum)Convert.ChangeType(list[i], typeof(TEnum)));
+            }
+
+            return enumList.AnyListToStringJsonArray();
         }
 
         /// <summary>
