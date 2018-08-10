@@ -174,7 +174,7 @@ namespace BGC.DataStructures
             List<TEnum> enumList = new List<TEnum>();
             for(int i = 0; i < list.Count; ++i)
             {
-                enumList.Add((TEnum)Convert.ChangeType(list[i], typeof(TEnum)));
+                enumList.Add((TEnum)Enum.ToObject(typeof(TEnum), list[i]));
             }
 
             return enumList.AnyListToStringJsonArray();
