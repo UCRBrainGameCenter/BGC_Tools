@@ -2,6 +2,7 @@
 using UnityEngine.Networking;
 using UnityEngine.Assertions;
 using BGC.Web.Utility;
+using BGC.MonoUtility;
 using System.IO;
 using LightJson;
 using System;
@@ -23,15 +24,28 @@ namespace BGC.Web
             public const string Content = "content";
             public const string Study = "study";
             public const string Game = "game";
+            public const string Code = "code";
         }
 
+        public const string ConditionURL = "https://84cje3rj4j.execute-api.us-east-1.amazonaws.com/Production/condition-retriever";
+        public const string CodeURL = "https://84cje3rj4j.execute-api.us-east-1.amazonaws.com/Production/code-retriever";
+        public const string ToS3URL = "https://84cje3rj4j.execute-api.us-east-1.amazonaws.com/Production/to-s3";
+
         public const string PathSeparator = "/";
-        public const string ApiUrl = "https://84cje3rj4j.execute-api.us-east-1.amazonaws.com/Production/to-s3";
         public const string CacheControl = "no-cache";
         public const string BGCExtension = ".bgc";
         public const string JSONExtension = ".json";
 
         private const char extensionSplitter = '.';
+
+        public static Dictionary<string, string> Header(string apiKey)
+        {
+            return new Dictionary<string, string>
+            {
+                { HeaderKeys.ApiKey, apiKey},
+                { "Content-Type", "application/x-www-form-urlencoded" }
+            };
+        }
 
         // @note: this is currently not used, but will be used in the future
         ///// <summary>
@@ -119,13 +133,7 @@ namespace BGC.Web
             Assert.IsFalse(String.IsNullOrEmpty(study));
             Assert.IsFalse(String.IsNullOrEmpty(game));
             Assert.IsTrue(ContainsJSONExtension(fileName));
-
-            Dictionary<string, string> headers = new Dictionary<string, string>
-            {
-                { HeaderKeys.ApiKey, apiKey },
-                { "Content-Type", "application/x-www-form-urlencoded" }
-            };
-
+            
             JsonObject body = new JsonObject
             {
                 {
@@ -142,20 +150,55 @@ namespace BGC.Web
             };
 
             Rest.PostRequest(
-                ApiUrl,
-                headers,
+                ToS3URL,
+                Header(apiKey),
                 body.ToString(),
                 callBack);
         }
 
-        public static void GetCodeConfig(string code, string apiKey)
+        public static void GetCodeConfig(
+            string code,
+            string game, 
+            string apiKey,
+            StatusPanel statusPanel,
+            Action<string, int> callback=null)
         {
+            Assert.IsNotNull(statusPanel);
+            Assert.IsFalse(String.IsNullOrEmpty(code));
+            Assert.IsFalse(String.IsNullOrEmpty(game));
+            Assert.IsFalse(String.IsNullOrEmpty(apiKey));
 
+            statusPanel.Status = "Requesting code configuration...";
+
+            JsonObject body = new JsonObject
+            {
+                {
+                    "body",
+                    new JsonObject
+                    {
+                        { BodyKeys.Game, game },
+                        { BodyKeys.Code, code }
+                    }
+                }
+            };
+
+            Rest.PostRequest(
+                CodeURL,
+                Header(apiKey),
+                body.ToString(),
+                (UnityWebRequest uwr) => {
+                    if (callback != null)
+                    {
+                        DownloadHandler downloader = uwr.downloadHandler;
+                        statusPanel.Status = "Downloading server response...";
+                        callback(downloader.text, (int) uwr.responseCode);
+                    }
+                });
         }
 
-        public static void GetCondition(string path, string apiKey)
+        public static void GetCondition(string path, string apiKey, StatusPanel statusPanel, Action<string, int> callback=null)
         {
-
+            statusPanel.Status = "Requesting condition...";
         }
 
         /// <summary>
