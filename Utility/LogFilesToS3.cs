@@ -15,7 +15,7 @@ namespace BGC.Utility
         /// </summary>
         /// <param name="bucketName"></param>
         /// <param name="serverPath"></param>
-        public static void MigrateFiles(string organization, string study, string game)
+        public static void MigrateFiles(string organization, string study, string game, string apiKey)
         {
             Assert.IsFalse(System.String.IsNullOrEmpty(organization));
             Assert.IsFalse(System.String.IsNullOrEmpty(study));
@@ -25,7 +25,7 @@ namespace BGC.Utility
 
             for (int i = 0; i < users.Length; ++i)
             {
-                MigrateUser(Path.GetFileName(users[i]), organization, study, game);
+                MigrateUser(Path.GetFileName(users[i]), organization, study, game, apiKey);
             }
         }
 
@@ -35,7 +35,7 @@ namespace BGC.Utility
         /// <param name="userName"></param>
         /// <param name="bucket"></param>
         /// <param name="serverPath"></param>
-        private static void MigrateUser(string userName, string organization, string study, string game)
+        private static void MigrateUser(string userName, string organization, string study, string game, string apiKey)
         {
             string permanentPath = LogDirectories.UserPermanentDirectory(userName);
             string stagingPath = LogDirectories.UserStagingDirectory(userName);
@@ -54,6 +54,7 @@ namespace BGC.Utility
                     organization,
                     study, 
                     game,
+                    apiKey,
                     (UnityWebRequest request) => {
                         if (request.responseCode == 200)
                         {

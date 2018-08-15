@@ -2,7 +2,6 @@
 using UnityEngine.Networking;
 using UnityEngine.Assertions;
 using BGC.Web.Utility;
-using UnityEngine;
 using System.IO;
 using LightJson;
 using System;
@@ -28,7 +27,6 @@ namespace BGC.Web
 
         public const string PathSeparator = "/";
         public const string ApiUrl = "https://84cje3rj4j.execute-api.us-east-1.amazonaws.com/Production/to-s3";
-        public const string ApiKey = "3Hz6KpZXBb2aFY57wCo137fm9OWmmyOo9D7TJCsx";
         public const string CacheControl = "no-cache";
         public const string BGCExtension = ".bgc";
         public const string JSONExtension = ".json";
@@ -74,6 +72,7 @@ namespace BGC.Web
             string organization,
             string study,
             string game,
+            string apiKey,
             Action<UnityWebRequest> callBack = null)
         {
             Assert.IsFalse(String.IsNullOrEmpty(filePath));
@@ -94,6 +93,7 @@ namespace BGC.Web
                 study,
                 game,
                 jsonContent,
+                apiKey,
                 callBack);
         }
 
@@ -111,6 +111,7 @@ namespace BGC.Web
             string study,
             string game,
             JsonObject content,
+            string apiKey,
             Action<UnityWebRequest> callBack = null)
         {
             Assert.IsFalse(String.IsNullOrEmpty(fileName));
@@ -121,7 +122,7 @@ namespace BGC.Web
 
             Dictionary<string, string> headers = new Dictionary<string, string>
             {
-                { HeaderKeys.ApiKey, ApiKey },
+                { HeaderKeys.ApiKey, apiKey },
                 { "Content-Type", "application/x-www-form-urlencoded" }
             };
 
@@ -145,6 +146,16 @@ namespace BGC.Web
                 headers,
                 body.ToString(),
                 callBack);
+        }
+
+        public static void GetCodeConfig(string code, string apiKey)
+        {
+
+        }
+
+        public static void GetCondition(string path, string apiKey)
+        {
+
         }
 
         /// <summary>

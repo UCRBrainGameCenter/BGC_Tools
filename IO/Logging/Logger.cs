@@ -146,7 +146,7 @@ namespace BGC.IO.Logging
             }
         }
 
-        public void CloseFile(string userName, string organization, string study)
+        public void CloseFile(string userName, string organization, string study, string apiKey)
         {
             if (logger != null)
             {
@@ -162,6 +162,7 @@ namespace BGC.IO.Logging
                         organization,
                         study,
                         applicationName,
+                        apiKey,
                         (UnityWebRequest request) => {
                             if (request.isNetworkError == false)
                             {
