@@ -20,6 +20,7 @@ namespace BGC.Web
         public static class BodyKeys
         {
             public const string Oganization = "organization";
+            public const string Condition = "condition";
             public const string FileName = "file_name";
             public const string Content = "content";
             public const string Study = "study";
@@ -189,16 +190,45 @@ namespace BGC.Web
                 (UnityWebRequest uwr) => {
                     if (callback != null)
                     {
-                        DownloadHandler downloader = uwr.downloadHandler;
                         statusPanel.Status = "Downloading server response...";
+                        DownloadHandler downloader = uwr.downloadHandler;
                         callback(downloader.text, (int) uwr.responseCode);
                     }
                 });
         }
 
-        public static void GetCondition(string path, string apiKey, StatusPanel statusPanel, Action<string, int> callback=null)
+        public static void GetCondition(string path, string apiKey, StatusPanel statusPanel, Action<string, int> callback = null)
         {
+            Assert.IsFalse(String.IsNullOrEmpty(apiKey));
+            Assert.IsFalse(String.IsNullOrEmpty(path));
+            Assert.IsNotNull(statusPanel);
+
             statusPanel.Status = "Requesting condition...";
+
+            JsonObject body = new JsonObject
+            {
+                {
+                    "body",
+                    new JsonObject
+                    {
+                        { BodyKeys.Condition, path }
+                    }
+               }
+            };
+
+            Rest.PostRequest(
+                ConditionURL,
+                Header(apiKey),
+                body.ToString(),
+                (uwr) =>
+                {
+                    if (callback != null)
+                    {
+                        statusPanel.Status = "Downloading server response...";
+                        DownloadHandler downloader = uwr.downloadHandler;
+                        callback(downloader.text, (int)uwr.responseCode);
+                    }
+                });
         }
 
         /// <summary>
