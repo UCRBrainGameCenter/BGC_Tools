@@ -176,7 +176,7 @@ namespace BGC.DataStructures
         /// Sets the list to a deserialized JsonArray
         /// </summary>
         /// <param name="array"></param>
-        public void Deserialize(JsonArray array)
+        protected void Deserialize(JsonArray array)
         {
             this.list = array.JsonArrayToIntList();
         }
