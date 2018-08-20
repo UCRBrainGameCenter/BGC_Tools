@@ -22,7 +22,11 @@ namespace BGC.Utility
                 if (Dirs[i].Equals(ResourcesDirectory))
                 {
                     Dirs = Dirs.GetRange(i + 1, Dirs.Length);
-                    Dirs[Dirs.Length - 1] = Dirs[Dirs.Length - 1].Split(Extension)[0];
+
+                    string[] fileName = Dirs[Dirs.Length - 1].Split(Extension);
+                    fileName = fileName.GetRange(0, fileName.Length - 1);
+                    Dirs[Dirs.Length - 1] = fileName.Join(".");
+
                     path = Dirs.Join(FileDelimiter.ToString());
 
                     return true;

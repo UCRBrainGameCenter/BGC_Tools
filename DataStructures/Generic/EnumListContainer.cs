@@ -6,7 +6,7 @@ using BGC.Utility;
 
 namespace BGC.DataStructures
 {
-    //@todo: When updated to C# 7.3 Remove all System type Checks and add where TEnum : Enum
+    // @todo: When updated to C# 7.3 Remove all System type Checks and add where TEnum : Enum
     /// <summary>
     /// A Serializeable List<EnumType> for 2D lists
     /// </summary>
@@ -44,7 +44,7 @@ namespace BGC.DataStructures
             CheckIfEnumType();
 
             List<int> temp = new List<int>();
-            for(int i = 0; i < list.Count; ++i)
+            for (int i = 0; i < list.Count; ++i)
             {
                 temp.Add((int)Convert.ChangeType(list[i], typeof(int)));
             }
@@ -53,12 +53,22 @@ namespace BGC.DataStructures
         }
 
         /// <summary>
-        /// Constructor from a JsonArray
+        /// Constructor from a JsonArray of Ints
         /// </summary>
         /// <param name="json"></param>
         public EnumListContainer(JsonArray json)
         {
             Deserialize(json);
+        }
+
+        /// <summary>
+        /// Constructor from a JsonArray of EnumStrings
+        /// </summary>
+        /// <param name="json"></param>
+        /// <param name="serialization"></param>
+        public EnumListContainer(JsonArray json, EnumSerialization serialization)
+        {
+            Deserialize(json, serialization);
         }
 
         /// <summary>
@@ -161,7 +171,13 @@ namespace BGC.DataStructures
         /// <returns></returns>
         public new JsonArray Serialize()
         {
-            return list.AnyListToStringJsonArray();
+            List<TEnum> enumList = new List<TEnum>();
+            for (int i = 0; i < list.Count; ++i)
+            {
+                enumList.Add((TEnum)Enum.ToObject(typeof(TEnum), list[i]));
+            }
+
+            return enumList.AnyListToStringJsonArray();
         }
 
         /// <summary>
@@ -169,11 +185,11 @@ namespace BGC.DataStructures
         /// </summary>
         /// <param name="array"></param>
         /// <param name="serialization"></param>
-        public void Deserialize(JsonArray array, EnumSerialization serialization)
+        private void Deserialize(JsonArray array, EnumSerialization serialization)
         {
             List<TEnum> list = array.JsonArrayToEnumList<TEnum>(serialization);
             List<int> temp = new List<int>();
-            for(int i = 0; i < list.Count; ++i)
+            for (int i = 0; i < list.Count; ++i)
             {
                 temp.Add((int)Convert.ChangeType(list[i], typeof(int)));
             }
