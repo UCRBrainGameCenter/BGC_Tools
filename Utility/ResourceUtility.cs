@@ -7,6 +7,7 @@ namespace BGC.Utility
     {
         public const string ResourcesDirectory = "Resources";
         public const char FileDelimiter = '/';
+        public const char FileDelimiterOS = '\\';
         public const char Extension = '.';
 
         /// <summary>
@@ -17,6 +18,11 @@ namespace BGC.Utility
         public static bool ConvertToValidResourcePath(ref string path)
         {
             string[] Dirs = path.Split(FileDelimiter);
+            if(Dirs.Length == 1)
+            {
+                Dirs = path.Split(FileDelimiterOS);
+            }
+
             for (int i = 0; i < Dirs.Length; ++i)
             {
                 if (Dirs[i].Equals(ResourcesDirectory))
