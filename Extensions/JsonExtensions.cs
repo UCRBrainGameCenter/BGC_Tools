@@ -62,6 +62,19 @@ namespace BGC.Extensions
             });
         }
 
+        public static List<string> JsonaArrayToStringList(this JsonArray jsonArray)
+        {
+            List<string> stringList = new List<string>();
+
+            int count = jsonArray.Count;
+            for (int i = 0; i < count; ++i)
+            {
+                stringList.Add(jsonArray[i]);
+            }
+
+            return stringList;
+        }
+
         /// <summary>
         /// Converts a Json Array to a List of floats
         /// </summary>

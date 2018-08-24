@@ -1,5 +1,4 @@
 ﻿using BGC.Extensions;
-using UnityEngine;
 
 namespace BGC.Utility
 {
@@ -17,6 +16,7 @@ namespace BGC.Utility
         public static bool ConvertToValidResourcePath(ref string path)
         {
             string[] Dirs = path.Split(FileDelimiter);
+
             for (int i = 0; i < Dirs.Length; ++i)
             {
                 if (Dirs[i].Equals(ResourcesDirectory))
@@ -34,6 +34,27 @@ namespace BGC.Utility
             }
 
             return false;
+        }
+
+        public static string Combine(string path1, string path2)
+        {
+            bool p1NullOrEmpty = string.IsNullOrEmpty(path1);
+            bool p2NullOrEmpty = string.IsNullOrEmpty(path2);
+
+            if (p1NullOrEmpty && p2NullOrEmpty)
+            {
+                return "";
+            }
+            else if (p1NullOrEmpty)
+            {
+                return path2;
+            }
+            else if(p2NullOrEmpty)
+            {
+                return path1;
+            }
+
+            return $"{path1}{FileDelimiter}{path2}";
         }
     }
 }

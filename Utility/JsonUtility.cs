@@ -44,6 +44,24 @@ namespace BGC.Utility
         }
 
         /// <summary>
+        /// Convert list of strings to json array
+        /// </summary>
+        /// <param name="list"></param>
+        /// <returns></returns>
+        public static JsonArray ToJsonArray(this IList<string> list)
+        {
+            JsonArray jsonArray = new JsonArray();
+
+            int length = list.Count;
+            for (int i = 0; i < length; ++i)
+            {
+                jsonArray.Add(list[i]);
+            }
+
+            return jsonArray;
+        }
+
+        /// <summary>
         /// Convert json array to array with lambda to convert elements to defined type
         /// </summary>
         /// <typeparam name="T"></typeparam>
