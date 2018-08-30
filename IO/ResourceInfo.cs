@@ -13,7 +13,7 @@ namespace BGC.IO
         private static List<string> resources;
         private static int length;
 
-        public static List<string> ListFiles(string path)
+        public static List<string> ListFiles(string path, bool recursive = false)
         {
             InitializeResourceInfo();
             List<string> paths = new List<string>();
@@ -34,7 +34,7 @@ namespace BGC.IO
                 if (filePath.Contains(path))
                 {
                     resourceDirectoryCount = filePath.Split(ResourceInfoConstructor.CharPathSeparator).Length;
-                    if (directoryCount == resourceDirectoryCount)
+                    if (directoryCount == resourceDirectoryCount || recursive)
                     {
                         paths.Add(filePath);
                     }
