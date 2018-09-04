@@ -5,6 +5,7 @@ using UnityEngine.Assertions;
 
 namespace BGC.Utility
 {
+#if UNITY_EDITOR
     public class TextPopupField : EditorWindow
     {
         /// <summary>
@@ -58,4 +59,5 @@ namespace BGC.Utility
             }
         }
     }
+#endif
 }
