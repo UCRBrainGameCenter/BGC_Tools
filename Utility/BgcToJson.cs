@@ -1,6 +1,7 @@
 ﻿using UnityEngine.Assertions;
 using LightJson;
 using System;
+using BGC.IO.Logging;
 
 namespace BGC.Utility
 {
@@ -8,19 +9,27 @@ namespace BGC.Utility
     {
         public static class RequiredFields
         {
-            public const string DefaultColumn = "default";
-            public const string Delimiter = "delimiter";
-            public const string ColumnMapping = "column_mapping";
-            public const string ValueMapping = "value_mapping";
             public const string MetaData = "meta_data";
             public const string Data = "data";
 
-            public static readonly string[] MetaDataFields = new string[] {
-            "game_name", "version", "user_name", "device_id", "session_number",
-            "run_number", Delimiter, ColumnMapping, ValueMapping};
+            public static readonly string[] MetaDataFields = new string[]
+            {
+                LoggingKeys.GameName,
+                LoggingKeys.Version,
+                LoggingKeys.UserName,
+                LoggingKeys.DeviceID,
+                LoggingKeys.Session,
+                LoggingKeys.Delimiter,
+                LoggingKeys.ColumnMapping,
+                LoggingKeys.ValueMapping
+            };
 
-            public static readonly string[] RedundantFields = new string[] {
-            ColumnMapping, ValueMapping, Delimiter};
+            public static readonly string[] RedundantFields = new string[]
+            {
+                LoggingKeys.ColumnMapping,
+                LoggingKeys.ValueMapping,
+                LoggingKeys.Delimiter
+            };
         }
 
         /// <summary>
@@ -47,10 +56,10 @@ namespace BGC.Utility
             Assert.IsTrue(MetaDataHasCorrectFields(metaData, verbose));
 
             JsonArray data = new JsonArray();
-            string[] delimiter = new string[] { metaData[RequiredFields.Delimiter].AsString };
+            string[] delimiter = new string[] { metaData[LoggingKeys.Delimiter].AsString };
             for (int i = 1; i < bgc.Length; ++i)
             {
-                if (System.String.IsNullOrEmpty(bgc[i]) == false)
+                if (String.IsNullOrEmpty(bgc[i]) == false)
                 {
                     data.Add(ConvertLine(metaData, delimiter, bgc[i]));
                 }
@@ -118,16 +127,16 @@ namespace BGC.Utility
             string[] data = line.Split(splitBy, StringSplitOptions.None);
 
             string columnMappingKey;
-            if (metaData[RequiredFields.ColumnMapping].AsJsonObject.ContainsKey(data[0]))
+            if (metaData[LoggingKeys.ColumnMapping].AsJsonObject.ContainsKey(data[0]))
             {
                 columnMappingKey = data[0];
             }
             else
             {
-                columnMappingKey = RequiredFields.DefaultColumn;
+                columnMappingKey = LoggingKeys.DefaultColumn;
             }
 
-            JsonArray columnMapping = metaData[RequiredFields.ColumnMapping][columnMappingKey];
+            JsonArray columnMapping = metaData[LoggingKeys.ColumnMapping][columnMappingKey];
             Assert.AreEqual(data.Length, columnMapping.Count);
 
             bool b;
@@ -152,7 +161,7 @@ namespace BGC.Utility
                     jsonData.Add(columnMapping[i], data[i]);
                 }
 
-                JsonObject valueMapping = metaData[RequiredFields.ValueMapping];
+                JsonObject valueMapping = metaData[LoggingKeys.ValueMapping];
                 if (valueMapping.ContainsKey(columnMapping[i]))
                 {
                     JsonObject mapping = valueMapping[columnMapping[i]];

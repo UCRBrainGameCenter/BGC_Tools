@@ -7,7 +7,6 @@
         public const string UserName  = "user_name";
         public const string Session   = "session_number";
         public const string DeviceID  = "device_id";
-        public const string RunNumber = "run_number";
         public const string Delimiter = "delimiter";
 
         public const string DefaultColumn     = "default";
