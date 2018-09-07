@@ -11,8 +11,6 @@ namespace BGC.IO.Logging
 {
     public abstract class Logger
     {
-        protected const string bgcExtension = ".bgc";
-
         protected static string TimeStamp => DateTime.Now.ToString("yy_MM_dd_HH_mm_ss");
 
         protected string delimiter;
@@ -62,7 +60,7 @@ namespace BGC.IO.Logging
         protected abstract JsonObject ConstructColumnMapping();
         protected abstract JsonObject ConstructValueMapping();
 
-        protected void ApplyHeaders()
+        private void ApplyHeaders()
         {
             JsonObject header = new JsonObject
             {
@@ -76,10 +74,8 @@ namespace BGC.IO.Logging
         }
 
         /// <summary>
-        /// Push a line to the logger.
-        /// a file
+        /// Push a line to the logger. Open the logger if it's null.
         /// </summary>
-        /// <param name="line"></param>
         protected void PushLine(params IConvertible[] strings)
         {
             if (logger == null)
@@ -92,10 +88,8 @@ namespace BGC.IO.Logging
         }
 
         /// <summary>
-        /// Push a string to the logger. Will throw an exception if the logger 
-        /// hasn't been opened
+        /// Push a string to the logger. Open the logger if it's null.
         /// </summary>
-        /// <param name="str"></param>
         protected void PushString(string str)
         {
             if (logger == null)
@@ -111,10 +105,21 @@ namespace BGC.IO.Logging
         {
             if (logger != null)
             {
-                throw new InvalidOperationException($"Must close the current file before opening a new one for \"{path}\"");
+                throw new InvalidOperationException(
+                    $"Must close the current file before opening a new one for \"{path}\"");
             }
 
-            path = GetNewLogName();
+            // if fileIndices is { }:           ""
+            // if fileIndices is {5}:           "_005"
+            // if fileIndices is {1, 2}:        "_001_002"
+            // if fileIndices is {0, 1, 2}:     "_000_001_002"
+            string indexString = string.Join("", fileIndices.Select(i => $"_{i.ToString("000")}"));
+            string fileName = $"{userName}_{sessionNumber.ToString("000")}{indexString}_{Name}_{TimeStamp}{FileExtensions.BGC}";
+
+            path = PathForLogFile(
+                userName: userName,
+                filename: fileName,
+                pushToServer: pushToServer);
 
             ReservedFiles.ReserveFile(path);
             logger = File.AppendText(path);
@@ -139,9 +144,9 @@ namespace BGC.IO.Logging
                 logger = null;
                 ReservedFiles.UnReserveFile(path);
 
-#if UNITY_EDITOR
                 if (pushToServer == true)
                 {
+#if !UNITY_EDITOR
                     AWSServer.PostBGCToJSonToAWS(
                         path,
                         organization,
@@ -161,33 +166,30 @@ namespace BGC.IO.Logging
                                 Debug.LogError(request.ToString());
                             }
                         });
-                }
 #endif
+                }
             }
         }
 
-        private string GetNewLogName()
-        {
-            string indexString = string.Join("", fileIndices.Select(i => $"_{i.ToString("000")}"));
-
-            return PathForLogFile(
-                userName: userName,
-                filename: $"{userName}_{sessionNumber.ToString("000")}{indexString}_{Name}_{TimeStamp}{bgcExtension}");
-        }
-
-        protected string GetExceptionFileName()
+        private string GetExceptionFileName()
         {
             return Path.Combine(
                 LogDirectories.ExceptionDirectory,
-                $"Exception_{TimeStamp}{bgcExtension}");
+                $"Exception_{TimeStamp}{FileExtensions.BGC}");
         }
 
-        protected string PathForLogFile(string userName, string filename)
+        private static string PathForLogFile(string userName, string filename, bool pushToServer)
         {
+            if (pushToServer == false)
+            {
+                //Files not being pushed to the server are written straight to the permanent dir
+                return Path.Combine(LogDirectories.UserPermanentDirectory(userName), filename);
+            }
+
             return Path.Combine(LogDirectories.UserStagingDirectory(userName), filename);
         }
 
-        protected void ApplyRequiredFields(JsonObject jo)
+        private void ApplyRequiredFields(JsonObject jo)
         {
             jo.Add(LoggingKeys.GameName, applicationName);
             jo.Add(LoggingKeys.Version, applicationVersion);

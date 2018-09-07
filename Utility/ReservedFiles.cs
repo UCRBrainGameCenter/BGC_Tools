@@ -32,7 +32,7 @@ namespace BGC.Utility
         /// <returns>True if hte file was found and removed</returns>
         public static bool UnReserveFile(string path)
         {
-            if(files.Contains(path))
+            if (files.Contains(path))
             {
                 files.Remove(path);
                 return true;

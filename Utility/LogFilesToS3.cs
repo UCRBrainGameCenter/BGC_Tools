@@ -13,13 +13,11 @@ namespace BGC.Utility
         /// Move all files to s3 and on success move them from the staging area
         /// to the permanent area of logs
         /// </summary>
-        /// <param name="bucketName"></param>
-        /// <param name="serverPath"></param>
         public static void MigrateFiles(string organization, string study, string game, string apiKey)
         {
-            Assert.IsFalse(System.String.IsNullOrEmpty(organization));
-            Assert.IsFalse(System.String.IsNullOrEmpty(study));
-            Assert.IsFalse(System.String.IsNullOrEmpty(game));
+            Assert.IsFalse(string.IsNullOrEmpty(organization));
+            Assert.IsFalse(string.IsNullOrEmpty(study));
+            Assert.IsFalse(string.IsNullOrEmpty(game));
 
             string[] users = Directory.GetDirectories(LogDirectories.StagingDirectory);
 
@@ -32,15 +30,18 @@ namespace BGC.Utility
         /// <summary>
         /// Migrate user logs from staging to permanent on succesful upload to s3
         /// </summary>
-        /// <param name="userName"></param>
-        /// <param name="bucket"></param>
-        /// <param name="serverPath"></param>
-        private static void MigrateUser(string userName, string organization, string study, string game, string apiKey)
+        private static void MigrateUser(
+            string userName,
+            string organization,
+            string study,
+            string game,
+            string apiKey)
         {
             string permanentPath = LogDirectories.UserPermanentDirectory(userName);
             string stagingPath = LogDirectories.UserStagingDirectory(userName);
             string[] files = Directory.GetFiles(stagingPath);
 
+#if !UNITY_EDITOR
             for (int i = 0; i < files.Length; ++i)
             {
                 string stagingFile = Path.Combine(stagingPath, files[i]);
@@ -66,6 +67,7 @@ namespace BGC.Utility
                         }
                     });
             }
+#endif
         }
     }
 }
