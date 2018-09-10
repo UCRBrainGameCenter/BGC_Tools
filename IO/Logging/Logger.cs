@@ -1,11 +1,12 @@
-﻿using UnityEngine.Networking;
-using BGC.Utility;
-using UnityEngine;
-using System.Linq;
-using LightJson;
+﻿using System;
 using System.IO;
+using System.Linq;
+using UnityEngine;
+using UnityEngine.Assertions;
+using UnityEngine.Networking;
+using LightJson;
 using BGC.Web;
-using System;
+using BGC.Utility;
 
 namespace BGC.IO.Logging
 {
@@ -146,6 +147,11 @@ namespace BGC.IO.Logging
 
                 if (pushToServer == true)
                 {
+                    Assert.IsFalse(string.IsNullOrEmpty(userName));
+                    Assert.IsFalse(string.IsNullOrEmpty(organization));
+                    Assert.IsFalse(string.IsNullOrEmpty(study));
+                    Assert.IsFalse(string.IsNullOrEmpty(apiKey));
+
 #if !UNITY_EDITOR
                     AWSServer.PostBGCToJSonToAWS(
                         path,
