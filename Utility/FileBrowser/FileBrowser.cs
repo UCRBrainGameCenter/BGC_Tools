@@ -55,11 +55,22 @@ namespace BGC.Utility.FileBrowser
 
         private void Awake()
         {
+            Assert.IsNotNull(toggleNavigationButton);
+            Assert.IsNotNull(parentDirectoryButton);
+            Assert.IsNotNull(navigationContent);
+            Assert.IsNotNull(navigationPanel);
+            Assert.IsNotNull(mainMenuButton);
+            Assert.IsNotNull(fileTextPrefab);
+            Assert.IsNotNull(buttonPrefab);
+            Assert.IsNotNull(fileContent);
+            Assert.IsNotNull(pathText);
+            Assert.IsNotNull(fileName);
+
             parentDirectoryButton.onClick.AddListener(MoveUpDirectory);
             toggleNavigationButton.onClick.AddListener(ToggleNavPanel);
             mainMenuButton.onClick.AddListener(GoBack);
 
-            OpenDirectory(BGC.IO.DataManagement.RootDirectory);
+            OpenDirectory(IO.DataManagement.RootDirectory);
         }
 
         private void OnDestroy()
@@ -70,6 +81,7 @@ namespace BGC.Utility.FileBrowser
         private void GoBack()
         {
             Assert.IsFalse(System.String.IsNullOrEmpty(ReturnToScene));
+            Debug.Log(ReturnToScene);
             SceneManager.LoadScene(ReturnToScene);
         }
 
@@ -80,7 +92,7 @@ namespace BGC.Utility.FileBrowser
 
         private void MoveUpDirectory()
         {
-            if (Path.GetFullPath(currentDirectory) != Path.GetFullPath(BGC.IO.DataManagement.RootDirectory))
+            if (Path.GetFullPath(currentDirectory) != Path.GetFullPath(IO.DataManagement.RootDirectory))
             {
                 OpenDirectory(Directory.GetParent(currentDirectory).FullName);
             }
@@ -154,9 +166,9 @@ namespace BGC.Utility.FileBrowser
 
         private void UpdatePathText()
         {
-            // @todo: make this cleaner
-            pathText.text = "Path: " + currentDirectory.Remove(0, BGC.IO.DataManagement.RootDirectory.Length)
-                                .Replace(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + "/";
+            string directory = currentDirectory.Remove(0, IO.DataManagement.RootDirectory.Length);
+            directory = directory.Replace(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            pathText.text = $"Path: {directory}/";
         }
     }
 }
