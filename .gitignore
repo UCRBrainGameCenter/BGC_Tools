@@ -34,7 +34,7 @@ sysinfo.txt
 *.unitypackage
 
 # experimental ignore of meta files for this submodule
-*.meta
+#*.meta
 
 # ignore doxygen generated directory
 out
