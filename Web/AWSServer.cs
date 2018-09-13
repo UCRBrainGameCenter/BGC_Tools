@@ -48,47 +48,13 @@ namespace BGC.Web
             };
         }
 
-        // @note: this is currently not used, but will be used in the future
-        ///// <summary>
-        ///// Post a file to s3.
-        ///// </summary>
-        ///// <param name="filePath"></param>
-        ///// <param name="bucket"></param>
-        ///// <param name="serverPath"></param>
-        ///// <param name="callBack"></param>
-        //public static void PostFileToAWS(
-        //    string filePath,
-        //    string organization,
-        //    string study,
-        //    string game,
-        //    Action<UnityWebRequest> callBack = null)
-        //{
-        //    Assert.IsFalse(String.IsNullOrEmpty(filePath));
-        //    Assert.IsFalse(String.IsNullOrEmpty(organization));
-        //    Assert.IsFalse(String.IsNullOrEmpty(study));
-        //    Assert.IsFalse(String.IsNullOrEmpty(game));
-        //    Assert.IsTrue(File.Exists(filePath));
-
-        //    StreamReader reader = new StreamReader(filePath);
-        //    string content = reader.ReadToEnd();
-        //    reader.Close();
-
-        //    PostToAWS(
-        //        Path.GetFileName(filePath),
-        //        organization,
-        //        study,
-        //        game,
-        //        content,
-        //        callBack);
-        //}
-
         public static void PostBGCToJSonToAWS(
             string filePath,
             string organization,
             string study,
             string game,
             string apiKey,
-            Action<UnityWebRequest> callBack = null)
+            Action<UnityWebRequest, bool> callBack = null)
         {
             Assert.IsFalse(String.IsNullOrEmpty(filePath));
             Assert.IsFalse(String.IsNullOrEmpty(organization));
@@ -101,15 +67,24 @@ namespace BGC.Web
             string content = reader.ReadToEnd();
             reader.Close();
 
-            JsonObject jsonContent = BGC.Utility.BgcToJson.ConvertBgcToJson(content);
-            PostToAWS(
-                Path.GetFileName(filePath).Replace(BGCExtension, JSONExtension),
-                organization,
-                study,
-                game,
-                jsonContent,
-                apiKey,
-                callBack);
+            try
+            {
+
+                JsonObject jsonContent = BGC.Utility.BgcToJson.ConvertBgcToJson(content);
+                PostToAWS(
+                    Path.GetFileName(filePath).Replace(BGCExtension, JSONExtension),
+                    organization,
+                    study,
+                    game,
+                    jsonContent,
+                    apiKey,
+                    callBack);
+            }
+            catch (Exception e)
+            {
+                UnityEngine.Debug.LogError($"Error sending file {filePath} with exception {e.Message}.");
+                callBack(null, false);
+            }
         }
 
         /// <summary>
@@ -127,7 +102,7 @@ namespace BGC.Web
             string game,
             JsonObject content,
             string apiKey,
-            Action<UnityWebRequest> callBack = null)
+            Action<UnityWebRequest, bool> callBack = null)
         {
             Assert.IsFalse(String.IsNullOrEmpty(fileName));
             Assert.IsFalse(String.IsNullOrEmpty(organization));
@@ -187,7 +162,7 @@ namespace BGC.Web
                 CodeURL,
                 Header(apiKey),
                 body.ToString(),
-                (UnityWebRequest uwr) => {
+                (UnityWebRequest uwr, bool valid) => {
                     if (callback != null)
                     {
                         statusPanel.Status = "Downloading server response...";
@@ -220,7 +195,7 @@ namespace BGC.Web
                 ConditionURL,
                 Header(apiKey),
                 body.ToString(),
-                (uwr) =>
+                (uwr, validJson) =>
                 {
                     if (callback != null)
                     {
