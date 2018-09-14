@@ -37,11 +37,12 @@ namespace BGC.Utility
             string game,
             string apiKey)
         {
+#if UNITY_EDITOR
             string permanentPath = LogDirectories.UserPermanentDirectory(userName);
             string stagingPath = LogDirectories.UserStagingDirectory(userName);
+            string errorPath = LogDirectories.UserErrorLogDirectory(userName);
             string[] files = Directory.GetFiles(stagingPath);
 
-#if !UNITY_EDITOR
             for (int i = 0; i < files.Length; ++i)
             {
                 string stagingFile = Path.Combine(stagingPath, files[i]);
@@ -56,14 +57,22 @@ namespace BGC.Utility
                     study, 
                     game,
                     apiKey,
-                    (UnityWebRequest request) => {
-                        if (request.responseCode == 200)
+                    (UnityWebRequest request, bool validJson) => {
+                        if (validJson == true)
                         {
-                            IO.Utility.SafeMove(stagingFile, Path.Combine(permanentPath, Path.GetFileName(stagingFile)));
+                            if (request.responseCode == 200)
+                            {
+                                IO.Utility.SafeMove(stagingFile, Path.Combine(permanentPath, Path.GetFileName(stagingFile)));
+                            }
+                            else
+                            {
+                                Debug.LogError(request);
+                            }
                         }
                         else
                         {
-                            Debug.LogError(request);
+                            Debug.LogError($"Invalid json file: {stagingFile}");
+                            IO.Utility.SafeMove(stagingFile, Path.Combine(errorPath, Path.GetFileName(stagingFile)));
                         }
                     });
             }

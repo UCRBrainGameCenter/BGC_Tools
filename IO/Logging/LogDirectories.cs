@@ -8,11 +8,13 @@ namespace BGC.IO
         public const string S3StagingDirectory   = "Staging";
         public const string ExceptionsDirectory  = "Exceptions";
         public const string S3PermanentDirectory = "Permanent";
+        public const string ErrorLogsDirectory   = "ErrorLogs";
 
         private static string logDirectory       = null;
         private static string stagingDirectory   = null;
         private static string permanentDirectory = null;
         private static string exceptionDirectory = null;
+        private static string errorLogDirectory = null;
         
         /// <summary>
         /// Logs directory for all users
@@ -76,6 +78,26 @@ namespace BGC.IO
         }
 
         /// <summary>
+        /// Directory for all logs that have errors and can't be merged into s3
+        /// </summary>
+        public static string ErrorLogDirectory
+        {
+            get
+            {
+                if (errorLogDirectory == null)
+                {
+                    errorLogDirectory = Path.Combine(LogDirectory, ErrorLogsDirectory);
+                    if (Directory.Exists(errorLogDirectory) == false)
+                    {
+                        Directory.CreateDirectory(errorLogDirectory);
+                    }
+                }
+
+                return errorLogDirectory;
+            }
+        }
+
+        /// <summary>
         /// Get path for exceptions directory. Creates directory if it does not
         /// exist
         /// </summary>
@@ -122,6 +144,17 @@ namespace BGC.IO
         public static string UserPermanentDirectory(string user)
         {
             string dir = Path.Combine(PermanentDirectory, user);
+            if (Directory.Exists(dir) == false)
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            return dir;
+        }
+
+        public static string UserErrorLogDirectory(string user)
+        {
+            string dir = Path.Combine(ErrorLogDirectory, user);
             if (Directory.Exists(dir) == false)
             {
                 Directory.CreateDirectory(dir);
