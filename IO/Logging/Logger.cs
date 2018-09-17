@@ -159,17 +159,26 @@ namespace BGC.IO.Logging
                         study,
                         applicationName,
                         apiKey,
-                        (UnityWebRequest request) =>
+                        (UnityWebRequest request, bool validJson) =>
                         {
-                            if (request.isNetworkError == false)
+                            if (validJson == true)
                             {
-                                Utility.SafeMove(path, Path.Combine(
-                                    LogDirectories.UserPermanentDirectory(userName),
-                                    Path.GetFileName(path)));
+                                if (request.isNetworkError == false)
+                                {
+                                    Utility.SafeMove(path, Path.Combine(
+                                        LogDirectories.UserPermanentDirectory(userName),
+                                        Path.GetFileName(path)));
+                                }
+                                else
+                                {
+                                    Debug.LogError(request.ToString());
+                                }
                             }
                             else
                             {
-                                Debug.LogError(request.ToString());
+                                Utility.SafeMove(path, Path.Combine(
+                                    LogDirectories.UserErrorLogDirectory(userName),
+                                    Path.GetFileName(path)));
                             }
                         });
 #endif
