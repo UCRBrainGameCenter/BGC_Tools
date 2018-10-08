@@ -15,7 +15,9 @@ cd BGC_Tools
 doxygen doxygen.conf
 
 # update html
-mv out/html/* ../UCRBrainGameCenter.github.io
+rm -r ../UCRBrainGameCenter.github.io/documentation
+mkdir ../UCRBrainGameCenter.github.io/documentation
+mv out/html/* ../UCRBrainGameCenter.github.io/documentation
 cd ../UCRBrainGameCenter.github.io
 git add .
 git commit -m "new api commit"
