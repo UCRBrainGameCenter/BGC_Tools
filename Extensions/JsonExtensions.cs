@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
-using LightJson;
-using System;
 using UnityEngine.Assertions;
 using BGC.Utility;
+using LightJson;
+using System;
 
 namespace BGC.Extensions
 {
@@ -82,10 +82,15 @@ namespace BGC.Extensions
         /// <returns></returns>
         public static List<float> JsonArrayToFloatList(this JsonArray jsonArray)
         {
-            return jsonArray.JsonArrayToList((JsonValue val) =>
+            int size = jsonArray.Count;
+            List<float> floatList = new List<float>(size);
+
+            for (int i = 0; i < size; ++i)
             {
-                return (float)val.AsNumber;
-            });
+                floatList.Add((float) jsonArray[i].AsNumber);
+            }
+
+            return floatList;
         }
 
         /// <summary>
@@ -96,10 +101,15 @@ namespace BGC.Extensions
         /// <returns></returns>
         public static List<T> JsonArrayToEnumList<T>(this JsonArray jsonArray, EnumSerialization enumSerialization)
         {
-            return jsonArray.JsonArrayToList((JsonValue val) =>
+            int size = jsonArray.Count;
+            List<T> enumList = new List<T>(size);
+
+            for (int i = 0; i < size; ++i)
             {
-                return enumSerialization.StringToEnum<T>(val.AsString);
-            });
+                enumList.Add(enumSerialization.StringToEnum<T>(jsonArray[i].AsString));
+            }
+
+            return enumList;
         }
 
         /// <summary>
@@ -107,28 +117,17 @@ namespace BGC.Extensions
         /// </summary>
         /// <param name="list"></param>
         /// <returns></returns>
-        public static JsonArray IntListToJsonArray(this List<int> list)
+        public static JsonArray IntListToJsonArray(this IList<int> list)
         {
-            return list.ConvertToJsonArray((int val) => 
-            {
-                return new JsonValue(val);
-            });
-        }
+            int size = list.Count;
+            JsonArray jsonArray = new JsonArray();
 
-        /// <summary>
-        /// Converts an int arr to a Json Array of Int Values
-        /// </summary>
-        /// <param name="arr"></param>
-        /// <returns></returns>
-        public static JsonArray IntArrayToJsonArray(this int[] arr)
-        {
-            JsonArray jsonArr = new JsonArray();
-            for(int i = 0; i < arr.Length; ++i)
+            for (int i = 0; i < size; ++i)
             {
-                jsonArr.Add(arr[i]);
+                jsonArray.Add(list[i]);
             }
 
-            return jsonArr;
+            return jsonArray;
         }
 
         /// <summary>
@@ -136,12 +135,17 @@ namespace BGC.Extensions
         /// </summary>
         /// <param name="list"></param>
         /// <returns></returns>
-        public static JsonArray FloatListToJsonArray(this List<float> list)
+        public static JsonArray FloatListToJsonArray(this IList<float> list)
         {
-            return list.ConvertToJsonArray((float val) =>
+            int size = list.Count;
+            JsonArray jsonArray = new JsonArray();
+
+            for (int i = 0; i < size; ++i)
             {
-                return new JsonValue(val);
-            });
+                jsonArray.Add(list[i]);
+            }
+
+            return jsonArray;
         }
 
         /// <summary>
@@ -150,12 +154,18 @@ namespace BGC.Extensions
         /// <typeparam name="T"></typeparam>
         /// <param name="list"></param>
         /// <returns></returns>
-        public static JsonArray AnyListToStringJsonArray<T>(this List<T> list)
+        public static JsonArray AnyListToStringJsonArray<T>(this IList<T> list)
         {
-            return list.ConvertToJsonArray((T val) => 
+            int size = list.Count;
+            JsonArray jsonArray = new JsonArray();
+
+            for (int i = 0; i < size; ++i)
             {
-                return new JsonValue(val.ToString());
-            });
+                jsonArray.Add(list[i].ToString());
+            }
+
+            return jsonArray;
+
         }
 
         /// <summary>
