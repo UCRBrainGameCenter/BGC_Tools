@@ -37,7 +37,7 @@ namespace BGC.Utility
             string game,
             string apiKey)
         {
-#if UNITY_EDITOR
+#if !UNITY_EDITOR
             string permanentPath = LogDirectories.UserPermanentDirectory(userName);
             string stagingPath = LogDirectories.UserStagingDirectory(userName);
             string errorPath = LogDirectories.UserErrorLogDirectory(userName);
