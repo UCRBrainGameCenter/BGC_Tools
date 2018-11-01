@@ -33,6 +33,20 @@ namespace BGC.Utility
         }
 
         /// <summary>
+        /// Reupload all of the permanent logs for the indicated users
+        /// </summary>
+        public static void ReUploadFiles(IEnumerable<MigrationData> userData, string game, string apiKey)
+        {
+            Assert.IsFalse(string.IsNullOrEmpty(game));
+            Assert.IsFalse(string.IsNullOrEmpty(apiKey));
+
+            foreach (MigrationData data in userData)
+            {
+                ReUploadUser(data, game, apiKey);
+            }
+        }
+
+        /// <summary>
         /// Migrate user logs from staging to permanent on succesful upload to s3
         /// </summary>
         private static void MigrateUser(
