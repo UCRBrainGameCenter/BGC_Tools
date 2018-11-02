@@ -94,7 +94,7 @@ namespace BGC.IO
                         jsonExcp.Message,
                         "",
                         "Error Location:",
-                        string.Format("Line {0}, Column {1}", jsonExcp.Position.line + 1, jsonExcp.Position.column + 1)
+                        $"Line {jsonExcp.Position.line + 1}, Column {jsonExcp.Position.column + 1}"
                 };
             }
             else

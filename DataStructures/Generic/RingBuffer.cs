@@ -14,9 +14,9 @@ namespace BGC.DataStructures.Generic
         private int availableCount = 0;
         private int headIndex = -1;
 
-        public int Size { get { return values.Length; } }
-        public int Count { get { return availableCount; } }
-        bool ICollection<T>.IsReadOnly { get { return false; } }
+        public int Size => values.Length;
+        public int Count => availableCount;
+        bool ICollection<T>.IsReadOnly => false;
 
         public T this[int index]
         {
@@ -44,7 +44,7 @@ namespace BGC.DataStructures.Generic
         /// <summary>
         /// Returns the head (the most recent) element.
         /// </summary>
-        public T Top { get { return this[0]; } }
+        public T Top => this[0];
 
         /// <summary>
         /// Construct an empty ring buffer supporting bufferSize elements
@@ -54,7 +54,7 @@ namespace BGC.DataStructures.Generic
         {
             if (bufferSize <= 0)
             {
-                throw new ArgumentException(string.Format("Initialized a RingBuffer with size {0}.", bufferSize));
+                throw new ArgumentException($"Initialized a RingBuffer with size {bufferSize}.");
             }
 
             values = new T[bufferSize];
@@ -76,8 +76,7 @@ namespace BGC.DataStructures.Generic
 
             if (bufferSize <= 0)
             {
-                throw new ArgumentException(string.Format(
-                    "Attempted to initialize RingBuffer with size {0}.", bufferSize));
+                throw new ArgumentException($"Attempted to initialize RingBuffer with size {bufferSize}.");
             }
 
             this.values = new T[bufferSize];
@@ -287,7 +286,7 @@ namespace BGC.DataStructures.Generic
         {
             if (bufferSize <= 0)
             {
-                throw new ArgumentException(string.Format("Initialized a RingBuffer with size {0}.", bufferSize));
+                throw new ArgumentException($"Initialized a RingBuffer with size {bufferSize}.");
             }
 
             if (bufferSize == Size)
@@ -310,20 +309,12 @@ namespace BGC.DataStructures.Generic
             availableCount = newItemCount;
         }
 
-        public RingBufferEnum<T> GetRingEnumerator()
-        {
-            return new RingBufferEnum<T>(values, availableCount, headIndex);
-        }
+        public RingBufferEnum<T> GetRingEnumerator() => 
+            new RingBufferEnum<T>(values, availableCount, headIndex);
 
-        public IEnumerator<T> GetEnumerator()
-        {
-            return GetRingEnumerator() as IEnumerator<T>;
-        }
+        public IEnumerator<T> GetEnumerator() => GetRingEnumerator();
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return this.GetEnumerator();
-        }
+        IEnumerator IEnumerable.GetEnumerator() => GetRingEnumerator();
     }
 
     /// <summary>
@@ -338,7 +329,7 @@ namespace BGC.DataStructures.Generic
 
         private int index = -1;
 
-        public int Size { get { return values.Length; } }
+        public int Size => values.Length;
 
 
         public RingBufferEnum(T[] values, int availableCount, int headIndex)
@@ -370,13 +361,7 @@ namespace BGC.DataStructures.Generic
             index = -1;
         }
 
-        object IEnumerator.Current
-        {
-            get
-            {
-                return Current;
-            }
-        }
+        object IEnumerator.Current => Current;
 
         void IDisposable.Dispose() { }
 
