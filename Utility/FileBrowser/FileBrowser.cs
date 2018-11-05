@@ -50,8 +50,8 @@ namespace BGC.Utility.FileBrowser
         // Extensions that a user can actually open in the viewer. All files will be show in the browser, however.
         private static readonly string[] AcceptableExtensions =
         {
-        ".txt", ".json", ".bgc", ".int", ".float", ".str", ".user"
-    };
+            ".txt", ".json", ".bgc", ".int", ".float", ".str", ".user"
+        };
 
         private void Awake()
         {
@@ -80,8 +80,7 @@ namespace BGC.Utility.FileBrowser
 
         private void GoBack()
         {
-            Assert.IsFalse(System.String.IsNullOrEmpty(ReturnToScene));
-            Debug.Log(ReturnToScene);
+            Assert.IsFalse(string.IsNullOrEmpty(ReturnToScene));
             SceneManager.LoadScene(ReturnToScene);
         }
 
