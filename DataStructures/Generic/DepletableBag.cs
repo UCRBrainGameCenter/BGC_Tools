@@ -17,23 +17,32 @@ namespace BGC.DataStructures.Generic
         [SerializeField]
         protected int availableCount;
 
-        public DepletableBag()
+        System.Random randomizer = null;
+
+        public DepletableBag(System.Random randomizer = null)
         {
             values = new List<T>();
             availableCount = 0;
+
+            this.randomizer = randomizer;
         }
 
-        public DepletableBag(IEnumerable<T> values, bool autoRefill = false)
+        public DepletableBag(
+            IEnumerable<T> values,
+            bool autoRefill = false,
+            System.Random randomizer = null)
         {
             this.values = new List<T>(values);
             AutoRefill = autoRefill;
             availableCount = this.values.Count;
+
+            this.randomizer = randomizer;
         }
 
         #region IDepletable<T>
 
         public bool AutoRefill { get; set; }
-        public int TotalCount { get { return values.Count; } }
+        public int TotalCount => values.Count;
 
         public T PopNext()
         {
@@ -50,7 +59,7 @@ namespace BGC.DataStructures.Generic
                 }
             }
 
-            int index = UnityEngine.Random.Range(0, availableCount);
+            int index = randomizer?.Next(0, availableCount) ?? UnityEngine.Random.Range(0, availableCount);
             T temp = values[index];
 
             //Swap the position of the highest available value with the randomly chosen index.
@@ -80,7 +89,7 @@ namespace BGC.DataStructures.Generic
                 }
             }
 
-            int index = UnityEngine.Random.Range(0, availableCount);
+            int index = randomizer?.Next(0, availableCount) ?? UnityEngine.Random.Range(0, availableCount);
             value = values[index];
 
             //Swap the position of the highest available value with the randomly chosen index.
@@ -144,15 +153,9 @@ namespace BGC.DataStructures.Generic
             return success;
         }
 
-        public bool ContainsAnywhere(T value)
-        {
-            return values.Contains(value);
-        }
+        public bool ContainsAnywhere(T value) => values.Contains(value);
 
-        public IList<T> GetAvailable()
-        {
-            return values.GetRange(0, availableCount);
-        }
+        public IList<T> GetAvailable() => values.GetRange(0, availableCount);
 
         public void CopyAllTo(T[] array, int arrayIndex)
         {
@@ -166,9 +169,9 @@ namespace BGC.DataStructures.Generic
         #endregion IDepletable<T>
         #region ICollection<T>
 
-        public int Count { get { return availableCount; } }
+        public int Count => availableCount;
 
-        bool ICollection<T>.IsReadOnly { get { return false; } }
+        bool ICollection<T>.IsReadOnly => false;
 
         public void Add(T value)
         {
@@ -233,15 +236,8 @@ namespace BGC.DataStructures.Generic
         #endregion ICollection<T>
         #region IEnumerable<T>
 
-        public IEnumerator<T> GetEnumerator()
-        {
-            return ((IEnumerable<T>)values).GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return ((IEnumerable<T>)values).GetEnumerator();
-        }
+        public IEnumerator<T> GetEnumerator() => values.GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => values.GetEnumerator();
 
         #endregion IEnumerable<T>
     }

@@ -54,7 +54,7 @@ namespace BGC.DataStructures.Generic
         #region IDepletable<T>
 
         public bool AutoRefill { get; set; }
-        public int TotalCount { get { return values.Count; } }
+        public int TotalCount => values.Count;
 
         private void AdvanceCurrentIndexPastDepleted(bool allowRefill = true)
         {
@@ -160,10 +160,7 @@ namespace BGC.DataStructures.Generic
             return success;
         }
 
-        public bool ContainsAnywhere(T value)
-        {
-            return values.Contains(value);
-        }
+        public bool ContainsAnywhere(T value) => values.Contains(value);
 
         public IList<T> GetAvailable()
         {
@@ -195,9 +192,9 @@ namespace BGC.DataStructures.Generic
         #endregion IDepletable<T>
         #region ICollection<T>
 
-        public int Count { get { return GetRemainingCount(); } }
+        public int Count => GetRemainingCount();
 
-        bool ICollection<T>.IsReadOnly { get { return false; } }
+        bool ICollection<T>.IsReadOnly => false;
 
         public void Add(T value)
         {
@@ -263,15 +260,8 @@ namespace BGC.DataStructures.Generic
         #endregion ICollection<T>
         #region IEnumerable<T>
 
-        public IEnumerator<T> GetEnumerator()
-        {
-            return ((IEnumerable<T>)values).GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return ((IEnumerable<T>)values).GetEnumerator();
-        }
+        public IEnumerator<T> GetEnumerator() => values.GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => values.GetEnumerator();
 
         #endregion IEnumerable<T>
     }

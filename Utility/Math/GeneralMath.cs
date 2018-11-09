@@ -16,7 +16,7 @@ namespace BGC.Utility.Math
         }
 
         /// <summary>
-        /// x mood m
+        /// x mod m
         /// </summary>
         /// <param name="x"></param>
         /// <param name="m"></param>

@@ -42,7 +42,7 @@ namespace BGC.Utility.Math
         {
             lock (randLock)
             {
-                return (float)GlobalRand.NextDouble();
+                return GlobalRand.NextFloat();
             }
         }
 
@@ -77,6 +77,16 @@ namespace BGC.Utility.Math
         public static double RayleighDistribution(double input)
         {
             return System.Math.Sqrt(-2.0 * System.Math.Log(1.0 - input));
+        }
+
+        /// <summary>
+        /// Retrieve the next double and cast it to a float.
+        /// </summary>
+        /// <param name="random"></param>
+        /// <returns></returns>
+        public static float NextFloat(this Random random)
+        {
+            return (float)random.NextDouble();
         }
     }
 }

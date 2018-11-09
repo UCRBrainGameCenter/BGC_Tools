@@ -113,5 +113,42 @@ namespace BGC.Extensions
 
             return indexes;
         }
+
+        /// <summary>
+        /// Search a (ordered) float array for the first value exceeding or equal to the argument
+        /// </summary>
+        public static int BinarySearchLowerBound(this float[] array, float value)
+        {
+            int min = 0;
+            int max = array.Length;
+            int guess;
+
+            if (value < array[0])
+            {
+                return -1;
+            }
+
+            while (true)
+            {
+                guess = (max + min) / 2;
+
+                if (guess == min)
+                {
+                    return guess;
+                }
+                else if (array[guess] == value)
+                {
+                    return guess;
+                }
+                else if (value > array[guess])
+                {
+                    min = guess;
+                }
+                else
+                {
+                    max = guess;
+                }
+            }
+        }
     }
 }
