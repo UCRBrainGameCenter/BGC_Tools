@@ -54,7 +54,7 @@ namespace BGC.Utility
             string game,
             string apiKey)
         {
-#if !UNITY_EDITOR
+#if !UNITY_EDITOR || EDITOR_SERVER_ENABLED
             string permanentPath = LogDirectories.UserPermanentDirectory(migrationData.userName);
             string stagingPath = LogDirectories.UserStagingDirectory(migrationData.userName);
             string errorPath = LogDirectories.UserErrorLogDirectory(migrationData.userName);
@@ -105,7 +105,7 @@ namespace BGC.Utility
             string game,
             string apiKey)
         {
-#if !UNITY_EDITOR
+#if !UNITY_EDITOR || EDITOR_SERVER_ENABLED
             string permanentPath = LogDirectories.UserPermanentDirectory(migrationData.userName);
             string errorPath = LogDirectories.UserErrorLogDirectory(migrationData.userName);
             string[] files = Directory.GetFiles(permanentPath);

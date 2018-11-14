@@ -152,7 +152,7 @@ namespace BGC.IO.Logging
                     Assert.IsFalse(string.IsNullOrEmpty(study));
                     Assert.IsFalse(string.IsNullOrEmpty(apiKey));
 
-#if !UNITY_EDITOR
+#if !UNITY_EDITOR || EDITOR_SERVER_ENABLED
                     AWSServer.PostBGCToJSonToAWS(
                         path,
                         organization,

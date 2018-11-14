@@ -109,7 +109,13 @@ namespace BGC.Web
             Assert.IsFalse(String.IsNullOrEmpty(study));
             Assert.IsFalse(String.IsNullOrEmpty(game));
             Assert.IsTrue(ContainsJSONExtension(fileName));
-            
+
+#if UNITY_EDITOR
+            UnityEngine.Debug.LogWarning("Overwritting organization and study.");
+            organization = "braingamecenter";
+            study = "default";
+#endif
+
             JsonObject body = new JsonObject
             {
                 {
