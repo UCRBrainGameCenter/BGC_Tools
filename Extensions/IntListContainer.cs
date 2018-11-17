@@ -53,10 +53,15 @@ namespace BGC.Extensions
         /// <returns></returns>
         public static List<IntListContainer> JsonArrayToIntListContainerList(this JsonArray jsons)
         {
-            return jsons.JsonArrayToList((JsonValue val) =>
+            List<IntListContainer> list = new List<IntListContainer>();
+            int count = jsons.Count;
+
+            for(int i = 0; i < count; ++i)
             {
-                return new IntListContainer(val);
-            });
+                list.Add(new IntListContainer(jsons[i].AsJsonArray));
+            }
+
+            return list;
         }
 
         /// <summary>

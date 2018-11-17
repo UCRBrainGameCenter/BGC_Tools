@@ -36,7 +36,30 @@ namespace BGC.DataStructures
         /// <param name="list"></param>
         public IntListContainer(List<int> list)
         {
-            this.list = new List<int>(list);
+            if (list == null)
+            {
+                this.list = new List<int>();
+            }
+            else
+            {
+                this.list = new List<int>(list);
+            }
+        }
+
+        /// <summary>
+        /// Constructor from paramater list
+        /// </summary>
+        /// <param name="list"></param>
+        public IntListContainer(params int[] list)
+        {
+            if (list == null)
+            {
+                this.list = new List<int>();
+            }
+            else
+            {
+                this.list = new List<int>(list);
+            }
         }
 
         /// <summary>
@@ -45,11 +68,18 @@ namespace BGC.DataStructures
         /// <param name="json"></param>
         public IntListContainer(JsonArray json)
         {
-            Deserialize(json);
+            if (json == null)
+            {
+                list = new List<int>();
+            }
+            else
+            {
+                Deserialize(json);
+            }
         }
 
         /// <summary>
-        /// Default constructor
+        /// Default empty constructor
         /// </summary>
         public IntListContainer()
         {
@@ -123,7 +153,7 @@ namespace BGC.DataStructures
                 return false;
             }
 
-            if (obj.GetType() != this.GetType())
+            if (obj.GetType() != GetType())
             {
                 if(obj.GetType() == typeof(List<int>))
                 {
