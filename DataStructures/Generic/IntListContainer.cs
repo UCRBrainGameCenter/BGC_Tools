@@ -2,18 +2,24 @@
 using BGC.Extensions;
 using UnityEngine;
 using LightJson;
+using System;
 
 namespace BGC.DataStructures
 {
     /// <summary>
-    /// A Serializeable List<int> for 2D Lists
+    /// A Serializeable List<int> for lists of lists
     /// </summary>
-    [System.Serializable]
+    [Serializable]
     public class IntListContainer
     {
         [SerializeField]
         public List<int> list = new List<int>();
 
+        /// <summary>
+        /// Get value at index i
+        /// </summary>
+        /// <param name="i"></param>
+        /// <returns></returns>
         public int this[int i]
         {
             get
@@ -26,8 +32,24 @@ namespace BGC.DataStructures
             }
         }
 
+        /// <summary>
+        /// Get json array representation of the list
+        /// </summary>
+        public JsonArray JsonArray => list.IntListToJsonArray();
+
+        /// <summary>
+        /// Get a clean clone of this as a new int list container
+        /// </summary>
         public IntListContainer Clone => new IntListContainer(new List<int>(list));
+
+        /// <summary>
+        /// Get a random value in the list
+        /// </summary>
         public int RandomValue => list.RandomValue<int>();
+
+        /// <summary>
+        /// Get the number of elements in the list
+        /// </summary>
         public int Count => list.Count;
 
         /// <summary>
@@ -133,15 +155,6 @@ namespace BGC.DataStructures
         }
 
         /// <summary>
-        /// Set contained list
-        /// </summary>
-        /// <param name="list"></param>
-        public void Set(List<int> list)
-        {
-            this.list = list;
-        }
-
-        /// <summary>
         /// Check if two IntListContainers are equal
         /// </summary>
         /// <param name="obj"></param>
@@ -194,21 +207,27 @@ namespace BGC.DataStructures
         }
 
         /// <summary>
-        /// Serializes the list into a json array
-        /// </summary>
-        /// <returns></returns>
-        public JsonArray Serialize()
-        {
-            return list.IntListToJsonArray();
-        }
-
-        /// <summary>
         /// Sets the list to a deserialized JsonArray
         /// </summary>
         /// <param name="array"></param>
         protected void Deserialize(JsonArray array)
         {
-            this.list = array.JsonArrayToIntList();
+            list = new List<int>();
+            int count = array.Count;
+            JsonValue arrayValue;
+
+            for (int i = 0; i < count; ++i)
+            {
+                arrayValue = array[i];
+                if (arrayValue.IsInteger)
+                {
+                    list.Add(arrayValue.AsInteger);
+                }
+                else
+                {
+                    throw new ArgumentException("Json array must be composed of only integers");
+                }
+            }
         }
     }
 }

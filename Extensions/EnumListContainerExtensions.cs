@@ -11,7 +11,7 @@ namespace BGC.Extensions
         {
             return enumList.ConvertToJsonArray((EnumListContainer<T> val) =>
             {
-                return val.Serialize();
+                return val.JsonArray;
             });
         }
 

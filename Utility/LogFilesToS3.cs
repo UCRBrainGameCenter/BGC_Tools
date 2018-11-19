@@ -107,7 +107,6 @@ namespace BGC.Utility
         {
 #if !UNITY_EDITOR || EDITOR_SERVER_ENABLED
             string permanentPath = LogDirectories.UserPermanentDirectory(migrationData.userName);
-            string errorPath = LogDirectories.UserErrorLogDirectory(migrationData.userName);
             string[] files = Directory.GetFiles(permanentPath);
 
             for (int i = 0; i < files.Length; ++i)

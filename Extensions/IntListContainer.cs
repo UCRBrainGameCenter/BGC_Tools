@@ -73,7 +73,7 @@ namespace BGC.Extensions
         {
             return list.ConvertToJsonArray((IntListContainer container) =>
             {
-                return container.Serialize();
+                return container.JsonArray;
             });
         }
     }

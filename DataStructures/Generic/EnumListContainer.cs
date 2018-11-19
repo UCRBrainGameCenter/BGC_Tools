@@ -26,6 +26,24 @@ namespace BGC.DataStructures
             }
         }
 
+        /// <summary>
+        /// Serializes the list into a json array
+        /// </summary>
+        /// <returns></returns>
+        public new JsonArray JsonArray
+        {
+            get
+            {
+                List<TEnum> enumList = new List<TEnum>();
+                for (int i = 0; i < list.Count; ++i)
+                {
+                    enumList.Add((TEnum)Enum.ToObject(typeof(TEnum), list[i]));
+                }
+
+                return enumList.AnyListToStringJsonArray();
+            }
+        }
+
         public new EnumListContainer<TEnum> Clone => new EnumListContainer<TEnum>(new List<int>(list));
         public new TEnum RandomValue => (TEnum)Convert.ChangeType(list.RandomValue<int>(), typeof(TEnum));
 
@@ -53,7 +71,7 @@ namespace BGC.DataStructures
         }
 
         /// <summary>
-        /// Constructor from a JsonArray of Ints
+        /// Construct from a JsonArray of Ints
         /// </summary>
         /// <param name="json"></param>
         public EnumListContainer(JsonArray json)
@@ -163,21 +181,6 @@ namespace BGC.DataStructures
         public bool Contains(TEnum item)
         {
             return list.Contains((int)Convert.ChangeType(item, typeof(int)));
-        }
-
-        /// <summary>
-        /// Serializes the list into a json array
-        /// </summary>
-        /// <returns></returns>
-        public new JsonArray Serialize()
-        {
-            List<TEnum> enumList = new List<TEnum>();
-            for (int i = 0; i < list.Count; ++i)
-            {
-                enumList.Add((TEnum)Enum.ToObject(typeof(TEnum), list[i]));
-            }
-
-            return enumList.AnyListToStringJsonArray();
         }
 
         /// <summary>
