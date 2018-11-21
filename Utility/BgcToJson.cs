@@ -165,7 +165,7 @@ namespace BGC.Utility
                 if (valueMapping.ContainsKey(columnMapping[i]))
                 {
                     JsonObject mapping = valueMapping[columnMapping[i]];
-                    string key = jsonData[columnMapping[i]].AsInteger.ToString();
+                    string key = jsonData[columnMapping[i]].AsString;
 
                     if (mapping.ContainsKey(key))
                     {
