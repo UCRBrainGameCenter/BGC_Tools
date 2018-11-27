@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
+using UnityEngine.Assertions;
 using System.Collections;
 using UnityEngine;
-using UnityEngine.Assertions;
 
 namespace BGC.Extensions
 {
@@ -360,20 +360,24 @@ namespace BGC.Extensions
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="list"></param>
-        /// <param name="separator"></param>
+        /// <param name="separator">defaults to a comma</param>
         /// <returns></returns>
-        public static string Join<T>(this List<T> list, string separator)
+        public static string Join<T>(this List<T> list, string separator=",")
         {
-            int length = list.Count;
-            if (length == 0)
-            {
-                return "";
-            }
+            Assert.IsNotNull(list);
+            Assert.IsFalse(string.IsNullOrEmpty(separator));
 
-            string result = list[0].ToString();
-            for (int i = 1; i < length; ++i)
+            int length = list.Count;
+            string result = "";
+
+            if (length != 0)
             {
-                result = $"{result}{separator}{list[i].ToString()}";
+                result = list[0].ToString();
+
+                for (int i = 1; i < length; ++i)
+                {
+                    result = $"{result}{separator}{list[i].ToString()}";
+                }
             }
 
             return result;
