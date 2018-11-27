@@ -33,35 +33,69 @@ namespace BGC.Utility
         }
 
         /// <summary>
+        /// (Potentially) modifies the <paramref name="metaData"/> argument.
+        /// </summary>
+        /// <remarks>Intended to fix critical versioning issues.</remarks>
+        public delegate void EditBGCMetaData(JsonObject metaData);
+
+        /// <summary>
+        /// Uses the column label and data to determine if it should override default BGC Parsing.
+        /// </summary>
+        /// <returns>Whether this method overrode the standard parsing.</returns>
+        /// <remarks>Intended to fix critical versioning issues.</remarks>
+        public delegate bool OverrideBGCParsing(string columnLabel, string data, out JsonValue parsedValue);
+
+
+        /// <summary>
         /// Convert complete string of bgc to json
         /// </summary>
-        /// <param name="bgc"></param>
-        /// <param name="verbose"></param>
-        /// <returns></returns>
-        public static JsonObject ConvertBgcToJson(string bgc, char separator = '\n', bool verbose = false)
+        /// <param name="editMetaData">A function to remap or fix MetaData logging issues</param>
+        /// <param name="overrideBGCParsing">A function to remap or fix logging issues</param>
+        public static JsonObject ConvertBgcToJson(
+            string bgc,
+            char separator = '\n',
+            EditBGCMetaData editMetaData = null,
+            OverrideBGCParsing overrideBGCParsing = null,
+            bool verbose = false)
         {
-            return ConvertBGCToJson(bgc.Split(separator), verbose);
+            return ConvertBGCToJson(
+                bgc: bgc.Split(separator),
+                editMetaData: editMetaData,
+                overrideBGCParsing: overrideBGCParsing,
+                verbose: verbose);
         }
 
         /// <summary>
         /// Convert lines of bgc to complete json
         /// </summary>
-        /// <param name="bgc"></param>
-        /// <param name="verbose"></param>
+        /// <param name="editMetaData">A function to remap or fix MetaData logging issues</param>
+        /// <param name="overrideBGCParsing">A function to remap or fix logging issues</param>
         /// <returns></returns>
-        public static JsonObject ConvertBGCToJson(string[] bgc, bool verbose = false)
+        public static JsonObject ConvertBGCToJson(
+            string[] bgc,
+            EditBGCMetaData editMetaData = null,
+            OverrideBGCParsing overrideBGCParsing = null,
+            bool verbose = false)
         {
             JsonObject json = new JsonObject();
             JsonObject metaData = LightJson.Serialization.JsonReader.Parse(bgc[0]);
+
+            //If a MetaData-editing delegate was passed in, execute it
+            editMetaData?.Invoke(metaData);
+
             Assert.IsTrue(MetaDataHasCorrectFields(metaData, verbose));
 
             JsonArray data = new JsonArray();
             string[] delimiter = new string[] { metaData[LoggingKeys.Delimiter].AsString };
             for (int i = 1; i < bgc.Length; ++i)
             {
-                if (String.IsNullOrEmpty(bgc[i]) == false)
+                if (string.IsNullOrEmpty(bgc[i]) == false)
                 {
-                    data.Add(ConvertLine(metaData, delimiter, bgc[i]));
+                    data.Add(ConvertLine(
+                        metaData: metaData,
+                        splitBy: delimiter,
+                        line: bgc[i],
+                        overrideBGCParsing: overrideBGCParsing));
                 }
             }
 
@@ -75,8 +109,6 @@ namespace BGC.Utility
         /// <summary>
         /// Test to see whether or not the meta data has all the correct fields
         /// </summary>
-        /// <param name="metaData"></param>
-        /// <param name="verbose"></param>
         /// <returns>True if the meta data has all the correct fields</returns>
         private static bool MetaDataHasCorrectFields(JsonObject metaData, bool verbose)
         {
@@ -102,7 +134,6 @@ namespace BGC.Utility
         /// <summary>
         /// Remove any redundant meta data fields from the json object
         /// </summary>
-        /// <param name="metaData"></param>
         private static void RemoveRedundantMetaData(JsonObject metaData)
         {
             for (int i = 0; i < RequiredFields.RedundantFields.Length; ++i)
@@ -117,11 +148,12 @@ namespace BGC.Utility
         /// <summary>
         /// Convert every line into a json object based on the meta data
         /// </summary>
-        /// <param name="metaData"></param>
-        /// <param name="splitBy"></param>
-        /// <param name="line"></param>
         /// <returns>Json object representing the line based on the colum manpping</returns>
-        private static JsonObject ConvertLine(JsonObject metaData, string[] splitBy, string line)
+        private static JsonObject ConvertLine(
+            JsonObject metaData,
+            string[] splitBy,
+            string line,
+            OverrideBGCParsing overrideBGCParsing)
         {
             JsonObject jsonData = new JsonObject();
             string[] data = line.Split(splitBy, StringSplitOptions.None);
@@ -139,24 +171,36 @@ namespace BGC.Utility
             JsonArray columnMapping = metaData[LoggingKeys.ColumnMapping][columnMappingKey];
             Assert.AreEqual(data.Length, columnMapping.Count);
 
-            bool b;
-            int intNum;
-            float floatNum;
+            JsonValue jsonValue;
+            bool boolValue;
+            int intValue;
+            double doubleValue;
             for (int i = 0; i < data.Length; ++i)
             {
-                if (bool.TryParse(data[i], out b))
+                if (overrideBGCParsing != null &&
+                    overrideBGCParsing.Invoke(columnMapping[i], data[i], out jsonValue))
                 {
-                    jsonData.Add(columnMapping[i], b);
+                    jsonData.Add(columnMapping[i], jsonValue);
                 }
-                else if (int.TryParse(data[i], out intNum))
+                else if (data[i].StartsWith("\"") && data[i].EndsWith("\"") && data[i].Length > 1)
                 {
-                    jsonData.Add(columnMapping[i], intNum);
+                    //Length test exists because technically the data could be a single quotation mark
+                    //Remove quotation marks
+                    jsonData.Add(columnMapping[i], data[i].Substring(1, data[i].Length - 2));
                 }
-                else if (float.TryParse(data[i], out floatNum))
+                else if (bool.TryParse(data[i], out boolValue))
                 {
-                    jsonData.Add(columnMapping[i], floatNum);
+                    jsonData.Add(columnMapping[i], boolValue);
                 }
-                else
+                else if (int.TryParse(data[i], out intValue))
+                {
+                    jsonData.Add(columnMapping[i], intValue);
+                }
+                else if (double.TryParse(data[i], out doubleValue))
+                {
+                    jsonData.Add(columnMapping[i], doubleValue);
+                }
+                else //as string
                 {
                     jsonData.Add(columnMapping[i], data[i]);
                 }

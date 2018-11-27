@@ -75,7 +75,9 @@ namespace BGC.IO.Logging
         }
 
         /// <summary>
-        /// Push a line to the logger. Open the logger if it's null.
+        /// Push a line to the logger. Open the logger if it's null.  
+        /// DON'T call "ToString()" unnecessarily unless you want the field written to file in 
+        /// quotation marks.
         /// </summary>
         protected void PushLine(params IConvertible[] strings)
         {
@@ -216,7 +218,40 @@ namespace BGC.IO.Logging
 
         private string DelimiterLine(params IConvertible[] strings)
         {
-            return string.Join(delimiter, strings.Select(x => x.ToString()).ToArray());
+            return string.Join(delimiter, strings.Select(ConvertToBGCString).ToArray());
+        }
+
+        /// <summary>
+        /// Used on each element of our varargs conversion method to generate a bgcString
+        /// </summary>
+        private string ConvertToBGCString(IConvertible element)
+        {
+            switch (element.GetTypeCode())
+            {
+                case TypeCode.Char:
+                case TypeCode.String:
+                    return $"\"{element.ToString()}\"";
+                case TypeCode.Boolean:
+                case TypeCode.Byte:
+                case TypeCode.DateTime:
+                case TypeCode.DBNull:
+                case TypeCode.Decimal:
+                case TypeCode.Double:
+                case TypeCode.Empty:
+                case TypeCode.Int16:
+                case TypeCode.Int32:
+                case TypeCode.Int64:
+                case TypeCode.Object:
+                case TypeCode.SByte:
+                case TypeCode.Single:
+                case TypeCode.UInt16:
+                case TypeCode.UInt32:
+                case TypeCode.UInt64:
+                    return element.ToString();
+                default:
+                    Debug.LogError($"Unexpected Typecode: {element.GetTypeCode()}");
+                    return element.ToString();
+            }
         }
     }
 }
