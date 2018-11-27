@@ -241,7 +241,6 @@ namespace BGC.Web
         /// <param name="callback">first bool is if the internet connection is working and second if the version is valid</param>
         public static void UsingAcceptedServerVersion(StatusPanel statusPanel, Action<bool, bool> callback)
         {
-            UnityEngine.Debug.LogWarning("update to use server version in bgc tools.");
             Assert.IsNotNull(statusPanel);
 
             if (callback == null)
