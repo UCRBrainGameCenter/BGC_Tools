@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
+using LightJson.Serialization;
 using UnityEngine.Networking;
 using UnityEngine.Assertions;
 using BGC.Web.Utility;
 using BGC.MonoUtility;
+using UnityEngine;
 using System.IO;
 using LightJson;
 using System;
@@ -28,9 +30,12 @@ namespace BGC.Web
             public const string Code = "code";
         }
 
+        public const int ServerVersion = 0;
+
         public const string ConditionURL = "https://84cje3rj4j.execute-api.us-east-1.amazonaws.com/Production/condition-retriever";
         public const string CodeURL = "https://84cje3rj4j.execute-api.us-east-1.amazonaws.com/Production/code-retriever";
         public const string ToS3URL = "https://84cje3rj4j.execute-api.us-east-1.amazonaws.com/Production/to-s3";
+        public const string VersionsURL = "https://g1rqafkt2i.execute-api.us-east-1.amazonaws.com/prod";
 
         public const string PathSeparator = "/";
         public const string CacheControl = "no-cache";
@@ -138,6 +143,14 @@ namespace BGC.Web
                 callBack);
         }
 
+        /// <summary>
+        /// Get configuration from code
+        /// </summary>
+        /// <param name="code"></param>
+        /// <param name="game"></param>
+        /// <param name="apiKey"></param>
+        /// <param name="statusPanel"></param>
+        /// <param name="callback"></param>
         public static void GetCodeConfig(
             string code,
             string game, 
@@ -150,6 +163,7 @@ namespace BGC.Web
             Assert.IsFalse(String.IsNullOrEmpty(game));
             Assert.IsFalse(String.IsNullOrEmpty(apiKey));
 
+            statusPanel.Title = "Requestion Configuration";
             statusPanel.Status = "Requesting code configuration...";
 
             JsonObject body = new JsonObject
@@ -178,12 +192,20 @@ namespace BGC.Web
                 });
         }
 
+        /// <summary>
+        /// Get condition from server
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="apiKey"></param>
+        /// <param name="statusPanel"></param>
+        /// <param name="callback"></param>
         public static void GetCondition(string path, string apiKey, StatusPanel statusPanel, Action<string, int> callback = null)
         {
             Assert.IsFalse(String.IsNullOrEmpty(apiKey));
             Assert.IsFalse(String.IsNullOrEmpty(path));
             Assert.IsNotNull(statusPanel);
 
+            statusPanel.Title = "Requesting Condition";
             statusPanel.Status = "Requesting condition...";
 
             JsonObject body = new JsonObject
@@ -213,13 +235,69 @@ namespace BGC.Web
         }
 
         /// <summary>
-        /// Combine two strings to form a path in AWS
+        /// Get a list of strings from the server which represent api versions that are currently running
         /// </summary>
-        /// <param name="str"></param>
-        /// <returns>a + "/" + b</returns>
-        public static string Combine(string a, string b)
+        /// <param name="statusPanel"></param>
+        /// <param name="callback">first bool is if the internet connection is working and second if the version is valid</param>
+        public static void UsingAcceptedServerVersion(StatusPanel statusPanel, Action<bool, bool> callback)
         {
-            return $"{a}{PathSeparator}{b}";
+            UnityEngine.Debug.LogWarning("update to use server version in bgc tools.");
+            Assert.IsNotNull(statusPanel);
+
+            if (callback == null)
+            {
+                return;
+            }
+
+            statusPanel.Title = "Requesting API Versions";
+            statusPanel.Status = "Requesting server version...";
+
+            if (Application.internetReachability != NetworkReachability.NotReachable)
+            {
+                Rest.PostRequest(
+                VersionsURL,
+                new Dictionary<string, string>(),
+                "{}",
+                (uwr, validJson) =>
+                {
+                    statusPanel.Status = "Downloading server response...";
+
+                    if (uwr.responseCode != 200)
+                    {
+                        statusPanel.Status = "Invalid version url. Update application.";
+                        callback(false, false);
+                    }
+                    else
+                    {
+                        DownloadHandler downloader = uwr.downloadHandler;
+                        try
+                        {
+                            JsonArray versions = JsonReader.Parse(downloader.text).AsJsonArray;
+                            bool found = false;
+
+                            for (int i = 0; i < versions.Count; ++i)
+                            {
+                                if (versions[i].IsInteger && versions[i].AsInteger == ServerVersion)
+                                {
+                                    found = true;
+                                    break;
+                                }
+                            }
+
+                            callback(true, found);
+                        }
+                        catch (JsonParseException)
+                        {
+                            statusPanel.Title = "ERROR";
+                            statusPanel.Status = "Cannot parse server response. Critcal error. Contact admin as soon as possible.";
+                        }
+                    }
+                });
+            }
+            else
+            {
+                callback(false, true);
+            }
         }
 
         private static bool ContainsBGCExtension(string path)
