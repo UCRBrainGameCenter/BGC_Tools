@@ -48,7 +48,7 @@ namespace BGC.Web
         {
             return new Dictionary<string, string>
             {
-                { HeaderKeys.ApiKey, apiKey},
+                { HeaderKeys.ApiKey, apiKey },
                 { "Content-Type", "application/x-www-form-urlencoded" }
             };
         }
@@ -61,10 +61,10 @@ namespace BGC.Web
             string apiKey,
             Action<UnityWebRequest, bool> callBack = null)
         {
-            Assert.IsFalse(String.IsNullOrEmpty(filePath));
-            Assert.IsFalse(String.IsNullOrEmpty(organization));
-            Assert.IsFalse(String.IsNullOrEmpty(study));
-            Assert.IsFalse(String.IsNullOrEmpty(game));
+            Assert.IsFalse(string.IsNullOrEmpty(filePath));
+            Assert.IsFalse(string.IsNullOrEmpty(organization));
+            Assert.IsFalse(string.IsNullOrEmpty(study));
+            Assert.IsFalse(string.IsNullOrEmpty(game));
             Assert.IsTrue(ContainsBGCExtension(filePath));
             Assert.IsTrue(File.Exists(filePath));
 
@@ -74,16 +74,18 @@ namespace BGC.Web
 
             try
             {
+                JsonObject jsonContent = BGC.Utility.BgcToJson.ConvertBgcToJson(
+                    filepath: filePath,
+                    bgc: content);
 
-                JsonObject jsonContent = BGC.Utility.BgcToJson.ConvertBgcToJson(content);
                 PostToAWS(
-                    Path.GetFileName(filePath).Replace(BGCExtension, JSONExtension),
-                    organization,
-                    study,
-                    game,
-                    jsonContent,
-                    apiKey,
-                    callBack);
+                    fileName: Path.GetFileName(filePath).Replace(BGCExtension, JSONExtension),
+                    organization: organization,
+                    study: study,
+                    game: game,
+                    content: jsonContent,
+                    apiKey: apiKey,
+                    callBack: callBack);
             }
             catch (Exception e)
             {
@@ -109,10 +111,10 @@ namespace BGC.Web
             string apiKey,
             Action<UnityWebRequest, bool> callBack = null)
         {
-            Assert.IsFalse(String.IsNullOrEmpty(fileName));
-            Assert.IsFalse(String.IsNullOrEmpty(organization));
-            Assert.IsFalse(String.IsNullOrEmpty(study));
-            Assert.IsFalse(String.IsNullOrEmpty(game));
+            Assert.IsFalse(string.IsNullOrEmpty(fileName));
+            Assert.IsFalse(string.IsNullOrEmpty(organization));
+            Assert.IsFalse(string.IsNullOrEmpty(study));
+            Assert.IsFalse(string.IsNullOrEmpty(game));
             Assert.IsTrue(ContainsJSONExtension(fileName));
 
 #if UNITY_EDITOR
@@ -137,10 +139,10 @@ namespace BGC.Web
             };
 
             Rest.PostRequest(
-                ToS3URL,
-                Header(apiKey),
-                body.ToString(),
-                callBack);
+                url: ToS3URL,
+                headers: Header(apiKey),
+                body: body.ToString(),
+                callBack: callBack);
         }
 
         /// <summary>
@@ -153,15 +155,15 @@ namespace BGC.Web
         /// <param name="callback"></param>
         public static void GetCodeConfig(
             string code,
-            string game, 
+            string game,
             string apiKey,
             StatusPanel statusPanel,
-            Action<string, int> callback=null)
+            Action<string, int> callback = null)
         {
             Assert.IsNotNull(statusPanel);
-            Assert.IsFalse(String.IsNullOrEmpty(code));
-            Assert.IsFalse(String.IsNullOrEmpty(game));
-            Assert.IsFalse(String.IsNullOrEmpty(apiKey));
+            Assert.IsFalse(string.IsNullOrEmpty(code));
+            Assert.IsFalse(string.IsNullOrEmpty(game));
+            Assert.IsFalse(string.IsNullOrEmpty(apiKey));
 
             statusPanel.Title = "Requestion Configuration";
             statusPanel.Status = "Requesting code configuration...";
@@ -179,15 +181,16 @@ namespace BGC.Web
             };
 
             Rest.PostRequest(
-                CodeURL,
-                Header(apiKey),
-                body.ToString(),
-                (UnityWebRequest uwr, bool valid) => {
+                url: CodeURL,
+                headers: Header(apiKey),
+                body: body.ToString(),
+                callBack: (UnityWebRequest uwr, bool valid) =>
+                {
                     if (callback != null)
                     {
                         statusPanel.Status = "Downloading server response...";
                         DownloadHandler downloader = uwr.downloadHandler;
-                        callback(downloader.text, (int) uwr.responseCode);
+                        callback(downloader.text, (int)uwr.responseCode);
                     }
                 });
         }
@@ -195,14 +198,10 @@ namespace BGC.Web
         /// <summary>
         /// Get condition from server
         /// </summary>
-        /// <param name="path"></param>
-        /// <param name="apiKey"></param>
-        /// <param name="statusPanel"></param>
-        /// <param name="callback"></param>
         public static void GetCondition(string path, string apiKey, StatusPanel statusPanel, Action<string, int> callback = null)
         {
-            Assert.IsFalse(String.IsNullOrEmpty(apiKey));
-            Assert.IsFalse(String.IsNullOrEmpty(path));
+            Assert.IsFalse(string.IsNullOrEmpty(apiKey));
+            Assert.IsFalse(string.IsNullOrEmpty(path));
             Assert.IsNotNull(statusPanel);
 
             statusPanel.Title = "Requesting Condition";
@@ -220,10 +219,10 @@ namespace BGC.Web
             };
 
             Rest.PostRequest(
-                ConditionURL,
-                Header(apiKey),
-                body.ToString(),
-                (uwr, validJson) =>
+                url: ConditionURL,
+                headers: Header(apiKey),
+                body: body.ToString(),
+                callBack: (uwr, validJson) =>
                 {
                     if (callback != null)
                     {
@@ -237,9 +236,10 @@ namespace BGC.Web
         /// <summary>
         /// Get a list of strings from the server which represent api versions that are currently running
         /// </summary>
-        /// <param name="statusPanel"></param>
         /// <param name="callback">first bool is if the internet connection is working and second if the version is valid</param>
-        public static void UsingAcceptedServerVersion(StatusPanel statusPanel, Action<bool, bool> callback)
+        public static void UsingAcceptedServerVersion(
+            StatusPanel statusPanel,
+            Action<bool, bool> callback)
         {
             Assert.IsNotNull(statusPanel);
 
@@ -254,44 +254,44 @@ namespace BGC.Web
             if (Application.internetReachability != NetworkReachability.NotReachable)
             {
                 Rest.PostRequest(
-                VersionsURL,
-                new Dictionary<string, string>(),
-                "{}",
-                (uwr, validJson) =>
-                {
-                    statusPanel.Status = "Downloading server response...";
+                    url: VersionsURL,
+                    headers: new Dictionary<string, string>(),
+                    body: "{}",
+                    callBack: (uwr, validJson) =>
+                    {
+                        statusPanel.Status = "Downloading server response...";
 
-                    if (uwr.responseCode != 200)
-                    {
-                        statusPanel.Status = "Invalid version url. Update application.";
-                        callback(false, false);
-                    }
-                    else
-                    {
-                        DownloadHandler downloader = uwr.downloadHandler;
-                        try
+                        if (uwr.responseCode != 200)
                         {
-                            JsonArray versions = JsonReader.Parse(downloader.text).AsJsonArray;
-                            bool found = false;
-
-                            for (int i = 0; i < versions.Count; ++i)
+                            statusPanel.Status = "Invalid version url. Update application.";
+                            callback(false, false);
+                        }
+                        else
+                        {
+                            DownloadHandler downloader = uwr.downloadHandler;
+                            try
                             {
-                                if (versions[i].IsInteger && versions[i].AsInteger == ServerVersion)
-                                {
-                                    found = true;
-                                    break;
-                                }
-                            }
+                                JsonArray versions = JsonReader.Parse(downloader.text).AsJsonArray;
+                                bool found = false;
 
-                            callback(true, found);
+                                for (int i = 0; i < versions.Count; ++i)
+                                {
+                                    if (versions[i].IsInteger && versions[i].AsInteger == ServerVersion)
+                                    {
+                                        found = true;
+                                        break;
+                                    }
+                                }
+
+                                callback(true, found);
+                            }
+                            catch (JsonParseException)
+                            {
+                                statusPanel.Title = "ERROR";
+                                statusPanel.Status = "Cannot parse server response. Critcal error. Contact admin as soon as possible.";
+                            }
                         }
-                        catch (JsonParseException)
-                        {
-                            statusPanel.Title = "ERROR";
-                            statusPanel.Status = "Cannot parse server response. Critcal error. Contact admin as soon as possible.";
-                        }
-                    }
-                });
+                    });
             }
             else
             {
@@ -299,14 +299,14 @@ namespace BGC.Web
             }
         }
 
-        private static bool ContainsBGCExtension(string path)
-        {
-            return Path.HasExtension(BGCExtension);
-        }
+        /// <summary>
+        /// Combine two strings to form a path in AWS
+        /// </summary>
+        /// <returns>a + "/" + b</returns>
+        public static string Combine(string a, string b) => $"{a}{PathSeparator}{b}";
 
-        private static bool ContainsJSONExtension(string fileName)
-        {
-            return Path.HasExtension(JSONExtension);
-        }
+        private static bool ContainsBGCExtension(string path) => Path.HasExtension(BGCExtension);
+
+        private static bool ContainsJSONExtension(string fileName) => Path.HasExtension(JSONExtension);
     }
 }

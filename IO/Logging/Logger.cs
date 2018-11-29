@@ -156,12 +156,12 @@ namespace BGC.IO.Logging
 
 #if !UNITY_EDITOR || EDITOR_SERVER_ENABLED
                     AWSServer.PostBGCToJSonToAWS(
-                        path,
-                        organization,
-                        study,
-                        applicationName,
-                        apiKey,
-                        (UnityWebRequest request, bool validJson) =>
+                        filePath: path,
+                        organization: organization,
+                        study: study,
+                        game: applicationName,
+                        apiKey: apiKey,
+                        callBack: (UnityWebRequest request, bool validJson) =>
                         {
                             if (validJson == true)
                             {

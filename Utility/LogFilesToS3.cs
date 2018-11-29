@@ -69,12 +69,12 @@ namespace BGC.Utility
                 }
 
                 AWSServer.PostBGCToJSonToAWS(
-                    stagingFile,
-                    migrationData.organization,
-                    migrationData.study,
-                    game,
-                    apiKey,
-                    (UnityWebRequest request, bool validJson) =>
+                    filePath: stagingFile,
+                    organization: migrationData.organization,
+                    study: migrationData.study,
+                    game: game,
+                    apiKey: apiKey,
+                    callBack: (UnityWebRequest request, bool validJson) =>
                     {
                         if (validJson == true)
                         {
@@ -118,12 +118,12 @@ namespace BGC.Utility
                 }
 
                 AWSServer.PostBGCToJSonToAWS(
-                    file,
-                    migrationData.organization,
-                    migrationData.study,
-                    game,
-                    apiKey,
-                    (UnityWebRequest request, bool validJson) =>
+                    filePath: file,
+                    organization: migrationData.organization,
+                    study: migrationData.study,
+                    game: game,
+                    apiKey: apiKey,
+                    callBack: (UnityWebRequest request, bool validJson) =>
                     {
                         if (validJson)
                         {

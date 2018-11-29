@@ -1,7 +1,8 @@
-﻿using UnityEngine.Assertions;
-using LightJson;
-using System;
+﻿using System;
+using System.Linq;
+using UnityEngine.Assertions;
 using BGC.IO.Logging;
+using LightJson;
 
 namespace BGC.Utility
 {
@@ -32,56 +33,37 @@ namespace BGC.Utility
             };
         }
 
-        /// <summary>
-        /// (Potentially) modifies the <paramref name="metaData"/> argument.
-        /// </summary>
-        /// <remarks>Intended to fix critical versioning issues.</remarks>
-        public delegate void EditBGCMetaData(JsonObject metaData);
-
-        /// <summary>
-        /// Uses the column label and data to determine if it should override default BGC Parsing.
-        /// </summary>
-        /// <returns>Whether this method overrode the standard parsing.</returns>
-        /// <remarks>Intended to fix critical versioning issues.</remarks>
-        public delegate bool OverrideBGCParsing(string columnLabel, string data, out JsonValue parsedValue);
-
 
         /// <summary>
         /// Convert complete string of bgc to json
         /// </summary>
-        /// <param name="editMetaData">A function to remap or fix MetaData logging issues</param>
-        /// <param name="overrideBGCParsing">A function to remap or fix logging issues</param>
         public static JsonObject ConvertBgcToJson(
+            string filepath,
             string bgc,
             char separator = '\n',
-            EditBGCMetaData editMetaData = null,
-            OverrideBGCParsing overrideBGCParsing = null,
             bool verbose = false)
         {
             return ConvertBGCToJson(
+                filepath: filepath,
                 bgc: bgc.Split(separator),
-                editMetaData: editMetaData,
-                overrideBGCParsing: overrideBGCParsing,
                 verbose: verbose);
         }
 
         /// <summary>
         /// Convert lines of bgc to complete json
         /// </summary>
-        /// <param name="editMetaData">A function to remap or fix MetaData logging issues</param>
-        /// <param name="overrideBGCParsing">A function to remap or fix logging issues</param>
-        /// <returns></returns>
         public static JsonObject ConvertBGCToJson(
+            string filepath,
             string[] bgc,
-            EditBGCMetaData editMetaData = null,
-            OverrideBGCParsing overrideBGCParsing = null,
             bool verbose = false)
         {
             JsonObject json = new JsonObject();
             JsonObject metaData = LightJson.Serialization.JsonReader.Parse(bgc[0]);
 
-            //If a MetaData-editing delegate was passed in, execute it
-            editMetaData?.Invoke(metaData);
+            //Apply any prepared MetaData Upgrades
+            BGCRemapHelper remapHelper = LogUpgradeUtility.UpgradeMetaData(
+                filePath: filepath,
+                metaData: metaData);
 
             Assert.IsTrue(MetaDataHasCorrectFields(metaData, verbose));
 
@@ -95,7 +77,7 @@ namespace BGC.Utility
                         metaData: metaData,
                         splitBy: delimiter,
                         line: bgc[i],
-                        overrideBGCParsing: overrideBGCParsing));
+                        remapHelper: remapHelper));
                 }
             }
 
@@ -153,7 +135,7 @@ namespace BGC.Utility
             JsonObject metaData,
             string[] splitBy,
             string line,
-            OverrideBGCParsing overrideBGCParsing)
+            BGCRemapHelper remapHelper)
         {
             JsonObject jsonData = new JsonObject();
             string[] data = line.Split(splitBy, StringSplitOptions.None);
@@ -169,51 +151,46 @@ namespace BGC.Utility
             }
 
             JsonArray columnMapping = metaData[LoggingKeys.ColumnMapping][columnMappingKey];
-            Assert.AreEqual(data.Length, columnMapping.Count);
+            string[] columnLabels = columnMapping.Select(x => x.AsString).ToArray();
 
-            JsonValue jsonValue;
+            remapHelper?.Apply(
+                columnLabels: columnLabels,
+                data: data);
+
+            Assert.AreEqual(data.Length, columnLabels.Length);
+            
             bool boolValue;
-            int intValue;
             double doubleValue;
             for (int i = 0; i < data.Length; ++i)
             {
-                if (overrideBGCParsing != null &&
-                    overrideBGCParsing.Invoke(columnMapping[i], data[i], out jsonValue))
-                {
-                    jsonData.Add(columnMapping[i], jsonValue);
-                }
-                else if (data[i].StartsWith("\"") && data[i].EndsWith("\"") && data[i].Length > 1)
+                if (data[i].StartsWith("\"") && data[i].EndsWith("\"") && data[i].Length > 1)
                 {
                     //Length test exists because technically the data could be a single quotation mark
                     //Remove quotation marks
-                    jsonData.Add(columnMapping[i], data[i].Substring(1, data[i].Length - 2));
+                    jsonData.Add(columnLabels[i], data[i].Substring(1, data[i].Length - 2));
                 }
                 else if (bool.TryParse(data[i], out boolValue))
                 {
-                    jsonData.Add(columnMapping[i], boolValue);
-                }
-                else if (int.TryParse(data[i], out intValue))
-                {
-                    jsonData.Add(columnMapping[i], intValue);
+                    jsonData.Add(columnLabels[i], boolValue);
                 }
                 else if (double.TryParse(data[i], out doubleValue))
                 {
-                    jsonData.Add(columnMapping[i], doubleValue);
+                    jsonData.Add(columnLabels[i], doubleValue);
                 }
                 else //as string
                 {
-                    jsonData.Add(columnMapping[i], data[i]);
+                    jsonData.Add(columnLabels[i], data[i]);
                 }
 
                 JsonObject valueMapping = metaData[LoggingKeys.ValueMapping];
-                if (valueMapping.ContainsKey(columnMapping[i]))
+                if (valueMapping.ContainsKey(columnLabels[i]))
                 {
-                    JsonObject mapping = valueMapping[columnMapping[i]];
-                    string key = jsonData[columnMapping[i]].AsString;
+                    JsonObject mapping = valueMapping[columnLabels[i]];
+                    string key = jsonData[columnLabels[i]].AsString;
 
                     if (mapping.ContainsKey(key))
                     {
-                        jsonData[columnMapping[i]] = mapping[key];
+                        jsonData[columnLabels[i]] = mapping[key];
                     }
                 }
             }
