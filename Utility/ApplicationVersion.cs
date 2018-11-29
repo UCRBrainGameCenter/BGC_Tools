@@ -175,10 +175,11 @@ namespace BGC.Utility
                     }
                 }
 
-                //End with *'s for unspecified elements
+                //End with Floor for unspecified elements
+                //This way, the range "100.3" to "101.1" means [100.3.0.0 , 101.1.0.0)
                 for (int i = splitVersion.Length; i < parsedVersion.Length; i++)
                 {
-                    parsedVersion[i] = upperBound ? WILD_CARD_CEIL : WILD_CARD_FLOOR;
+                    parsedVersion[i] = 0;
                 }
 
             }
