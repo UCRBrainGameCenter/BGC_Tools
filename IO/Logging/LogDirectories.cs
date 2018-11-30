@@ -9,31 +9,26 @@ namespace BGC.IO
         public const string ExceptionsDirectory = "Exceptions";
         public const string S3PermanentDirectory = "Permanent";
         public const string ErrorLogsDirectory = "ErrorLogs";
-
-        private static string logDirectory = null;
+        
         private static string stagingDirectory = null;
         private static string permanentDirectory = null;
         private static string exceptionDirectory = null;
         private static string errorLogDirectory = null;
-
-        /// <summary> Logs directory for all users </summary>
-        public static string LogDirectory => logDirectory ??
-            (logDirectory = DataManagement.PathForDataDirectory(LogsDirectory));
 
         /// <summary>
         /// Directory for all staged files that are to be moved to s3 and then
         /// put into the PermanentDirectory
         /// </summary>
         public static string StagingDirectory => stagingDirectory ??
-            (stagingDirectory = DataManagement.PathForDataDirectory(S3StagingDirectory));
+            (stagingDirectory = DataManagement.PathForDataSubDirectory(LogsDirectory, S3StagingDirectory));
 
         /// <summary> Directory for all logs that have been merged into s3 </summary>
         public static string PermanentDirectory => permanentDirectory ??
-            (permanentDirectory = DataManagement.PathForDataDirectory(S3PermanentDirectory));
+            (permanentDirectory = DataManagement.PathForDataSubDirectory(LogsDirectory, S3PermanentDirectory));
 
         /// <summary> Directory for all logs that have errors and can't be merged into s3 </summary>
         public static string ErrorLogDirectory => errorLogDirectory ??
-            (errorLogDirectory = DataManagement.PathForDataDirectory(ErrorLogsDirectory));
+            (errorLogDirectory = DataManagement.PathForDataSubDirectory(LogsDirectory, ErrorLogsDirectory));
 
         /// <summary>
         /// Get path for exceptions directory. Creates directory if it does not
