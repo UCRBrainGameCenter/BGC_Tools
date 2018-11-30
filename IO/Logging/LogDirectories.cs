@@ -4,163 +4,76 @@ namespace BGC.IO
 {
     public class LogDirectories
     {
-        public const string LogsDirectory        = "Logs";
-        public const string S3StagingDirectory   = "Staging";
-        public const string ExceptionsDirectory  = "Exceptions";
+        public const string LogsDirectory = "Logs";
+        public const string S3StagingDirectory = "Staging";
+        public const string ExceptionsDirectory = "Exceptions";
         public const string S3PermanentDirectory = "Permanent";
-        public const string ErrorLogsDirectory   = "ErrorLogs";
+        public const string ErrorLogsDirectory = "ErrorLogs";
 
-        private static string logDirectory       = null;
-        private static string stagingDirectory   = null;
+        private static string logDirectory = null;
+        private static string stagingDirectory = null;
         private static string permanentDirectory = null;
         private static string exceptionDirectory = null;
         private static string errorLogDirectory = null;
-        
-        /// <summary>
-        /// Logs directory for all users
-        /// </summary>
-        public static string LogDirectory
-        {
-            get
-            {
-                if (logDirectory == null)
-                {
-                    logDirectory = Path.Combine(DataManagement.RootDirectory, LogsDirectory);
-                    if (Directory.Exists(logDirectory) == false)
-                    {
-                        Directory.CreateDirectory(logDirectory);
-                    }
-                }
 
-                return logDirectory;
-            }
-        }
+        /// <summary> Logs directory for all users </summary>
+        public static string LogDirectory => logDirectory ??
+            (logDirectory = DataManagement.PathForDataDirectory(LogsDirectory));
 
         /// <summary>
         /// Directory for all staged files that are to be moved to s3 and then
         /// put into the PermanentDirectory
         /// </summary>
-        public static string StagingDirectory
-        {
-            get
-            {
-                if (stagingDirectory == null)
-                {
-                    stagingDirectory = Path.Combine(LogDirectory, S3StagingDirectory);
-                    if (Directory.Exists(stagingDirectory) == false)
-                    {
-                        Directory.CreateDirectory(stagingDirectory);
-                    }
-                }
+        public static string StagingDirectory => stagingDirectory ??
+            (stagingDirectory = DataManagement.PathForDataDirectory(S3StagingDirectory));
 
-                return stagingDirectory;
-            }
-        }
+        /// <summary> Directory for all logs that have been merged into s3 </summary>
+        public static string PermanentDirectory => permanentDirectory ??
+            (permanentDirectory = DataManagement.PathForDataDirectory(S3PermanentDirectory));
 
-        /// <summary>
-        /// Directory for all logs that have been merged into s3
-        /// </summary>
-        public static string PermanentDirectory
-        {
-            get
-            {
-                if (permanentDirectory == null)
-                {
-                    permanentDirectory = Path.Combine(LogDirectory, S3PermanentDirectory);
-                    if (Directory.Exists(permanentDirectory) == false)
-                    {
-                        Directory.CreateDirectory(permanentDirectory);
-                    }
-                }
-
-                return permanentDirectory;
-            }
-        }
-
-        /// <summary>
-        /// Directory for all logs that have errors and can't be merged into s3
-        /// </summary>
-        public static string ErrorLogDirectory
-        {
-            get
-            {
-                if (errorLogDirectory == null)
-                {
-                    errorLogDirectory = Path.Combine(LogDirectory, ErrorLogsDirectory);
-                    if (Directory.Exists(errorLogDirectory) == false)
-                    {
-                        Directory.CreateDirectory(errorLogDirectory);
-                    }
-                }
-
-                return errorLogDirectory;
-            }
-        }
+        /// <summary> Directory for all logs that have errors and can't be merged into s3 </summary>
+        public static string ErrorLogDirectory => errorLogDirectory ??
+            (errorLogDirectory = DataManagement.PathForDataDirectory(ErrorLogsDirectory));
 
         /// <summary>
         /// Get path for exceptions directory. Creates directory if it does not
         /// exist
         /// </summary>
-        public static string ExceptionDirectory
-        {
-            get
-            {
-                if (exceptionDirectory == null)
-                {
-                    exceptionDirectory = Path.Combine(LogDirectory, ExceptionsDirectory);
-                    if (Directory.Exists(exceptionDirectory) == false)
-                    {
-                        Directory.CreateDirectory(exceptionDirectory);
-                    }
-                }
-
-                return exceptionDirectory;
-            }
-        }
+        public static string ExceptionDirectory => exceptionDirectory ??
+            (exceptionDirectory = DataManagement.PathForDataDirectory(ExceptionsDirectory));
 
         /// <summary>
-        /// Get the path to the user in the stagin directory. This automatically creates 
+        /// Get the path to the user in the staging directory. This automatically creates 
         /// a directory if it does not exist
         /// </summary>
-        /// <param name="user"></param>
-        /// <returns></returns>
-        public static string UserStagingDirectory(string user)
-        {
-            string dir = Path.Combine(StagingDirectory, user);
-            if (Directory.Exists(dir) == false)
-            {
-                Directory.CreateDirectory(dir);
-            }
-
-            return dir;
-        }
+        public static string UserStagingDirectory(string user) => SafeCombine(StagingDirectory, user);
 
         /// <summary>
         /// Get the path to the user in the permanent directory. This automatically
         /// creates a directory if it does not exists
         /// </summary>
-        /// <param name="user"></param>
-        /// <returns></returns>
-        public static string UserPermanentDirectory(string user)
+        public static string UserPermanentDirectory(string user) => SafeCombine(PermanentDirectory, user);
+
+        /// <summary>
+        /// Get the path to the user in the ErrorLog directory. This automatically
+        /// creates a directory if it does not exists
+        /// </summary>
+        public static string UserErrorLogDirectory(string user) => SafeCombine(ErrorLogDirectory, user);
+
+        /// <summary>
+        /// Returns the Path-combined directories, and creates them they don't exist
+        /// </summary>
+        /// <returns>Combined path</returns>
+        private static string SafeCombine(string directory, string user)
         {
-            string dir = Path.Combine(PermanentDirectory, user);
-            if (Directory.Exists(dir) == false)
+            string path = Path.Combine(directory, user);
+
+            if (Directory.Exists(path) == false)
             {
-                Directory.CreateDirectory(dir);
+                Directory.CreateDirectory(path);
             }
 
-            return dir;
-        }
-
-        public static string UserErrorLogDirectory(string user)
-        {
-            string dir = Path.Combine(ErrorLogDirectory, user);
-            if (Directory.Exists(dir) == false)
-            {
-                Directory.CreateDirectory(dir);
-            }
-
-            return dir;
+            return path;
         }
     }
 }

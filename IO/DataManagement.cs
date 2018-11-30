@@ -34,47 +34,52 @@ namespace BGC.IO
         /// <summary>
         /// Get a list of all data files in sub directory of os data directory
         /// </summary>
-        /// <param name="dataSubDir"></param>
+        /// <param name="dataDirectory"></param>
         /// <returns></returns>
-        public static List<string> GetDataFiles(string dataSubDir)
-        {
-            string path = PathForDataDirectory(dataSubDir);
+        public static IEnumerable<string> GetDataFiles(string dataDirectory) =>
+            Directory.GetFiles(PathForDataDirectory(dataDirectory));
 
-            return new List<string>(Directory.GetFiles(path));
-        }
+        public static string PathForDataFile(string dataDirectory, string fileName) =>
+            Path.Combine(PathForDataDirectory(dataDirectory), fileName);
 
         /// <summary>
-        /// Get path for dat directory root
-        /// </summary>
+        /// Returns the full path to the <paramref name="dataDirectory"/> directory.
+        /// <param name="dataDirectory"></param>
         /// <returns></returns>
-        private static string GetDataRootDir()
+        public static string PathForDataDirectory(string dataDirectory)
         {
-            string path = Application.persistentDataPath;
+            string path = Path.Combine(RootDirectory, dataDirectory);
 
-            if (Application.platform != RuntimePlatform.IPhonePlayer &&
-                Application.platform != RuntimePlatform.Android)
+            if (Directory.Exists(path) == false)
             {
-                // Use the DataPath on Development machines
-                path = Application.dataPath;
-                path = path.Substring(0, path.LastIndexOf('/'));
+                Directory.CreateDirectory(path);
             }
 
             return path;
         }
 
         /// <summary>
-        /// Returns the full path to the <paramref name="dataSubdir"/> directory.
-        /// <param name="dataSubdir"></param>
+        /// Returns the full path to the <paramref name="dataDirectory"/> directory.
+        /// <param name="dataDirectory"></param>
         /// <returns></returns>
-        public static string PathForDataDirectory(string dataSubdir)
+        public static string PathForDataSubDirectory(params string[] dataDirectories)
         {
-            string path = Path.Combine(GetDataRootDir(), dataSubdir);
+            string[] paths = new string[dataDirectories.Length + 1];
+            paths[0] = RootDirectory;
+            System.Array.Copy(
+                sourceArray: dataDirectories,
+                sourceIndex: 0,
+                destinationArray: paths,
+                destinationIndex: 1,
+                length: dataDirectories.Length);
 
-            if (!Directory.Exists(path))
+            string path = Path.Combine(paths);
+
+            if (Directory.Exists(path) == false)
             {
                 Directory.CreateDirectory(path);
             }
-
+            
             return path;
         }
     }
