@@ -118,6 +118,7 @@ namespace LightJson
                 {
                     return int.MaxValue;
                 }
+
                 if (value <= int.MinValue)
                 {
                     return int.MinValue;
@@ -137,9 +138,7 @@ namespace LightJson
                 switch (Type)
                 {
                     case JsonValueType.Boolean:
-                        return (value == 1)
-                            ? 1
-                            : 0;
+                        return (value == 1) ? 1 : 0;
 
                     case JsonValueType.Number:
                         return value;
@@ -150,10 +149,7 @@ namespace LightJson
                         {
                             return number;
                         }
-                        else
-                        {
-                            goto default;
-                        }
+                        goto default;
 
                     default:
                         return 0;
@@ -171,9 +167,7 @@ namespace LightJson
                 switch (Type)
                 {
                     case JsonValueType.Boolean:
-                        return (value == 1)
-                            ? "true"
-                            : "false";
+                        return (value == 1) ? "true" : "false";
 
                     case JsonValueType.Number:
                         return value.ToString();
@@ -210,10 +204,8 @@ namespace LightJson
                 {
                     return value;
                 }
-                else
-                {
-                    return null;
-                }
+
+                return null;
             }
         }
 
@@ -252,25 +244,21 @@ namespace LightJson
         {
             get
             {
-                if (IsJsonObject)
-                {
-                    return ((JsonObject)reference)[key];
-                }
-                else
+                if (IsJsonObject == false)
                 {
                     throw new InvalidOperationException("This value does not represent a JsonObject.");
                 }
+
+                return ((JsonObject)reference)[key];
             }
             set
             {
-                if (IsJsonObject)
-                {
-                    ((JsonObject)reference)[key] = value;
-                }
-                else
+                if (IsJsonObject == false)
                 {
                     throw new InvalidOperationException("This value does not represent a JsonObject.");
                 }
+
+                ((JsonObject)reference)[key] = value;
             }
         }
 
@@ -285,25 +273,21 @@ namespace LightJson
         {
             get
             {
-                if (IsJsonArray)
-                {
-                    return ((JsonArray)reference)[index];
-                }
-                else
+                if (IsJsonArray == false)
                 {
                     throw new InvalidOperationException("This value does not represent a JsonArray.");
                 }
+
+                return ((JsonArray)reference)[index];
             }
             set
             {
-                if (IsJsonArray)
-                {
-                    ((JsonArray)reference)[index] = value;
-                }
-                else
+                if (IsJsonArray == false)
                 {
                     throw new InvalidOperationException("This value does not represent a JsonArray.");
                 }
+
+                ((JsonArray)reference)[index] = value;
             }
         }
 
@@ -464,15 +448,8 @@ namespace LightJson
         /// since JSON does not define a DateTime type.
         /// </remarks>
         /// <param name="value">The value to be converted.</param>
-        public static implicit operator JsonValue(DateTime? value)
-        {
-            if (value == null)
-            {
-                return Null;
-            }
+        public static implicit operator JsonValue(DateTime? value) => value.HasValue ? Null : new JsonValue(value.Value.ToString("o"));
 
-            return new JsonValue(value.Value.ToString("o"));
-        }
 
         /// <summary>
         /// Converts the given JsonValue into an Int.
@@ -488,17 +465,8 @@ namespace LightJson
         /// Throws System.InvalidCastException when the inner value type of the
         /// JsonValue is not the desired type of the conversion.
         /// </exception>
-        public static implicit operator int? (JsonValue jsonValue)
-        {
-            if (jsonValue.IsNull)
-            {
-                return null;
-            }
-            else
-            {
-                return (int)jsonValue;
-            }
-        }
+        public static implicit operator int? (JsonValue jsonValue) => jsonValue.IsNull ? (int?)null : (int)jsonValue;
+
 
         /// <summary>
         /// Converts the given JsonValue into a Bool.
@@ -515,17 +483,8 @@ namespace LightJson
         /// Throws System.InvalidCastException when the inner value type of the
         /// JsonValue is not the desired type of the conversion.
         /// </exception>
-        public static implicit operator bool? (JsonValue jsonValue)
-        {
-            if (jsonValue.IsNull)
-            {
-                return null;
-            }
-            else
-            {
-                return (bool)jsonValue;
-            }
-        }
+        public static implicit operator bool? (JsonValue jsonValue) => jsonValue.IsNull ? (bool?)null : (bool)jsonValue;
+
 
         /// <summary>
         /// Converts the given JsonValue into a Double.
@@ -541,17 +500,7 @@ namespace LightJson
         /// Throws System.InvalidCastException when the inner value type of the
         /// JsonValue is not the desired type of the conversion.
         /// </exception>
-        public static implicit operator double? (JsonValue jsonValue)
-        {
-            if (jsonValue.IsNull)
-            {
-                return null;
-            }
-            else
-            {
-                return (double)jsonValue;
-            }
-        }
+        public static implicit operator double? (JsonValue jsonValue) => jsonValue.IsNull ? (double?)null : (double)jsonValue;
 
         /// <summary>
         /// Converts the given JsonValue into a String.
