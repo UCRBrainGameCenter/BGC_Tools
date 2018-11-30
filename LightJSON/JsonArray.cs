@@ -5,14 +5,14 @@ using LightJson.Serialization;
 
 namespace LightJson
 {
-	/// <summary>
-	/// Represents an ordered collection of JsonValues.
-	/// </summary>
-	[DebuggerDisplay("Count = {Count}")]
-	[DebuggerTypeProxy(typeof(JsonArrayDebugView))]
-	public sealed class JsonArray : IEnumerable<JsonValue>
-	{
-		private IList<JsonValue> items;
+    /// <summary>
+    /// Represents an ordered collection of JsonValues.
+    /// </summary>
+    [DebuggerDisplay("Count = {Count}")]
+    [DebuggerTypeProxy(typeof(JsonArrayDebugView))]
+    public sealed class JsonArray : IEnumerable<JsonValue>
+    {
+        private IList<JsonValue> items;
 
         /// <summary>
         /// Gets the number of values in this collection.
@@ -27,87 +27,87 @@ namespace LightJson
         /// The getter will return JsonValue.Null if the given index is out of range.
         /// </remarks>
         public JsonValue this[int index]
-		{
-			get
-			{
-				if (index >= 0 && index < items.Count)
-				{
-					return items[index];
-				}
-				else
-				{
-					return JsonValue.Null;
-				}
-			}
-			set
-			{
-				items[index] = value;
-			}
-		}
+        {
+            get
+            {
+                if (index >= 0 && index < items.Count)
+                {
+                    return items[index];
+                }
+                else
+                {
+                    return JsonValue.Null;
+                }
+            }
+            set
+            {
+                items[index] = value;
+            }
+        }
 
-		/// <summary>
-		/// Initializes a new instance of JsonArray.
-		/// </summary>
-		public JsonArray()
-		{
-			items = new List<JsonValue>();
-		}
+        /// <summary>
+        /// Initializes a new instance of JsonArray.
+        /// </summary>
+        public JsonArray()
+        {
+            items = new List<JsonValue>();
+        }
 
-		/// <summary>
-		/// Initializes a new instance of JsonArray, adding the given values to the collection.
-		/// </summary>
-		/// <param name="values">The values to be added to this collection.</param>
-		public JsonArray(params JsonValue[] values) : this()
-		{
-			foreach (JsonValue value in values)
-			{
-				items.Add(value);
-			}
-		}
+        /// <summary>
+        /// Initializes a new instance of JsonArray, adding the given values to the collection.
+        /// </summary>
+        /// <param name="values">The values to be added to this collection.</param>
+        public JsonArray(params JsonValue[] values) : this()
+        {
+            foreach (JsonValue value in values)
+            {
+                items.Add(value);
+            }
+        }
 
-		/// <summary>
-		/// Adds the given value to this collection.
-		/// </summary>
-		/// <param name="value">The value to be added.</param>
-		/// <returns>Returns this collection.</returns>
-		public JsonArray Add(JsonValue value)
-		{
-			items.Add(value);
-			return this;
-		}
+        /// <summary>
+        /// Adds the given value to this collection.
+        /// </summary>
+        /// <param name="value">The value to be added.</param>
+        /// <returns>Returns this collection.</returns>
+        public JsonArray Add(JsonValue value)
+        {
+            items.Add(value);
+            return this;
+        }
 
-		/// <summary>
-		/// Inserts the given value at the given index in this collection.
-		/// </summary>
-		/// <param name="index">The index where the given value will be inserted.</param>
-		/// <param name="value">The value to be inserted into this collection.</param>
-		/// <returns>Returns this collection.</returns>
-		public JsonArray Insert(int index, JsonValue value)
-		{
-			items.Insert(index, value);
-			return this;
-		}
+        /// <summary>
+        /// Inserts the given value at the given index in this collection.
+        /// </summary>
+        /// <param name="index">The index where the given value will be inserted.</param>
+        /// <param name="value">The value to be inserted into this collection.</param>
+        /// <returns>Returns this collection.</returns>
+        public JsonArray Insert(int index, JsonValue value)
+        {
+            items.Insert(index, value);
+            return this;
+        }
 
-		/// <summary>
-		/// Removes the value at the given index.
-		/// </summary>
-		/// <param name="index">The index of the value to be removed.</param>
-		/// <returns>Return this collection.</returns>
-		public JsonArray Remove(int index)
-		{
-			items.RemoveAt(index);
-			return this;
-		}
+        /// <summary>
+        /// Removes the value at the given index.
+        /// </summary>
+        /// <param name="index">The index of the value to be removed.</param>
+        /// <returns>Return this collection.</returns>
+        public JsonArray Remove(int index)
+        {
+            items.RemoveAt(index);
+            return this;
+        }
 
-		/// <summary>
-		/// Clears the contents of this collection.
-		/// </summary>
-		/// <returns>Returns this collection.</returns>
-		public JsonArray Clear()
-		{
-			items.Clear();
-			return this;
-		}
+        /// <summary>
+        /// Clears the contents of this collection.
+        /// </summary>
+        /// <returns>Returns this collection.</returns>
+        public JsonArray Clear()
+        {
+            items.Clear();
+            return this;
+        }
 
         /// <summary>
         /// Determines whether the given item is in the JsonArray.
@@ -153,37 +153,37 @@ namespace LightJson
         /// Indicates whether the resulting string should be formatted for human-readability.
         /// </param>
         public string ToString(bool pretty)
-		{
-			using (JsonWriter writer = new JsonWriter(pretty))
-			{
-				return writer.Serialize(this);
-			}
-		}
+        {
+            using (JsonWriter writer = new JsonWriter(pretty))
+            {
+                return writer.Serialize(this);
+            }
+        }
 
-		private class JsonArrayDebugView
-		{
-			private JsonArray jsonArray;
+        private class JsonArrayDebugView
+        {
+            private JsonArray jsonArray;
 
-			[DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
-			public JsonValue[] Items
-			{
-				get
-				{
+            [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+            public JsonValue[] Items
+            {
+                get
+                {
                     JsonValue[] items = new JsonValue[jsonArray.Count];
 
-					for (int i = 0; i < jsonArray.Count; i += 1)
-					{
-						items[i] = jsonArray[i];
-					}
+                    for (int i = 0; i < jsonArray.Count; i += 1)
+                    {
+                        items[i] = jsonArray[i];
+                    }
 
-					return items;
-				}
-			}
+                    return items;
+                }
+            }
 
-			public JsonArrayDebugView(JsonArray jsonArray)
-			{
-				this.jsonArray = jsonArray;
-			}
-		}
-	}
+            public JsonArrayDebugView(JsonArray jsonArray)
+            {
+                this.jsonArray = jsonArray;
+            }
+        }
+    }
 }

@@ -5,14 +5,14 @@ using LightJson.Serialization;
 
 namespace LightJson
 {
-	/// <summary>
-	/// Represents a key-value pair collection of JsonValue objects.
-	/// </summary>
-	[DebuggerDisplay("Count = {Count}")]
-	[DebuggerTypeProxy(typeof(JsonObjectDebugView))]
-	public sealed class JsonObject : IEnumerable<KeyValuePair<string, JsonValue>>, IEnumerable<JsonValue>
-	{
-		private IDictionary<string, JsonValue> properties;
+    /// <summary>
+    /// Represents a key-value pair collection of JsonValue objects.
+    /// </summary>
+    [DebuggerDisplay("Count = {Count}")]
+    [DebuggerTypeProxy(typeof(JsonObjectDebugView))]
+    public sealed class JsonObject : IEnumerable<KeyValuePair<string, JsonValue>>, IEnumerable<JsonValue>
+    {
+        private IDictionary<string, JsonValue> properties;
 
         /// <summary>
         /// Gets the number of properties in this JsonObject.
@@ -27,33 +27,33 @@ namespace LightJson
         /// The getter will return JsonValue.Null if the given key is not assosiated with any value.
         /// </remarks>
         public JsonValue this[string key]
-		{
-			get
-			{
-				JsonValue value;
+        {
+            get
+            {
+                JsonValue value;
 
-				if (properties.TryGetValue(key, out value))
-				{
-					return value;
-				}
-				else
-				{
-					return JsonValue.Null;
-				}
-			}
-			set
-			{
-				properties[key] = value;
-			}
-		}
+                if (properties.TryGetValue(key, out value))
+                {
+                    return value;
+                }
+                else
+                {
+                    return JsonValue.Null;
+                }
+            }
+            set
+            {
+                properties[key] = value;
+            }
+        }
 
-		/// <summary>
-		/// Initializes a new instance of JsonObject.
-		/// </summary>
-		public JsonObject()
-		{
-			properties = new Dictionary<string, JsonValue>();
-		}
+        /// <summary>
+        /// Initializes a new instance of JsonObject.
+        /// </summary>
+        public JsonObject()
+        {
+            properties = new Dictionary<string, JsonValue>();
+        }
 
         /// <summary>
         /// Adds a key with a null value to this collection.
@@ -69,10 +69,10 @@ namespace LightJson
         /// <param name="value">The value of the property to be added.</param>
         /// <returns>Returns this JsonObject.</returns>
         public JsonObject Add(string key, JsonValue value)
-		{
-			properties.Add(key, value);
-			return this;
-		}
+        {
+            properties.Add(key, value);
+            return this;
+        }
 
         /// <summary>
         /// Removes a property with the given key.
@@ -88,33 +88,33 @@ namespace LightJson
         /// </summary>
         /// <returns>Returns this JsonObject.</returns>
         public JsonObject Clear()
-		{
-			properties.Clear();
-			return this;
-		}
+        {
+            properties.Clear();
+            return this;
+        }
 
-		/// <summary>
-		/// Changes the key of one of the items in the collection.
-		/// </summary>
-		/// <remarks>
-		/// This method has no effects if the <i>oldKey</i> does not exists.
-		/// If the <i>newKey</i> already exists, the value will be overwritten.
-		/// </remarks>
-		/// <param name="oldKey">The name of the key to be changed.</param>
-		/// <param name="newKey">The new name of the key.</param>
-		/// <returns>Returns this JsonObject.</returns>
-		public JsonObject Rename(string oldKey, string newKey)
-		{
-			JsonValue value;
+        /// <summary>
+        /// Changes the key of one of the items in the collection.
+        /// </summary>
+        /// <remarks>
+        /// This method has no effects if the <i>oldKey</i> does not exists.
+        /// If the <i>newKey</i> already exists, the value will be overwritten.
+        /// </remarks>
+        /// <param name="oldKey">The name of the key to be changed.</param>
+        /// <param name="newKey">The new name of the key.</param>
+        /// <returns>Returns this JsonObject.</returns>
+        public JsonObject Rename(string oldKey, string newKey)
+        {
+            JsonValue value;
 
-			if (properties.TryGetValue(oldKey, out value))
-			{
-				this[newKey] = value;
-				Remove(oldKey);
-			}
+            if (properties.TryGetValue(oldKey, out value))
+            {
+                this[newKey] = value;
+                Remove(oldKey);
+            }
 
-			return this;
-		}
+            return this;
+        }
 
         /// <summary>
         /// Determines whether this collection contains an item assosiated with the given key.
@@ -165,78 +165,94 @@ namespace LightJson
         /// Indicates whether the resulting string should be formatted for human-readability.
         /// </param>
         public string ToString(bool pretty)
-		{
-			using (JsonWriter writer = new JsonWriter(pretty))
-			{
-				return writer.Serialize(this);
-			}
-		}
+        {
+            using (JsonWriter writer = new JsonWriter(pretty))
+            {
+                return writer.Serialize(this);
+            }
+        }
 
-		private class JsonObjectDebugView
-		{
-			private JsonObject jsonObject;
+        private class JsonObjectDebugView
+        {
+            private JsonObject jsonObject;
 
-			[DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
-			public KeyValuePair[] Keys
-			{
-				get
-				{
+            [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+            public KeyValuePair[] Keys
+            {
+                get
+                {
                     KeyValuePair[] keys = new KeyValuePair[jsonObject.Count];
 
                     int i = 0;
-					foreach (KeyValuePair<string, JsonValue> property in jsonObject)
-					{
-						keys[i] = new KeyValuePair(property.Key, property.Value);
-						i += 1;
-					}
+                    foreach (KeyValuePair<string, JsonValue> property in jsonObject)
+                    {
+                        keys[i] = new KeyValuePair(jsonObject, property.Key, property.Value);
+                        i += 1;
+                    }
 
-					return keys;
-				}
-			}
+                    return keys;
+                }
+            }
 
-			public JsonObjectDebugView(JsonObject jsonObject)
-			{
-				this.jsonObject = jsonObject;
-			}
+            public JsonObjectDebugView(JsonObject jsonObject)
+            {
+                this.jsonObject = jsonObject;
+            }
 
-			[DebuggerDisplay("{value.ToString(),nq}", Name = "{key}", Type = "JsonValue({Type})")]
-			public class KeyValuePair
-			{
-				[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-				private string key;
+            [DebuggerDisplay("{value.ToString(),nq}", Name = "{key,nq}", Type = "JsonValue({Type})")]
+            public class KeyValuePair
+            {
+                [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+                private string key;
 
-				[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-				private JsonValue value;
+                [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+                private JsonValue value;
 
                 [DebuggerBrowsable(DebuggerBrowsableState.Never)]
                 private JsonValueType Type => value.Type;
 
-                [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
-				public object View
-				{
-					get
-					{
-						if (value.IsJsonObject)
-						{
-							return (JsonObject)value;
-						}
-						else if (value.IsJsonArray)
-						{
-							return (JsonArray)value;
-						}
-						else
-						{
-							return value;
-						}
-					}
-				}
+                [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+                private JsonObject parent;
 
-				public KeyValuePair(string key, JsonValue value)
-				{
-					this.key = key;
-					this.value = value;
-				}
-			}
-		}
-	}
+                [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+                public object View
+                {
+                    get
+                    {
+                        if (value.IsJsonObject)
+                        {
+                            return (JsonObject)value;
+                        }
+                        else if (value.IsJsonArray)
+                        {
+                            return (JsonArray)value;
+                        }
+                        else
+                        {
+                            return value;
+                        }
+                    }
+                }
+
+                public string Key
+                {
+                    get { return key; }
+                    set
+                    {
+                        JsonValue tempValue = parent[key];
+                        parent.Remove(key);
+                        key = value;
+                        parent.Add(key, tempValue);
+                    }
+                }
+
+                public KeyValuePair(JsonObject parent, string key, JsonValue value)
+                {
+                    this.parent = parent;
+                    this.key = key;
+                    this.value = value;
+                }
+            }
+        }
+    }
 }
