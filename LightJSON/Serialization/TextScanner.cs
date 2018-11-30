@@ -14,22 +14,16 @@ namespace LightJson.Serialization
 		private TextReader reader;
 		private TextPosition position;
 
-		/// <summary>
-		/// Gets the position of the scanner within the text.
-		/// </summary>
-		public TextPosition Position
-		{
-			get
-			{
-				return this.position;
-			}
-		}
+        /// <summary>
+        /// Gets the position of the scanner within the text.
+        /// </summary>
+        public TextPosition Position => position;
 
-		/// <summary>
-		/// Initializes a new instance of TextScanner.
-		/// </summary>
-		/// <param name="reader">The TextReader to read the text.</param>
-		public TextScanner(TextReader reader)
+        /// <summary>
+        /// Initializes a new instance of TextScanner.
+        /// </summary>
+        /// <param name="reader">The TextReader to read the text.</param>
+        public TextScanner(TextReader reader)
 		{
 			this.reader = reader;
 		}
@@ -39,14 +33,13 @@ namespace LightJson.Serialization
 		/// </summary>
 		public char Peek()
 		{
-			var next = reader.Peek();
+            int next = reader.Peek();
 
 			if (next == -1)
 			{
 				throw new JsonParseException(
-					ErrorType.IncompleteMessage,
-					this.position
-				);
+                    type: ErrorType.IncompleteMessage,
+                    position: position);
 			}
 			else
 			{
@@ -59,25 +52,24 @@ namespace LightJson.Serialization
 		/// </summary>
 		public char Read()
 		{
-			var next = reader.Read();
+            int next = reader.Read();
 
 			if (next == -1)
 			{
 				throw new JsonParseException(
-					ErrorType.IncompleteMessage,
-					this.position
-				);
+                    type: ErrorType.IncompleteMessage,
+                    position: position);
 			}
 			else
 			{
 				if (next == '\n')
 				{
-					this.position.line += 1;
-					this.position.column = 0;
+					position.line += 1;
+					position.column = 0;
 				}
 				else
 				{
-					this.position.column += 1;
+					position.column += 1;
 				}
 
 				return (char)next;
@@ -105,10 +97,9 @@ namespace LightJson.Serialization
 			if (Read() != next)
 			{
 				throw new JsonParseException(
-					string.Format("Parser expected '{0}'", next),
-					ErrorType.InvalidOrUnexpectedCharacter,
-					this.position
-				);
+                    message: $"Parser expected '{next}'",
+                    type: ErrorType.InvalidOrUnexpectedCharacter,
+                    position: position);
 			}
 		}
 
@@ -119,7 +110,7 @@ namespace LightJson.Serialization
 		/// <param name="next">The expected string.</param>
 		public void Assert(string next)
 		{
-			for (var i = 0; i < next.Length; i += 1)
+			for (int i = 0; i < next.Length; i += 1)
 			{
 				Assert(next[i]);
 			}

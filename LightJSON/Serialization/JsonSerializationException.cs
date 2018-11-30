@@ -36,7 +36,7 @@ namespace LightJson.Serialization
 		public JsonSerializationException(string message, ErrorType type)
 			: base(message)
 		{
-			this.Type = type;
+			Type = type;
 		}
 
 		private static string GetDefaultMessage(ErrorType type)

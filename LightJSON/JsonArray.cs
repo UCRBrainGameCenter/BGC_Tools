@@ -14,31 +14,25 @@ namespace LightJson
 	{
 		private IList<JsonValue> items;
 
-		/// <summary>
-		/// Gets the number of values in this collection.
-		/// </summary>
-		public int Count
-		{
-			get
-			{
-				return this.items.Count;
-			}
-		}
+        /// <summary>
+        /// Gets the number of values in this collection.
+        /// </summary>
+        public int Count => items.Count;
 
-		/// <summary>
-		/// Gets or sets the value at the given index.
-		/// </summary>
-		/// <param name="index">The zero-based index of the value to get or set.</param>
-		/// <remarks>
-		/// The getter will return JsonValue.Null if the given index is out of range.
-		/// </remarks>
-		public JsonValue this[int index]
+        /// <summary>
+        /// Gets or sets the value at the given index.
+        /// </summary>
+        /// <param name="index">The zero-based index of the value to get or set.</param>
+        /// <remarks>
+        /// The getter will return JsonValue.Null if the given index is out of range.
+        /// </remarks>
+        public JsonValue this[int index]
 		{
 			get
 			{
-				if (index >= 0 && index < this.items.Count)
+				if (index >= 0 && index < items.Count)
 				{
-					return this.items[index];
+					return items[index];
 				}
 				else
 				{
@@ -47,7 +41,7 @@ namespace LightJson
 			}
 			set
 			{
-				this.items[index] = value;
+				items[index] = value;
 			}
 		}
 
@@ -56,7 +50,7 @@ namespace LightJson
 		/// </summary>
 		public JsonArray()
 		{
-			this.items = new List<JsonValue>();
+			items = new List<JsonValue>();
 		}
 
 		/// <summary>
@@ -65,9 +59,9 @@ namespace LightJson
 		/// <param name="values">The values to be added to this collection.</param>
 		public JsonArray(params JsonValue[] values) : this()
 		{
-			foreach (var value in values)
+			foreach (JsonValue value in values)
 			{
-				this.items.Add(value);
+				items.Add(value);
 			}
 		}
 
@@ -78,7 +72,7 @@ namespace LightJson
 		/// <returns>Returns this collection.</returns>
 		public JsonArray Add(JsonValue value)
 		{
-			this.items.Add(value);
+			items.Add(value);
 			return this;
 		}
 
@@ -90,7 +84,7 @@ namespace LightJson
 		/// <returns>Returns this collection.</returns>
 		public JsonArray Insert(int index, JsonValue value)
 		{
-			this.items.Insert(index, value);
+			items.Insert(index, value);
 			return this;
 		}
 
@@ -101,7 +95,7 @@ namespace LightJson
 		/// <returns>Return this collection.</returns>
 		public JsonArray Remove(int index)
 		{
-			this.items.RemoveAt(index);
+			items.RemoveAt(index);
 			return this;
 		}
 
@@ -111,71 +105,56 @@ namespace LightJson
 		/// <returns>Returns this collection.</returns>
 		public JsonArray Clear()
 		{
-			this.items.Clear();
+			items.Clear();
 			return this;
 		}
 
-		/// <summary>
-		/// Determines whether the given item is in the JsonArray.
-		/// </summary>
-		/// <param name="item">The item to locate in the JsonArray.</param>
-		/// <returns>Returns true if the item is found; otherwise, false.</returns>
-		public bool Contains(JsonValue item)
-		{
-			return this.items.Contains(item);
-		}
+        /// <summary>
+        /// Determines whether the given item is in the JsonArray.
+        /// </summary>
+        /// <param name="item">The item to locate in the JsonArray.</param>
+        /// <returns>Returns true if the item is found; otherwise, false.</returns>
+        public bool Contains(JsonValue item) => items.Contains(item);
 
-		/// <summary>
-		/// Determines the index of the given item in this JsonArray.
-		/// </summary>
-		/// <param name="item">The item to locate in this JsonArray.</param>
-		/// <returns>The index of the item, if found. Otherwise, returns -1.</returns>
-		public int IndexOf(JsonValue item)
-		{
-			return this.items.IndexOf(item);
-		}
+        /// <summary>
+        /// Determines the index of the given item in this JsonArray.
+        /// </summary>
+        /// <param name="item">The item to locate in this JsonArray.</param>
+        /// <returns>The index of the item, if found. Otherwise, returns -1.</returns>
+        public int IndexOf(JsonValue item) => items.IndexOf(item);
 
-		/// <summary>
-		/// Returns an enumerator that iterates through the collection.
-		/// </summary>
-		public IEnumerator<JsonValue> GetEnumerator()
-		{
-			return this.items.GetEnumerator();
-		}
+        /// <summary>
+        /// Returns an enumerator that iterates through the collection.
+        /// </summary>
+        public IEnumerator<JsonValue> GetEnumerator() => items.GetEnumerator();
 
-		/// <summary>
-		/// Returns an enumerator that iterates through the collection.
-		/// </summary>
-		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-		{
-			return this.GetEnumerator();
-		}
+        /// <summary>
+        /// Returns an enumerator that iterates through the collection.
+        /// </summary>
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 
-		/// <summary>
-		/// Returns a JSON string representing the state of the array.
-		/// </summary>
-		/// <remarks>
-		/// The resulting string is safe to be inserted as is into dynamically
-		/// generated JavaScript or JSON code.
-		/// </remarks>
-		public override string ToString()
-		{
-			return ToString(false);
-		}
+        /// <summary>
+        /// Returns a JSON string representing the state of the array.
+        /// </summary>
+        /// <remarks>
+        /// The resulting string is safe to be inserted as is into dynamically
+        /// generated JavaScript or JSON code.
+        /// </remarks>
+        public override string ToString() => ToString(false);
 
-		/// <summary>
-		/// Returns a JSON string representing the state of the array.
-		/// </summary>
-		/// <remarks>
-		/// The resulting string is safe to be inserted as is into dynamically
-		/// generated JavaScript or JSON code.
-		/// </remarks>
-		/// <param name="pretty">
-		/// Indicates whether the resulting string should be formatted for human-readability.
-		/// </param>
-		public string ToString(bool pretty)
+        /// <summary>
+        /// Returns a JSON string representing the state of the array.
+        /// </summary>
+        /// <remarks>
+        /// The resulting string is safe to be inserted as is into dynamically
+        /// generated JavaScript or JSON code.
+        /// </remarks>
+        /// <param name="pretty">
+        /// Indicates whether the resulting string should be formatted for human-readability.
+        /// </param>
+        public string ToString(bool pretty)
 		{
-			using (var writer = new JsonWriter(pretty))
+			using (JsonWriter writer = new JsonWriter(pretty))
 			{
 				return writer.Serialize(this);
 			}
@@ -190,11 +169,11 @@ namespace LightJson
 			{
 				get
 				{
-					var items = new JsonValue[this.jsonArray.Count];
+                    JsonValue[] items = new JsonValue[jsonArray.Count];
 
-					for (int i = 0; i < this.jsonArray.Count; i += 1)
+					for (int i = 0; i < jsonArray.Count; i += 1)
 					{
-						items[i] = this.jsonArray[i];
+						items[i] = jsonArray[i];
 					}
 
 					return items;
