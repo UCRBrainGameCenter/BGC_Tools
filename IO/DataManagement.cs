@@ -8,9 +8,7 @@ namespace BGC.IO
     {
         private static string rootDirectory = null;
 
-        /// <summary>
-        /// Root directory for all users data
-        /// </summary>
+        /// <summary> Root directory for all users data </summary>
         public static string RootDirectory
         {
             get
@@ -31,21 +29,15 @@ namespace BGC.IO
             }
         }
 
-        /// <summary>
-        /// Get a list of all data files in sub directory of os data directory
-        /// </summary>
-        /// <param name="dataDirectory"></param>
-        /// <returns></returns>
+        /// <summary> Get a list of all data files in sub directory of os data directory </summary>
         public static IEnumerable<string> GetDataFiles(string dataDirectory) =>
             Directory.GetFiles(PathForDataDirectory(dataDirectory));
 
+        /// <summary> Returns the full path for specified datafile in a data directory </summary>
         public static string PathForDataFile(string dataDirectory, string fileName) =>
             Path.Combine(PathForDataDirectory(dataDirectory), fileName);
 
-        /// <summary>
-        /// Returns the full path to the <paramref name="dataDirectory"/> directory.
-        /// <param name="dataDirectory"></param>
-        /// <returns></returns>
+        /// <summary> Returns the full path to the <paramref name="dataDirectory"/> directory. </summary>
         public static string PathForDataDirectory(string dataDirectory)
         {
             string path = Path.Combine(RootDirectory, dataDirectory);
@@ -58,10 +50,7 @@ namespace BGC.IO
             return path;
         }
 
-        /// <summary>
-        /// Returns the full path to the <paramref name="dataDirectory"/> directory.
-        /// <param name="dataDirectory"></param>
-        /// <returns></returns>
+        /// <summary> Returns the full path to the <paramref name="dataDirectories"/> directory. </summary>
         public static string PathForDataSubDirectory(params string[] dataDirectories)
         {
             string[] paths = new string[dataDirectories.Length + 1];

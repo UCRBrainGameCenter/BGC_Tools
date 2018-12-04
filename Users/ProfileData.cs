@@ -47,7 +47,7 @@ namespace BGC.Users
                 //Check existing data for type match
                 if (userData[key].IsInteger == false)
                 {
-                    Debug.LogError($"StaticData \"{key}\" Datatype changed from {userData[key].Type.ToString()} to Int");
+                    Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type.ToString()} to Int");
                 }
 
                 //Set data
@@ -69,7 +69,7 @@ namespace BGC.Users
                 //Check existing data for type match
                 if (userData[key].IsBoolean == false)
                 {
-                    Debug.LogError($"StaticData \"{key}\" Datatype changed from {userData[key].Type.ToString()} to Bool");
+                    Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type.ToString()} to Bool");
                 }
 
                 //Set data
@@ -90,7 +90,7 @@ namespace BGC.Users
                 //Check existing data for type match
                 if (userData[key].IsString == false)
                 {
-                    Debug.LogError($"StaticData \"{key}\" Datatype changed from {userData[key].Type.ToString()} to String");
+                    Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type.ToString()} to String");
                 }
 
                 //Set data
@@ -111,7 +111,7 @@ namespace BGC.Users
                 //Check existing data for type match
                 if (userData[key].IsNumber == false)
                 {
-                    Debug.LogError($"StaticData \"{key}\" Datatype changed from {userData[key].Type.ToString()} to Number");
+                    Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type.ToString()} to Number");
                 }
 
                 //Set data
@@ -132,7 +132,7 @@ namespace BGC.Users
                 //Check existing data for type match
                 if (userData[key].IsNumber == false)
                 {
-                    Debug.LogError($"StaticData \"{key}\" Datatype changed from {userData[key].Type.ToString()} to Number");
+                    Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type.ToString()} to Number");
                 }
 
                 //Set data

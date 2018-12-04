@@ -6,40 +6,15 @@ namespace BGC.Utility
 {
     public class EnumSerialization
     {
-        private List<Dictionary<string, int>> enumStringValuePairs;
-        private List<Dictionary<string, int>> EnumStringValuePairs
-        {
-            get
-            {
-                if (enumStringValuePairs == null)
-                {
-                    enumStringValuePairs = new List<Dictionary<string, int>>();
-                }
+        private List<Dictionary<string, int>> enumStringValuePairs = null;
+        private List<Dictionary<string, int>> EnumStringValuePairs => enumStringValuePairs ?? (enumStringValuePairs = new List<Dictionary<string, int>>());
 
-                return enumStringValuePairs;
-            }
-        }
 
-        private Dictionary<Type, int> enumTypeIndexPair;
-        private Dictionary<Type, int> EnumTypeIndexPair
-        {
-            get
-            {
-                if (enumTypeIndexPair == null)
-                {
-                    enumTypeIndexPair = new Dictionary<Type, int>();
-                }
+        private Dictionary<Type, int> enumTypeIndexPair = null;
+        private Dictionary<Type, int> EnumTypeIndexPair => enumTypeIndexPair ?? (enumTypeIndexPair = new Dictionary<Type, int>());
 
-                return enumTypeIndexPair;
-            }
-        }
 
-        /// <summary>
-        /// Adds an Enum Value to serialization
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="Enum"></param>
-        /// <returns></returns>
+        /// <summary> Adds an Enum Value to serialization </summary>
         public bool AddEnumToDic<T>(T Enum)
         {
             if (EnumTypeIndexPair.ContainsKey(Enum.GetType()) == false)
@@ -70,15 +45,10 @@ namespace BGC.Utility
             return false;
         }
 
-        /// <summary>
-        /// Converts a String to an Enum that was added to the serialization
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="str"></param>
-        /// <returns></returns>
+        /// <summary> Converts a String to an Enum that was added to the serialization </summary>
         public T StringToEnum<T>(string str)
         {
-            Assert.IsFalse(String.IsNullOrEmpty(str));
+            Assert.IsFalse(string.IsNullOrEmpty(str));
 
             int index = EnumTypeIndexPair[typeof(T)];
             T val;

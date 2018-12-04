@@ -167,7 +167,7 @@ namespace BGC.Users
             if (!initialized)
             {
                 //If deleteUser is attempted without first loading data
-                Debug.LogError($"Tried to AddUser before initializing StaticData.  userName: {userName}");
+                Debug.LogError($"Tried to AddUser before initializing PlayerData.  userName: {userName}");
                 return false;
             }
 
