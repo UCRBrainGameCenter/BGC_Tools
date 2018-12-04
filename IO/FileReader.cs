@@ -8,21 +8,19 @@ namespace BGC.IO
 {
     public static class FileReader
     {
-
         /// <summary>
-        /// Gives two callbacks for when a file is not found and for when a file has
-        /// been succesfully parsed into a json object. With the latter, you can use 
-        /// the parsed object to build out whatever you need. 
+        /// Offers two error callbacks for when a file is not found and for when a file failed to
+        /// parse correctly, and one for when the file has been succesfully parsed into a json object.
+        /// With the latter, you can use the parsed object to build out whatever you need. 
         /// 
         /// There is also an optional override for exception handling.
         /// </summary>
-        /// <param name="path"></param>
-        /// <param name="errorLogDirectory"></param>
-        /// <param name="jsonParseExceptionMessage"></param>
-        /// <param name="parsingExceptionMessage"></param>
-        /// <param name="fileNotFoundCallback"></param>
-        /// <param name="successCallback"></param>
-        /// <returns>Boolean if a file has been sucesfully read</returns>
+        /// <param name="path">File Path to load</param>
+        /// <param name="successCallback">Executed only on successful read</param>
+        /// <param name="failCallback">Notifies caller of failure</param>
+        /// <param name="fileNotFoundCallback">Notifies caller of failure to locate file</param>
+        /// <param name="overrideExceptionHandling">Optionally replaces default exception handling</param>
+        /// <returns>Whether the json file was successfully read</returns>
         public static bool ReadJsonFile(
             string path,
             Action<JsonObject> successCallback,
@@ -30,7 +28,7 @@ namespace BGC.IO
             Action fileNotFoundCallback = null,
             Action<string,Exception> overrideExceptionHandling = null)
         {
-            bool jsonFIleRead = false;
+            bool jsonFileRead = false;
 
             try
             {
@@ -44,7 +42,7 @@ namespace BGC.IO
                     successCallback(JsonReader.ParseFile(path));
                 }
 
-                jsonFIleRead = true;
+                jsonFileRead = true;
             }
             catch (Exception excp)
             {
@@ -62,7 +60,65 @@ namespace BGC.IO
                 }
             }
 
-            return jsonFIleRead;
+            return jsonFileRead;
+        }
+
+        /// <summary>
+        /// Tries reading Json from a TextReader and returns the parsed JsonObject as an out parameter.
+        /// Includes an optional exceptionHandler argument
+        /// </summary>
+        /// <param name="jsonReader">As reader containing serialized Json</param>
+        /// <param name="exceptionHandler">An optional exception handler</param>
+        /// <returns>Whether the json was successfully read</returns>
+        public static JsonValue ReadJsonStream(
+            TextReader jsonReader,
+            Action<Exception> exceptionHandler = null)
+        {
+            Debug.Assert(jsonReader != null);
+
+            JsonValue parsedJson;
+
+            try
+            {
+                parsedJson = JsonReader.Parse(jsonReader);
+            }
+            catch (Exception excp)
+            {
+                Debug.LogError($"Error parsing Json by text: {excp.Message}");
+                parsedJson = JsonValue.Null;
+                exceptionHandler?.Invoke(excp);
+            }
+
+            return parsedJson;
+        }
+
+        /// <summary>
+        /// Tries reading a Json string and returns the parsed JsonObject.
+        /// Includes an optional exceptionHandler argument.
+        /// </summary>
+        /// <param name="jsonText">As string containing deserialized Json</param>
+        /// <param name="exceptionHandler">An optional exception handler</param>
+        /// <returns>Whether the json was successfully read</returns>
+        public static JsonValue SafeReadJsonString(
+            string jsonText,
+            Action<Exception> exceptionHandler = null)
+        {
+            Debug.Assert(string.IsNullOrEmpty(jsonText) == false);
+
+            JsonValue parsedJson;
+
+            try
+            {
+                parsedJson = JsonReader.Parse(jsonText);
+            }
+            catch (Exception excp)
+            {
+                Debug.LogError($"Error parsing Json by text: {excp.Message}");
+                parsedJson = JsonValue.Null;
+                exceptionHandler?.Invoke(excp);
+            }
+
+            return parsedJson;
         }
 
         private static void HandleException(string path, Exception excp)
