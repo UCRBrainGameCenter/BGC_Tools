@@ -38,7 +38,7 @@ namespace BGC.Extensions
         {
             for (int i = 0; i < array.Length; i++)
             {
-                if (array[i].Equals(target))
+                if (Equals(array[i], target))
                 {
                     return true;
                 }
