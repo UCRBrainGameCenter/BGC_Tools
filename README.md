@@ -8,6 +8,7 @@ Developers:
 - Colan Biemer ([@bi3mer](https://github.com/bi3mer))
 - Randy Mester ([@randymester](https://github.com/randymester))
 - Lorenzo Alamillo ([@nadnbuds](https://github.com/nadnbuds))
+- [@Jaerdon](https://github.com/Jaerdon)
 
 Pull requests welcome.
 
