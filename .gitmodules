@@ -1,0 +1,6 @@
+[submodule "BGC_Tools.wiki"]
+	path = BGC_Tools.wiki
+	url = https://github.com/UCRBrainGameCenter/BGC_Tools.wiki.git
+[submodule "UCRBrainGameCenter.github.io"]
+	path = UCRBrainGameCenter.github.io
+	url = https://github.com/UCRBrainGameCenter/UCRBrainGameCenter.github.io.git

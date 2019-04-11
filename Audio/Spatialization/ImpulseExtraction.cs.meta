@@ -1,0 +1,12 @@
+fileFormatVersion: 2
+guid: 506199b197bc0b542b3bb75d9e9d634c
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - impulseZip: {fileID: 4900000, guid: 8fbf9d45961f88048a39bc421ef9989d, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
