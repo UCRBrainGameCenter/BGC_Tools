@@ -1,6 +1,15 @@
 # BGC Tools
 
-A collection of useful Unity Tools and scripts developed at the UC Riverside Brain Game Center.  Pull requests welcome.
+A collection of useful Unity Tools and scripts developed at the UC Riverside Brain Game Center.
+
+Developers:
+
+- Trevor Stavropoulos ([@tstavropoulos](https://github.com/tstavropoulos))
+- Colan Biemer ([@bi3mer](https://github.com/bi3mer))
+- Randy Mester ([@randymester](https://github.com/randymester))
+- Lorenzo Alamillo ([@nadnbuds](https://github.com/nadnbuds))
+
+Pull requests welcome.
 
 ## How To Use
 
@@ -11,7 +20,6 @@ cd ${project_root}/Assets/Plugins
 git clone https://github.com/UCRBrainGameCenter/BGC_Tools.git 
 git submodule add https://github.com/UCRBrainGameCenter/BGC_Tools.git BGC_Tools
 cd ${project_root}
-git submodule init
 ```
 
 ## Features
