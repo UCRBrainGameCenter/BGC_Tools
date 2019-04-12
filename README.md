@@ -23,26 +23,25 @@ This project has been built largely to be imported as a managed-code plugin.  Wi
 cd ${project_root}/Assets/Plugins
 git clone https://github.com/UCRBrainGameCenter/BGC_Tools.git
 git submodule add https://github.com/UCRBrainGameCenter/BGC_Tools.git BGC_Tools
-cd ${project_root}
 ```
 
 ## Features
 
 ### User Management
 
-- Easily-integrated system for managing multiple distinct user accounts
+- Easily-integrated system for managing multiple distinct user profiles in `Users.PlayerData`
 - User data is serialized into JSON and readily available for inspection, debugging, reproduction
 
 ### Audio
 
-- Advanced Audio synthesis library
+- Advanced Audio synthesis library (Check out examples in `Tests.SynthesisTests`)
 - Fourier transforms, Spectrogram generation
-- Managed code to Read and Write WAV files
-- Midi Encoding, Decoding, and Rendering (Alpha)
+- Managed code to Read and Write WAV files in `Audio.WaveEncoding`
+- Midi Encoding, Decoding, and Rendering (Alpha) in `Audio.Midi.MidiEncoding`
 
 ### Custom Data Structures
 
-- `IDepletable` containers, representing sets of values that can be depleted when taken, but can also be refreshed
+- `IDepletable` containers, representing sets of values that can be depleted when taken, but can also be refreshed (located in `DataStructures.Generic`)
   - `DepletableList<T>` will return values from an underlying collection in a fixed order, and can be refreshed to its original state (like a stack that can be reset)
   - `DepletableBag<T>` will return values in a random order from an underlying collection (like shuffle on a music player)
 - Efficient `RingBuffer<T>` implementation
@@ -77,4 +76,4 @@ cd ${project_root}
 
 - Robust Semantic Versioning struct in `Utility.ApplicationVersion`
 - Coroutine Management utility in `Utility.CoroutineUtility`
-- Local file-browser Scene and Scripts, to allow the inspection of application files on-device
+- Local file-browser Scene and Scripts, to allow the inspection of application files on-device (`UnityAssets/Scenes/FileBrowser.unity`)
