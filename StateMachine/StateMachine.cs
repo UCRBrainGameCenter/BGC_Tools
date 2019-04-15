@@ -1,11 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System;
+
 using UnityEngine;
 
 namespace BGC.StateMachine
 {
+    /// <summary>
+    /// Implements a state machine that can be constructed programatically that
+    /// is similar to the Unity animation state machine but not frame capped.
+    /// 
+    /// To use the update function, put the Update call in a MonoBehavior class
+    /// Update call.
+    /// </summary>
     public class StateMachine
     {
+        /// <summary>
+        /// Enumeration defining the two transition types. Regular is a 
+        /// transition that has been defined between to states. Any is a
+        /// transition that can happy between any state to the target.
+        /// </summary>
         private enum TransitionType
         {
             Regular,
@@ -13,13 +26,17 @@ namespace BGC.StateMachine
             Max
         }
 
+        private readonly Dictionary<string, List<Transition>> stateTransitions;
+        private readonly List<Transition> anyStateTransitions;
+        private readonly Dictionary<string, State> states;
+        private readonly StateData stateData;
         private readonly bool verbose;
-        private string entryState = null;
-        private StateData stateData;
-        private Dictionary<string, State> states;
-        private Dictionary<string, List<Transition>> stateTransitions;
-        private List<Transition> anyStateTransitions;
 
+        private string entryState = null;
+
+        /// <summary>
+        /// Get the current state name that the state machine is in
+        /// </summary>
         public string CurrentState
         {
             get;
@@ -27,6 +44,11 @@ namespace BGC.StateMachine
         }
 
         #region State Machine Construction
+        /// <summary>
+        /// Build a state machine with the option for it to be verbose in it's 
+        /// state transitions or not
+        /// </summary>
+        /// <param name="verbose"></param>
         public StateMachine(bool verbose = false)
         {
             this.verbose = verbose;
@@ -191,19 +213,40 @@ namespace BGC.StateMachine
             states[entryState].OnEnter();
         }
 
-        public void Reset()
+        /// <summary>
+        /// Reset the state machine by exiting the current state and setting the
+        /// state to the entry state. if restartStateMachine is set to true than
+        /// entry state will be entered and the machine will have effectively
+        /// restarted
+        /// </summary>
+        /// <param name="restartStateMachine"></param>
+        public void Reset(bool restartStateMachine = false)
         {
             states[CurrentState].OnExit();
-            CurrentState = entryState;
+
+            if (restartStateMachine)
+            {
+                Start();
+            }
+            else
+            {
+                CurrentState = entryState;
+            }
         }
 
-        private Transition ShouldTransition()
+        /// <summary>
+        /// Test to see if there is a valid transition and if there is then
+        /// run that ransition.
+        /// </summary>
+        private void Transition()
         {
+            Transition transition = null;
             for (int i = 0; i < anyStateTransitions.Count; ++i)
             {
                 if (anyStateTransitions[i].ShouldTransition())
                 {
-                    return anyStateTransitions[i];
+                    transition = anyStateTransitions[i];
+                    break;
                 }
             }
 
@@ -211,22 +254,16 @@ namespace BGC.StateMachine
             {
                 if (stateTransitions[CurrentState][i].ShouldTransition())
                 {
-                    return stateTransitions[CurrentState][i];
+                    transition = stateTransitions[CurrentState][i];
+                    break;
                 }
             }
 
-            return null;
-        }
-
-        private void Transition()
-        {
-            Transition t = ShouldTransition();
-
-            if (t != null)
+            if (transition != null)
             {
                 string activeState = CurrentState;
-                CurrentState = t.TargetState;
-                t.OnTransition();
+                CurrentState = transition.TargetState;
+                transition.OnTransition();
                 states[activeState].OnExit();
                 states[CurrentState].OnEnter();
 

@@ -3,10 +3,16 @@ using UnityEngine;
 
 namespace BGC.StateMachine
 {
+    /// <summary>
+    /// This class is implemented by states that are use din game. It comes with
+    /// access to state machine related functions once it has been added to the
+    /// machine. Users must implement OnEnter and OnExit. Users can override
+    /// Update if they have a function they want to call on a frame by frame
+    /// basis.
+    /// </summary>
     public abstract class State
     {
         protected abstract string DefaultName { get; }
-        private string name;
         private bool verbose = false;
 
         // these functions are called in implementations to stop the user from 
@@ -20,14 +26,14 @@ namespace BGC.StateMachine
         /// Name of the state. This will either be user defined or the default state
         /// name depending on the constructor used
         /// </summary>
-        public string Name => name;
+        public string Name { get; private set; }
 
         /// <summary>
         /// Create a state with the default name
         /// </summary>
         public State()
         {
-            name = DefaultName;
+            Name = DefaultName;
         }
 
         /// <summary>
@@ -36,7 +42,7 @@ namespace BGC.StateMachine
         /// <param name="name"></param>
         public State(string name)
         {
-            this.name = name;
+            Name = name;
         }
 
         /// <summary>

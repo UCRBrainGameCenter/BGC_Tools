@@ -2,10 +2,14 @@
 
 namespace BGC.StateMachine
 {
+    /// <summary>
+    /// This defines a transition between two states with the required 
+    /// transition conditions for the transition to occur
+    /// </summary>
     public class Transition
     {
-        private State targetState;
-        private TransitionCondition[] transitionConditions;
+        private readonly State targetState;
+        private readonly TransitionCondition[] transitionConditions;
 
         protected Func<string, bool> GetBool;
         protected Func<string, bool> GetTrigger;
@@ -23,17 +27,13 @@ namespace BGC.StateMachine
         /// <param name="targetState"></param>
         public Transition(State targetState, params TransitionCondition[] transitionConditions)
         {
-            if (targetState == null)
-            {
-                throw new ArgumentNullException(nameof(targetState),
-                    message: "Transition target state cannot be null.");
-            }
+            this.targetState = targetState ?? throw new ArgumentNullException(
+                nameof(targetState),
+                message: "Transition target state cannot be null.");
 
-            if (transitionConditions == null)
-            {
-                throw new ArgumentNullException(nameof(transitionConditions),
-                    message: "Transition conditions canot be null.");
-            }
+            this.transitionConditions = transitionConditions ?? throw new ArgumentNullException(
+                nameof(transitionConditions),
+                message: "Transition conditions cannot be null.");
 
             for (int i = 0; i < transitionConditions.Length; ++i)
             {
@@ -43,9 +43,6 @@ namespace BGC.StateMachine
                         message: $"Transition conditions element {i} is null and should not be.");
                 }
             }
-
-            this.targetState = targetState;
-            this.transitionConditions = transitionConditions;
         }
 
         /// <summary>

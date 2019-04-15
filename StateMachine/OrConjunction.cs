@@ -2,10 +2,25 @@
 
 namespace BGC.StateMachine
 {
+    /// <summary>
+    /// An or conjunction is a set of transitions conditions where they are
+    /// tested together with the logical or operator. If one transition
+    /// condition returns true, then this entire conjunction will also return
+    /// true.
+    /// </summary>
     public class OrConjunction : TransitionCondition
     {
-        private TransitionCondition[] conditions;
+        /// <summary>
+        /// Seet of required conditions for a transition to be called
+        /// </summary>
+        private readonly TransitionCondition[] conditions;
 
+        /// <summary>
+        /// Construct an or conjuction which operates as a set of boolean results
+        /// with an or between each. This function sets the conditions and does
+        /// error checking for null values.
+        /// </summary>
+        /// <param name="conditions"></param>
         public OrConjunction(params TransitionCondition[] conditions)
         {
             if (conditions == null)
@@ -26,6 +41,9 @@ namespace BGC.StateMachine
             this.conditions = conditions;
         }
 
+        /// <summary>
+        /// On Transition, all conditions are notified of the transition.
+        /// </summary>
         public override void OnTransition()
         {
             for (int i = 0; i < conditions.Length; ++i)
@@ -38,6 +56,11 @@ namespace BGC.StateMachine
             }
         }
 
+        /// <summary>
+        /// Returns true as long as one state returns that a transition should
+        /// happen
+        /// </summary>
+        /// <returns></returns>
         public override bool ShouldTransition()
         {
             bool shouldTransition = false;
@@ -53,6 +76,10 @@ namespace BGC.StateMachine
             return conditions.Length == 0 ? true : shouldTransition;
         }
 
+        /// <summary>
+        /// Calls this function on every state to give them their required
+        /// functionality.
+        /// </summary>
         protected override void StateMachineFunctionsSet()
         {
             for (int i = 0; i < conditions.Length; ++i)
