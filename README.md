@@ -66,6 +66,7 @@ git submodule add https://github.com/UCRBrainGameCenter/BGC_Tools.git BGC_Tools
 ### State Machine
 
 - Fast, fully-programmatic state machine implementation in `StateMachine` namespace.
+- Sample implementation included in [README.md](StateMachine/README.md).
 
 ### UI
 
