@@ -4,11 +4,11 @@ A collection of useful Unity Tools and scripts developed at the UC Riverside Bra
 
 Developers:
 
-- Trevor Stavropoulos ([@tstavropoulos](https://github.com/tstavropoulos))
-- Colan Biemer ([@bi3mer](https://github.com/bi3mer))
+- [Trevor Stavropoulos](https://tstavropoulos.github.io/) ([@tstavropoulos](https://github.com/tstavropoulos))
+- [Colan Biemer](https://bi3mer.github.io/#resume) ([@bi3mer](https://github.com/bi3mer))
 - Randy Mester ([@randymester](https://github.com/randymester))
 - Lorenzo Alamillo ([@nadnbuds](https://github.com/nadnbuds))
-- [@Jaerdon](https://github.com/Jaerdon)
+- [Jordan Whiting](https://jaerdon.com/) ([@Jaerdon](https://github.com/Jaerdon))
 
 [Doxygen-built documentation available here](
 https://ucrbraingamecenter.github.io/documentation/namespaces.html).
