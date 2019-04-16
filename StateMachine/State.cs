@@ -85,10 +85,7 @@ namespace BGC.StateMachine
         /// This can be called every frame or whenever for complex states that
         /// have behavior on a frame by X basis.
         /// </summary>
-        public virtual void Update()
-        {
-            Debug.LogError("Update not implemented.");
-        }
+        public virtual void Update() { }
 
         /// <summary>
         /// Receive state machine related functions that give states required behaviour
