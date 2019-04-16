@@ -40,9 +40,10 @@ namespace BGC.IO
                 else
                 {
                     successCallback(JsonReader.ParseFile(path));
+                    //If the above callback itself throws an exception, it will be caught here and
+                    //ultimately the method will return false.
+                    jsonFileRead = true;
                 }
-
-                jsonFileRead = true;
             }
             catch (Exception excp)
             {
