@@ -12,7 +12,7 @@ namespace BGC.StateMachine
     /// To use the update function, put the Update call in a MonoBehavior class
     /// Update call.
     /// </summary>
-    public class StateMachine
+    public class StateMachine : IStateDataRetriever, ITransitionDataRetriever
     {
         /// <summary>
         /// Enumeration defining the two transition types. Regular is a 
@@ -48,7 +48,6 @@ namespace BGC.StateMachine
         /// Build a state machine with the option for it to be verbose in it's 
         /// state transitions or not
         /// </summary>
-        /// <param name="verbose"></param>
         public StateMachine(bool verbose = false)
         {
             this.verbose = verbose;
@@ -61,12 +60,11 @@ namespace BGC.StateMachine
         /// <summary>
         /// Add a state to the state machine
         /// </summary>
-        /// <param name="state"></param>
         /// <returns>True if the state was added</returns>
         public void AddState(State state)
         {
             states.Add(state.Name, state);
-            state.SetStateMachineFunctions(ActivateTrigger, GetTrigger, GetBool, SetBool);
+            state.SetStateMachineFunctions(this);
             state.SetVerbose(verbose);
             stateTransitions.Add(state.Name, new List<Transition>());
         }
@@ -74,8 +72,6 @@ namespace BGC.StateMachine
         /// <summary>
         /// Add the state to where the game runs
         /// </summary>
-        /// <param name="state"></param>
-        /// <returns></returns>
         public void AddEntryState(State state)
         {
             if (entryState != null)
@@ -93,8 +89,10 @@ namespace BGC.StateMachine
         /// <summary>
         /// Add a transition to a state
         /// </summary>
-        /// <param name="transition"></param>
-        public void AddTransition(State fromState, State targetState, params TransitionCondition[] conditions)
+        public void AddTransition(
+            State fromState,
+            State targetState,
+            params TransitionCondition[] conditions)
         {
             if (fromState == null)
             {
@@ -104,17 +102,16 @@ namespace BGC.StateMachine
 
             Transition transition = new Transition(targetState, conditions);
             stateTransitions[fromState.Name].Add(transition);
-            transition.SetStateDataRetrievers(GetBool, GetTrigger, stateData.DeActivateTrigger);
+            transition.SetStateDataRetrievers(this);
         }
 
         /// <summary>
         /// Add a transition that can occur on any state
         /// </summary>
-        /// <param name="transition"></param>
         public void AddAnyStateTransition(State targetState, params TransitionCondition[] conditions)
         {
             Transition transition = new Transition(targetState, conditions);
-            transition.SetStateDataRetrievers(GetBool, GetTrigger, stateData.DeActivateTrigger);
+            transition.SetStateDataRetrievers(this);
             anyStateTransitions.Add(transition);
         }
         #endregion
@@ -123,8 +120,6 @@ namespace BGC.StateMachine
         /// <summary>
         /// Add a boolean that can affect transitions
         /// </summary>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
         /// <returns>True if the boolean was added without error</returns>
         public void AddBool(string key, bool value)
         {
@@ -132,20 +127,8 @@ namespace BGC.StateMachine
         }
 
         /// <summary>
-        /// Get a boolean that can affect transitions
-        /// Warning: Should only be called from State!
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns>Value of the key. False is default if value is not found.</returns>
-        public bool GetBool(string key)
-        {
-            return stateData.GetBoolean(key);
-        }
-
-        /// <summary>
         /// Add a trigger that can cause the state machine to go to the next state
         /// </summary>
-        /// <param name="key"></param>
         /// <returns>True if the trigger was added</returns>
         public void AddTrigger(string key)
         {
@@ -156,7 +139,6 @@ namespace BGC.StateMachine
         /// Activate a trigger to move the state machine forward
         /// Warning: Should only be called from State!
         /// </summary>
-        /// <param name="key"></param>
         /// <returns>True if the trigger was succesfully activated</returns>
         public void ActivateTrigger(string key)
         {
@@ -168,24 +150,11 @@ namespace BGC.StateMachine
         /// Set a boolean that can affect transitions
         /// Warning: Should only be called from State!
         /// </summary>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
         /// <returns>True if the boolean was set without error</returns>
         public void SetBool(string key, bool value)
         {
             stateData.SetBoolean(key, value);
             Transition();
-        }
-
-        /// <summary>
-        /// Gets a trigger value
-        /// Warning: Should only be called from State!
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        public bool GetTrigger(string key)
-        {
-            return stateData.GetTrigger(key);
         }
 
         /// <summary>
@@ -219,7 +188,6 @@ namespace BGC.StateMachine
         /// entry state will be entered and the machine will have effectively
         /// restarted
         /// </summary>
-        /// <param name="restartStateMachine"></param>
         public void Reset(bool restartStateMachine = false)
         {
             states[CurrentState].OnExit();
@@ -279,6 +247,19 @@ namespace BGC.StateMachine
             }
         }
         #endregion
+
+        #region IStateDataRetriever
+        void IStateDataRetriever.ActivateTrigger(string key) => ActivateTrigger(key);
+        bool IStateDataRetriever.GetTrigger(string key) => stateData.GetTrigger(key);
+        bool IStateDataRetriever.GetBool(string key) => stateData.GetBoolean(key);
+        void IStateDataRetriever.SetBool(string key, bool value) => SetBool(key, value);
+        #endregion IStateDataRetriever
+
+        #region ITransitionDataRetriever
+        bool ITransitionDataRetriever.GetBool(string key) => stateData.GetBoolean(key);
+        bool ITransitionDataRetriever.GetTrigger(string key) => stateData.GetTrigger(key);
+        void ITransitionDataRetriever.ConsumeTrigger(string key) => stateData.DeActivateTrigger(key);
+        #endregion ITransitionDataRetriever
 
         /// <summary>
         /// Log the string if verbose

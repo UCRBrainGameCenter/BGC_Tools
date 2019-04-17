@@ -18,7 +18,6 @@ namespace BGC.StateMachine
         /// Construct a trigger condition with the key that will be checked in
         /// the triggers dictionary.
         /// </summary>
-        /// <param name="key"></param>
         public TriggerCondition(string key)
         {
             if (string.IsNullOrEmpty(key))
@@ -34,20 +33,13 @@ namespace BGC.StateMachine
         /// <summary>
         /// On transition, a trigger will always be consumed
         /// </summary>
-        public override void OnTransition()
-        {
-            consumeTrigger(key);
-        }
+        public override void OnTransition() => stateMachine.ConsumeTrigger(key);
 
         /// <summary>
         /// If the required trigger has been activated this will return true
         /// until it has been consumed
         /// </summary>
-        /// <returns></returns>
-        public override bool ShouldTransition()
-        {
-            return getTrigger(key);
-        }
+        public override bool ShouldTransition() => stateMachine.GetTrigger(key);
 
         protected override void StateMachineFunctionsSet()
         {

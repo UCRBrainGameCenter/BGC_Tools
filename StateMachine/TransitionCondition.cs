@@ -11,32 +11,20 @@ namespace BGC.StateMachine
     /// </summary>
     public abstract class TransitionCondition
     {
-        protected Func<string, bool> getBool;
-        protected Func<string, bool> getTrigger;
-        protected Action<string> consumeTrigger;
+        protected ITransitionDataRetriever stateMachine;
 
         /// <summary>
         /// Sets the required functions for the transition that it has received
         /// from the state machine.
         /// </summary>
-        /// <param name="getBool"></param>
-        /// <param name="getTrigger"></param>
-        /// <param name="consumeTrigger"></param>
-        public void SetStateMachineFunctions(
-            Func<string, bool> getBool, 
-            Func<string, bool> getTrigger, 
-            Action<string> consumeTrigger)
+        public void SetStateMachineFunctions(ITransitionDataRetriever stateMachine)
         {
             // These assert checks are here for safety despite us being all but
             // guaranteed that the functions will always be valid because we 
             // have received them from the state machine
-            Assert.IsNotNull(consumeTrigger);
-            Assert.IsNotNull(getTrigger);
-            Assert.IsNotNull(getBool);
+            Assert.IsNotNull(stateMachine);
 
-            this.consumeTrigger = consumeTrigger;
-            this.getTrigger = getTrigger;
-            this.getBool = getBool;
+            this.stateMachine = stateMachine;
 
             StateMachineFunctionsSet();
         }

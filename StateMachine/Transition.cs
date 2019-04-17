@@ -11,9 +11,7 @@ namespace BGC.StateMachine
         private readonly State targetState;
         private readonly TransitionCondition[] transitionConditions;
 
-        protected Func<string, bool> GetBool;
-        protected Func<string, bool> GetTrigger;
-        protected Action<string> ConsumeTrigger;
+        protected ITransitionDataRetriever stateMachine;
 
         /// <summary>
         /// Get name of the state this transition goes to
@@ -23,23 +21,24 @@ namespace BGC.StateMachine
         /// <summary>
         /// Construct abstract transtion to define path
         /// </summary>
-        /// <param name="fromState"></param>
-        /// <param name="targetState"></param>
-        public Transition(State targetState, params TransitionCondition[] transitionConditions)
+        public Transition(
+            State targetState,
+            params TransitionCondition[] transitionConditions)
         {
             this.targetState = targetState ?? throw new ArgumentNullException(
-                nameof(targetState),
+                paramName: nameof(targetState),
                 message: "Transition target state cannot be null.");
 
             this.transitionConditions = transitionConditions ?? throw new ArgumentNullException(
-                nameof(transitionConditions),
+                paramName: nameof(transitionConditions),
                 message: "Transition conditions cannot be null.");
 
             for (int i = 0; i < transitionConditions.Length; ++i)
             {
                 if (transitionConditions[i] == null)
                 {
-                    throw new ArgumentNullException(nameof(transitionConditions),
+                    throw new ArgumentNullException(
+                        paramName: nameof(transitionConditions),
                         message: $"Transition conditions element {i} is null and should not be.");
                 }
             }
@@ -48,19 +47,15 @@ namespace BGC.StateMachine
         /// <summary>
         /// Add state machine data which is required for checking info
         /// </summary>
-        /// <param name="stateData"></param>
-        public void SetStateDataRetrievers(
-            Func<string, bool> getBool,
-            Func<string, bool> getTrigger,
-            Action<string> consumeTrigger)
+        public void SetStateDataRetrievers(ITransitionDataRetriever stateMachine)
         {
-            GetBool = getBool;
-            GetTrigger = getTrigger;
-            ConsumeTrigger = consumeTrigger;
+            this.stateMachine = stateMachine ?? throw new ArgumentNullException(
+                paramName: nameof(stateMachine),
+                message: "stateMachine argument cannot be null.");
 
             for (int i = 0; i < transitionConditions.Length; ++i)
             {
-                transitionConditions[i].SetStateMachineFunctions(getBool, getTrigger, consumeTrigger);
+                transitionConditions[i].SetStateMachineFunctions(stateMachine);
             }
         }
 

@@ -25,8 +25,6 @@ namespace BGC.StateMachine
         /// dictionary and will call for a transition when the expected value
         /// is found
         /// </summary>
-        /// <param name="key"></param>
-        /// <param name="val"></param>
         public BoolCondition(string key, bool val)
         {
             if (string.IsNullOrEmpty(key))
@@ -52,11 +50,7 @@ namespace BGC.StateMachine
         /// Returns true when the correct value specified during construction 
         /// is seen
         /// </summary>
-        /// <returns></returns>
-        public override bool ShouldTransition()
-        {
-            return getBool(key) == val;
-        }
+        public override bool ShouldTransition() => stateMachine.GetBool(key) == val;
 
         /// <summary>
         /// Not used

@@ -11,7 +11,7 @@ namespace BGC.StateMachine
     public class OrConjunction : TransitionCondition
     {
         /// <summary>
-        /// Seet of required conditions for a transition to be called
+        /// Set of required conditions for a transition to be called
         /// </summary>
         private readonly TransitionCondition[] conditions;
 
@@ -20,7 +20,6 @@ namespace BGC.StateMachine
         /// with an or between each. This function sets the conditions and does
         /// error checking for null values.
         /// </summary>
-        /// <param name="conditions"></param>
         public OrConjunction(params TransitionCondition[] conditions)
         {
             if (conditions == null)
@@ -60,7 +59,6 @@ namespace BGC.StateMachine
         /// Returns true as long as one state returns that a transition should
         /// happen
         /// </summary>
-        /// <returns></returns>
         public override bool ShouldTransition()
         {
             bool shouldTransition = false;
@@ -84,7 +82,7 @@ namespace BGC.StateMachine
         {
             for (int i = 0; i < conditions.Length; ++i)
             {
-                conditions[i].SetStateMachineFunctions(getBool, getTrigger, consumeTrigger);
+                conditions[i].SetStateMachineFunctions(stateMachine);
             }
         }
     }

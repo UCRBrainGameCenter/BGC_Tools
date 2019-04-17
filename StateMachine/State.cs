@@ -15,12 +15,7 @@ namespace BGC.StateMachine
         protected virtual string DefaultName => "State";
         private bool verbose = false;
 
-        // these functions are called in implementations to stop the user from 
-        // accidentally modifying them
-        private Action<string> activateTrigger;
-        private Action<string, bool> setBool;
-        private Func<string, bool> getBool;
-        private Func<string, bool> getTrigger;
+        private IStateDataRetriever stateMachine;
 
         /// <summary>
         /// Name of the state. This will either be user defined or the default state
@@ -91,23 +86,11 @@ namespace BGC.StateMachine
         /// <summary>
         /// Receive state machine related functions that give states required behaviour
         /// </summary>
-        public void SetStateMachineFunctions(
-            Action<string> activateTrigger,
-            Func<string, bool> getTrigger,
-            Func<string, bool> getBool,
-            Action<string, bool> setBool)
+        public void SetStateMachineFunctions(IStateDataRetriever stateMachine)
         {
-            this.activateTrigger = activateTrigger ?? throw new ArgumentNullException(nameof(activateTrigger),
-                    message: "activateTrigger function cannot be null.");
-
-            this.getTrigger = getTrigger ?? throw new ArgumentNullException(nameof(getTrigger),
-                    message: "getTrigger function cannot be null.");
-
-            this.getBool = getBool ?? throw new ArgumentNullException(nameof(getBool),
-                    message: "getBool function cannot be null.");
-
-            this.setBool = setBool ?? throw new ArgumentNullException(nameof(setBool),
-                    message: "setBool function cannot be null.");
+            this.stateMachine = stateMachine ?? throw new ArgumentNullException(
+                paramName: nameof(stateMachine),
+                message: "stateMachine cannot be null.");
         }
 
         /// <summary>
@@ -124,10 +107,7 @@ namespace BGC.StateMachine
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        protected void ActivateTrigger(string key)
-        {
-            activateTrigger(key);
-        }
+        protected void ActivateTrigger(string key) => stateMachine.ActivateTrigger(key);
 
         /// <summary>
         /// Set a bool in the state machine this state is a part of
@@ -135,19 +115,13 @@ namespace BGC.StateMachine
         /// <param name="key"></param>
         /// <param name="val"></param>
         /// <returns></returns>
-        protected void SetBool(string key, bool val)
-        {
-            setBool(key, val);
-        }
+        protected void SetBool(string key, bool val) => stateMachine.SetBool(key, val);
 
         /// <summary>
         /// Get a bool from the state machine this state is a part of
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        protected bool GetBool(string key)
-        {
-            return getBool(key);
-        }
+        protected bool GetBool(string key) => stateMachine.GetBool(key);
     }
 }
