@@ -13,7 +13,7 @@ Developers:
 [Doxygen-built documentation available here](
 https://ucrbraingamecenter.github.io/documentation/namespaces.html).
 
-Pull requests welcome.
+Pull requests are welcome.
 
 ## How To Use
 
@@ -24,6 +24,8 @@ cd ${project_root}/Assets/Plugins
 git clone https://github.com/UCRBrainGameCenter/BGC_Tools.git
 git submodule add https://github.com/UCRBrainGameCenter/BGC_Tools.git BGC_Tools
 ```
+
+Take a look at our MIT Licensed [CleanBGCProject Unity Demo Project](https://github.com/UCRBrainGameCenter/CleanBGCProject) to see some of these tools in action.
 
 ## Features
 
