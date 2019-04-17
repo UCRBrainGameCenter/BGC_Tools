@@ -14,18 +14,6 @@ namespace BGC.StateMachine
     /// </summary>
     public class StateMachine : IStateDataRetriever, ITransitionDataRetriever
     {
-        /// <summary>
-        /// Enumeration defining the two transition types. Regular is a 
-        /// transition that has been defined between to states. Any is a
-        /// transition that can happy between any state to the target.
-        /// </summary>
-        private enum TransitionType
-        {
-            Regular,
-            Any,
-            Max
-        }
-
         private readonly Dictionary<string, List<Transition>> stateTransitions;
         private readonly List<Transition> anyStateTransitions;
         private readonly Dictionary<string, State> states;
@@ -33,6 +21,9 @@ namespace BGC.StateMachine
         private readonly bool verbose;
 
         private string entryState = null;
+
+        private bool dirtyTransitionState = false;
+        private bool blockTransitions = false;
 
         /// <summary>
         /// Get the current state name that the state machine is in
@@ -45,8 +36,8 @@ namespace BGC.StateMachine
 
         #region State Machine Construction
         /// <summary>
-        /// Build a state machine with the option for it to be verbose in it's 
-        /// state transitions or not
+        /// Construct a StateMachine.
+        /// Verbose dumps state transition information to UnityEngine.Log
         /// </summary>
         public StateMachine(bool verbose = false)
         {
@@ -60,7 +51,6 @@ namespace BGC.StateMachine
         /// <summary>
         /// Add a state to the state machine
         /// </summary>
-        /// <returns>True if the state was added</returns>
         public void AddState(State state)
         {
             states.Add(state.Name, state);
@@ -70,7 +60,7 @@ namespace BGC.StateMachine
         }
 
         /// <summary>
-        /// Add the state to where the game runs
+        /// Add a state to the StateMachine and sets it as the initial State
         /// </summary>
         public void AddEntryState(State state)
         {
@@ -87,7 +77,7 @@ namespace BGC.StateMachine
         }
 
         /// <summary>
-        /// Add a transition to a state
+        /// Add a Standard Transition between two States
         /// </summary>
         public void AddTransition(
             State fromState,
@@ -106,7 +96,7 @@ namespace BGC.StateMachine
         }
 
         /// <summary>
-        /// Add a transition that can occur on any state
+        /// Add a Transition that can occur from any state
         /// </summary>
         public void AddAnyStateTransition(State targetState, params TransitionCondition[] conditions)
         {
@@ -120,49 +110,85 @@ namespace BGC.StateMachine
         /// <summary>
         /// Add a boolean that can affect transitions
         /// </summary>
-        /// <returns>True if the boolean was added without error</returns>
-        public void AddBool(string key, bool value)
-        {
-            stateData.AddBoolean(key, value);
-        }
+        public void AddBool(string key, bool value) => stateData.AddBoolean(key, value);
 
         /// <summary>
         /// Add a trigger that can cause the state machine to go to the next state
         /// </summary>
-        /// <returns>True if the trigger was added</returns>
-        public void AddTrigger(string key)
+        public void AddTrigger(string key) => stateData.AddTrigger(key);
+
+        /// <summary>
+        /// Activate a trigger to move the state machine forward.
+        /// Immediate ActivateTrigger calls initiate a transition check if transitions aren't blocked.
+        /// </summary>
+        public void ActivateTrigger(string key, bool immediate)
         {
-            stateData.AddTrigger(key);
+            stateData.ActivateTrigger(key);
+
+            if (immediate && !blockTransitions)
+            {
+                ExecuteTransitions();
+            }
+            else
+            {
+                dirtyTransitionState = true;
+            }
         }
 
         /// <summary>
         /// Activate a trigger to move the state machine forward
-        /// Warning: Should only be called from State!
         /// </summary>
-        /// <returns>True if the trigger was succesfully activated</returns>
-        public void ActivateTrigger(string key)
+        [Obsolete("Indicate the immediacy of the Trigger Activation")]
+        public void ActivateTrigger(string key) => ActivateTrigger(key, true);
+
+        /// <summary>
+        /// Set a boolean that can affect transitions.
+        /// Immediate SetBool calls initiate a transition check if transitions aren't blocked.
+        /// </summary>
+        public void SetBool(string key, bool value, bool immediate)
         {
-            stateData.ActivateTrigger(key);
-            Transition();
+            stateData.SetBoolean(key, value);
+
+            if (immediate && !blockTransitions)
+            {
+                ExecuteTransitions();
+            }
+            else
+            {
+                dirtyTransitionState = true;
+            }
         }
 
         /// <summary>
         /// Set a boolean that can affect transitions
-        /// Warning: Should only be called from State!
         /// </summary>
-        /// <returns>True if the boolean was set without error</returns>
-        public void SetBool(string key, bool value)
-        {
-            stateData.SetBoolean(key, value);
-            Transition();
-        }
+        [Obsolete("Indicate the immediacy of the Bool Set")]
+        public void SetBool(string key, bool value) => SetBool(key, value, true);
 
         /// <summary>
         /// Call update function on the currently active state.
         /// </summary>
         public void Update()
         {
-            states[CurrentState].Update();
+            //Pre-Update check for Transitions
+            if (dirtyTransitionState)
+            {
+                ExecuteTransitions();
+            }
+
+            //Block mid-update transitions
+            {
+                blockTransitions = true;
+                //Update current state
+                states[CurrentState].Update();
+                blockTransitions = false;
+            }
+
+            //Post-Update check for Transitions
+            if (dirtyTransitionState)
+            {
+                ExecuteTransitions();
+            }
         }
         #endregion
 
@@ -170,7 +196,6 @@ namespace BGC.StateMachine
         /// <summary>
         /// Run the first state of the state machine
         /// </summary>
-        /// <returns>True if the state machine started</returns>
         public void Start()
         {
             if (entryState == null)
@@ -179,14 +204,23 @@ namespace BGC.StateMachine
             }
 
             CurrentState = entryState;
-            states[entryState].OnEnter();
+
+            //Block transitions during OnEnter
+            {
+                blockTransitions = true;
+                states[entryState].OnEnter();
+                blockTransitions = false;
+            }
+
+            //Execute any transitions
+            ExecuteTransitions();
         }
 
         /// <summary>
         /// Reset the state machine by exiting the current state and setting the
-        /// state to the entry state. if restartStateMachine is set to true than
-        /// entry state will be entered and the machine will have effectively
-        /// restarted
+        /// state to the entry state. 
+        /// If restartStateMachine is set to true then entry state will be entered and the
+        /// StateMachine will have effectively restarted
         /// </summary>
         public void Reset(bool restartStateMachine = false)
         {
@@ -203,56 +237,62 @@ namespace BGC.StateMachine
         }
 
         /// <summary>
-        /// Test to see if there is a valid transition and if there is then
-        /// run that ransition.
+        /// Test to see if there is a valid transitions and return it, or null.
+        /// Clears the dirtyTransitionState flag.
         /// </summary>
-        private void Transition()
+        private Transition CheckTransitions()
         {
-            Transition transition = null;
+            dirtyTransitionState = false;
 
-            //Check AnyState Transitions
+            //Check AnyState Transitions First
             for (int i = 0; i < anyStateTransitions.Count; ++i)
             {
                 if (anyStateTransitions[i].ShouldTransition())
                 {
-                    transition = anyStateTransitions[i];
-                    break;
+                    return anyStateTransitions[i];
                 }
             }
 
-            //Check State Transitions (only if there's no valid AnyState Transition)
-            if (transition == null)
+            //Check State Transitions Next
+            for (int i = 0; i < stateTransitions[CurrentState].Count; ++i)
             {
-                for (int i = 0; i < stateTransitions[CurrentState].Count; ++i)
+                if (stateTransitions[CurrentState][i].ShouldTransition())
                 {
-                    if (stateTransitions[CurrentState][i].ShouldTransition())
-                    {
-                        transition = stateTransitions[CurrentState][i];
-                        break;
-                    }
+                    return stateTransitions[CurrentState][i];
                 }
             }
 
-            if (transition != null)
-            {
-                string activeState = CurrentState;
-                CurrentState = transition.TargetState;
-                transition.OnTransition();
-                states[activeState].OnExit();
-                states[CurrentState].OnEnter();
+            //No valid Transition found
+            return null;
+        }
 
-                // run transition again if we have transitioned so we can continue
-                // through the statem achine until we reach a point to wait again
-                Transition();
+        /// <summary>
+        /// Run transitions as long as we have a valid one to perform next.
+        /// Blocks immediate transitions from occuring.
+        /// </summary>
+        private void ExecuteTransitions()
+        {
+            blockTransitions = true;
+
+            Transition transition;
+
+            while ((transition = CheckTransitions()) != null)
+            {
+                transition.OnTransition();
+                states[CurrentState].OnExit();
+                CurrentState = transition.TargetState;
+                states[CurrentState].OnEnter();
             }
+
+            blockTransitions = false;
         }
         #endregion
 
         #region IStateDataRetriever
-        void IStateDataRetriever.ActivateTrigger(string key) => ActivateTrigger(key);
+        void IStateDataRetriever.ActivateTrigger(string key) => ActivateTrigger(key, false);
         bool IStateDataRetriever.GetTrigger(string key) => stateData.GetTrigger(key);
         bool IStateDataRetriever.GetBool(string key) => stateData.GetBoolean(key);
-        void IStateDataRetriever.SetBool(string key, bool value) => SetBool(key, value);
+        void IStateDataRetriever.SetBool(string key, bool value) => SetBool(key, value, false);
         #endregion IStateDataRetriever
 
         #region ITransitionDataRetriever
@@ -264,7 +304,6 @@ namespace BGC.StateMachine
         /// <summary>
         /// Log the string if verbose
         /// </summary>
-        /// <param name="str"></param>
         private void Log(string str)
         {
             if (verbose)
