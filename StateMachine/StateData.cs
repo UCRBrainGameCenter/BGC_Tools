@@ -4,18 +4,34 @@ using UnityEngine.Assertions;
 namespace BGC.StateMachine
 {
     /// <summary>
-    /// Contains data for a state machine with descriptive functions to improve
-    /// code clarity. Likely to be removed in the future.
+    /// Contains data for a state machine with descriptive functions to improve code clarity.
     /// </summary>
     public class StateData
     {
+        private readonly Dictionary<string, bool> initialBooleans = new Dictionary<string, bool>();
         private readonly Dictionary<string, bool> booleans = new Dictionary<string, bool>();
-        private readonly Dictionary<string, bool> triggers = new Dictionary<string, bool>();
+        private readonly HashSet<string> triggers = new HashSet<string>();
 
-        public void AddBoolean(string key, bool value)
+        public void Initialize()
+        {
+            Clear();
+
+            foreach (var kvp in initialBooleans)
+            {
+                booleans.Add(kvp.Key, kvp.Value);
+            }
+        }
+
+        public void Clear()
+        {
+            booleans.Clear();
+            triggers.Clear();
+        }
+
+        public void AddBoolean(string key, bool initialValue)
         {
             Assert.IsFalse(string.IsNullOrEmpty(key));
-            booleans.Add(key, value);
+            initialBooleans.Add(key, initialValue);
         }
 
         public void SetBoolean(string key, bool value)
@@ -30,28 +46,22 @@ namespace BGC.StateMachine
             return booleans[key];
         }
 
-        public void AddTrigger(string key)
-        {
-            Assert.IsFalse(string.IsNullOrEmpty(key));
-            triggers.Add(key, false);
-        }
-
         public void ActivateTrigger(string key)
         {
             Assert.IsFalse(string.IsNullOrEmpty(key));
-            triggers[key] = true;
+            triggers.Add(key);
         }
 
         public void DeActivateTrigger(string key)
         {
             Assert.IsFalse(string.IsNullOrEmpty(key));
-            triggers[key] = false;
+            triggers.Remove(key);
         }
 
         public bool GetTrigger(string key)
         {
             Assert.IsFalse(string.IsNullOrEmpty(key));
-            return triggers[key];
+            return triggers.Contains(key);
         }
     }
 }

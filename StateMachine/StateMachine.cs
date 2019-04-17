@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System;
-
 using UnityEngine;
 
 namespace BGC.StateMachine
@@ -22,17 +21,14 @@ namespace BGC.StateMachine
 
         private string entryState = null;
 
+        private bool running = false;
         private bool dirtyTransitionState = false;
         private bool blockTransitions = false;
 
         /// <summary>
-        /// Get the current state name that the state machine is in
+        /// Get the name of the current State that the StateMachine is in
         /// </summary>
-        public string CurrentState
-        {
-            get;
-            private set;
-        }
+        public string CurrentState { get; private set; }
 
         #region State Machine Construction
         /// <summary>
@@ -110,12 +106,13 @@ namespace BGC.StateMachine
         /// <summary>
         /// Add a boolean that can affect transitions
         /// </summary>
-        public void AddBool(string key, bool value) => stateData.AddBoolean(key, value);
+        public void AddBool(string key, bool initialValue) => stateData.AddBoolean(key, initialValue);
 
         /// <summary>
         /// Add a trigger that can cause the state machine to go to the next state
         /// </summary>
-        public void AddTrigger(string key) => stateData.AddTrigger(key);
+        [Obsolete("Triggers no longer need to be added to the stateData.  This function does nothing.")]
+        public void AddTrigger(string key) { }
 
         /// <summary>
         /// Activate a trigger to move the state machine forward.
@@ -123,6 +120,9 @@ namespace BGC.StateMachine
         /// </summary>
         public void ActivateTriggerImmediate(string key)
         {
+            Debug.Assert(running,
+                "Activating Triggers when the StateMachine is not running will accomplish nothing");
+
             stateData.ActivateTrigger(key);
 
             if (!blockTransitions)
@@ -141,6 +141,9 @@ namespace BGC.StateMachine
         /// </summary>
         public void ActivateTriggerDeferred(string key)
         {
+            Debug.Assert(running,
+                "Activating Triggers when the StateMachine is not running will accomplish nothing");
+
             stateData.ActivateTrigger(key);
             dirtyTransitionState = true;
         }
@@ -157,6 +160,9 @@ namespace BGC.StateMachine
         /// </summary>
         public void SetBoolImmediate(string key, bool value)
         {
+            Debug.Assert(running, 
+                "Setting boolean values when the StateMachine is not running will accomplish nothing");
+
             stateData.SetBoolean(key, value);
 
             if (!blockTransitions)
@@ -175,6 +181,9 @@ namespace BGC.StateMachine
         /// </summary>
         public void SetBoolDeferred(string key, bool value)
         {
+            Debug.Assert(running,
+                "Setting boolean values when the StateMachine is not running will accomplish nothing");
+
             stateData.SetBoolean(key, value);
             dirtyTransitionState = true;
         }
@@ -190,6 +199,11 @@ namespace BGC.StateMachine
         /// </summary>
         public void Update()
         {
+            if (!running)
+            {
+                return;
+            }
+
             //Pre-Update check for Transitions
             if (dirtyTransitionState)
             {
@@ -224,6 +238,9 @@ namespace BGC.StateMachine
             }
 
             CurrentState = entryState;
+            running = true;
+            dirtyTransitionState = false;
+            stateData.Initialize();
 
             //Block transitions during OnEnter
             {
@@ -244,15 +261,22 @@ namespace BGC.StateMachine
         /// </summary>
         public void Reset(bool restartStateMachine = false)
         {
-            states[CurrentState].OnExit();
+            if (running)
+            {
+                //Prevent escape of current state
+                blockTransitions = true;
+                states[CurrentState].OnExit();
+                blockTransitions = false;
+            }
+
+            CurrentState = null;
+            running = false;
+            dirtyTransitionState = false;
+            stateData.Clear();
 
             if (restartStateMachine)
             {
                 Start();
-            }
-            else
-            {
-                CurrentState = entryState;
             }
         }
 
