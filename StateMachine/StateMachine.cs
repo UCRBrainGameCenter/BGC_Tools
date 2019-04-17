@@ -119,13 +119,13 @@ namespace BGC.StateMachine
 
         /// <summary>
         /// Activate a trigger to move the state machine forward.
-        /// Immediate ActivateTrigger calls initiate a transition check if transitions aren't blocked.
+        /// Initiate a transition check if transitions aren't blocked.
         /// </summary>
-        public void ActivateTrigger(string key, bool immediate)
+        public void ActivateTriggerImmediate(string key)
         {
             stateData.ActivateTrigger(key);
 
-            if (immediate && !blockTransitions)
+            if (!blockTransitions)
             {
                 ExecuteTransitions();
             }
@@ -133,23 +133,33 @@ namespace BGC.StateMachine
             {
                 dirtyTransitionState = true;
             }
+        }
+
+        /// <summary>
+        /// Activate a trigger to move the state machine forward.
+        /// Relies upon the eventual calling of either an Update or an Immediate call.
+        /// </summary>
+        public void ActivateTriggerDeferred(string key)
+        {
+            stateData.ActivateTrigger(key);
+            dirtyTransitionState = true;
         }
 
         /// <summary>
         /// Activate a trigger to move the state machine forward
         /// </summary>
-        [Obsolete("Indicate the immediacy of the Trigger Activation")]
-        public void ActivateTrigger(string key) => ActivateTrigger(key, true);
+        [Obsolete("Indicate the immediacy of the ActivateTrigger call")]
+        public void ActivateTrigger(string key) => ActivateTriggerImmediate(key);
 
         /// <summary>
         /// Set a boolean that can affect transitions.
-        /// Immediate SetBool calls initiate a transition check if transitions aren't blocked.
+        /// Initiate a transition check if transitions aren't blocked.
         /// </summary>
-        public void SetBool(string key, bool value, bool immediate)
+        public void SetBoolImmediate(string key, bool value)
         {
             stateData.SetBoolean(key, value);
 
-            if (immediate && !blockTransitions)
+            if (!blockTransitions)
             {
                 ExecuteTransitions();
             }
@@ -160,10 +170,20 @@ namespace BGC.StateMachine
         }
 
         /// <summary>
+        /// Set a boolean that can affect transitions.
+        /// Relies upon the eventual calling of either an Update or an Immediate call.
+        /// </summary>
+        public void SetBoolDeferred(string key, bool value)
+        {
+            stateData.SetBoolean(key, value);
+            dirtyTransitionState = true;
+        }
+
+        /// <summary>
         /// Set a boolean that can affect transitions
         /// </summary>
-        [Obsolete("Indicate the immediacy of the Bool Set")]
-        public void SetBool(string key, bool value) => SetBool(key, value, true);
+        [Obsolete("Indicate the immediacy of the SetBool call")]
+        public void SetBool(string key, bool value) => SetBoolImmediate(key, value);
 
         /// <summary>
         /// Call update function on the currently active state.
@@ -289,10 +309,10 @@ namespace BGC.StateMachine
         #endregion
 
         #region IStateDataRetriever
-        void IStateDataRetriever.ActivateTrigger(string key) => ActivateTrigger(key, false);
+        void IStateDataRetriever.ActivateTrigger(string key) => ActivateTriggerDeferred(key);
         bool IStateDataRetriever.GetTrigger(string key) => stateData.GetTrigger(key);
         bool IStateDataRetriever.GetBool(string key) => stateData.GetBoolean(key);
-        void IStateDataRetriever.SetBool(string key, bool value) => SetBool(key, value, false);
+        void IStateDataRetriever.SetBool(string key, bool value) => SetBoolDeferred(key, value);
         #endregion IStateDataRetriever
 
         #region ITransitionDataRetriever
