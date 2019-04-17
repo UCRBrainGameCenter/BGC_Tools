@@ -241,6 +241,8 @@ namespace BGC.StateMachine
         private void Transition()
         {
             Transition transition = null;
+
+            //Check AnyState Transitions
             for (int i = 0; i < anyStateTransitions.Count; ++i)
             {
                 if (anyStateTransitions[i].ShouldTransition())
@@ -250,12 +252,16 @@ namespace BGC.StateMachine
                 }
             }
 
-            for (int i = 0; i < stateTransitions[CurrentState].Count; ++i)
+            //Check State Transitions (only if there's no valid AnyState Transition)
+            if (transition == null)
             {
-                if (stateTransitions[CurrentState][i].ShouldTransition())
+                for (int i = 0; i < stateTransitions[CurrentState].Count; ++i)
                 {
-                    transition = stateTransitions[CurrentState][i];
-                    break;
+                    if (stateTransitions[CurrentState][i].ShouldTransition())
+                    {
+                        transition = stateTransitions[CurrentState][i];
+                        break;
+                    }
                 }
             }
 

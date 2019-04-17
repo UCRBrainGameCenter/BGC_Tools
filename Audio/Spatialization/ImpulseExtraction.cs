@@ -26,8 +26,9 @@ namespace BGC.Audio.Spatialization
 
         protected override bool PrepareRun()
         {
-            if (PlayerPrefs.GetInt(ImpulseVersionKey, 0) < ImpulseVersion || 
-                !DataManagement.DataDirectoryExists(HRTFDirectory))
+            if (PlayerPrefs.GetInt(ImpulseVersionKey, 0) < ImpulseVersion ||
+                !DataManagement.DataDirectoryExists(HRTFDirectory) ||
+                !System.IO.File.Exists(DataManagement.PathForDataFile(HRTFDirectory, "0_impulse.wav")))
             {
                 rawData = (byte[])impulseZip.bytes.Clone();
                 outputPath = DataManagement.PathForDataDirectory(HRTFDirectory);

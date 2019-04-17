@@ -12,7 +12,7 @@ namespace BGC.StateMachine
     /// </summary>
     public abstract class State
     {
-        protected abstract string DefaultName { get; }
+        protected virtual string DefaultName => "State";
         private bool verbose = false;
 
         // these functions are called in implementations to stop the user from 
@@ -33,15 +33,16 @@ namespace BGC.StateMachine
         /// </summary>
         public State()
         {
+            Debug.Assert(!string.IsNullOrEmpty(DefaultName));
             Name = DefaultName;
         }
 
         /// <summary>
         /// Create a state with a custom name rather than the default
         /// </summary>
-        /// <param name="name"></param>
         public State(string name)
         {
+            Debug.Assert(!string.IsNullOrEmpty(name));
             Name = name;
         }
 
@@ -79,7 +80,7 @@ namespace BGC.StateMachine
         /// <summary>
         /// Called when the state is exited before the next state is entered
         /// </summary>
-        protected abstract void OnStateExit();
+        protected virtual void OnStateExit() { }
 
         /// <summary>
         /// This can be called every frame or whenever for complex states that
@@ -90,10 +91,6 @@ namespace BGC.StateMachine
         /// <summary>
         /// Receive state machine related functions that give states required behaviour
         /// </summary>
-        /// <param name="activateTrigger"></param>
-        /// <param name="getTrigger"></param>
-        /// <param name="getBool"></param>
-        /// <param name="setBool"></param>
         public void SetStateMachineFunctions(
             Action<string> activateTrigger,
             Func<string, bool> getTrigger,
