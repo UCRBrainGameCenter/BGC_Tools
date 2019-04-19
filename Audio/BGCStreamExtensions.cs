@@ -370,6 +370,11 @@ namespace BGC.Audio
             return new StreamTimeShiftFilter(stream, timeShift);
         }
 
+        public static IBGCStream Loop(this IBGCStream stream)
+        {
+            return new StreamRepeater(stream);
+        }
+
         public static IBGCStream ToStream(
             this ComplexCarrierTone carrierTone)
         {

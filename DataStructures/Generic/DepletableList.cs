@@ -160,6 +160,43 @@ namespace BGC.DataStructures.Generic
             return success;
         }
 
+        public bool ReplenishValue(T value)
+        {
+            const int NOT_FOUND = -1;
+            int index = NOT_FOUND;
+
+            for (int i = currentIndex - 1; i >= 0; i--)
+            {
+                if (values[i].Equals(value))
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index == NOT_FOUND)
+            {
+                return false;
+            }
+
+            valueDepleted[index] = false;
+            //Jump the currentIndex back to the restored value
+            currentIndex = index;
+            return true;
+        }
+
+        public bool ReplenishAllValue(T value)
+        {
+            bool success = false;
+
+            while (ReplenishValue(value))
+            {
+                success = true;
+            }
+
+            return success;
+        }
+
         public bool ContainsAnywhere(T value) => values.Contains(value);
 
         public IList<T> GetAvailable()

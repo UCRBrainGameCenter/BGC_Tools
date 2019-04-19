@@ -13,7 +13,6 @@ namespace BGC.Audio.Filters
         public override int TotalSamples => int.MaxValue;
         public override int ChannelSamples => int.MaxValue;
 
-
         public StreamRepeater(IBGCStream stream)
             : base(stream)
         {
