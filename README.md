@@ -21,9 +21,10 @@ This project has been built largely to be imported as a managed-code plugin.  Wi
 
 ```sh
 cd ${project_root}/Assets/Plugins
-git clone https://github.com/UCRBrainGameCenter/BGC_Tools.git
-git submodule add https://github.com/UCRBrainGameCenter/BGC_Tools.git BGC_Tools
+git submodule add https://github.com/UCRBrainGameCenter/BGC_Tools.git
 ```
+
+If you're not familiar with using git submodules, [check out Trevor's blog post on submodules](https://tstavropoulos.github.io/blargs/git_submodules.html).
 
 Take a look at our MIT Licensed [CleanBGCProject Unity Demo Project](https://github.com/UCRBrainGameCenter/CleanBGCProject) to see some of these tools in action.
 
