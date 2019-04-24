@@ -1,9 +1,11 @@
-﻿namespace BGC.StateMachine
+﻿using System;
+
+namespace BGC.StateMachine
 {
-    public interface ITransitionDataRetriever
+    public interface ITransitionDataRetriever<TBoolEnum, TTriggerEnum> where TBoolEnum : Enum where TTriggerEnum : Enum
     {
-        bool GetBool(string key);
-        bool GetTrigger(string key);
-        void ConsumeTrigger(string key);
+        bool GetBool(TBoolEnum key);
+        bool GetTrigger(TTriggerEnum key);
+        void ConsumeTrigger(TTriggerEnum key);
     }
 }

@@ -1,10 +1,13 @@
-﻿namespace BGC.StateMachine
+﻿using System;
+
+namespace BGC.StateMachine
 {
-    public interface IStateDataRetriever
+    public interface IStateDataRetriever<TBoolEnum, TTriggerEnum> where TBoolEnum : Enum where TTriggerEnum : Enum
     {
-        void ActivateTrigger(string key);
-        bool GetTrigger(string key);
-        bool GetBool(string key);
-        void SetBool(string key, bool value);
+        void ActivateTrigger(TTriggerEnum key);
+        bool GetTrigger(TTriggerEnum key);
+
+        bool GetBool(TBoolEnum key);
+        void SetBool(TBoolEnum key, bool value);
     }
 }

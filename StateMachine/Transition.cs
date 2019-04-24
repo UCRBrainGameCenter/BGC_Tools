@@ -6,26 +6,25 @@ namespace BGC.StateMachine
     /// This defines a transition between two states with the required 
     /// transition conditions for the transition to occur
     /// </summary>
-    public class Transition
+    public class Transition<TBoolEnum, TTriggerEnum> where TBoolEnum : Enum where TTriggerEnum : Enum
     {
-        private readonly State targetState;
-        private readonly TransitionCondition[] transitionConditions;
+        private readonly TransitionCondition<TBoolEnum, TTriggerEnum>[] transitionConditions;
 
-        protected ITransitionDataRetriever stateMachine;
+        protected ITransitionDataRetriever<TBoolEnum, TTriggerEnum> stateMachine;
 
         /// <summary>
         /// Get name of the state this transition goes to
         /// </summary>
-        public string TargetState => targetState.Name;
+        public readonly State<TBoolEnum, TTriggerEnum> TargetState;
 
         /// <summary>
         /// Construct abstract transtion to define path
         /// </summary>
         public Transition(
-            State targetState,
-            params TransitionCondition[] transitionConditions)
+            State<TBoolEnum, TTriggerEnum> targetState,
+            params TransitionCondition<TBoolEnum, TTriggerEnum>[] transitionConditions)
         {
-            this.targetState = targetState ?? throw new ArgumentNullException(
+            TargetState = targetState ?? throw new ArgumentNullException(
                 paramName: nameof(targetState),
                 message: "Transition target state cannot be null.");
 
@@ -47,7 +46,7 @@ namespace BGC.StateMachine
         /// <summary>
         /// Add state machine data which is required for checking info
         /// </summary>
-        public void SetStateDataRetrievers(ITransitionDataRetriever stateMachine)
+        public void SetStateDataRetrievers(ITransitionDataRetriever<TBoolEnum, TTriggerEnum> stateMachine)
         {
             this.stateMachine = stateMachine ?? throw new ArgumentNullException(
                 paramName: nameof(stateMachine),

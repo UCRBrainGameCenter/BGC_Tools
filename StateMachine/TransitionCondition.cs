@@ -9,23 +9,19 @@ namespace BGC.StateMachine
     /// transitions should occur. It also allows for work to be done when a
     /// transition cocurs
     /// </summary>
-    public abstract class TransitionCondition
+    public abstract class TransitionCondition<TBoolEnum, TTriggerEnum> where TBoolEnum : Enum where TTriggerEnum : Enum
     {
-        protected ITransitionDataRetriever stateMachine;
+        protected ITransitionDataRetriever<TBoolEnum, TTriggerEnum> stateMachine;
 
         /// <summary>
         /// Sets the required functions for the transition that it has received
         /// from the state machine.
         /// </summary>
-        public void SetStateMachineFunctions(ITransitionDataRetriever stateMachine)
+        public void SetStateMachineFunctions(ITransitionDataRetriever<TBoolEnum, TTriggerEnum> stateMachine)
         {
-            // These assert checks are here for safety despite us being all but
-            // guaranteed that the functions will always be valid because we 
-            // have received them from the state machine
             Assert.IsNotNull(stateMachine);
 
             this.stateMachine = stateMachine;
-
             StateMachineFunctionsSet();
         }
 

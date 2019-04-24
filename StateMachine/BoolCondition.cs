@@ -7,12 +7,14 @@ namespace BGC.StateMachine
     /// but will not consume the boolean once it has been used. Instead it keeps
     /// the value exactly as it was when a transition occurs.
     /// </summary>
-    public class BoolCondition : TransitionCondition
+    public class BoolCondition<TBoolEnum, TTriggerEnum> : 
+        TransitionCondition<TBoolEnum, TTriggerEnum>
+        where TBoolEnum : Enum where TTriggerEnum : Enum
     {
         /// <summary>
         /// Key to access required boolean in state machine
         /// </summary>
-        private readonly string key;
+        private readonly TBoolEnum key;
 
         /// <summary>
         /// Expected boolean value for when this condition should call for a
@@ -25,15 +27,8 @@ namespace BGC.StateMachine
         /// dictionary and will call for a transition when the expected value
         /// is found
         /// </summary>
-        public BoolCondition(string key, bool val)
+        public BoolCondition(TBoolEnum key, bool val)
         {
-            if (string.IsNullOrEmpty(key))
-            {
-                throw new ArgumentException(
-                    paramName: nameof(key),
-                    message: "bool transition cannot receive null or empty key string");
-            }
-
             this.key = key;
             this.val = val;
         }

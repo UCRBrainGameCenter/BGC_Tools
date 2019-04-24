@@ -11,15 +11,16 @@ namespace BGC.StateMachine
     /// To use the update function, put the Update call in a MonoBehavior class
     /// Update call.
     /// </summary>
-    public class StateMachine : IStateDataRetriever, ITransitionDataRetriever
+    public class StateMachine<TBoolEnum, TTriggerEnum> : 
+        IStateDataRetriever<TBoolEnum, TTriggerEnum>, ITransitionDataRetriever<TBoolEnum, TTriggerEnum>
+        where TBoolEnum : Enum where TTriggerEnum : Enum 
     {
-        private readonly Dictionary<string, List<Transition>> stateTransitions;
-        private readonly List<Transition> anyStateTransitions;
-        private readonly Dictionary<string, State> states;
-        private readonly StateData stateData;
+        private readonly Dictionary<State<TBoolEnum, TTriggerEnum>, List<Transition<TBoolEnum, TTriggerEnum>>> stateTransitions;
+        private readonly List<Transition<TBoolEnum, TTriggerEnum>> anyStateTransitions;
+        private readonly StateData<TBoolEnum, TTriggerEnum> stateData;
         private readonly bool verbose;
 
-        private string entryState = null;
+        private State<TBoolEnum, TTriggerEnum> entryState = null;
 
         private bool running = false;
         private bool dirtyTransitionState = false;
@@ -28,7 +29,7 @@ namespace BGC.StateMachine
         /// <summary>
         /// Get the name of the current State that the StateMachine is in
         /// </summary>
-        public string CurrentState { get; private set; }
+        public State<TBoolEnum, TTriggerEnum> CurrentState { get; private set; }
 
         #region State Machine Construction
         /// <summary>
@@ -38,27 +39,25 @@ namespace BGC.StateMachine
         public StateMachine(bool verbose = false)
         {
             this.verbose = verbose;
-            stateData = new StateData();
-            states = new Dictionary<string, State>();
-            stateTransitions = new Dictionary<string, List<Transition>>();
-            anyStateTransitions = new List<Transition>();
+            stateData = new StateData<TBoolEnum, TTriggerEnum>();
+            stateTransitions = new Dictionary<State<TBoolEnum, TTriggerEnum>, List<Transition<TBoolEnum, TTriggerEnum>>>();
+            anyStateTransitions = new List<Transition<TBoolEnum, TTriggerEnum>>();
         }
 
         /// <summary>
         /// Add a state to the state machine
         /// </summary>
-        public void AddState(State state)
+        public void AddState(State<TBoolEnum, TTriggerEnum> state)
         {
-            states.Add(state.Name, state);
             state.SetStateMachineFunctions(this);
             state.SetVerbose(verbose);
-            stateTransitions.Add(state.Name, new List<Transition>());
+            stateTransitions.Add(state, new List<Transition<TBoolEnum, TTriggerEnum>>());
         }
 
         /// <summary>
         /// Add a state to the StateMachine and sets it as the initial State
         /// </summary>
-        public void AddEntryState(State state)
+        public void AddEntryState(State<TBoolEnum, TTriggerEnum> state)
         {
             if (entryState != null)
             {
@@ -69,16 +68,16 @@ namespace BGC.StateMachine
             }
 
             AddState(state);
-            entryState = state.Name;
+            entryState = state;
         }
 
         /// <summary>
         /// Add a Standard Transition between two States
         /// </summary>
         public void AddTransition(
-            State fromState,
-            State targetState,
-            params TransitionCondition[] conditions)
+            State<TBoolEnum, TTriggerEnum> fromState,
+            State<TBoolEnum, TTriggerEnum> targetState,
+            params TransitionCondition<TBoolEnum, TTriggerEnum>[] conditions)
         {
             if (fromState == null)
             {
@@ -86,17 +85,19 @@ namespace BGC.StateMachine
                     message: "Cannot add a transition that has an empty state");
             }
 
-            Transition transition = new Transition(targetState, conditions);
-            stateTransitions[fromState.Name].Add(transition);
+            Transition<TBoolEnum, TTriggerEnum> transition = new Transition<TBoolEnum, TTriggerEnum>(targetState, conditions);
+            stateTransitions[fromState].Add(transition);
             transition.SetStateDataRetrievers(this);
         }
 
         /// <summary>
         /// Add a Transition that can occur from any state
         /// </summary>
-        public void AddAnyStateTransition(State targetState, params TransitionCondition[] conditions)
+        public void AddAnyStateTransition(
+            State<TBoolEnum, TTriggerEnum> targetState, 
+            params TransitionCondition<TBoolEnum, TTriggerEnum>[] conditions)
         {
-            Transition transition = new Transition(targetState, conditions);
+            Transition<TBoolEnum, TTriggerEnum> transition = new Transition<TBoolEnum, TTriggerEnum>(targetState, conditions);
             transition.SetStateDataRetrievers(this);
             anyStateTransitions.Add(transition);
         }
@@ -106,19 +107,13 @@ namespace BGC.StateMachine
         /// <summary>
         /// Add a boolean that can affect transitions
         /// </summary>
-        public void AddBool(string key, bool initialValue) => stateData.AddBoolean(key, initialValue);
-
-        /// <summary>
-        /// Add a trigger that can cause the state machine to go to the next state
-        /// </summary>
-        [Obsolete("Triggers no longer need to be added to the stateData.  This function does nothing.")]
-        public void AddTrigger(string key) { }
+        public void AddBool(TBoolEnum key, bool initialValue) => stateData.AddBoolean(key, initialValue);
 
         /// <summary>
         /// Activate a trigger to move the state machine forward.
         /// Initiate a transition check if transitions aren't blocked.
         /// </summary>
-        public void ActivateTriggerImmediate(string key)
+        public void ActivateTriggerImmediate(TTriggerEnum key)
         {
             Debug.Assert(running,
                 "Activating Triggers when the StateMachine is not running will accomplish nothing");
@@ -139,7 +134,7 @@ namespace BGC.StateMachine
         /// Activate a trigger to move the state machine forward.
         /// Relies upon the eventual calling of either an Update or an Immediate call.
         /// </summary>
-        public void ActivateTriggerDeferred(string key)
+        public void ActivateTriggerDeferred(TTriggerEnum key)
         {
             Debug.Assert(running,
                 "Activating Triggers when the StateMachine is not running will accomplish nothing");
@@ -149,16 +144,10 @@ namespace BGC.StateMachine
         }
 
         /// <summary>
-        /// Activate a trigger to move the state machine forward
-        /// </summary>
-        [Obsolete("Indicate the immediacy of the ActivateTrigger call")]
-        public void ActivateTrigger(string key) => ActivateTriggerImmediate(key);
-
-        /// <summary>
         /// Set a boolean that can affect transitions.
         /// Initiate a transition check if transitions aren't blocked.
         /// </summary>
-        public void SetBoolImmediate(string key, bool value)
+        public void SetBoolImmediate(TBoolEnum key, bool value)
         {
             Debug.Assert(running, 
                 "Setting boolean values when the StateMachine is not running will accomplish nothing");
@@ -179,7 +168,7 @@ namespace BGC.StateMachine
         /// Set a boolean that can affect transitions.
         /// Relies upon the eventual calling of either an Update or an Immediate call.
         /// </summary>
-        public void SetBoolDeferred(string key, bool value)
+        public void SetBoolDeferred(TBoolEnum key, bool value)
         {
             Debug.Assert(running,
                 "Setting boolean values when the StateMachine is not running will accomplish nothing");
@@ -187,12 +176,6 @@ namespace BGC.StateMachine
             stateData.SetBoolean(key, value);
             dirtyTransitionState = true;
         }
-
-        /// <summary>
-        /// Set a boolean that can affect transitions
-        /// </summary>
-        [Obsolete("Indicate the immediacy of the SetBool call")]
-        public void SetBool(string key, bool value) => SetBoolImmediate(key, value);
 
         /// <summary>
         /// Call update function on the currently active state.
@@ -214,7 +197,7 @@ namespace BGC.StateMachine
             {
                 blockTransitions = true;
                 //Update current state
-                states[CurrentState].Update();
+                CurrentState.Update();
                 blockTransitions = false;
             }
 
@@ -245,7 +228,7 @@ namespace BGC.StateMachine
             //Block transitions during OnEnter
             {
                 blockTransitions = true;
-                states[entryState].OnEnter();
+                entryState.OnEnter();
                 blockTransitions = false;
             }
 
@@ -265,7 +248,7 @@ namespace BGC.StateMachine
             {
                 //Prevent escape of current state
                 blockTransitions = true;
-                states[CurrentState].OnExit();
+                CurrentState.OnExit();
                 blockTransitions = false;
             }
 
@@ -284,7 +267,7 @@ namespace BGC.StateMachine
         /// Test to see if there is a valid transitions and return it, or null.
         /// Clears the dirtyTransitionState flag.
         /// </summary>
-        private Transition CheckTransitions()
+        private Transition<TBoolEnum, TTriggerEnum> CheckTransitions()
         {
             dirtyTransitionState = false;
 
@@ -318,14 +301,14 @@ namespace BGC.StateMachine
         {
             blockTransitions = true;
 
-            Transition transition;
+            Transition<TBoolEnum, TTriggerEnum> transition;
 
             while ((transition = CheckTransitions()) != null)
             {
                 transition.OnTransition();
-                states[CurrentState].OnExit();
+                CurrentState.OnExit();
                 CurrentState = transition.TargetState;
-                states[CurrentState].OnEnter();
+                CurrentState.OnEnter();
             }
 
             blockTransitions = false;
@@ -333,17 +316,34 @@ namespace BGC.StateMachine
         #endregion
 
         #region IStateDataRetriever
-        void IStateDataRetriever.ActivateTrigger(string key) => ActivateTriggerDeferred(key);
-        bool IStateDataRetriever.GetTrigger(string key) => stateData.GetTrigger(key);
-        bool IStateDataRetriever.GetBool(string key) => stateData.GetBoolean(key);
-        void IStateDataRetriever.SetBool(string key, bool value) => SetBoolDeferred(key, value);
+        void IStateDataRetriever<TBoolEnum, TTriggerEnum>.ActivateTrigger(TTriggerEnum key) => ActivateTriggerDeferred(key);
+        bool IStateDataRetriever<TBoolEnum, TTriggerEnum>.GetTrigger(TTriggerEnum key) => stateData.GetTrigger(key);
+        void IStateDataRetriever<TBoolEnum, TTriggerEnum>.SetBool(TBoolEnum key, bool value) => SetBoolDeferred(key, value);
+        bool IStateDataRetriever<TBoolEnum, TTriggerEnum>.GetBool(TBoolEnum key) => stateData.GetBoolean(key);
         #endregion IStateDataRetriever
 
         #region ITransitionDataRetriever
-        bool ITransitionDataRetriever.GetBool(string key) => stateData.GetBoolean(key);
-        bool ITransitionDataRetriever.GetTrigger(string key) => stateData.GetTrigger(key);
-        void ITransitionDataRetriever.ConsumeTrigger(string key) => stateData.DeActivateTrigger(key);
+        bool ITransitionDataRetriever<TBoolEnum, TTriggerEnum>.GetBool(TBoolEnum key) => stateData.GetBoolean(key);
+        bool ITransitionDataRetriever<TBoolEnum, TTriggerEnum>.GetTrigger(TTriggerEnum key) => stateData.GetTrigger(key);
+        void ITransitionDataRetriever<TBoolEnum, TTriggerEnum>.ConsumeTrigger(TTriggerEnum key) => stateData.DeActivateTrigger(key);
         #endregion ITransitionDataRetriever
+
+        #region Constructors
+        public TriggerCondition<TBoolEnum, TTriggerEnum> CreateTriggerCondition(TTriggerEnum key)
+        {
+            return new TriggerCondition<TBoolEnum, TTriggerEnum>(key);
+        }
+
+        public BoolCondition<TBoolEnum, TTriggerEnum> CreateBoolCondition(TBoolEnum key, bool value)
+        {
+            return new BoolCondition<TBoolEnum, TTriggerEnum>(key, value);
+        }
+
+        public OrConjunction<TBoolEnum, TTriggerEnum> CreateOrConjunction(params TransitionCondition<TBoolEnum, TTriggerEnum>[] conditions)
+        {
+            return new OrConjunction<TBoolEnum, TTriggerEnum>(conditions);
+        }
+        #endregion
 
         /// <summary>
         /// Log the string if verbose

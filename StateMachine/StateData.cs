@@ -1,24 +1,27 @@
-﻿using System.Collections.Generic;
-using UnityEngine.Assertions;
+﻿using System;
+using System.Collections.Generic;
 
 namespace BGC.StateMachine
 {
     /// <summary>
     /// Contains data for a state machine with descriptive functions to improve code clarity.
     /// </summary>
-    public class StateData
+    public class StateData<BoolT, TriggerT>
     {
-        private readonly Dictionary<string, bool> initialBooleans = new Dictionary<string, bool>();
-        private readonly Dictionary<string, bool> booleans = new Dictionary<string, bool>();
-        private readonly HashSet<string> triggers = new HashSet<string>();
+        private readonly Dictionary<BoolT, bool> initialBooleans = new Dictionary<BoolT, bool>();
+        private readonly Dictionary<BoolT, bool> booleans = new Dictionary<BoolT, bool>();
+        private readonly HashSet<TriggerT> triggers = new HashSet<TriggerT>();
 
+        /// <summary>
+        ///  initialize data with original booleans 
+        /// </summary>
         public void Initialize()
         {
             Clear();
 
-            foreach (var kvp in initialBooleans)
+            foreach (KeyValuePair<BoolT, bool> boolRow in initialBooleans)
             {
-                booleans.Add(kvp.Key, kvp.Value);
+                booleans.Add(boolRow.Key, boolRow.Value);
             }
         }
 
@@ -28,40 +31,39 @@ namespace BGC.StateMachine
             triggers.Clear();
         }
 
-        public void AddBoolean(string key, bool initialValue)
+        public void AddBoolean(BoolT key, bool initialValue)
         {
-            Assert.IsFalse(string.IsNullOrEmpty(key));
             initialBooleans.Add(key, initialValue);
         }
 
-        public void SetBoolean(string key, bool value)
+        public void SetBoolean(BoolT key, bool value)
         {
-            Assert.IsFalse(string.IsNullOrEmpty(key));
             booleans[key] = value;
         }
 
-        public bool GetBoolean(string key)
+        public bool GetBoolean(BoolT key)
         {
-            Assert.IsFalse(string.IsNullOrEmpty(key));
             return booleans[key];
         }
 
-        public void ActivateTrigger(string key)
+        public void ActivateTrigger(TriggerT key)
         {
-            Assert.IsFalse(string.IsNullOrEmpty(key));
             triggers.Add(key);
         }
 
-        public void DeActivateTrigger(string key)
+        public void DeActivateTrigger(TriggerT key)
         {
-            Assert.IsFalse(string.IsNullOrEmpty(key));
             triggers.Remove(key);
         }
 
-        public bool GetTrigger(string key)
+        public bool GetTrigger(TriggerT key)
         {
-            Assert.IsFalse(string.IsNullOrEmpty(key));
             return triggers.Contains(key);
+        }
+
+        internal bool GetTrigger<TTriggerEnum>(TTriggerEnum key)
+        {
+            throw new NotImplementedException();
         }
     }
 }
