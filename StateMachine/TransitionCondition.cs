@@ -9,7 +9,9 @@ namespace BGC.StateMachine
     /// transitions should occur. It also allows for work to be done when a
     /// transition cocurs
     /// </summary>
-    public abstract class TransitionCondition<TBoolEnum, TTriggerEnum> where TBoolEnum : Enum where TTriggerEnum : Enum
+    public abstract class TransitionCondition<TBoolEnum, TTriggerEnum>
+        where TBoolEnum : Enum
+        where TTriggerEnum : Enum
     {
         protected ITransitionDataRetriever<TBoolEnum, TTriggerEnum> stateMachine;
 

@@ -6,7 +6,8 @@ namespace BGC.StateMachine
     /// Simplest state possible - effectively featureless
     /// </summary>
     public sealed class EmptyState<TBoolEnum, TTriggerEnum> : State<TBoolEnum, TTriggerEnum> 
-        where TBoolEnum : Enum where TTriggerEnum : Enum
+        where TBoolEnum : Enum
+        where TTriggerEnum : Enum
     {
         public EmptyState(string name) : base(name) { }
         protected override void OnStateEnter() { }

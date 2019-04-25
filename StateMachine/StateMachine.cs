@@ -11,9 +11,11 @@ namespace BGC.StateMachine
     /// To use the update function, put the Update call in a MonoBehavior class
     /// Update call.
     /// </summary>
-    public class StateMachine<TBoolEnum, TTriggerEnum> : 
-        IStateDataRetriever<TBoolEnum, TTriggerEnum>, ITransitionDataRetriever<TBoolEnum, TTriggerEnum>
-        where TBoolEnum : Enum where TTriggerEnum : Enum 
+    public class StateMachine<TBoolEnum, TTriggerEnum> :
+        IStateDataRetriever<TBoolEnum, TTriggerEnum>,
+        ITransitionDataRetriever<TBoolEnum, TTriggerEnum>
+        where TBoolEnum : Enum
+        where TTriggerEnum : Enum 
     {
         private readonly Dictionary<State<TBoolEnum, TTriggerEnum>, List<Transition<TBoolEnum, TTriggerEnum>>> stateTransitions;
         private readonly List<Transition<TBoolEnum, TTriggerEnum>> anyStateTransitions;
@@ -328,7 +330,7 @@ namespace BGC.StateMachine
         void ITransitionDataRetriever<TBoolEnum, TTriggerEnum>.ConsumeTrigger(TTriggerEnum key) => stateData.DeActivateTrigger(key);
         #endregion ITransitionDataRetriever
 
-        #region Constructors
+        #region Factory Methods
         public TriggerCondition<TBoolEnum, TTriggerEnum> CreateTriggerCondition(TTriggerEnum key)
         {
             return new TriggerCondition<TBoolEnum, TTriggerEnum>(key);
@@ -343,7 +345,7 @@ namespace BGC.StateMachine
         {
             return new OrConjunction<TBoolEnum, TTriggerEnum>(conditions);
         }
-        #endregion
+        #endregion Factory Methods
 
         /// <summary>
         /// Log the string if verbose

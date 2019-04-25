@@ -9,7 +9,8 @@ namespace BGC.StateMachine
     /// </summary>
     public class TriggerCondition<TBoolEnum, TTriggerEnum> : 
         TransitionCondition<TBoolEnum, TTriggerEnum> 
-        where TBoolEnum : Enum where TTriggerEnum : Enum
+        where TBoolEnum : Enum
+        where TTriggerEnum : Enum
     {
         /// <summary>
         /// Key to check state data triggers

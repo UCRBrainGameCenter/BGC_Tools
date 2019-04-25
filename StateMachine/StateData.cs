@@ -7,6 +7,8 @@ namespace BGC.StateMachine
     /// Contains data for a state machine with descriptive functions to improve code clarity.
     /// </summary>
     public class StateData<BoolT, TriggerT>
+        where TBoolEnum : Enum
+        where TTriggerEnum : Enum
     {
         private readonly Dictionary<BoolT, bool> initialBooleans = new Dictionary<BoolT, bool>();
         private readonly Dictionary<BoolT, bool> booleans = new Dictionary<BoolT, bool>();

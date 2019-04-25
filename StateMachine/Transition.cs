@@ -6,7 +6,9 @@ namespace BGC.StateMachine
     /// This defines a transition between two states with the required 
     /// transition conditions for the transition to occur
     /// </summary>
-    public class Transition<TBoolEnum, TTriggerEnum> where TBoolEnum : Enum where TTriggerEnum : Enum
+    public class Transition<TBoolEnum, TTriggerEnum>
+        where TBoolEnum : Enum
+        where TTriggerEnum : Enum
     {
         private readonly TransitionCondition<TBoolEnum, TTriggerEnum>[] transitionConditions;
 

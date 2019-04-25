@@ -10,7 +10,9 @@ namespace BGC.StateMachine
     /// Update if they have a function they want to call on a frame by frame
     /// basis.
     /// </summary>
-    public abstract class State<TBoolEnum, TTriggerEnum> where TBoolEnum : Enum where TTriggerEnum : Enum
+    public abstract class State<TBoolEnum, TTriggerEnum>
+        where TBoolEnum : Enum
+        where TTriggerEnum : Enum
     {
         protected virtual string DefaultName => "State";
         private bool verbose = false;

@@ -8,7 +8,8 @@ namespace BGC.StateMachine
     /// The lambdas return strings which, if not null, are fired off as Triggers
     /// </summary>
     public class TriggeringUpdatingLambdaState<TBoolEnum, TTriggerEnum> : State<TBoolEnum, TTriggerEnum>
-        where TBoolEnum : Enum where TTriggerEnum : Enum
+        where TBoolEnum : Enum
+        where TTriggerEnum : Enum
     {
         private readonly Func<TTriggerEnum> onStateEnter;
         private readonly Func<TTriggerEnum> onStateExit;

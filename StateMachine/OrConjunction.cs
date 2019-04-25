@@ -9,7 +9,8 @@ namespace BGC.StateMachine
     /// true.
     /// </summary>
     public class OrConjunction<TBoolEnum, TTriggerEnum> : TransitionCondition<TBoolEnum, TTriggerEnum> 
-        where TBoolEnum : Enum where TTriggerEnum : Enum
+        where TBoolEnum : Enum
+        where TTriggerEnum : Enum
     {
         /// <summary>
         /// Set of required conditions for a transition to be called

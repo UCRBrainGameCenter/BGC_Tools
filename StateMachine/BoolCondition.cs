@@ -7,9 +7,9 @@ namespace BGC.StateMachine
     /// but will not consume the boolean once it has been used. Instead it keeps
     /// the value exactly as it was when a transition occurs.
     /// </summary>
-    public class BoolCondition<TBoolEnum, TTriggerEnum> : 
-        TransitionCondition<TBoolEnum, TTriggerEnum>
-        where TBoolEnum : Enum where TTriggerEnum : Enum
+    public class BoolCondition<TBoolEnum, TTriggerEnum> : TransitionCondition<TBoolEnum, TTriggerEnum>
+        where TBoolEnum : Enum
+        where TTriggerEnum : Enum
     {
         /// <summary>
         /// Key to access required boolean in state machine
