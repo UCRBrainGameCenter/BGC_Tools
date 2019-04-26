@@ -24,25 +24,21 @@ namespace BGC.StateMachine
 
         protected override void OnStateEnter()
         {
-            if(onStateEnter != null)
+            TTriggerEnum? trigger = onStateEnter?.Invoke();
+
+            if (trigger.HasValue)
             {
-                TTriggerEnum? trigger = onStateEnter.Invoke();
-                if (trigger != null)
-                {
-                    ActivateTrigger((TTriggerEnum) trigger);
-                }
+                ActivateTrigger(trigger.Value);
             }
         }
 
         protected override void OnStateExit()
         {
-            if (onStateExit != null)
+            TTriggerEnum? trigger = onStateExit?.Invoke();
+
+            if (trigger.HasValue)
             {
-                TTriggerEnum? trigger = onStateExit.Invoke();
-                if (trigger != null)
-                {
-                    ActivateTrigger((TTriggerEnum) trigger);
-                }
+                ActivateTrigger(trigger.Value);
             }
         }
     }

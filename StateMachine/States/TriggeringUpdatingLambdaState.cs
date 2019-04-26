@@ -30,27 +30,21 @@ namespace BGC.StateMachine
 
         protected override void OnStateEnter()
         {
-            if (onStateEnter != null)
-            {
-                TTriggerEnum? trigger = onStateEnter.Invoke();
+            TTriggerEnum? trigger = onStateEnter?.Invoke();
 
-                if (trigger != null)
-                {
-                    ActivateTrigger((TTriggerEnum) trigger);
-                }
+            if (trigger.HasValue)
+            {
+                ActivateTrigger(trigger.Value);
             }
         }
 
         protected override void OnStateExit()
         {
-            if (onStateExit != null)
-            {
-                TTriggerEnum? trigger = onStateExit.Invoke();
+            TTriggerEnum? trigger = onStateExit?.Invoke();
 
-                if (trigger != null)
-                {
-                    ActivateTrigger((TTriggerEnum) trigger);
-                }
+            if (trigger.HasValue)
+            {
+                ActivateTrigger(trigger.Value);
             }
         }
 
@@ -58,9 +52,9 @@ namespace BGC.StateMachine
         {
             TTriggerEnum? trigger = update();
 
-            if(trigger != null)
+            if(trigger.HasValue)
             {
-                ActivateTrigger((TTriggerEnum) trigger);
+                ActivateTrigger(trigger.Value);
             }
         }
     }
