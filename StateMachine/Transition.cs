@@ -17,13 +17,13 @@ namespace BGC.StateMachine
         /// <summary>
         /// Get name of the state this transition goes to
         /// </summary>
-        public readonly State<TBoolEnum, TTriggerEnum> TargetState;
+        public readonly State TargetState;
 
         /// <summary>
         /// Construct abstract transtion to define path
         /// </summary>
         public Transition(
-            State<TBoolEnum, TTriggerEnum> targetState,
+            State targetState,
             params TransitionCondition<TBoolEnum, TTriggerEnum>[] transitionConditions)
         {
             TargetState = targetState ?? throw new ArgumentNullException(

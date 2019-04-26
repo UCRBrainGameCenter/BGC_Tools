@@ -10,14 +10,11 @@ namespace BGC.StateMachine
     /// Update if they have a function they want to call on a frame by frame
     /// basis.
     /// </summary>
-    public abstract class State<TBoolEnum, TTriggerEnum>
-        where TBoolEnum : Enum
-        where TTriggerEnum : Enum
+    public abstract class State
     {
         protected virtual string DefaultName => "State";
         private bool verbose = false;
 
-        private IStateDataRetriever<TBoolEnum, TTriggerEnum> stateMachine;
 
         /// <summary>
         /// Name of the state. This will either be user defined or the default state
@@ -85,15 +82,6 @@ namespace BGC.StateMachine
         /// </summary>
         public virtual void Update() { }
 
-        /// <summary>
-        /// Receive state machine related functions that give states required behaviour
-        /// </summary>
-        public void SetStateMachineFunctions(IStateDataRetriever<TBoolEnum, TTriggerEnum> stateMachine)
-        {
-            this.stateMachine = stateMachine ?? throw new ArgumentNullException(
-                paramName: nameof(stateMachine),
-                message: "stateMachine cannot be null.");
-        }
 
         /// <summary>
         /// Set whether the state machine is verbose or not
@@ -103,27 +91,5 @@ namespace BGC.StateMachine
         {
             verbose = isVerbose;
         }
-
-        /// <summary>
-        /// Activate a trigger in the state machine this state is a part of
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        protected void ActivateTrigger(TTriggerEnum key) => stateMachine.ActivateTrigger(key);
-
-        /// <summary>
-        /// Set a bool in the state machine this state is a part of
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="val"></param>
-        /// <returns></returns>
-        protected void SetBool(TBoolEnum key, bool val) => stateMachine.SetBool(key, val);
-
-        /// <summary>
-        /// Get a bool from the state machine this state is a part of
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        protected bool GetBool(TBoolEnum key) => stateMachine.GetBool(key);
     }
 }

@@ -7,8 +7,7 @@ namespace BGC.StateMachine
     /// Simple State with optional lambda arguments for OnStateEnter, OnStateExit, and Update.
     /// The lambdas return strings which, if not null, are fired off as Triggers
     /// </summary>
-    public class TriggeringUpdatingLambdaState<TBoolEnum, TTriggerEnum> : State<TBoolEnum, TTriggerEnum>
-        where TBoolEnum : struct, Enum
+    public class TriggeringUpdatingLambdaState<TTriggerEnum> : TriggeringState<TTriggerEnum>
         where TTriggerEnum : struct, Enum
     {
         private readonly Func<TTriggerEnum?> onStateEnter;
