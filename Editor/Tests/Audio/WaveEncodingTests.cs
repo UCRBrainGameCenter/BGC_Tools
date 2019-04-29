@@ -76,9 +76,8 @@ namespace BGC.Tests
                 overwrite: true));
         }
 
-        private float[] CreateSineWave(int channels)
+        private float[] CreateSineWave(int channels, float samplingRate = 44100f)
         {
-            const float samplingRate = 44100f;
             const float duration = 1f;
             const float freq = 440f;
 
@@ -101,6 +100,25 @@ namespace BGC.Tests
             return samples;
         }
 
+
+        [Test]
+        public void UpScalingTest()
+        {
+            float[] singleChannelSamples = CreateSineWave(1, 22050f);
+            string upscaledFile = DataManagement.PathForDataFile("Test", "upscaled.wav");
+
+            IBGCStream stream = new SimpleAudioClip(
+                samples: LinearInterpolation.FactorUpscaler(
+                    samples: singleChannelSamples,
+                    factor: 2,
+                    channels: 1),
+                channels: 1);
+
+            Assert.IsTrue(WaveEncoding.SaveStream(
+                filepath: upscaledFile,
+                stream: stream,
+                overwrite: true));
+        }
 
     }
 }

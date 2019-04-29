@@ -20,6 +20,27 @@ namespace BGC.Audio
         }
 
 
+        public static float[] FactorUpscaler(
+            float[] samples,
+            int factor,
+            int channels)
+        {
+            int inputSampleCount = samples.Length / channels;
+            int outputSampleCount = factor * inputSampleCount;
+            float[] outputSamples = new float[outputSampleCount * channels];
+
+            for (int chan = 0; chan < channels; chan++)
+            {
+                for (int j = 0; j < inputSampleCount; j++)
+                {
+                    outputSamples[factor * j * channels + chan] = samples[j * channels + chan];
+                }
+            }
+
+            return outputSamples;
+        }
+
+
         public static float[] Resample(
             float[] samples,
             double oldSamplingRate,
@@ -32,20 +53,23 @@ namespace BGC.Audio
             double invRateRatio = oldSamplingRate / newSamplingRate;
 
             int inputSampleCount = samples.Length / channels;
-            int outputSampleCount = (int)Math.Ceiling(inputSampleCount * rateRatio);
+            int outputSampleCount = (int)Math.Floor(inputSampleCount * rateRatio);
             float[] outputSamples = new float[outputSampleCount * channels];
 
             double i;
             int i0;
             int i1;
 
-            for (int j = 0; j < outputSampleCount; j++)
+            for (int chan = 0; chan < channels; chan++)
             {
-                i = j * invRateRatio;
-                i0 = (int)i;
-                i1 = i0 + 1;
+                for (int j = 0; j < outputSampleCount; j++)
+                {
+                    i = j * invRateRatio;
+                    i0 = (int)i;
+                    i1 = i0 + 1;
 
-                outputSamples[j] = (float)((i1 - i) * samples[i0] + (i - i0) * samples[i1]);
+                    outputSamples[j * channels + chan] = (float)((i1 - i) * samples[i0 * channels + chan] + (i - i0) * samples[i1 * channels + chan]);
+                }
             }
 
             return outputSamples;
@@ -70,13 +94,16 @@ namespace BGC.Audio
             int i0;
             int i1;
 
-            for (int j = 0; j < outputSampleCount; j++)
+            for (int chan = 0; chan < channels; chan++)
             {
-                i = j * invRateRatio;
-                i0 = (int)i;
-                i1 = i0 + 1;
+                for (int j = 0; j < outputSampleCount; j++)
+                {
+                    i = j * invRateRatio;
+                    i0 = (int)i;
+                    i1 = i0 + 1;
 
-                outputSamples[j] = (short)Math.Round((i1 - i) * samples[i0] + (i - i0) * samples[i1]);
+                    outputSamples[j * channels + chan] = (short)Math.Round((i1 - i) * samples[i0 * channels + chan] + (i - i0) * samples[i1 * channels + chan]);
+                }
             }
 
             return outputSamples;
