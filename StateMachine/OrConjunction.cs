@@ -8,19 +8,21 @@ namespace BGC.StateMachine
     /// condition returns true, then this entire conjunction will also return
     /// true.
     /// </summary>
-    public class OrConjunction : TransitionCondition
+    public class OrConjunction<TBoolEnum, TTriggerEnum> : TransitionCondition<TBoolEnum, TTriggerEnum> 
+        where TBoolEnum : Enum
+        where TTriggerEnum : Enum
     {
         /// <summary>
         /// Set of required conditions for a transition to be called
         /// </summary>
-        private readonly TransitionCondition[] conditions;
+        private readonly TransitionCondition<TBoolEnum, TTriggerEnum>[] conditions;
 
         /// <summary>
         /// Construct an or conjuction which operates as a set of boolean results
         /// with an or between each. This function sets the conditions and does
         /// error checking for null values.
         /// </summary>
-        public OrConjunction(params TransitionCondition[] conditions)
+        public OrConjunction(params TransitionCondition<TBoolEnum, TTriggerEnum>[] conditions)
         {
             if (conditions == null)
             {

@@ -7,17 +7,18 @@ namespace BGC.StateMachine
     /// Simple State with optional lambda arguments for OnStateEnter, OnStateExit, and Update.
     /// The lambdas return strings which, if not null, are fired off as Triggers
     /// </summary>
-    public class TriggeringUpdatingLambdaState : State
+    public class TriggeringUpdatingLambdaState<TTriggerEnum> : TriggeringState<TTriggerEnum>
+        where TTriggerEnum : struct, Enum
     {
-        private readonly Func<string> onStateEnter;
-        private readonly Func<string> onStateExit;
-        private readonly Func<string> update;
+        private readonly Func<TTriggerEnum?> onStateEnter;
+        private readonly Func<TTriggerEnum?> onStateExit;
+        private readonly Func<TTriggerEnum?> update;
 
         public TriggeringUpdatingLambdaState(
             string name,
-            Func<string> onStateEnter = null,
-            Func<string> onStateExit = null,
-            Func<string> update = null)
+            Func<TTriggerEnum?> onStateEnter = null,
+            Func<TTriggerEnum?> onStateExit = null,
+            Func<TTriggerEnum?> update = null)
             : base(name)
         {
             Debug.Assert(update != null);
@@ -29,31 +30,31 @@ namespace BGC.StateMachine
 
         protected override void OnStateEnter()
         {
-            string trigger = onStateEnter?.Invoke();
+            TTriggerEnum? trigger = onStateEnter?.Invoke();
 
-            if (!string.IsNullOrEmpty(trigger))
+            if (trigger.HasValue)
             {
-                ActivateTrigger(trigger);
+                ActivateTrigger(trigger.Value);
             }
         }
 
         protected override void OnStateExit()
         {
-            string trigger = onStateExit?.Invoke();
+            TTriggerEnum? trigger = onStateExit?.Invoke();
 
-            if (!string.IsNullOrEmpty(trigger))
+            if (trigger.HasValue)
             {
-                ActivateTrigger(trigger);
+                ActivateTrigger(trigger.Value);
             }
         }
 
         public override void Update()
         {
-            string trigger = update();
+            TTriggerEnum? trigger = update();
 
-            if (!string.IsNullOrEmpty(trigger))
+            if(trigger.HasValue)
             {
-                ActivateTrigger(trigger);
+                ActivateTrigger(trigger.Value);
             }
         }
     }

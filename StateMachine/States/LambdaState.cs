@@ -5,7 +5,7 @@ namespace BGC.StateMachine
     /// <summary>
     /// Simple State with optional lambda arguments for OnStateEnter and OnStateExit.
     /// </summary>
-    public sealed class LambdaState : State
+    public sealed class LambdaState: State
     {
         private readonly Action onStateEnter;
         private readonly Action onStateExit;

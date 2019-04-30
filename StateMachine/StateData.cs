@@ -1,24 +1,29 @@
 ﻿using System.Collections.Generic;
-using UnityEngine.Assertions;
+using System;
 
 namespace BGC.StateMachine
 {
     /// <summary>
     /// Contains data for a state machine with descriptive functions to improve code clarity.
     /// </summary>
-    public class StateData
+    public class StateData<TBoolEnum, TTriggerEnum>
+        where TBoolEnum : Enum
+        where TTriggerEnum : Enum
     {
-        private readonly Dictionary<string, bool> initialBooleans = new Dictionary<string, bool>();
-        private readonly Dictionary<string, bool> booleans = new Dictionary<string, bool>();
-        private readonly HashSet<string> triggers = new HashSet<string>();
+        private readonly Dictionary<TBoolEnum, bool> initialBooleans = new Dictionary<TBoolEnum, bool>();
+        private readonly Dictionary<TBoolEnum, bool> booleans = new Dictionary<TBoolEnum, bool>();
+        private readonly HashSet<TTriggerEnum> triggers = new HashSet<TTriggerEnum>();
 
+        /// <summary>
+        ///  initialize data with original booleans 
+        /// </summary>
         public void Initialize()
         {
             Clear();
 
-            foreach (var kvp in initialBooleans)
+            foreach (KeyValuePair<TBoolEnum, bool> boolRow in initialBooleans)
             {
-                booleans.Add(kvp.Key, kvp.Value);
+                booleans.Add(boolRow.Key, boolRow.Value);
             }
         }
 
@@ -28,39 +33,33 @@ namespace BGC.StateMachine
             triggers.Clear();
         }
 
-        public void AddBoolean(string key, bool initialValue)
+        public void AddBoolean(TBoolEnum key, bool initialValue)
         {
-            Assert.IsFalse(string.IsNullOrEmpty(key));
             initialBooleans.Add(key, initialValue);
         }
 
-        public void SetBoolean(string key, bool value)
+        public void SetBoolean(TBoolEnum key, bool value)
         {
-            Assert.IsFalse(string.IsNullOrEmpty(key));
             booleans[key] = value;
         }
 
-        public bool GetBoolean(string key)
+        public bool GetBoolean(TBoolEnum key)
         {
-            Assert.IsFalse(string.IsNullOrEmpty(key));
             return booleans[key];
         }
 
-        public void ActivateTrigger(string key)
+        public void ActivateTrigger(TTriggerEnum key)
         {
-            Assert.IsFalse(string.IsNullOrEmpty(key));
             triggers.Add(key);
         }
 
-        public void DeActivateTrigger(string key)
+        public void DeActivateTrigger(TTriggerEnum key)
         {
-            Assert.IsFalse(string.IsNullOrEmpty(key));
             triggers.Remove(key);
         }
 
-        public bool GetTrigger(string key)
+        public bool GetTrigger(TTriggerEnum key)
         {
-            Assert.IsFalse(string.IsNullOrEmpty(key));
             return triggers.Contains(key);
         }
     }

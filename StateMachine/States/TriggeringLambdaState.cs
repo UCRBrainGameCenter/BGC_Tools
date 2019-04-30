@@ -6,15 +6,16 @@ namespace BGC.StateMachine
     /// Simple State with optional lambda arguments for OnStateEnter and OnStateExit.
     /// The lambdas return strings which, if not null, are fired off as Triggers
     /// </summary>
-    public class TriggeringLambdaState : State
+    public class TriggeringLambdaState<TTriggerEnum> : TriggeringState<TTriggerEnum>
+        where TTriggerEnum : struct, Enum
     {
-        private readonly Func<string> onStateEnter;
-        private readonly Func<string> onStateExit;
+        private readonly Func<TTriggerEnum?> onStateEnter;
+        private readonly Func<TTriggerEnum?> onStateExit;
 
         public TriggeringLambdaState(
             string name,
-            Func<string> onStateEnter = null,
-            Func<string> onStateExit = null)
+            Func<TTriggerEnum?> onStateEnter = null,
+            Func<TTriggerEnum?> onStateExit = null)
             : base(name)
         {
             this.onStateEnter = onStateEnter;
@@ -23,21 +24,21 @@ namespace BGC.StateMachine
 
         protected override void OnStateEnter()
         {
-            string trigger = onStateEnter?.Invoke();
+            TTriggerEnum? trigger = onStateEnter?.Invoke();
 
-            if (!string.IsNullOrEmpty(trigger))
+            if (trigger.HasValue)
             {
-                ActivateTrigger(trigger);
+                ActivateTrigger(trigger.Value);
             }
         }
 
         protected override void OnStateExit()
         {
-            string trigger = onStateExit?.Invoke();
+            TTriggerEnum? trigger = onStateExit?.Invoke();
 
-            if (!string.IsNullOrEmpty(trigger))
+            if (trigger.HasValue)
             {
-                ActivateTrigger(trigger);
+                ActivateTrigger(trigger.Value);
             }
         }
     }

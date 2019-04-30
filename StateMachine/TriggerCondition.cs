@@ -7,26 +7,22 @@ namespace BGC.StateMachine
     /// while a trigger is active. Once consumed, it will not transition. On a
     /// transition, it will consume the trigger it is associated with.
     /// </summary>
-    public class TriggerCondition : TransitionCondition
+    public class TriggerCondition<TBoolEnum, TTriggerEnum> : 
+        TransitionCondition<TBoolEnum, TTriggerEnum> 
+        where TBoolEnum : Enum
+        where TTriggerEnum : Enum
     {
         /// <summary>
         /// Key to check state data triggers
         /// </summary>
-        private readonly string key;
+        private readonly TTriggerEnum key;
 
         /// <summary>
         /// Construct a trigger condition with the key that will be checked in
         /// the triggers dictionary.
         /// </summary>
-        public TriggerCondition(string key)
+        public TriggerCondition(TTriggerEnum key)
         {
-            if (string.IsNullOrEmpty(key))
-            {
-                throw new ArgumentException(
-                    paramName: nameof(key),
-                    message: "Trigger condition cannot have a null or empty key");
-            }
-
             this.key = key;
         }
 
