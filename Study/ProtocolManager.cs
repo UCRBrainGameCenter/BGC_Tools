@@ -291,7 +291,92 @@ namespace BGC.Study
         public static void SaveAs(string protocolName)
         {
             loadedProtocol = protocolName;
+            RemoveRedundancies();
             SerializeAll();
+        }
+
+        private static void RemoveRedundancies()
+        {
+            Dictionary<int, int> sessionElementRemapping = new Dictionary<int, int>();
+            Dictionary<string, int> sessionElements = new Dictionary<string, int>();
+
+            foreach (KeyValuePair<int, SessionElement> sessionElement in sessionElementDictionary)
+            {
+                JsonObject serializedElement = sessionElement.Value.SerializeElement();
+                serializedElement.Remove(ProtocolKeys.SessionElement.Id);
+
+                string serialization = serializedElement.ToString();
+                if (sessionElements.ContainsKey(serialization))
+                {
+                    //Collision - Add it to be remapped
+                    int newID = sessionElements[serialization];
+                    sessionElementRemapping.Add(sessionElement.Key, newID);
+                }
+                else
+                {
+                    //It's a different sessionElement - Add it to the dictionary
+                    sessionElements.Add(serialization, sessionElement.Key);
+                }
+            }
+
+            Dictionary<int, int> sessionRemapping = new Dictionary<int, int>();
+            Dictionary<string, int> sessions = new Dictionary<string, int>();
+
+            foreach (KeyValuePair<int, Session> session in sessionDictionary)
+            {
+                //Apply Remapping To Sessions
+                List<SessionElementID> elementIDs = session.Value.sessionElements;
+
+                for (int i = 0; i < elementIDs.Count; i++)
+                {
+                    if (sessionElementRemapping.ContainsKey(elementIDs[i].id))
+                    {
+                        elementIDs[i] = new SessionElementID(sessionElementRemapping[elementIDs[i].id]);
+                    }
+                }
+
+                JsonObject serializedSession = session.Value.SerializeSession();
+                serializedSession.Remove(ProtocolKeys.Session.Id);
+
+                string serialization = serializedSession.ToString();
+                if (sessions.ContainsKey(serialization))
+                {
+                    //Collision - Add it to be remapped
+                    int newID = sessions[serialization];
+                    sessionRemapping.Add(session.Key, newID);
+                }
+                else
+                {
+                    //It's a different session - Add it to the dictionary
+                    sessions.Add(serialization, session.Key);
+                }
+            }
+
+            foreach (KeyValuePair<int, Protocol> protocol in protocolDictionary)
+            {
+                //Apply Remapping To Protocols
+                List<SessionID> sessionIDs = protocol.Value.sessions;
+
+                for (int i = 0; i < sessionIDs.Count; i++)
+                {
+                    if (sessionRemapping.ContainsKey(sessionIDs[i].id))
+                    {
+                        sessionIDs[i] = new SessionID(sessionRemapping[sessionIDs[i].id]);
+                    }
+                }
+            }
+
+            //Remove eliminated SessionElements
+            foreach (int sessionElementID in sessionElementRemapping.Keys)
+            {
+                sessionElementDictionary.Remove(sessionElementID);
+            }
+
+            //Remove eliminated Sessions
+            foreach (int sessionID in sessionRemapping.Keys)
+            {
+                sessionDictionary.Remove(sessionID);
+            }
         }
 
         public static void SerializeAll()
@@ -422,24 +507,7 @@ namespace BGC.Study
 
             foreach (Session session in sessionDictionary.Values)
             {
-                JsonArray jsonElementsIDs = new JsonArray();
-                foreach (SessionElementID elementID in session.sessionElements)
-                {
-                    jsonElementsIDs.Add(elementID.id);
-                }
-
-                JsonObject newSession = new JsonObject()
-                {
-                    { ProtocolKeys.Session.Id, session.id },
-                    { ProtocolKeys.Session.SessionElementIDs, jsonElementsIDs }
-                };
-
-                if (session.envVals.Count > 0)
-                {
-                    newSession.Add(ProtocolKeys.Session.EnvironmentValues, session.envVals);
-                }
-
-                sessions.Add(newSession);
+                sessions.Add(session.SerializeSession());
             }
 
             return sessions;
@@ -449,31 +517,11 @@ namespace BGC.Study
         {
             sessionDictionary.Clear();
 
-            foreach (JsonObject session in sessions)
+            foreach (JsonObject sessionData in sessions)
             {
-                List<SessionElementID> elements = new List<SessionElementID>();
-                foreach (int sessionElementID in session[ProtocolKeys.Session.SessionElementIDs].AsJsonArray)
-                {
-                    elements.Add(sessionElementID);
-                }
+                Session session = new Session(sessionData);
 
-                JsonObject envVals;
-                if (session.ContainsKey(ProtocolKeys.Session.EnvironmentValues))
-                {
-                    envVals = session[ProtocolKeys.Session.EnvironmentValues].AsJsonObject;
-                }
-                else
-                {
-                    envVals = new JsonObject();
-                }
-
-                sessionDictionary.Add(
-                    session[ProtocolKeys.Session.Id],
-                    new Session(session[ProtocolKeys.Session.Id])
-                    {
-                        sessionElements = elements,
-                        envVals = envVals
-                    });
+                sessionDictionary.Add(session.id, session);
             }
         }
 

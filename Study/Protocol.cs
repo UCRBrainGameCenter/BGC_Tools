@@ -53,7 +53,7 @@ namespace BGC.Study
 
         public void AddRange(IEnumerable<Session> sessions)
         {
-            foreach(Session session in sessions)
+            foreach (Session session in sessions)
             {
                 this.sessions.Add(session);
             }
@@ -90,17 +90,33 @@ namespace BGC.Study
             ProtocolManager.sessionDictionary.Add(id, this);
         }
 
-        //Deserialized Sessions are not added to the Session dictionary
-        public Session(int id)
+        /// <summary>
+        /// Deserialization Constructor
+        /// Deserialized Sessions are not added to the Session dictionary
+        /// </summary>
+        public Session(JsonObject sessionData)
         {
-            this.id = id;
+            id = sessionData[ProtocolKeys.Session.Id];
+
             if (nextSessionID <= id)
             {
                 nextSessionID = id + 1;
             }
 
-            //Should be assigned by constructing caller
-            envVals = null;
+            sessionElements = new List<SessionElementID>();
+            foreach (int sessionElementID in sessionData[ProtocolKeys.Session.SessionElementIDs].AsJsonArray)
+            {
+                sessionElements.Add(sessionElementID);
+            }
+
+            if (sessionData.ContainsKey(ProtocolKeys.Session.EnvironmentValues))
+            {
+                envVals = sessionData[ProtocolKeys.Session.EnvironmentValues].AsJsonObject;
+            }
+            else
+            {
+                envVals = new JsonObject();
+            }
         }
 
         public int Count => sessionElements.Count;
@@ -127,6 +143,28 @@ namespace BGC.Study
                     sessionElements.Add(element);
                 }
             }
+        }
+
+        public JsonObject SerializeSession()
+        {
+            JsonArray jsonElementsIDs = new JsonArray();
+            foreach (SessionElementID elementID in sessionElements)
+            {
+                jsonElementsIDs.Add(elementID.id);
+            }
+
+            JsonObject newSession = new JsonObject()
+            {
+                { ProtocolKeys.Session.Id, id },
+                { ProtocolKeys.Session.SessionElementIDs, jsonElementsIDs }
+            };
+
+            if (envVals.Count > 0)
+            {
+                newSession.Add(ProtocolKeys.Session.EnvironmentValues, envVals);
+            }
+
+            return newSession;
         }
 
         public static void HardClear()
