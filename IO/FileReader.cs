@@ -126,10 +126,8 @@ namespace BGC.IO
         {
             string[] errorMessage;
 
-            if (excp is ParsingException)
+            if (excp is ParsingException parsingExcp)
             {
-                ParsingException parsingExcp = excp as ParsingException;
-
                 errorMessage = new string[]
                 {
                     "Internal parsing error.",
@@ -140,10 +138,8 @@ namespace BGC.IO
                     parsingExcp.correctiveAction
                 };
             }
-            else if (excp is JsonParseException)
+            else if (excp is JsonParseException jsonExcp)
             {
-                JsonParseException jsonExcp = excp as JsonParseException;
-
                 errorMessage = new string[]
                 {
                     "JSON parsing error",
