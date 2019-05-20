@@ -8,7 +8,7 @@ namespace BGC.DataStructures.Generic
     /// <summary>
     /// Statically-sized ring buffer container.
     /// </summary>
-    public class RingBuffer<T> : ICollection<T>
+    public class RingBuffer<T> : IEnumerable<T>, ICollection<T>
     {
         private T[] values = null;
         private int availableCount = 0;

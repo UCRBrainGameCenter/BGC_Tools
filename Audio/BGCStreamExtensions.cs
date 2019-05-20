@@ -191,6 +191,24 @@ namespace BGC.Audio
                 smoothingSamples: smoothingSamples);
         }
 
+        public static IBGCStream Truncate(
+            this IBGCStream stream,
+            double totalDuration,
+            int offset = 0,
+            bool recalculateRMS = false)
+        {
+            return new StreamTruncator(stream, totalDuration, offset, recalculateRMS);
+        }
+
+        public static IBGCStream Truncate(
+            this IBGCStream stream,
+            int samples,
+            int offset = 0,
+            bool recalculateRMS = false)
+        {
+            return new StreamTruncator(stream, samples, offset, recalculateRMS);
+        }
+
         public static IBGCStream Window(
             this IBGCStream stream,
             Windowing.Function function = Windowing.Function.Hamming,
@@ -251,6 +269,22 @@ namespace BGC.Audio
             else if (stream.Channels == 2)
             {
                 return new NormalizerFilter(stream, presentationLevel);
+            }
+
+            throw new NotSupportedException("Cannot normalize stream of more than 2 channels");
+        }
+
+        public static IBGCStream Normalize(
+            this IBGCStream stream,
+            (double levelL, double levelR) presentationLevels)
+        {
+            if (stream.Channels == 1)
+            {
+                return new NormalizerMonoFilter(stream, presentationLevels);
+            }
+            else if (stream.Channels == 2)
+            {
+                return new NormalizerFilter(stream, presentationLevels);
             }
 
             throw new NotSupportedException("Cannot normalize stream of more than 2 channels");

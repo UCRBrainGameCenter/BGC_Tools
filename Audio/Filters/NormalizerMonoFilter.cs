@@ -17,7 +17,7 @@ namespace BGC.Audio.Filters
         private bool factorsInitialized = false;
         private float leftFactor;
         private float rightFactor;
-        private readonly double presentationLevel;
+        private readonly (double levelL, double levelR) presentationLevels;
 
         private const int BUFFER_SIZE = 512;
         private readonly float[] buffer = new float[BUFFER_SIZE];
@@ -32,7 +32,7 @@ namespace BGC.Audio.Filters
 
             this.leftFactor = (float)leftFactor;
             this.rightFactor = (float)rightFactor;
-            presentationLevel = 0f;
+            presentationLevels = (0, 0);
             factorsInitialized = true;
         }
 
@@ -44,7 +44,19 @@ namespace BGC.Audio.Filters
                 throw new ArgumentException("NormalizerMonoFilter inner stream but have only one channel.");
             }
 
-            this.presentationLevel = presentationLevel;
+            presentationLevels = (presentationLevel, presentationLevel);
+            factorsInitialized = false;
+        }
+
+        public NormalizerMonoFilter(IBGCStream stream, (double levelL, double levelR) levels)
+            : base(stream)
+        {
+            if (stream.Channels != 1)
+            {
+                throw new ArgumentException("NormalizerMonoFilter inner stream but have only one channel.");
+            }
+
+            presentationLevels = levels;
             factorsInitialized = false;
         }
 
@@ -56,9 +68,20 @@ namespace BGC.Audio.Filters
 
                 Normalization.GetRMSScalingFactors(
                     stream: stream,
-                    desiredLevel: presentationLevel,
+                    desiredLevel: presentationLevels.levelL,
                     scalingFactorL: out double tempLeftFactor,
                     scalingFactorR: out double tempRightFactor);
+
+
+                if (presentationLevels.levelL != presentationLevels.levelR)
+                {
+                    Normalization.GetRMSScalingFactors(
+                        stream: stream,
+                        desiredLevel: presentationLevels.levelR,
+                        scalingFactorL: out double _,
+                        scalingFactorR: out tempRightFactor);
+                }
+
 
                 leftFactor = (float)tempLeftFactor;
                 rightFactor = (float)tempRightFactor;

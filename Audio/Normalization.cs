@@ -19,7 +19,7 @@ namespace BGC.Audio
         }
 
         public const double dbMax = 90.0;
-        public const double dbOffset = 85.0;
+        public const double dbOffset = 80.0;
 
         public const double RMS_TO_PEAK = 2.8;
         public const double TARGET_RMS = 1.0 / 128.0;
@@ -45,13 +45,12 @@ namespace BGC.Audio
             dbAdjustL = dbOffsetL + dbSPLL - dbOffset;
 
             //If they're not the same, then generate a new set of offsets
-            //  (It doesn't matter if we mess up OffsetL, we already finished using it)
             if (dbSPLL != dbSPLR)
             {
                 //To right calculation if it's different
                 Calibration.GetLevelOffset(
                     level: dbSPLR,
-                    levelOffsetL: out dbOffsetL,
+                    levelOffsetL: out _,
                     levelOffsetR: out dbOffsetR,
                     source: source);
             }

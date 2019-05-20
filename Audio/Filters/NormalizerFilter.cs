@@ -17,14 +17,17 @@ namespace BGC.Audio.Filters
         private bool factorsInitialized = false;
         private float leftFactor;
         private float rightFactor;
-        private readonly double presentationLevel;
+        private readonly (double levelL, double levelR) presentationLevels;
 
         private readonly Calibration.Source source;
 
         private const int BUFFER_SIZE = 512;
         private readonly float[] buffer = new float[BUFFER_SIZE];
 
-        public NormalizerFilter(IBGCStream stream, double leftFactor, double rightFactor)
+        public NormalizerFilter(
+            IBGCStream stream,
+            double leftFactor,
+            double rightFactor)
             : base(stream)
         {
             if (stream.Channels != 2)
@@ -34,14 +37,16 @@ namespace BGC.Audio.Filters
 
             this.leftFactor = (float)leftFactor;
             this.rightFactor = (float)rightFactor;
-            presentationLevel = 0.0;
+            presentationLevels = (0.0, 0.0);
             factorsInitialized = true;
 
             //Doesn't matter, we won't use this.
             source = Calibration.Source.MAX;
         }
 
-        public NormalizerFilter(IBGCStream stream, double presentationLevel)
+        public NormalizerFilter(
+            IBGCStream stream,
+            double presentationLevel)
             : base(stream)
         {
             if (stream.Channels != 2)
@@ -49,7 +54,23 @@ namespace BGC.Audio.Filters
                 throw new ArgumentException("NormalizerFilter inner stream but have two channels.");
             }
 
-            this.presentationLevel = presentationLevel;
+            presentationLevels = (presentationLevel, presentationLevel);
+            factorsInitialized = false;
+
+            source = Calibration.Source.Custom;
+        }
+
+        public NormalizerFilter(
+            IBGCStream stream,
+            (double levelL, double levelR) presentationLevel)
+            : base(stream)
+        {
+            if (stream.Channels != 2)
+            {
+                throw new ArgumentException("NormalizerFilter inner stream but have two channels.");
+            }
+
+            presentationLevels = presentationLevel;
             factorsInitialized = false;
 
             source = Calibration.Source.Custom;
@@ -66,7 +87,7 @@ namespace BGC.Audio.Filters
                 throw new ArgumentException("NormalizerFilter inner stream but have two channels.");
             }
 
-            this.presentationLevel = presentationLevel;
+            presentationLevels = (presentationLevel, presentationLevel);
             factorsInitialized = false;
 
             this.source = source;
@@ -80,10 +101,21 @@ namespace BGC.Audio.Filters
 
                 Normalization.GetRMSScalingFactors(
                     stream: stream,
-                    desiredLevel: presentationLevel,
+                    desiredLevel: presentationLevels.levelL,
                     scalingFactorL: out double tempLeftFactor,
                     scalingFactorR: out double tempRightFactor,
                     source: source);
+
+                if (presentationLevels.levelL != presentationLevels.levelR)
+                {
+                    Normalization.GetRMSScalingFactors(
+                        stream: stream,
+                        desiredLevel: presentationLevels.levelL,
+                        scalingFactorL: out double _,
+                        scalingFactorR: out tempRightFactor,
+                        source: source);
+
+                }
 
                 leftFactor = (float)tempLeftFactor;
                 rightFactor = (float)tempRightFactor;
