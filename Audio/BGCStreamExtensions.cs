@@ -180,6 +180,12 @@ namespace BGC.Audio
             return adder;
         }
 
+        public static IBGCStream AddTogether(
+            this IEnumerable<IBGCStream> streams)
+        {
+            return new StreamAdder(streams);
+        }
+
         public static IBGCStream Window(
             this IBGCStream stream,
             double totalDuration,

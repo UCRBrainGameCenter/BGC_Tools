@@ -233,11 +233,11 @@ namespace BGC.Tests
                         stream: new StreamAdder(
                             carrierFuncs[i]()
                                 .BiQuadBandpassFilter(
-                                    centralFrequency: 500,
+                                    criticalFrequency: 500,
                                     qFactor: qFactor), 
                             carrierFuncs[j]()
                                 .BiQuadBandpassFilter(
-                                    centralFrequency: 1500,
+                                    criticalFrequency: 1500,
                                     qFactor: qFactor))
                         .Window(0.5)
                         .SlowRangeFitter(),
@@ -316,12 +316,12 @@ namespace BGC.Tests
             {
                 IBGCStream f1 = makeCarrier()
                     .BiQuadBandpassFilter(
-                        centralFrequency: 500,
+                        criticalFrequency: 500,
                         qFactor: qFactor);
 
                 IBGCStream f2 = makeCarrier()
                     .BiQuadBandpassFilter(
-                        centralFrequency: 1500,
+                        criticalFrequency: 1500,
                         qFactor: qFactor);
 
                 IBGCStream fakeVoice = new StreamAdder(f1, f2)
@@ -338,12 +338,12 @@ namespace BGC.Tests
             {
                 IBGCStream f1 = makeCarrier()
                     .BiQuadBandpassFilter(
-                        centralFrequency: 750,
+                        criticalFrequency: 750,
                         qFactor: qFactor);
 
                 IBGCStream f2 = makeCarrier()
                     .BiQuadBandpassFilter(
-                        centralFrequency: 2000,
+                        criticalFrequency: 2000,
                         qFactor: qFactor);
 
                 IBGCStream fakeVoice = new StreamAdder(f1, f2)

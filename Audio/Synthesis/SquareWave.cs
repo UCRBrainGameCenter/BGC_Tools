@@ -23,11 +23,14 @@ namespace BGC.Audio.Synthesis
         private readonly double periodSamples;
         private readonly double upSamples;
 
+        private readonly double initialPosition;
+
         private double position = 0.0;
 
         public SquareWave(
             double amplitude,
             double frequency,
+            double phase = 0.0,
             double dutyCycle = 0.5)
         {
             firstAmplitude = (float)amplitude;
@@ -35,14 +38,25 @@ namespace BGC.Audio.Synthesis
             this.frequency = frequency;
             this.dutyCycle = dutyCycle;
 
+
             periodSamples = SamplingRate / this.frequency;
             upSamples = this.dutyCycle * periodSamples;
+
+            phase %= 2.0 * Math.PI;
+            if (phase < 0.0)
+            {
+                phase += 2.0 * Math.PI;
+            }
+
+            initialPosition = phase * periodSamples / (2.0 * Math.PI);
+            position = initialPosition;
         }
 
         public SquareWave(
             double firstAmplitude,
             double secondAmplitude,
             double frequency,
+            double phase = 0.0,
             double dutyCycle = 0.5)
         {
             this.firstAmplitude = (float)firstAmplitude;
@@ -52,6 +66,40 @@ namespace BGC.Audio.Synthesis
 
             periodSamples = SamplingRate / this.frequency;
             upSamples = this.dutyCycle * periodSamples;
+
+            phase %= 2.0 * Math.PI;
+            if (phase < 0.0)
+            {
+                phase += 2.0 * Math.PI;
+            }
+
+            initialPosition = phase * periodSamples / (2.0 * Math.PI);
+            position = initialPosition;
+        }
+
+        public SquareWave(
+            double firstAmplitude,
+            double secondAmplitude,
+            ComplexCarrierTone carrier,
+            double dutyCycle = 0.5)
+        {
+            this.firstAmplitude = (float)(firstAmplitude * carrier.amplitude.Magnitude);
+            this.secondAmplitude = (float)(secondAmplitude * carrier.amplitude.Magnitude);
+            frequency = carrier.frequency;
+            this.dutyCycle = dutyCycle;
+
+            periodSamples = SamplingRate / frequency;
+            upSamples = this.dutyCycle * periodSamples;
+
+            double phase = carrier.amplitude.Phase / (2.0 * Math.PI);
+            phase %= 1.0;
+            if (phase < 0.0)
+            {
+                phase += 1.0;
+            }
+
+            initialPosition = phase * periodSamples;
+            position = initialPosition;
         }
 
         public override int Read(float[] data, int offset, int count)
@@ -98,12 +146,12 @@ namespace BGC.Audio.Synthesis
 
         public override void Reset()
         {
-            position = 0.0;
+            position = initialPosition;
         }
 
         public override void Seek(int position)
         {
-            this.position = position;
+            this.position = initialPosition + position;
             this.position %= periodSamples;
             if (this.position < 0f)
             {

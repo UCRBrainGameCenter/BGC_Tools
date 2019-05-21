@@ -75,7 +75,7 @@ namespace BGC.Audio.Midi.Synth
 
                 case ReservedSoundSet.ElectricPiano1:
                 case ReservedSoundSet.ElectricPiano2:
-                    return new SquareWave(amplitude, frequency, 0.66)
+                    return new SquareWave(amplitude, frequency, dutyCycle: 0.66)
                         .ADSR(0.0125, 0.25, 0.8, 1, 0.05);
 
                 case ReservedSoundSet.DrawbarOrgan:
@@ -112,7 +112,7 @@ namespace BGC.Audio.Midi.Synth
                 case ReservedSoundSet.SlapBass2:
                 case ReservedSoundSet.SynthBass1:
                 case ReservedSoundSet.SynthBass2:
-                    return new SquareWave(amplitude, frequency, 0.33)
+                    return new SquareWave(amplitude, frequency, dutyCycle: 0.33)
                         .ContinuousFilter(
                             envelopeStream: new LinearEnvelope(0.25, 1.5),
                             filterType: ContinuousFilter.FilterType.LowPass,
@@ -130,7 +130,7 @@ namespace BGC.Audio.Midi.Synth
                 case ReservedSoundSet.Whistle:
                 case ReservedSoundSet.Ocarina:
                     return new StreamAdder(
-                            new SquareWave(0.75 * amplitude, frequency, 0.6),
+                            new SquareWave(0.75 * amplitude, frequency, dutyCycle: 0.6),
                             new AnalyticNoiseStream(0.0125, 20.0, 10000.0, 1000, AnalyticNoiseStream.AmplitudeDistribution.White)
                                 .ToBGCStream())
                         .ContinuousFilter(
@@ -144,7 +144,7 @@ namespace BGC.Audio.Midi.Synth
 
 
                 case ReservedSoundSet.Lead1_Square:
-                    return new SquareWave(amplitude, frequency, 0.5)
+                    return new SquareWave(amplitude, frequency, dutyCycle: 0.5)
                         .ADSR(0.0125, 0.25, 0.8, 1, 0.05);
 
                 case ReservedSoundSet.Lead2_Sawtooth:

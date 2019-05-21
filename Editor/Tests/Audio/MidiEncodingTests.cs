@@ -103,7 +103,7 @@ namespace BGC.Tests
 
                 Assert.IsTrue(WaveEncoding.SaveStream(
                     filepath: saveFile,
-                    stream: new SquareWave(1.0, 400, dutyCycle)
+                    stream: new SquareWave(1.0, 400, dutyCycle: dutyCycle)
                         .Window(3.0),
                     overwrite: true));
             }

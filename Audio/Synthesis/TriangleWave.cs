@@ -23,11 +23,14 @@ namespace BGC.Audio.Synthesis
         private readonly double upSamples;
         private readonly double downSamples;
 
+        private readonly double initialPosition;
+
         private double position = 0.0;
 
         public TriangleWave(
             double amplitude,
             double frequency,
+            double phase = 0.0,
             double dutyCycle = 0.5)
         {
             this.amplitude = amplitude;
@@ -37,6 +40,38 @@ namespace BGC.Audio.Synthesis
             periodSamples = SamplingRate / this.frequency;
             upSamples = this.dutyCycle * periodSamples;
             downSamples = periodSamples - upSamples;
+
+            phase %= 2.0 * Math.PI;
+            if (phase < 0.0)
+            {
+                phase += 2.0 * Math.PI;
+            }
+
+            initialPosition = phase * periodSamples / (2.0 * Math.PI);
+            position = initialPosition;
+        }
+
+        public TriangleWave(
+            ComplexCarrierTone carrierTone,
+            double dutyCycle = 0.5)
+        {
+            amplitude = carrierTone.amplitude.Magnitude;
+            frequency = carrierTone.frequency;
+            this.dutyCycle = dutyCycle;
+
+            periodSamples = SamplingRate / frequency;
+            upSamples = this.dutyCycle * periodSamples;
+            downSamples = periodSamples - upSamples;
+
+            double phase = carrierTone.amplitude.Phase / (2.0 * Math.PI);
+            phase %= 1.0;
+            if (phase < 0.0)
+            {
+                phase += 1.0;
+            }
+
+            initialPosition = phase * periodSamples;
+            position = initialPosition;
         }
 
         public override int Read(float[] data, int offset, int count)
@@ -89,12 +124,12 @@ namespace BGC.Audio.Synthesis
 
         public override void Reset()
         {
-            position = 0.0;
+            position = initialPosition;
         }
 
         public override void Seek(int position)
         {
-            this.position = position;
+            this.position = initialPosition + position;
             this.position %= periodSamples;
             if (this.position < 0f)
             {

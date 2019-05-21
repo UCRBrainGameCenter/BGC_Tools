@@ -96,7 +96,7 @@ namespace BGC.Audio.Filters
 
             while (remainingSamples > 0 && Position < ChannelSamples)
             {
-                int copyLength = Math.Min(Channels * Position, remainingSamples);
+                int copyLength = Math.Min(Channels * (ChannelSamples - Position), remainingSamples);
                 int readSamples = stream.Read(data, offset, copyLength);
 
                 if (readSamples == 0)

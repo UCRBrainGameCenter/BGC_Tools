@@ -9,7 +9,7 @@ namespace BGC.Audio.Filters
     /// </summary>
     public class NormalizerMonoFilter : SimpleBGCFilter
     {
-        public override int TotalSamples => 2 * stream.TotalSamples;
+        public override int TotalSamples => stream.ChannelSamples == int.MaxValue ? int.MaxValue : 2 * stream.ChannelSamples;
         public override int ChannelSamples => stream.ChannelSamples;
 
         public override int Channels => 2;
