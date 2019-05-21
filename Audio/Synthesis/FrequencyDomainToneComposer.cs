@@ -20,7 +20,7 @@ namespace BGC.Audio.Synthesis
 
         private readonly ComplexCarrierTone[] carrierTones;
 
-        private const int FRAME_SIZE = 4096/2;
+        private const int FRAME_SIZE = 2048;
         private const int OVERLAP_FACTOR = 32;
         private const int WINDOWING_SAMPLES = FRAME_SIZE / 2;
 
@@ -45,7 +45,9 @@ namespace BGC.Audio.Synthesis
             this.carrierTones = carrierTones.ToArray();
 
             timePerFrame = STEP_SIZE / (double)SamplingRate;
-            outputScalar = 1.0 / OVERLAP_FACTOR;
+
+            //outputScalar = 1.0 / OVERLAP_FACTOR;
+            outputScalar = 2.0 / (OVERLAP_FACTOR * Sqrt(FRAME_SIZE));
 
             for (int i = 0; i < WINDOWING_SAMPLES; i++)
             {
