@@ -30,6 +30,11 @@ namespace BGC.Audio.Synthesis
 
         public SineWave(double amplitude, double frequency, double initialPhase = 0.0)
         {
+            if (frequency == 0.0)
+            {
+                throw new ArgumentException($"Unable to render 0Hz Sine Wave");
+            }
+
             this.amplitude = amplitude;
 
             double sampleCount = SamplingRate / frequency;

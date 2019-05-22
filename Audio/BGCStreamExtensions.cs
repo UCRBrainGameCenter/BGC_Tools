@@ -424,12 +424,19 @@ namespace BGC.Audio
         public static IBGCStream ToStream(
             this IEnumerable<ComplexCarrierTone> carrierTones)
         {
-            if (carrierTones.Count() == 0)
+            int carrierToneCount = carrierTones.Count();
+
+            if (carrierToneCount == 0)
             {
                 return new PerpetualSilence();
             }
 
-            if (carrierTones.Count() < 10)
+            if (carrierToneCount == 1)
+            {
+                return new SineWave(carrierTones.First());
+            }
+
+            if (carrierToneCount < 10)
             {
                 return new StreamAdder(carrierTones.Select(x => x.ToStream()));
             }

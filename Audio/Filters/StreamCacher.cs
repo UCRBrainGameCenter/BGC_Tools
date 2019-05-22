@@ -54,6 +54,7 @@ namespace BGC.Audio.Filters
                 {
                     //Read from stream
                     int samplesToReadToCache = Math.Min(FRAME_SIZE, samplesRemaining);
+                    samplesToReadToCache = Math.Min(samplesToReadToCache, TotalSamples - cachePosition);
                     int readSamples = stream.Read(sampleCache, cachePosition, samplesToReadToCache);
 
                     if (readSamples == 0)

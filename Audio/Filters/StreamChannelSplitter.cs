@@ -116,7 +116,7 @@ namespace BGC.Audio.Filters
                     bufferedSamples.Enqueue(buffer[2 * i + cacheIndex]);
                 }
 
-                remainingSamples -= streamRead / 2;
+                remainingSamples -= streamRead;
                 offset += streamRead / 2;
             }
 
@@ -140,7 +140,6 @@ namespace BGC.Audio.Filters
                 }
 
                 samplesToCopy -= copiedSamples;
-
             }
 
             return count - samplesToCopy;

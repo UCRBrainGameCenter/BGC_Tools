@@ -35,6 +35,7 @@ namespace BGC.Audio.Synthesis
         private readonly float[] cachedSampleBuffer = new float[STEP_SIZE];
         private readonly double[] window = new double[FRAME_SIZE];
 
+        private int leadingFrames = 0;
         private int frame = 0;
 
         private int bufferIndex = 0;
@@ -59,6 +60,8 @@ namespace BGC.Audio.Synthesis
             {
                 window[i] = 1.0;
             }
+
+            leadingFrames = -(OVERLAP_FACTOR - 1);
         }
 
         private int ReadBody(float[] buffer, int offset, int count)
@@ -89,11 +92,15 @@ namespace BGC.Audio.Synthesis
                 //Clear IFFT Buffer
                 Array.Clear(ifftBuffer, 0, ifftBuffer.Length);
 
+                //If there are any leading frames...
+                double timeShiftDeltaT = (frame + leadingFrames) * timePerFrame;
+                bool isLeadingFrame = leadingFrames < 0;
+
                 foreach (ComplexCarrierTone carrierTone in carrierTones)
                 {
                     FrequencyDomain.Populate(
                         buffer: ifftBuffer,
-                        carrierTone: carrierTone.TimeShift(frame * timePerFrame));
+                        carrierTone: carrierTone.TimeShift(timeShiftDeltaT));
                 }
 
                 //IFFT
@@ -106,7 +113,14 @@ namespace BGC.Audio.Synthesis
                 }
 
                 //Advance Frame
-                frame++;
+                if (isLeadingFrame)
+                {
+                    leadingFrames++;
+                }
+                else
+                {
+                    frame++;
+                }
 
                 //Copy output samples to output buffer
                 Array.Copy(
@@ -128,7 +142,10 @@ namespace BGC.Audio.Synthesis
                     index: OVERLAP,
                     length: STEP_SIZE);
 
-                samplesWritten += ReadBody(data, offset + samplesWritten, count - samplesWritten);
+                if (!isLeadingFrame)
+                {
+                    samplesWritten += ReadBody(data, offset + samplesWritten, count - samplesWritten);
+                }
             }
 
             return count;
@@ -138,6 +155,7 @@ namespace BGC.Audio.Synthesis
         {
             bufferIndex = 0;
             bufferCount = 0;
+            leadingFrames = -(OVERLAP_FACTOR - 1);
 
             Array.Clear(outputAccumulation, 0, FRAME_SIZE);
         }
