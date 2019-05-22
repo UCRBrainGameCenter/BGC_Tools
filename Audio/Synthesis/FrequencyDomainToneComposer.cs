@@ -20,8 +20,8 @@ namespace BGC.Audio.Synthesis
 
         private readonly ComplexCarrierTone[] carrierTones;
 
-        private const int FRAME_SIZE = 2048;
-        private const int OVERLAP_FACTOR = 32;
+        private const int FRAME_SIZE = 8192;
+        private const int OVERLAP_FACTOR = 16;
         private const int WINDOWING_SAMPLES = FRAME_SIZE / 2;
 
         private const int STEP_SIZE = FRAME_SIZE / OVERLAP_FACTOR;
