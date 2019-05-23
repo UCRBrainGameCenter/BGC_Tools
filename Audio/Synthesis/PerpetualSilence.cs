@@ -8,7 +8,7 @@ namespace BGC.Audio.Synthesis
     /// Stream representing silence.
     /// Useful for concatenation or as a building-block for some stimuli.
     /// </summary>
-    public class PerpetualSilence : BGCStream, IBGCEnvelopeStream
+    public class PerpetualSilence : BGCStream, IBGCEnvelopeStream, IBGCStream
     {
         public override int Channels => 1;
         public override float SamplingRate => 44100f;

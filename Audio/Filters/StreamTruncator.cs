@@ -12,10 +12,10 @@ namespace BGC.Audio.Filters
     {
         public override int Channels => stream.Channels;
 
-        public override int TotalSamples => Channels * ChannelSamples;
+        public override int TotalSamples { get; }
         public override int ChannelSamples { get; }
 
-        private readonly int sampleOffset;
+        private readonly int sampleShift;
 
         private readonly bool recalculateRMS;
 
@@ -23,20 +23,41 @@ namespace BGC.Audio.Filters
 
         public StreamTruncator(
             IBGCStream stream,
-            int samples,
-            int sampleOffset = 0,
+            int totalChannelSamples = -1,
+            int sampleShift = 0,
             bool recalculateRMS = false)
             : base(stream)
         {
-            if (sampleOffset > stream.ChannelSamples)
+            if (sampleShift > stream.ChannelSamples)
             {
                 Debug.LogError("Requested a sampleOffset larger than clip length");
-                sampleOffset = 0;
+                sampleShift = 0;
             }
 
-            this.sampleOffset = sampleOffset;
+            this.sampleShift = sampleShift;
 
-            ChannelSamples = Math.Min(samples, stream.ChannelSamples - sampleOffset);
+            if (totalChannelSamples != -1)
+            {
+                ChannelSamples = Math.Min(
+                    totalChannelSamples,
+                    stream.ChannelSamples - sampleShift);
+                TotalSamples = Channels * ChannelSamples;
+            }
+            else
+            {
+                if (stream.ChannelSamples == int.MaxValue)
+                {
+                    ChannelSamples = int.MaxValue;
+                    TotalSamples = int.MaxValue;
+                }
+                else
+                {
+                    ChannelSamples = stream.ChannelSamples - sampleShift;
+                    TotalSamples = Channels * ChannelSamples;
+                }
+            }
+
+            TotalSamples = Channels * ChannelSamples;
 
             this.recalculateRMS = recalculateRMS;
 
@@ -46,27 +67,37 @@ namespace BGC.Audio.Filters
         public StreamTruncator(
             IBGCStream stream,
             double totalDuration = double.NaN,
-            int sampleOffset = 0,
+            int sampleShift = 0,
             bool recalculateRMS = false)
             : base(stream)
         {
-            if (sampleOffset > stream.ChannelSamples)
+            if (sampleShift > stream.ChannelSamples)
             {
                 Debug.LogError("Requested a sampleOffset larger than clip length");
-                sampleOffset = 0;
+                sampleShift = 0;
             }
 
-            this.sampleOffset = sampleOffset;
+            this.sampleShift = sampleShift;
 
             if (!double.IsNaN(totalDuration))
             {
                 ChannelSamples = Math.Min(
-                    (int)(totalDuration * SamplingRate),
-                    stream.ChannelSamples - sampleOffset);
+                    (int)Math.Round(totalDuration * SamplingRate),
+                    stream.ChannelSamples - sampleShift);
+                TotalSamples = Channels * ChannelSamples;
             }
             else
             {
-                ChannelSamples = stream.ChannelSamples - sampleOffset;
+                if (stream.ChannelSamples == int.MaxValue)
+                {
+                    ChannelSamples = int.MaxValue;
+                    TotalSamples = int.MaxValue;
+                }
+                else
+                {
+                    ChannelSamples = stream.ChannelSamples - sampleShift;
+                    TotalSamples = Channels * ChannelSamples;
+                }
             }
 
             this.recalculateRMS = recalculateRMS;
@@ -78,16 +109,16 @@ namespace BGC.Audio.Filters
         {
             Position = 0;
             stream.Reset();
-            if (sampleOffset > 0)
+            if (sampleShift > 0)
             {
-                stream.Seek(sampleOffset);
+                stream.Seek(sampleShift);
             }
         }
 
         public override void Seek(int position)
         {
             Position = GeneralMath.Clamp(position, 0, ChannelSamples);
-            stream.Seek(Position + sampleOffset);
+            stream.Seek(Position + sampleShift);
         }
 
         public override int Read(float[] data, int offset, int count)

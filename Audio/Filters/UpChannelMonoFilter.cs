@@ -9,7 +9,7 @@ namespace BGC.Audio.Filters
     /// </summary>
     public class UpChannelMonoFilter : SimpleBGCFilter
     {
-        public override int TotalSamples => Channels * stream.TotalSamples;
+        public override int TotalSamples { get; }
         public override int ChannelSamples => stream.ChannelSamples;
 
         public override int Channels { get; }
@@ -22,10 +22,19 @@ namespace BGC.Audio.Filters
         {
             if (stream.Channels != 1)
             {
-                throw new ArgumentException("NormalizerMonoFilter inner stream but have only one channel.");
+                throw new ArgumentException("UpChannelMonoFilter inner stream but have only one channel.");
             }
 
             Channels = channelCount;
+
+            if (ChannelSamples == int.MaxValue)
+            {
+                TotalSamples = int.MaxValue;
+            }
+            else
+            {
+                TotalSamples = Channels * ChannelSamples;
+            }
         }
 
         public override int Read(float[] data, int offset, int count)

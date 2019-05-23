@@ -27,7 +27,7 @@ namespace BGC.Audio.Synthesis
         private const int STEP_SIZE = FRAME_SIZE / OVERLAP_FACTOR;
         private const int OVERLAP = FRAME_SIZE - STEP_SIZE;
 
-        private readonly double timePerFrame;
+        private readonly double timePerStep;
         private readonly double outputScalar;
 
         private readonly Complex64[] ifftBuffer = new Complex64[FRAME_SIZE];
@@ -45,7 +45,7 @@ namespace BGC.Audio.Synthesis
         {
             this.carrierTones = carrierTones.ToArray();
 
-            timePerFrame = STEP_SIZE / (double)SamplingRate;
+            timePerStep = STEP_SIZE / (double)SamplingRate;
 
             //outputScalar = 1.0 / OVERLAP_FACTOR;
             outputScalar = 2.0 / (OVERLAP_FACTOR * Sqrt(FRAME_SIZE));
@@ -93,7 +93,7 @@ namespace BGC.Audio.Synthesis
                 Array.Clear(ifftBuffer, 0, ifftBuffer.Length);
 
                 //If there are any leading frames...
-                double timeShiftDeltaT = (frame + leadingFrames) * timePerFrame;
+                double timeShiftDeltaT = (frame + leadingFrames) * timePerStep;
                 bool isLeadingFrame = leadingFrames < 0;
 
                 foreach (ComplexCarrierTone carrierTone in carrierTones)

@@ -12,11 +12,12 @@ namespace BGC.Audio.Filters
     {
         public override int Channels => stream.Channels;
 
-        public override int TotalSamples => Channels * ChannelSamples;
+        public override int TotalSamples { get; }
         public override int ChannelSamples { get; }
 
-        private readonly float[] window;
-        private readonly int sampleOffset;
+        private readonly float[] openingWindow;
+        private readonly float[] closingWindow;
+        private readonly int sampleShift;
 
         private readonly int endOpeningWindow;
         private readonly int startClosingWindow;
@@ -30,37 +31,110 @@ namespace BGC.Audio.Filters
             Windowing.Function function = Windowing.Function.Hamming,
             double totalDuration = double.NaN,
             int smoothingSamples = 1000,
-            int sampleOffset = 0,
+            int sampleShift = 0,
             bool recalculateRMS = false)
             : base(stream)
         {
-            if (sampleOffset > stream.ChannelSamples)
+            if (sampleShift > stream.ChannelSamples)
             {
                 Debug.LogError("Requested a sampleOffset larger than clip length");
-                sampleOffset = 0;
+                sampleShift = 0;
             }
 
-            this.sampleOffset = sampleOffset;
+            this.sampleShift = sampleShift;
 
             if (!double.IsNaN(totalDuration))
             {
                 ChannelSamples = Math.Min(
-                    (int)(totalDuration * SamplingRate),
-                    stream.ChannelSamples - sampleOffset);
+                    (int)Math.Round(totalDuration * SamplingRate),
+                    stream.ChannelSamples - sampleShift);
+                TotalSamples = Channels * ChannelSamples;
             }
             else
             {
-                ChannelSamples = stream.ChannelSamples - sampleOffset;
+                if (stream.ChannelSamples == int.MaxValue)
+                {
+                    ChannelSamples = int.MaxValue;
+                    TotalSamples = int.MaxValue;
+                }
+                else
+                {
+                    ChannelSamples = stream.ChannelSamples - sampleShift;
+                    TotalSamples = Channels * ChannelSamples;
+                }
             }
 
             this.recalculateRMS = recalculateRMS;
 
             smoothingSamples = Math.Min(smoothingSamples, ChannelSamples / 2);
 
-            window = Windowing.GetHalfWindow(function, smoothingSamples);
+            openingWindow = Windowing.GetHalfWindow(function, smoothingSamples);
+            closingWindow = openingWindow;
 
             endOpeningWindow = smoothingSamples;
             startClosingWindow = ChannelSamples - smoothingSamples;
+
+            Reset();
+        }
+
+        public StreamWindower(
+            IBGCStream stream,
+            Windowing.Function openingFunction,
+            Windowing.Function closingFunction,
+            int openingSmoothingSamples = 1000,
+            int closingSmoothingSamples = 1000,
+            int sampleShift = 0,
+            int totalChannelSamples = -1,
+            bool recalculateRMS = false)
+            : base(stream)
+        {
+            if (sampleShift > stream.ChannelSamples)
+            {
+                Debug.LogError("Requested a sampleOffset larger than clip length");
+                sampleShift = 0;
+            }
+
+            this.sampleShift = sampleShift;
+            this.recalculateRMS = recalculateRMS;
+
+            if (totalChannelSamples != -1)
+            {
+                ChannelSamples = Math.Min(
+                    totalChannelSamples,
+                    stream.ChannelSamples - sampleShift);
+                TotalSamples = Channels * ChannelSamples;
+            }
+            else
+            {
+                if (stream.ChannelSamples == int.MaxValue)
+                {
+                    ChannelSamples = int.MaxValue;
+                    TotalSamples = int.MaxValue;
+                }
+                else
+                {
+                    ChannelSamples = stream.ChannelSamples - sampleShift;
+                    TotalSamples = Channels * ChannelSamples;
+                }
+            }
+
+            if (openingSmoothingSamples + closingSmoothingSamples > ChannelSamples)
+            {
+                //Requested smoothing samples exceeded remaining stream length
+                int totalSmoothingSamples = openingSmoothingSamples + closingSmoothingSamples;
+                int excessSamples = ChannelSamples - totalSmoothingSamples;
+
+                //Allocate reduced smoothing samples based on requested percentage
+                openingSmoothingSamples -= (int)Math.Round(
+                    excessSamples * (openingSmoothingSamples / (double)totalSmoothingSamples));
+                closingSmoothingSamples = ChannelSamples - openingSmoothingSamples;
+            }
+
+            openingWindow = Windowing.GetHalfWindow(openingFunction, openingSmoothingSamples);
+            closingWindow = Windowing.GetHalfWindow(closingFunction, closingSmoothingSamples);
+
+            endOpeningWindow = openingSmoothingSamples;
+            startClosingWindow = ChannelSamples - closingSmoothingSamples;
 
             Reset();
         }
@@ -69,16 +143,16 @@ namespace BGC.Audio.Filters
         {
             Position = 0;
             stream.Reset();
-            if (sampleOffset > 0)
+            if (sampleShift > 0)
             {
-                stream.Seek(sampleOffset);
+                stream.Seek(sampleShift);
             }
         }
 
         public override void Seek(int position)
         {
             Position = GeneralMath.Clamp(position, 0, ChannelSamples);
-            stream.Seek(Position + sampleOffset);
+            stream.Seek(Position + sampleShift);
         }
 
         public override int Read(float[] data, int offset, int count)
@@ -105,7 +179,7 @@ namespace BGC.Audio.Filters
 
                     for (int i = 0; i < readSamples; i++)
                     {
-                        data[offset + i] *= window[Position + (i / Channels)];
+                        data[offset + i] *= openingWindow[Position + (i / Channels)];
                     }
 
                     remainingSamples -= readSamples;
@@ -150,7 +224,7 @@ namespace BGC.Audio.Filters
 
                     for (int i = 0; i < readSamples; i++)
                     {
-                        data[offset + i] *= window[window.Length + startClosingWindow - (Position + (i / Channels) + 1)];
+                        data[offset + i] *= closingWindow[closingWindow.Length + startClosingWindow - (Position + (i / Channels) + 1)];
                     }
 
                     remainingSamples -= readSamples;

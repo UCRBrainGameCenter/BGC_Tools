@@ -192,9 +192,41 @@ namespace BGC.Audio
             Windowing.Function function = Windowing.Function.Hamming,
             int smoothingSamples = 1000)
         {
-            return new StreamWindower(stream, function,
+            return new StreamWindower(
+                stream: stream,
+                function: function,
                 totalDuration: totalDuration,
                 smoothingSamples: smoothingSamples);
+        }
+
+        public static IBGCStream Window(
+            this IBGCStream stream,
+            Windowing.Function function = Windowing.Function.Hamming,
+            int smoothingSamples = 1000)
+        {
+            return new StreamWindower(
+                stream: stream,
+                function: function,
+                smoothingSamples: smoothingSamples);
+        }
+
+        public static IBGCStream Window(
+            this IBGCStream stream,
+            Windowing.Function openingFunction,
+            Windowing.Function closingFunction,
+            int openingSmoothingSamples = 1000,
+            int closingSmoothingSamples = 1000,
+            int sampleShift = 0,
+            int totalChannelSamples = -1)
+        {
+            return new StreamWindower(
+                stream: stream,
+                openingFunction: openingFunction,
+                closingFunction: closingFunction,
+                openingSmoothingSamples: openingSmoothingSamples,
+                closingSmoothingSamples: closingSmoothingSamples,
+                sampleShift: sampleShift,
+                totalChannelSamples: totalChannelSamples);
         }
 
         public static IBGCStream Truncate(
@@ -208,20 +240,11 @@ namespace BGC.Audio
 
         public static IBGCStream Truncate(
             this IBGCStream stream,
-            int samples,
+            int totalChannelSamples,
             int offset = 0,
             bool recalculateRMS = false)
         {
-            return new StreamTruncator(stream, samples, offset, recalculateRMS);
-        }
-
-        public static IBGCStream Window(
-            this IBGCStream stream,
-            Windowing.Function function = Windowing.Function.Hamming,
-            int smoothingSamples = 1000)
-        {
-            return new StreamWindower(stream, function,
-                smoothingSamples: smoothingSamples);
+            return new StreamTruncator(stream, totalChannelSamples, offset, recalculateRMS);
         }
 
         public static IBGCStream IsolateChannel(
@@ -408,6 +431,14 @@ namespace BGC.Audio
             double timeShift)
         {
             return new StreamTimeShiftFilter(stream, timeShift);
+        }
+
+        public static IBGCStream SinglePassPhaseReencode(
+            this IBGCStream stream,
+            double leftTimeShift,
+            double rightTimeShift)
+        {
+            return new SinglePassPhaseReencoder(stream, leftTimeShift, rightTimeShift);
         }
 
         public static IBGCStream Loop(this IBGCStream stream)
