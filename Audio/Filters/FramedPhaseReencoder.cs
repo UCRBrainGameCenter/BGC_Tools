@@ -9,8 +9,6 @@ namespace BGC.Audio.Filters
 {
     /// <summary>
     /// Applies an ITD by adjusting the phase in the frequency domain, frame-based
-    /// 
-    /// This is close, but isn't ready for primetime yet.
     /// </summary>
     public class FramedPhaseReencoder : SimpleBGCFilter
     {
@@ -55,8 +53,8 @@ namespace BGC.Audio.Filters
         public FramedPhaseReencoder(
             IBGCStream stream,
             double timeShift,
-            int frameSize,
-            int overlapFactor)
+            int frameSize = (1 << 11),
+            int overlapFactor = 8)
             : base(stream)
         {
             UnityEngine.Debug.LogWarning("FramedPhaseReencoder isn't really ready... use at your own risk.");
@@ -119,8 +117,8 @@ namespace BGC.Audio.Filters
             IBGCStream stream,
             double leftTimeShift,
             double rightTimeShift,
-            int frameSize = 8192,
-            int overlapFactor = 16)
+            int frameSize = (1 << 11),
+            int overlapFactor = 8)
             : base(StereoifyStream(stream))
         {
             UnityEngine.Debug.LogWarning("FramedPhaseReencoder isn't really ready... use at your own risk.");
@@ -169,7 +167,7 @@ namespace BGC.Audio.Filters
                 phasors[i][0] = 1.0;
             }
 
-            outputScalar = 2.0 / (this.overlapFactor * Sqrt(frameSize));
+            outputScalar = 2.0 / this.overlapFactor;
 
             windowInput = new double[frameSize];
 

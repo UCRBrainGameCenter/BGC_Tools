@@ -234,7 +234,7 @@ namespace BGC.Tests
                             carrierFuncs[i]()
                                 .BiQuadBandpassFilter(
                                     criticalFrequency: 500,
-                                    qFactor: qFactor), 
+                                    qFactor: qFactor),
                             carrierFuncs[j]()
                                 .BiQuadBandpassFilter(
                                     criticalFrequency: 1500,
@@ -570,6 +570,106 @@ namespace BGC.Tests
         }
 
         [Test]
+        public void TestFDComposer()
+        {
+            Calibration.Initialize();
+
+            System.Random randomizer = new System.Random();
+
+            IEnumerable<double> frequencies = GetExpFrequencies(500, 10000, 10000);
+
+            IEnumerable<ComplexCarrierTone> carriers = frequencies.Select(freq =>
+                new ComplexCarrierTone(
+                    frequency: freq,
+                    amplitude: Complex64.FromPolarCoordinates(
+                        magnitude: CustomRandom.RayleighDistribution(randomizer.NextDouble()),
+                        phase: 2.0 * Math.PI * randomizer.NextDouble()))).ToArray();
+
+
+            for (int frameExp = 10; frameExp < 16; frameExp++)
+            {
+                for (int overlapExp = 1; overlapExp < 6; overlapExp++)
+                {
+                    int frameSize = 1 << frameExp;
+                    int overlap = 1 << overlapExp;
+
+                    IBGCStream composed = new FrequencyDomainToneComposer(
+                            carrierTones: carriers,
+                            frameSize: frameSize,
+                            overlapFactor: overlap)
+                        .Truncate(totalDuration: 1.0)
+                        .StandardizeRMS(0.008)
+                        .Cache();
+
+                    Debug.Log($"(FrameSize, Overlap): ({frameSize},{overlap}). " +
+                        $"RMSExp: 0.008  " +
+                        $"RMSActual: {composed.GetChannelRMS().First()}");
+
+                    WaveEncoding.SaveStream(
+                       filepath: DataManagement.PathForDataFile("Test", $"FDNoise_{frameExp:D2}_{overlapExp}.wav"),
+                       stream: composed,
+                       overwrite: true);
+                }
+            }
+        }
+
+        [Test]
+        public void TestFDComposerPure()
+        {
+            Calibration.Initialize();
+
+            System.Random randomizer = new System.Random();
+
+            //Maximally inharmonic
+            double frequency = 1 / ((1 / 441.0) + 0.5 / 44100.0);
+
+            IEnumerable<ComplexCarrierTone> carriers = new ComplexCarrierTone[]
+            {
+                new ComplexCarrierTone(
+                    frequency: frequency,
+                    amplitude: Complex64.FromPolarCoordinates(
+                        magnitude: 1.0,
+                        phase: 2.0 * Math.PI * randomizer.NextDouble()))
+            };
+
+            for (int frameExp = 10; frameExp < 16; frameExp++)
+            {
+                for (int overlapExp = 1; overlapExp < 6; overlapExp++)
+                {
+                    int frameSize = 1 << frameExp;
+                    int overlap = 1 << overlapExp;
+
+                    IBGCStream composed = new FrequencyDomainToneComposer(
+                            carrierTones: carriers,
+                            frameSize: frameSize,
+                            overlapFactor: overlap)
+                        .Truncate(totalDuration: 1.0)
+                        .StandardizeRMS(0.008)
+                        .Cache();
+
+                    Debug.Log($"(FrameSize, Overlap): ({frameSize},{overlap}). " +
+                        $"RMSExp: 0.008 " +
+                        $"RMSActual: {composed.GetChannelRMS().First()}");
+
+                    WaveEncoding.SaveStream(
+                       filepath: DataManagement.PathForDataFile("Test", $"FDClean_{frameExp:D2}_{overlapExp}.wav"),
+                       stream: composed.StandardizeRMS(),
+                       overwrite: true);
+                }
+            }
+        }
+
+        private IEnumerable<double> GetExpFrequencies(double freqLB, double freqUB, int freqCount)
+        {
+            double ratio = freqUB / freqLB;
+
+            for (int i = 0; i < freqCount; i++)
+            {
+                yield return freqLB * Math.Pow(ratio, i / (double)(freqCount - 1));
+            }
+        }
+
+        [Test]
         public void TestPhaseReEncoder()
         {
             Calibration.Initialize();
@@ -601,14 +701,34 @@ namespace BGC.Tests
                stream: fullReencodedStream,
                overwrite: true);
 
-            IBGCStream frameReencodedStream = new FramedPhaseReencoder(baseStream, 0.0, 0.000_100, 8192, 16);
+            IBGCStream frameReencodedStream = new FramedPhaseReencoder(baseStream, 0.0, 0.000_100);
 
             Debug.Log($"After Full ReEncoding: ({string.Join(",", frameReencodedStream.CalculateRMS().Select(x => x.ToString()))})");
 
             WaveEncoding.SaveStream(
-               filepath: DataManagement.PathForDataFile("Test", $"ReEncoding_Frame.wav"),
-               stream: frameReencodedStream,
-               overwrite: true);
+                filepath: DataManagement.PathForDataFile("Test", $"ReEncoding_Frame.wav"),
+                stream: frameReencodedStream,
+                overwrite: true);
+        }
+
+        [Test]
+        public void TestSTM()
+        {
+            Calibration.Initialize();
+
+            WaveEncoding.SaveStream(
+            filepath: DataManagement.PathForDataFile("Test", $"Long_STM.wav"),
+            stream: new STMAudioClip(
+                duration: 95.0,
+                freqLB: 20,
+                freqUB: 10000,
+                frequencyCount: 10000,
+                modulationDepth: 20,
+                spectralModulationRate: 2,
+                temporalModulationRate: 4,
+                rippleDirection: STMAudioClip.RippleDirection.Up,
+                distribution: STMAudioClip.AmplitudeDistribution.Pink).SlowRangeFitter(),
+            overwrite: true);
         }
 
         [Test]

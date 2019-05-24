@@ -20,20 +20,20 @@ namespace BGC.Audio.Synthesis
 
         private readonly ComplexCarrierTone[] carrierTones;
 
-        private const int FRAME_SIZE = 8192;
-        private const int OVERLAP_FACTOR = 16;
-        private const int WINDOWING_SAMPLES = FRAME_SIZE / 2;
+        private readonly int frameSize;
+        private readonly int windowingSamples;
 
-        private const int STEP_SIZE = FRAME_SIZE / OVERLAP_FACTOR;
-        private const int OVERLAP = FRAME_SIZE - STEP_SIZE;
+        private readonly int overlapFactor;
+        private readonly int stepSize;
+        private readonly int overlap;
 
         private readonly double timePerStep;
         private readonly double outputScalar;
 
-        private readonly Complex64[] ifftBuffer = new Complex64[FRAME_SIZE];
-        private readonly float[] outputAccumulation = new float[FRAME_SIZE];
-        private readonly float[] cachedSampleBuffer = new float[STEP_SIZE];
-        private readonly double[] window = new double[FRAME_SIZE];
+        private readonly Complex64[] ifftBuffer;
+        private readonly float[] outputAccumulation;
+        private readonly float[] cachedSampleBuffer;
+        private readonly double[] window;
 
         private int leadingFrames = 0;
         private int frame = 0;
@@ -41,27 +41,43 @@ namespace BGC.Audio.Synthesis
         private int bufferIndex = 0;
         private int bufferCount = 0;
 
-        public FrequencyDomainToneComposer(IEnumerable<ComplexCarrierTone> carrierTones)
+        public FrequencyDomainToneComposer(
+            IEnumerable<ComplexCarrierTone> carrierTones,
+            int frameSize = (1 << 11),
+            int overlapFactor = 8)
         {
             this.carrierTones = carrierTones.ToArray();
 
-            timePerStep = STEP_SIZE / (double)SamplingRate;
+            this.frameSize = frameSize;
+            this.overlapFactor = overlapFactor;
+
+            windowingSamples = frameSize / 2;
+            stepSize = frameSize / overlapFactor;
+            overlap = frameSize - stepSize;
+
+            timePerStep = stepSize / (double)SamplingRate;
 
             //outputScalar = 1.0 / OVERLAP_FACTOR;
-            outputScalar = 2.0 / (OVERLAP_FACTOR * Sqrt(FRAME_SIZE));
+            outputScalar = 2.0 / (overlapFactor * Sqrt(frameSize));
 
-            for (int i = 0; i < WINDOWING_SAMPLES; i++)
+            ifftBuffer = new Complex64[frameSize];
+            outputAccumulation = new float[frameSize];
+            cachedSampleBuffer = new float[stepSize];
+            window = new double[frameSize];
+
+
+            for (int i = 0; i < windowingSamples; i++)
             {
-                window[i] = 0.54 - 0.46 * Cos(i * PI / WINDOWING_SAMPLES);
-                window[FRAME_SIZE - i - 1] = window[i];
+                window[i] = 0.54 - 0.46 * Cos(i * PI / windowingSamples);
+                window[frameSize - i - 1] = window[i];
             }
 
-            for (int i = WINDOWING_SAMPLES; i < FRAME_SIZE - WINDOWING_SAMPLES; i++)
+            for (int i = windowingSamples; i < frameSize - windowingSamples; i++)
             {
                 window[i] = 1.0;
             }
 
-            leadingFrames = -(OVERLAP_FACTOR - 1);
+            leadingFrames = -(overlapFactor - 1);
         }
 
         private int ReadBody(float[] buffer, int offset, int count)
@@ -87,7 +103,7 @@ namespace BGC.Audio.Synthesis
             while (samplesWritten < count)
             {
                 bufferIndex = 0;
-                bufferCount = STEP_SIZE;
+                bufferCount = stepSize;
 
                 //Clear IFFT Buffer
                 Array.Clear(ifftBuffer, 0, ifftBuffer.Length);
@@ -107,7 +123,7 @@ namespace BGC.Audio.Synthesis
                 Fourier.Inverse(ifftBuffer);
 
                 //Accumualte the window samples
-                for (int i = 0; i < FRAME_SIZE; i++)
+                for (int i = 0; i < frameSize; i++)
                 {
                     outputAccumulation[i] += (float)(outputScalar * window[i] * ifftBuffer[i].Real);
                 }
@@ -126,21 +142,21 @@ namespace BGC.Audio.Synthesis
                 Array.Copy(
                     sourceArray: outputAccumulation,
                     destinationArray: cachedSampleBuffer,
-                    length: STEP_SIZE);
+                    length: stepSize);
 
                 //Slide down output accumulation
                 Array.Copy(
                     sourceArray: outputAccumulation,
-                    sourceIndex: STEP_SIZE,
+                    sourceIndex: stepSize,
                     destinationArray: outputAccumulation,
                     destinationIndex: 0,
-                    length: OVERLAP);
+                    length: overlap);
 
                 //Clear empty output accumulation region
                 Array.Clear(
                     array: outputAccumulation,
-                    index: OVERLAP,
-                    length: STEP_SIZE);
+                    index: overlap,
+                    length: stepSize);
 
                 if (!isLeadingFrame)
                 {
@@ -155,9 +171,9 @@ namespace BGC.Audio.Synthesis
         {
             bufferIndex = 0;
             bufferCount = 0;
-            leadingFrames = -(OVERLAP_FACTOR - 1);
+            leadingFrames = -(overlapFactor - 1);
 
-            Array.Clear(outputAccumulation, 0, FRAME_SIZE);
+            Array.Clear(outputAccumulation, 0, frameSize);
         }
 
         public override void Reset()
@@ -169,8 +185,8 @@ namespace BGC.Audio.Synthesis
         public override void Seek(int position)
         {
             ClearBuffers();
-            frame = position / STEP_SIZE;
-            int scanSamples = position - STEP_SIZE * frame;
+            frame = position / stepSize;
+            int scanSamples = position - stepSize * frame;
             float[] temp = new float[scanSamples];
 
             Read(temp, 0, scanSamples);

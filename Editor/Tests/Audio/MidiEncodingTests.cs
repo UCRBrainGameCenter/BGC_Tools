@@ -42,7 +42,6 @@ namespace BGC.Tests
                 midiFile: midiFile,
                 overwrite: true));
 
-
             Assert.IsTrue(File.Exists(saveFile));
         }
 
