@@ -570,6 +570,48 @@ namespace BGC.Tests
         }
 
         [Test]
+        public void TestPhaseReEncoder()
+        {
+            Calibration.Initialize();
+
+            IBGCStream baseStream = new STMAudioClip(
+                duration: 2.0,
+                freqLB: 20,
+                freqUB: 10000,
+                frequencyCount: 10000,
+                modulationDepth: 20,
+                spectralModulationRate: 2,
+                temporalModulationRate: 4,
+                rippleDirection: STMAudioClip.RippleDirection.Up,
+                distribution: STMAudioClip.AmplitudeDistribution.Pink).StandardizeRMS();
+
+            Debug.Log($"Base RMS: {baseStream.CalculateRMS().First()}");
+
+            WaveEncoding.SaveStream(
+               filepath: DataManagement.PathForDataFile("Test", $"ReEncoding_Initial.wav"),
+               stream: baseStream,
+               overwrite: true);
+
+            IBGCStream fullReencodedStream = baseStream.SinglePassPhaseReencode(0.0, 0.000_100);
+
+            Debug.Log($"After Full ReEncoding: ({string.Join(",", fullReencodedStream.CalculateRMS().Select(x => x.ToString()))})");
+
+            WaveEncoding.SaveStream(
+               filepath: DataManagement.PathForDataFile("Test", $"ReEncoding_Full.wav"),
+               stream: fullReencodedStream,
+               overwrite: true);
+
+            IBGCStream frameReencodedStream = new FramedPhaseReencoder(baseStream, 0.0, 0.000_100, 8192, 16);
+
+            Debug.Log($"After Full ReEncoding: ({string.Join(",", frameReencodedStream.CalculateRMS().Select(x => x.ToString()))})");
+
+            WaveEncoding.SaveStream(
+               filepath: DataManagement.PathForDataFile("Test", $"ReEncoding_Frame.wav"),
+               stream: frameReencodedStream,
+               overwrite: true);
+        }
+
+        [Test]
         public void SmallSineFMTest()
         {
             Calibration.Initialize();

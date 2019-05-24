@@ -54,9 +54,9 @@ namespace BGC.Audio.Filters
 
         public FramedPhaseReencoder(
             IBGCStream stream,
+            double timeShift,
             int frameSize,
-            int overlapFactor,
-            double timeShift)
+            int overlapFactor)
             : base(stream)
         {
             UnityEngine.Debug.LogWarning("FramedPhaseReencoder isn't really ready... use at your own risk.");
@@ -117,10 +117,10 @@ namespace BGC.Audio.Filters
 
         public FramedPhaseReencoder(
             IBGCStream stream,
-            int frameSize,
-            int overlapFactor,
             double leftTimeShift,
-            double rightTimeShift)
+            double rightTimeShift,
+            int frameSize = 8192,
+            int overlapFactor = 16)
             : base(StereoifyStream(stream))
         {
             UnityEngine.Debug.LogWarning("FramedPhaseReencoder isn't really ready... use at your own risk.");
@@ -157,6 +157,7 @@ namespace BGC.Audio.Filters
             for (int i = 0; i < Channels; i++)
             {
                 inputBuffers[i] = new float[frameSize];
+                phasors[i] = new Complex64[halfFrameSize];
 
                 double rotationFactor = -2.0 * PI * SamplingRate * timeShifts[i] / frameSize;
                 for (int j = 1; j < halfFrameSize; j++)
