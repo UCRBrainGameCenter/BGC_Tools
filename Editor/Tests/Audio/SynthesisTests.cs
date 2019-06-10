@@ -675,40 +675,133 @@ namespace BGC.Tests
             Calibration.Initialize();
 
             IBGCStream baseStream = new STMAudioClip(
-                duration: 2.0,
-                freqLB: 20,
-                freqUB: 10000,
-                frequencyCount: 10000,
-                modulationDepth: 20,
-                spectralModulationRate: 2,
-                temporalModulationRate: 4,
-                rippleDirection: STMAudioClip.RippleDirection.Up,
-                distribution: STMAudioClip.AmplitudeDistribution.Pink).StandardizeRMS();
+                    duration: 4.0,
+                    freqLB: 20,
+                    freqUB: 10000,
+                    frequencyCount: 10000,
+                    modulationDepth: 20,
+                    spectralModulationRate: 2,
+                    temporalModulationRate: 4,
+                    rippleDirection: STMAudioClip.RippleDirection.Up,
+                    distribution: STMAudioClip.AmplitudeDistribution.Pink)
+                .StandardizeRMS(0.008)
+                .Cache();
 
             Debug.Log($"Base RMS: {baseStream.CalculateRMS().First()}");
 
             WaveEncoding.SaveStream(
-               filepath: DataManagement.PathForDataFile("Test", $"ReEncoding_Initial.wav"),
-               stream: baseStream,
-               overwrite: true);
+                filepath: DataManagement.PathForDataFile("Test", $"ReEncoding_Initial.wav"),
+                stream: baseStream
+                    .Truncate(totalDuration: 1.0)
+                    .Window(),
+                overwrite: true);
 
             IBGCStream fullReencodedStream = baseStream.SinglePassPhaseReencode(0.0, 0.000_100);
 
-            Debug.Log($"After Full ReEncoding: ({string.Join(",", fullReencodedStream.CalculateRMS().Select(x => x.ToString()))})");
+            Debug.Log($"After 100us Full ReEncoding: ({string.Join(",", fullReencodedStream.CalculateRMS().Select(x => x.ToString()))})");
 
             WaveEncoding.SaveStream(
-               filepath: DataManagement.PathForDataFile("Test", $"ReEncoding_Full.wav"),
-               stream: fullReencodedStream,
+               filepath: DataManagement.PathForDataFile("Test", $"ReEncoding_0100us_Single.wav"),
+               stream: fullReencodedStream
+                    .Truncate(totalDuration: 1.0)
+                    .Window(),
                overwrite: true);
 
             IBGCStream frameReencodedStream = new FramedPhaseReencoder(baseStream, 0.0, 0.000_100);
 
-            Debug.Log($"After Full ReEncoding: ({string.Join(",", frameReencodedStream.CalculateRMS().Select(x => x.ToString()))})");
+            Debug.Log($"After 100us Frame ReEncoding: ({string.Join(",", frameReencodedStream.CalculateRMS().Select(x => x.ToString()))})");
 
             WaveEncoding.SaveStream(
-                filepath: DataManagement.PathForDataFile("Test", $"ReEncoding_Frame.wav"),
-                stream: frameReencodedStream,
+                filepath: DataManagement.PathForDataFile("Test", $"ReEncoding_0100us_Frame.wav"),
+                stream: frameReencodedStream
+                    .Truncate(totalDuration: 1.0)
+                    .Window(),
                 overwrite: true);
+
+            fullReencodedStream = baseStream.SinglePassPhaseReencode(0.0, 0.001_000);
+
+            Debug.Log($"After 1000us Full ReEncoding: ({string.Join(",", fullReencodedStream.CalculateRMS().Select(x => x.ToString()))})");
+
+            WaveEncoding.SaveStream(
+               filepath: DataManagement.PathForDataFile("Test", $"ReEncoding_1000us_Single.wav"),
+               stream: fullReencodedStream
+                    .Truncate(totalDuration: 1.0)
+                    .Window(),
+               overwrite: true);
+
+            frameReencodedStream = new FramedPhaseReencoder(baseStream, 0.0, 0.001_000);
+
+            Debug.Log($"After 1000us Frame ReEncoding: ({string.Join(",", frameReencodedStream.CalculateRMS().Select(x => x.ToString()))})");
+
+            WaveEncoding.SaveStream(
+                filepath: DataManagement.PathForDataFile("Test", $"ReEncoding_1000us_Frame.wav"),
+                stream: frameReencodedStream
+                    .Truncate(totalDuration: 1.0)
+                    .Window(),
+                overwrite: true);
+
+            fullReencodedStream = baseStream.SinglePassPhaseReencode(0.0, 0.000_010);
+
+            Debug.Log($"After 10us Full ReEncoding: ({string.Join(",", fullReencodedStream.CalculateRMS().Select(x => x.ToString()))})");
+
+            WaveEncoding.SaveStream(
+               filepath: DataManagement.PathForDataFile("Test", $"ReEncoding_0010us_Single.wav"),
+               stream: fullReencodedStream
+                    .Truncate(totalDuration: 1.0)
+                    .Window(),
+               overwrite: true);
+
+            frameReencodedStream = new FramedPhaseReencoder(baseStream, 0.0, 0.000_010);
+
+            Debug.Log($"After 10us Frame ReEncoding: ({string.Join(",", frameReencodedStream.CalculateRMS().Select(x => x.ToString()))})");
+
+            WaveEncoding.SaveStream(
+                filepath: DataManagement.PathForDataFile("Test", $"ReEncoding_0010us_Frame.wav"),
+                stream: frameReencodedStream
+                    .Truncate(totalDuration: 1.0)
+                    .Window(),
+                overwrite: true);
+
+            WaveEncoding.LoadBGCStream(
+                filepath: DataManagement.PathForDataFile("Test", "000000.wav"),
+                stream: out baseStream);
+
+            baseStream = baseStream.StandardizeRMS();
+
+            WaveEncoding.SaveStream(
+               filepath: DataManagement.PathForDataFile("Test", $"ReEncodingCRM_initial.wav"),
+               stream: baseStream,
+               overwrite: true);
+
+            WaveEncoding.SaveStream(
+               filepath: DataManagement.PathForDataFile("Test", $"ReEncodingCRM_1000us_Single.wav"),
+               stream: baseStream.SinglePassPhaseReencode(0.0, 0.001_000),
+               overwrite: true);
+
+            WaveEncoding.SaveStream(
+               filepath: DataManagement.PathForDataFile("Test", $"ReEncodingCRM_0100us_Single.wav"),
+               stream: baseStream.SinglePassPhaseReencode(0.0, 0.000_100),
+               overwrite: true);
+
+            WaveEncoding.SaveStream(
+               filepath: DataManagement.PathForDataFile("Test", $"ReEncodingCRM_0010us_Single.wav"),
+               stream: baseStream.SinglePassPhaseReencode(0.0, 0.000_010),
+               overwrite: true);
+
+            WaveEncoding.SaveStream(
+               filepath: DataManagement.PathForDataFile("Test", $"ReEncodingCRM_1000us_Frame.wav"),
+               stream: new FramedPhaseReencoder(baseStream, 0.0, 0.001_000),
+               overwrite: true);
+
+            WaveEncoding.SaveStream(
+               filepath: DataManagement.PathForDataFile("Test", $"ReEncodingCRM_0100us_Frame.wav"),
+               stream: new FramedPhaseReencoder(baseStream, 0.0, 0.000_100),
+               overwrite: true);
+
+            WaveEncoding.SaveStream(
+               filepath: DataManagement.PathForDataFile("Test", $"ReEncodingCRM_0010us_Frame.wav"),
+               stream: new FramedPhaseReencoder(baseStream, 0.0, 0.000_010),
+               overwrite: true);
         }
 
         [Test]

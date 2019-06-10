@@ -232,7 +232,8 @@ namespace BGC.UI.Dialogs
             string headerText,
             string bodyText,
             ModalInputCallback inputCallback,
-            ModalButtonCallback buttonCallback = null)
+            ModalButtonCallback buttonCallback = null,
+            InputField.ContentType inputType = InputField.ContentType.Alphanumeric)
         {
             Debug.Assert(
                 condition: mode == Mode.InputAccept || mode == Mode.InputConfirmCancel,
@@ -253,6 +254,8 @@ namespace BGC.UI.Dialogs
             instance.inputCallback = inputCallback;
             instance.doubleInputCallback = null;
             instance.dropdownInputCallback = null;
+
+            instance.primaryInputField.contentType = inputType;
         }
 
         /// <summary>
@@ -263,7 +266,9 @@ namespace BGC.UI.Dialogs
             string primaryBodyText,
             string secondaryBodyText,
             ModalDoubleInputCallback inputCallback,
-            ModalButtonCallback buttonCallback = null)
+            ModalButtonCallback buttonCallback = null,
+            InputField.ContentType primaryInputType = InputField.ContentType.Alphanumeric,
+            InputField.ContentType secondaryInputType = InputField.ContentType.Alphanumeric)
         {
             //Update text
             instance.SetHeaderText(headerText);
@@ -280,6 +285,9 @@ namespace BGC.UI.Dialogs
             instance.inputCallback = null;
             instance.doubleInputCallback = inputCallback;
             instance.dropdownInputCallback = null;
+
+            instance.primaryInputField.contentType = primaryInputType;
+            instance.secondaryInputField.contentType = secondaryInputType;
         }
 
         /// <summary>
