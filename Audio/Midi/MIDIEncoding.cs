@@ -167,7 +167,7 @@ namespace BGC.Audio.Midi
                     }
                     else
                     {
-                        filePath = DataManagement.NextAvailableFilePath(filePath);
+                        filePath = FilePath.NextAvailableFilePath(filePath);
                     }
                 }
 

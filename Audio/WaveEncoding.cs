@@ -920,7 +920,7 @@ namespace BGC.Audio
                     }
                     else
                     {
-                        filepath = IO.DataManagement.NextAvailableFilePath(filepath);
+                        filepath = IO.FilePath.NextAvailableFilePath(filepath);
                     }
                 }
 
