@@ -130,14 +130,10 @@ namespace BGC.Mathematics
             primeField.Set(1, false);
             yield return 2;
 
-            ////Skip Clearing 2's - We won't check them
-            //for (int j = 4; j < number; j += 2)
-            //{
-            //    primeField.Set(j, false);
-            //}
+            //We don't bother setting the multiples of 2 because we don't bother checking them.
 
-            //Clear Others
-            for (int i = 3; i * i < number; i += 2)
+            int i;
+            for (i = 3; i * i < number; i += 2)
             {
                 if (primeField.Get(i))
                 {
@@ -153,6 +149,15 @@ namespace BGC.Mathematics
                     {
                         primeField.Set(j, false);
                     }
+                }
+            }
+
+            //Grab remainder of identified primes
+            for (; i < number; i += 2)
+            {
+                if (primeField.Get(i))
+                {
+                    yield return i;
                 }
             }
         }
