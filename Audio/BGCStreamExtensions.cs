@@ -568,6 +568,14 @@ namespace BGC.Audio
         /// <returns>New cached audio clip</returns>
         public static SimpleAudioClip Cache(this IBGCStream stream)
         {
+            if (stream.TotalSamples == int.MaxValue)
+            {
+                Debug.LogError($"Tried to cache infinite stream. Truncating to 10 seconds");
+
+                return stream.Truncate(10.0).Cache();
+            }
+
+
             stream.Reset();
             float[] samples = new float[stream.TotalSamples];
             stream.Read(samples, 0, stream.TotalSamples);

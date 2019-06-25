@@ -49,6 +49,10 @@ namespace BGC.Audio.Synthesis
 
             samples = new Complex64[intSampleCount];
 
+            //Initial implementation was actually Cosine.  Duh...
+            //Need to subtract Pi/2 to make it the advertised sine wave.
+            initialPhase -= 0.5 * PI;
+
             for (int i = 0; i < samples.Length; i++)
             {
                 samples[i] = Complex64.FromPolarCoordinates(
@@ -58,8 +62,30 @@ namespace BGC.Audio.Synthesis
         }
 
         public SineWave(Complex64 amplitude, double frequency)
-            : this (amplitude.Magnitude, frequency, amplitude.Phase)
         {
+            if (frequency == 0.0)
+            {
+                throw new ArgumentException($"Unable to render 0Hz Sine Wave");
+            }
+
+            this.amplitude = amplitude.Magnitude;
+
+            double sampleCount = SamplingRate / frequency;
+            int intSampleCount = (int)Ceiling(sampleCount) - 1;
+
+            cyclePartial = (2 * PI * frequency / SamplingRate) * (intSampleCount - sampleCount);
+
+            cycles = 0;
+            partial = Complex64.FromPolarCoordinates(
+                magnitude: 1.0,
+                phase: cycles * cyclePartial);
+
+            samples = new Complex64[intSampleCount];
+
+            for (int i = 0; i < samples.Length; i++)
+            {
+                samples[i] = amplitude.Rotation(2 * PI * i / sampleCount);
+            }
         }
 
         public SineWave(ComplexCarrierTone carrier)

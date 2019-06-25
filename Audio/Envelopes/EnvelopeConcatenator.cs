@@ -158,7 +158,7 @@ namespace BGC.Audio.Envelopes
 
                 if (_samplingRate != samplingRates.Min())
                 {
-                    throw new Exception("AudioClipConcatenator requires all streams have the same samplingRate.");
+                    throw new Exception("EnvelopeConcatenator requires all streams have the same samplingRate.");
                 }
 
 

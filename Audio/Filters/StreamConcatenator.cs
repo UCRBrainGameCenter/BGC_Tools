@@ -136,7 +136,7 @@ namespace BGC.Audio.Filters
 
                 if (_channels != channels.Min())
                 {
-                    throw new Exception("AudioClipConcatenator requires all streams have the same channel count.");
+                    throw new Exception("StreamConcatenator requires all streams have the same channel count.");
                 }
 
                 IEnumerable<float> samplingRates = streams.Select(x => x.SamplingRate);
@@ -144,7 +144,7 @@ namespace BGC.Audio.Filters
 
                 if (_samplingRate != samplingRates.Min())
                 {
-                    throw new Exception("AudioClipConcatenator requires all streams have the same samplingRate.");
+                    throw new Exception("StreamConcatenator requires all streams have the same samplingRate.");
                 }
 
                 _channelSampleCount = streams.Select(x => x.ChannelSamples).Sum();

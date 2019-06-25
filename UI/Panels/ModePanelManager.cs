@@ -95,15 +95,17 @@ namespace BGC.UI.Panels
                 case ShowPanelMode.Hierarchy:
                     newPanelInferior = animationControlOrderMap[lastActivePanel] < animationControlOrderMap[newPanel];
                     break;
+
                 case ShowPanelMode.Push:
                 case ShowPanelMode.PushClone:
                     newPanelInferior = true;
                     break;
+
                 case ShowPanelMode.Pop:
                 case ShowPanelMode.PopClone:
                     newPanelInferior = false;
                     break;
-                case ShowPanelMode.MAX:
+
                 default:
                     newPanelInferior = true;
                     Debug.LogError($"Unrecognized ShowPanelMode: {mode}");
@@ -117,11 +119,12 @@ namespace BGC.UI.Panels
                 case ShowPanelMode.Pop:
                     SetPanelActive(newPanel, newPanelInferior);
                     break;
+
                 case ShowPanelMode.PushClone:
                 case ShowPanelMode.PopClone:
                     SpecialSetPanelActive(newPanel, newPanelInferior);
                     break;
-                case ShowPanelMode.MAX:
+
                 default:
                     Debug.LogError($"Unrecognized ShowPanelMode: {mode}");
                     break;
