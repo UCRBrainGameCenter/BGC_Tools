@@ -323,7 +323,8 @@ namespace BGC.UI.Dialogs
             string secondaryBodyText,
             IEnumerable<string> dropdownOptions,
             ModalDropdownInputCallback inputCallback,
-            ModalButtonCallback buttonCallback = null)
+            ModalButtonCallback buttonCallback = null,
+            InputField.ContentType inputType = InputField.ContentType.Alphanumeric)
         {
             //Update text
             instance.SetHeaderText(headerText);
@@ -346,6 +347,8 @@ namespace BGC.UI.Dialogs
             instance.inputCallback = null;
             instance.doubleInputCallback = null;
             instance.dropdownInputCallback = inputCallback;
+
+            instance.primaryInputField.contentType = inputType;
         }
     }
 }
