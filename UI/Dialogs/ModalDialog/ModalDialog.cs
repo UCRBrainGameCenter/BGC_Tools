@@ -348,7 +348,7 @@ namespace BGC.UI.Dialogs
             instance.doubleInputCallback = null;
             instance.dropdownInputCallback = inputCallback;
 
-            instance.primaryInputField.contentType = inputType;
+            instance.secondaryInputField.contentType = inputType;
         }
     }
 }
