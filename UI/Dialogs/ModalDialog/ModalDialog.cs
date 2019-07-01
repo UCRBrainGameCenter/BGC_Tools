@@ -29,6 +29,10 @@ namespace BGC.UI.Dialogs
         private Text secondaryBodyText = null;
         [SerializeField]
         private InputField secondaryInputField = null;
+        [SerializeField]
+        private Text toggleText = null;
+        [SerializeField]
+        private Toggle toggleButton = null;
 
         private static ModalDialog instance;
 
@@ -52,6 +56,7 @@ namespace BGC.UI.Dialogs
             Accept,
             YesNo,
             InputConfirmCancel,
+            InputToggleConfirmCancel,
             InputAccept,
             LockDown,
             ABC,
@@ -64,6 +69,9 @@ namespace BGC.UI.Dialogs
 
         public delegate void ModalInputCallback(Response response, string inputText);
         ModalInputCallback inputCallback;
+
+        public delegate void ModalInputToggleCallback(Response response, string inputText, bool toggle);
+        ModalInputToggleCallback inputToggleCallback;
 
         public delegate void ModalDoubleInputCallback(Response response, string primaryInput, string secondaryInput);
         ModalDoubleInputCallback doubleInputCallback;
@@ -88,10 +96,8 @@ namespace BGC.UI.Dialogs
             buttonC.onClick.AddListener(() => HandleButtons(Response.C));
         }
 
-        private void SetHeaderText(string text)
-        {
+        private void SetHeaderText(string text) =>
             headerText.text = text;
-        }
 
         private void SetBodyText(string primaryText, string secondaryText = "")
         {
@@ -99,12 +105,16 @@ namespace BGC.UI.Dialogs
             secondaryBodyText.text = secondaryText;
         }
 
+        private void SetToggleText(string text) =>
+            toggleText.text = text;
+
         private void SetMode(Mode mode)
         {
             primaryInputField.text = "";
             primaryInputField.gameObject.SetActive(
                 mode == Mode.InputAccept ||
                 mode == Mode.InputConfirmCancel ||
+                mode == Mode.InputToggleConfirmCancel ||
                 mode == Mode.InputInputConfirmCancel);
 
             secondaryBodyText.gameObject.SetActive(mode == Mode.InputInputConfirmCancel || mode == Mode.DropdownInput);
@@ -114,6 +124,8 @@ namespace BGC.UI.Dialogs
 
             optionDropdown.gameObject.SetActive(mode == Mode.DropdownInput);
 
+            toggleButton.gameObject.SetActive(mode == Mode.InputToggleConfirmCancel);
+
             //Set button text
             switch (mode)
             {
@@ -121,6 +133,7 @@ namespace BGC.UI.Dialogs
                 case Mode.InputConfirmCancel:
                 case Mode.InputInputConfirmCancel:
                 case Mode.DropdownInput:
+                case Mode.InputToggleConfirmCancel:
                     SetButtonText(a: "Confirm", b: "Cancel");
                     break;
 
@@ -191,6 +204,7 @@ namespace BGC.UI.Dialogs
             //Update Callbacks
             instance.buttonCallback = callback;
             instance.inputCallback = null;
+            instance.inputToggleCallback = null;
             instance.doubleInputCallback = null;
             instance.dropdownInputCallback = null;
         }
@@ -220,6 +234,7 @@ namespace BGC.UI.Dialogs
             //Update Callbacks
             instance.buttonCallback = callback;
             instance.inputCallback = null;
+            instance.inputToggleCallback = null;
             instance.doubleInputCallback = null;
             instance.dropdownInputCallback = null;
         }
@@ -252,6 +267,7 @@ namespace BGC.UI.Dialogs
             //Update callbacks
             instance.buttonCallback = buttonCallback;
             instance.inputCallback = inputCallback;
+            instance.inputToggleCallback = null;
             instance.doubleInputCallback = null;
             instance.dropdownInputCallback = null;
 
@@ -283,6 +299,7 @@ namespace BGC.UI.Dialogs
             //Update callbacks
             instance.buttonCallback = buttonCallback;
             instance.inputCallback = null;
+            instance.inputToggleCallback = null;
             instance.doubleInputCallback = inputCallback;
             instance.dropdownInputCallback = null;
 
@@ -291,27 +308,36 @@ namespace BGC.UI.Dialogs
         }
 
         /// <summary>
-        /// Accept the button repsonse as input, invoke and clear the callbacks, and hide the dialog
+        /// Show the modal dialog in the indicated mode, and call the callback when it receives a response
         /// </summary>
-        private void HandleButtons(Response response)
+        public static void ShowInputToggleModal(
+            string headerText,
+            string bodyText,
+            string toggleText,
+            ModalInputToggleCallback inputToggleCallback,
+            InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
+            bool initialToggleState = false)
         {
-            //Temporary copy to allow for the calling of the dialog within a callback
-            ModalButtonCallback tmpCallback = buttonCallback;
-            ModalInputCallback tmpInputCallback = inputCallback;
-            ModalDoubleInputCallback tmpDoubleInputCallback = doubleInputCallback;
-            ModalDropdownInputCallback tmpDropdownInputCallback = dropdownInputCallback;
+            //Update text
+            instance.SetHeaderText(headerText);
+            instance.SetBodyText(bodyText);
+            instance.SetToggleText(toggleText);
+            instance.toggleButton.isOn = initialToggleState;
 
-            buttonCallback = null;
-            inputCallback = null;
-            doubleInputCallback = null;
-            dropdownInputCallback = null;
+            //Update buttons
+            instance.SetMode(Mode.InputToggleConfirmCancel);
 
-            gameObject.SetActive(false);
+            //Set dialog visible
+            instance.gameObject.SetActive(true);
 
-            tmpCallback?.Invoke(response);
-            tmpInputCallback?.Invoke(response, primaryInputField.text);
-            tmpDoubleInputCallback?.Invoke(response, primaryInputField.text, secondaryInputField.text);
-            tmpDropdownInputCallback?.Invoke(response, optionDropdown.value, secondaryInputField.text);
+            //Update callbacks
+            instance.inputToggleCallback = inputToggleCallback;
+            instance.buttonCallback = null;
+            instance.inputCallback = null;
+            instance.doubleInputCallback = null;
+            instance.dropdownInputCallback = null;
+
+            instance.primaryInputField.contentType = inputType;
         }
 
         /// <summary>
@@ -345,10 +371,38 @@ namespace BGC.UI.Dialogs
             //Update callbacks
             instance.buttonCallback = buttonCallback;
             instance.inputCallback = null;
+            instance.inputToggleCallback = null;
             instance.doubleInputCallback = null;
             instance.dropdownInputCallback = inputCallback;
 
             instance.secondaryInputField.contentType = inputType;
+        }
+
+        /// <summary>
+        /// Accept the button repsonse as input, invoke and clear the callbacks, and hide the dialog
+        /// </summary>
+        private void HandleButtons(Response response)
+        {
+            //Temporary copy to allow for the calling of the dialog within a callback
+            ModalButtonCallback tmpCallback = buttonCallback;
+            ModalInputCallback tmpInputCallback = inputCallback;
+            ModalInputToggleCallback tmpInputToggleCallback = inputToggleCallback;
+            ModalDoubleInputCallback tmpDoubleInputCallback = doubleInputCallback;
+            ModalDropdownInputCallback tmpDropdownInputCallback = dropdownInputCallback;
+
+            buttonCallback = null;
+            inputCallback = null;
+            inputToggleCallback = null;
+            doubleInputCallback = null;
+            dropdownInputCallback = null;
+
+            gameObject.SetActive(false);
+
+            tmpCallback?.Invoke(response);
+            tmpInputCallback?.Invoke(response, primaryInputField.text);
+            tmpInputToggleCallback?.Invoke(response, primaryInputField.text, toggleButton.isOn);
+            tmpDoubleInputCallback?.Invoke(response, primaryInputField.text, secondaryInputField.text);
+            tmpDropdownInputCallback?.Invoke(response, optionDropdown.value, secondaryInputField.text);
         }
     }
 }
