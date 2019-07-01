@@ -12,61 +12,65 @@ namespace BGC.Web.Utility
         /// <summary>
         /// Send a get request
         /// </summary>
-        /// <param name="callBack">false means there was an error</param>
+        /// <param name="callBack">false means there was a local parsing error</param>
         public static void GetRequest(
             string url,
-            Action<UnityWebRequest, bool> callBack = null)
+            Action<UnityWebRequest, bool> callBack = null,
+            int timeout = 0)
         {
             CoroutineUtility.Mono.StartCoroutine(RunGet(
                 url,
-                callBack));
+                callBack,
+                timeout));
         }
 
         /// <summary>
         /// Send a post request
         /// </summary>
-        /// <param name="callBack">false means there was an error</param>
+        /// <param name="callBack">false means there was a local parsing error</param>
         public static void PostRequest(
             string url,
             Dictionary<string, string> headers,
             string body,
-            Action<UnityWebRequest, bool> callBack = null)
+            Action<UnityWebRequest, bool> callBack = null,
+            int timeout = 0)
         {
             CoroutineUtility.Mono.StartCoroutine(RunPost(
                 url,
                 headers,
                 body,
-                callBack));
+                callBack,
+                timeout));
         }
 
         /// <summary>
-        /// Run post request
+        /// Run get request
         /// </summary>
-        /// <param name="callBack">boolean false means there was an error</param>
-        /// <returns></returns>
         private static IEnumerator RunGet(
             string url,
-            Action<UnityWebRequest, bool> callBack)
+            Action<UnityWebRequest, bool> callBack,
+            int timeout = 0)
         {
             UnityWebRequest request = UnityWebRequest.Get(url);
+            request.timeout = timeout;
             yield return request.SendWebRequest();
 
-            callBack?.Invoke(request, !request.isNetworkError);
+            callBack?.Invoke(request, true);
         }
 
         /// <summary>
         /// Run post request
         /// </summary>
-        /// <param name="callBack">boolean false means there was an error</param>
-        /// <returns></returns>
         private static IEnumerator RunPost(
             string url,
             Dictionary<string, string> headers,
             string body,
-            Action<UnityWebRequest, bool> callBack)
+            Action<UnityWebRequest, bool> callBack,
+            int timeout = 0)
         {
             UnityWebRequest request = UnityWebRequest.Post(url, "");
             request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
+            request.timeout = timeout;
 
             foreach (KeyValuePair<string, string> pair in headers)
             {
