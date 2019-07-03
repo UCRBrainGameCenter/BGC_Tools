@@ -10,7 +10,7 @@ namespace BGC.Audio.Synthesis
     /// <summary>
     /// Suboptimal attempt to do frame-based rendering of a set of carrier tones. 
     /// </summary>
-    public class FrequencyDomainToneComposer : BGCStream
+    public class ContinuousFrequencyDomainToneComposer : BGCStream
     {
         public override int Channels => 1;
         public override float SamplingRate => 44100f;
@@ -41,7 +41,7 @@ namespace BGC.Audio.Synthesis
         private int bufferIndex = 0;
         private int bufferCount = 0;
 
-        public FrequencyDomainToneComposer(
+        public ContinuousFrequencyDomainToneComposer(
             IEnumerable<ComplexCarrierTone> carrierTones,
             int frameSize = (1 << 11),
             int overlapFactor = 8)

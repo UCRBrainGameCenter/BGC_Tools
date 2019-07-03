@@ -593,7 +593,7 @@ namespace BGC.Tests
                     int frameSize = 1 << frameExp;
                     int overlap = 1 << overlapExp;
 
-                    IBGCStream composed = new FrequencyDomainToneComposer(
+                    IBGCStream composed = new ContinuousFrequencyDomainToneComposer(
                             carrierTones: carriers,
                             frameSize: frameSize,
                             overlapFactor: overlap)
@@ -639,7 +639,7 @@ namespace BGC.Tests
                     int frameSize = 1 << frameExp;
                     int overlap = 1 << overlapExp;
 
-                    IBGCStream composed = new FrequencyDomainToneComposer(
+                    IBGCStream composed = new ContinuousFrequencyDomainToneComposer(
                             carrierTones: carriers,
                             frameSize: frameSize,
                             overlapFactor: overlap)

@@ -175,6 +175,11 @@ namespace BGC.Audio
             this IBGCStream stream,
             params IBGCStream[] others)
         {
+            if (others.Length == 0)
+            {
+                return stream;
+            }
+
             StreamAdder adder = new StreamAdder(stream);
             adder.AddStreams(others);
             return adder;
@@ -183,6 +188,11 @@ namespace BGC.Audio
         public static IBGCStream AddTogether(
             this IEnumerable<IBGCStream> streams)
         {
+            if (streams.Count() == 1)
+            {
+                return streams.First();
+            }
+
             return new StreamAdder(streams);
         }
 
@@ -332,6 +342,20 @@ namespace BGC.Audio
             return new UpChannelMonoFilter(stream, channelCount);
         }
 
+        public static IBGCStream SafeStereoUpChannel(
+            this IBGCStream stream)
+        {
+            switch (stream.Channels)
+            {
+                case 1: return new UpChannelMonoFilter(stream, 2);
+                case 2: return stream;
+
+                default:
+                    throw new ArgumentException($"Cannot Stereo upchannel a stream with {stream.Channels} channels");
+            }
+
+        }
+
         public static IBGCStream SelectiveUpChannel(
             this IBGCStream stream,
             AudioChannel channels)
@@ -446,7 +470,7 @@ namespace BGC.Audio
             return new StreamRepeater(stream);
         }
 
-        public static IBGCStream ToStream(
+        public static IBGCStream ToWaveStream(
             this ComplexCarrierTone carrierTone)
         {
             return new SineWave(carrierTone);
@@ -467,12 +491,15 @@ namespace BGC.Audio
                 return new SineWave(carrierTones.First());
             }
 
-            if (carrierToneCount < 10)
+            if (carrierToneCount < 20)
             {
-                return new StreamAdder(carrierTones.Select(x => x.ToStream()));
+                return new StreamAdder(carrierTones.Select(ToWaveStream));
             }
 
-            return new FrequencyDomainToneComposer(carrierTones);
+            return new ContinuousFrequencyDomainToneComposer(
+                carrierTones: carrierTones,
+                frameSize: 1 << 11,
+                overlapFactor: 8);
         }
 
         /// <summary>
