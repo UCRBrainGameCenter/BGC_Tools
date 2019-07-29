@@ -80,11 +80,11 @@ namespace BGC.Audio.Synthesis
             switch (rippleDirection)
             {
                 case RippleDirection.Up:
-                    this.spectralModulationRate = spectralModulationRate;
+                    this.spectralModulationRate = -spectralModulationRate;
                     break;
 
                 case RippleDirection.Down:
-                    this.spectralModulationRate = -spectralModulationRate;
+                    this.spectralModulationRate = spectralModulationRate;
                     break;
 
                 default:
