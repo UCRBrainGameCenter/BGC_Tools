@@ -50,7 +50,6 @@ namespace BGC.Mathematics
         [DataMember(Order = 2)]
         private readonly double _imag;
 
-
         /// <summary>
         /// Returns a new Complex64 instance with a real number equal to zero and an imaginary number equal to zero.
         /// </summary>
@@ -488,7 +487,7 @@ namespace BGC.Mathematics
         /// <summary>
         /// Returns a value that indicates whether the current instance and a specified object have the same value.
         /// </summary>
-        public override bool Equals(object obj) => (obj is Complex64) && Equals((Complex64)obj);
+        public override bool Equals(object obj) => (obj is Complex64 other) && Equals(other);
 
         /// <summary>
         /// Returns the hash code for the current Complex64 object.
@@ -590,7 +589,7 @@ namespace BGC.Mathematics
         /// <summary>
         /// Defines an implicit conversion of an unsigned byte to a complex number.
         /// </summary>
-        public static implicit operator Complex64(Complex32 value) => new Complex64(value.Real, value.Imaginary);
+        public static implicit operator Complex64(in Complex32 value) => new Complex64(value.Real, value.Imaginary);
 
         /// <summary>
         /// Defines an implicit conversion of an unsigned byte to a complex number.
@@ -647,6 +646,8 @@ namespace BGC.Mathematics
         /// Defines an explicit conversion of a System.Decimal value to a complex number.
         /// </summary>
         public static explicit operator Complex64(decimal value) => new Complex64((double)value, 0.0);
+
+        public void Deconstruct(out double real, out double imag) => (real, imag) = (_real, _imag);
 
         /// <summary>
         /// Gets a value indicating whether the provided Complex64 is real.

@@ -653,6 +653,8 @@ namespace BGC.Mathematics
         /// </summary>
         public static explicit operator Complex32(decimal value) => new Complex32((float)value, 0f);
 
+        public void Deconstruct(out float real, out float imag) => (real, imag) = (_real, _imag);
+
         /// <summary>
         /// Gets a value indicating whether the provided Complex32 is real.
         /// </summary>
