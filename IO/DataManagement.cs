@@ -17,13 +17,24 @@ namespace BGC.IO
             {
                 if (rootDirectory == null)
                 {
-                    rootDirectory = Application.persistentDataPath;
-
-                    if (Application.platform != RuntimePlatform.IPhonePlayer &&
-                        Application.platform != RuntimePlatform.Android)
+                    switch (Application.platform)
                     {
-                        rootDirectory = Application.dataPath;
-                        rootDirectory = rootDirectory.Substring(0, rootDirectory.LastIndexOf('/'));
+                        case RuntimePlatform.IPhonePlayer:
+                        case RuntimePlatform.Android:
+                        case RuntimePlatform.WSAPlayerX64:
+                        case RuntimePlatform.WSAPlayerX86:
+                        case RuntimePlatform.WSAPlayerARM:
+                        case RuntimePlatform.PS4:
+                        case RuntimePlatform.XboxOne:
+                        case RuntimePlatform.tvOS:
+                        case RuntimePlatform.Switch:
+                            rootDirectory = Application.persistentDataPath;
+                            break;
+
+                        default:
+                            rootDirectory = Application.dataPath;
+                            rootDirectory = rootDirectory.Substring(0, rootDirectory.LastIndexOf('/'));
+                            break;
                     }
                 }
 
