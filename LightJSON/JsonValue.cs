@@ -394,7 +394,7 @@ namespace LightJson
         /// </remarks>
         /// <param name="value">The value to be converted.</param>
         public static implicit operator JsonValue(DateTime? value) =>
-            value.HasValue ? Null : new JsonValue(value.Value.ToString("o"));
+            value.HasValue ? new JsonValue(value.Value.ToString("o")) : Null;
 
 
         /// <summary>
