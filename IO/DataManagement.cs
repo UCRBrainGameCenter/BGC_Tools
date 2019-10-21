@@ -19,21 +19,16 @@ namespace BGC.IO
                 {
                     switch (Application.platform)
                     {
-                        case RuntimePlatform.IPhonePlayer:
-                        case RuntimePlatform.Android:
-                        case RuntimePlatform.WSAPlayerX64:
-                        case RuntimePlatform.WSAPlayerX86:
-                        case RuntimePlatform.WSAPlayerARM:
-                        case RuntimePlatform.PS4:
-                        case RuntimePlatform.XboxOne:
-                        case RuntimePlatform.tvOS:
-                        case RuntimePlatform.Switch:
-                            rootDirectory = Application.persistentDataPath;
+                        case RuntimePlatform.WindowsEditor:
+                        case RuntimePlatform.OSXEditor:
+                        case RuntimePlatform.LinuxEditor:
+                        case RuntimePlatform.WindowsPlayer:
+                            rootDirectory = Application.dataPath;
+                            rootDirectory = rootDirectory.Substring(0, rootDirectory.LastIndexOf('/'));
                             break;
 
                         default:
-                            rootDirectory = Application.dataPath;
-                            rootDirectory = rootDirectory.Substring(0, rootDirectory.LastIndexOf('/'));
+                            rootDirectory = Application.persistentDataPath;
                             break;
                     }
                 }
