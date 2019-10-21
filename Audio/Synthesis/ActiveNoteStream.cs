@@ -27,6 +27,8 @@ namespace BGC.Audio.Synthesis
         private const int BUFFER_SIZE = 512;
         private readonly float[] buffer = new float[BUFFER_SIZE];
 
+        private static readonly double rms = Math.Sqrt(0.5);
+
         public ActiveNoteStream()
         {
         }
@@ -164,7 +166,7 @@ namespace BGC.Audio.Synthesis
         //RMS will pretend to be one 1.0 amplitude sine wave
         public override IEnumerable<double> GetChannelRMS()
         {
-            yield return Math.Sqrt(0.5);
+            yield return rms;
         }
     }
 }

@@ -158,8 +158,6 @@ namespace BGC.Audio.Synthesis
                 Initialize();
             }
 
-            //Read...
-
             int samplesToRead = Math.Min(count, _channelSamples - position);
 
             for (int i = 0; i < samplesToRead; i++)
