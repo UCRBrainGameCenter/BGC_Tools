@@ -133,6 +133,18 @@ namespace BGC.Users
             string userName,
             Action userChangingCallback = null)
         {
+            //Log out of current user (if still logged in)
+            if (_currentUserData != null)
+            {
+                if (previousUser == userName)
+                {
+                    //Not changing user
+                    return true;
+                }
+
+                LogOut();
+            }
+
             //If we're logging into a new user...
             if (previousUser != userName)
             {
