@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using System.IO;
 using UnityEngine;
 using BGC.IO;
 using BGC.IO.Compression;
@@ -26,9 +27,15 @@ namespace BGC.Audio.Spatialization
 
         protected override bool PrepareRun()
         {
+            if (PlayerPrefs.GetInt(ImpulseVersionKey, 0) < ImpulseVersion &&
+                DataManagement.DataDirectoryExists(HRTFDirectory))
+            {
+                //Delete the old HRTF directory.
+                Directory.Delete(DataManagement.PathForDataDirectory(HRTFDirectory), true);
+            }
+
             if (PlayerPrefs.GetInt(ImpulseVersionKey, 0) < ImpulseVersion ||
-                !DataManagement.DataDirectoryExists(HRTFDirectory) ||
-                !System.IO.File.Exists(DataManagement.PathForDataFile(HRTFDirectory, "0_impulse.wav")))
+                !File.Exists(DataManagement.PathForDataFile(HRTFDirectory, "0_impulse.wav", false)))
             {
                 rawData = (byte[])impulseZip.bytes.Clone();
                 outputPath = DataManagement.PathForDataDirectory(HRTFDirectory);

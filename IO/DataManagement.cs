@@ -42,15 +42,15 @@ namespace BGC.IO
             Directory.GetFiles(PathForDataDirectory(dataDirectory));
 
         /// <summary> Returns the full path for specified datafile in a data directory </summary>
-        public static string PathForDataFile(string dataDirectory, string fileName) =>
-            Path.Combine(PathForDataDirectory(dataDirectory), fileName);
+        public static string PathForDataFile(string dataDirectory, string fileName, bool create = true) =>
+            Path.Combine(PathForDataDirectory(dataDirectory, create), fileName);
 
         /// <summary> Returns the full path to the <paramref name="dataDirectory"/> directory. </summary>
-        public static string PathForDataDirectory(string dataDirectory)
+        public static string PathForDataDirectory(string dataDirectory, bool create = true)
         {
             string path = Path.Combine(RootDirectory, dataDirectory);
 
-            if (Directory.Exists(path) == false)
+            if (create && !Directory.Exists(path))
             {
                 Directory.CreateDirectory(path);
             }
@@ -66,7 +66,7 @@ namespace BGC.IO
         {
             string[] paths = new string[dataDirectories.Length + 1];
             paths[0] = RootDirectory;
-            System.Array.Copy(
+            Array.Copy(
                 sourceArray: dataDirectories,
                 sourceIndex: 0,
                 destinationArray: paths,
@@ -75,22 +75,12 @@ namespace BGC.IO
 
             string path = Path.Combine(paths);
 
-            if (Directory.Exists(path) == false)
+            if (!Directory.Exists(path))
             {
                 Directory.CreateDirectory(path);
             }
 
             return path;
         }
-
-        /// <summary>
-        /// Returns an available filepath.
-        /// Appends " (#)" to the filename, incrementing # until it is available, 
-        /// starting with any modifier present in the filepath.
-        /// </summary>
-        /// <returns>An available filepath</returns>
-        [Obsolete("Use FilePath.NextAvailableFilePath instead")]
-        public static string NextAvailableFilePath(string filepath) =>
-            FilePath.NextAvailableFilePath(filepath);
     }
 }
