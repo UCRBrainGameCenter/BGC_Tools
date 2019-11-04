@@ -14,6 +14,7 @@ namespace BGC.Utility.Unity
         [SerializeField]
         private string screenShotTitle = "screenshot_";
 
+        [SerializeField]
         private int screenShotIndex = 0;
 
         #if UNITY_EDITOR

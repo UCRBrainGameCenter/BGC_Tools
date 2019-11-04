@@ -143,7 +143,8 @@ namespace BGC.Audio.Filters
                     .Aggregate(
                         seed: new double[Channels] as IEnumerable<double>,
                         func: (total, next) => total.Zip(next, (prior, second) => prior + second * second),
-                        resultSelector: total => total.Select(Math.Sqrt));
+                        resultSelector: total => total.Select(Math.Sqrt))
+                    .ToArray();
             }
 
             return _channelRMS;

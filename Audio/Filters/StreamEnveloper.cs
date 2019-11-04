@@ -96,6 +96,11 @@ namespace BGC.Audio.Filters
             return readSamples;
         }
 
+        protected override void _Initialize()
+        {
+            envelopeStream.Initialize();
+        }
+
         private IEnumerable<double> _channelRMS = null;
         public override IEnumerable<double> GetChannelRMS()
         {

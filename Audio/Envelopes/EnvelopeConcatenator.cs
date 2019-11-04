@@ -162,7 +162,7 @@ namespace BGC.Audio.Envelopes
                 }
 
 
-                if (streams.Any(x=>x.Samples == int.MaxValue))
+                if (streams.Any(x => x.Samples == int.MaxValue))
                 {
                     _sampleCount = int.MaxValue;
                 }
