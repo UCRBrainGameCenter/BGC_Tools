@@ -396,7 +396,7 @@ namespace BGC.Study
                     { ProtocolKeys.Sessions, SerializeSessions() },
                     { ProtocolKeys.SessionElements, SerializeSessionElements() }
                 },
-                pretty: true);
+                pretty: false);
         }
 
         public static bool LoadProtocolSet(string protocolName)
