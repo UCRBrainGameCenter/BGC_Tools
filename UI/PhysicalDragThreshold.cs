@@ -16,7 +16,18 @@ namespace BGC.UI
 
         void Start()
         {
-            GetComponent<EventSystem>().pixelDragThreshold = (int)(dragThresholdInches * Screen.dpi);
+            switch (Application.platform)
+            {
+                case RuntimePlatform.WSAPlayerARM:
+                case RuntimePlatform.WSAPlayerX64:
+                case RuntimePlatform.WSAPlayerX86:
+                    GetComponent<EventSystem>().pixelDragThreshold = (int)(dragThresholdInches * Screen.dpi);
+                    break;
+
+                default:
+                    GetComponent<EventSystem>().pixelDragThreshold = 5;
+                    break;
+            }
         }
     }
 }
