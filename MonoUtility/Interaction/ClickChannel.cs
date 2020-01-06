@@ -16,7 +16,7 @@ namespace BGC.MonoUtility.Interaction
         {
             this.callback = callback;
             
-            Debug.Assert(Target != default);
+            Debug.Assert(!Target.Equals(default(T)));
         }
 
         public void StripCallback() => callback = null;

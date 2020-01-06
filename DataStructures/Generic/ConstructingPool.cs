@@ -81,7 +81,7 @@ namespace BGC.DataStructures.Generic
         {
             T value = available.FirstOrDefault(predicate);
 
-            if (value == default)
+            if (value.Equals(default(T)))
             {
                 value = NewItem;
             }
@@ -114,7 +114,7 @@ namespace BGC.DataStructures.Generic
         {
             value = available.FirstOrDefault(predicate);
 
-            if (value == default)
+            if (value.Equals(default(T)))
             {
                 return false;
             }

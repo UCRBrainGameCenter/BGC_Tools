@@ -283,6 +283,7 @@ namespace BGC.Audio
                             //Do nothing with it
                             break;
 
+                        case "id3":
                         case "minf":
                         case "elm1":
                         case "regn":
@@ -297,7 +298,7 @@ namespace BGC.Audio
                             break;
 
                         case "data":
-                            if (readFormat == false)
+                            if (!readFormat)
                             {
                                 Debug.LogError($"fmt chunk not found in {filepath} before data.");
                                 channels = 0;
@@ -317,6 +318,11 @@ namespace BGC.Audio
                                 format: format,
                                 channels: channels,
                                 parsedData: out parsedData);
+
+                            if (!readData)
+                            {
+                               Debug.LogError($"Failed to successfully read data chunk");
+                            }
                             break;
 
                         default:
@@ -326,8 +332,7 @@ namespace BGC.Audio
                     }
                 }
 
-
-                if (parsedData != default && samplingRate != 44100)
+                if (!parsedData.Equals(default(T)) && samplingRate != 44100)
                 {
                     parsedData = dataResampler(
                         inputData: parsedData,
