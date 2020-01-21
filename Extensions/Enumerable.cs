@@ -8,7 +8,7 @@ namespace BGC.Extensions.Linq
     public static class EnumerableExtensions
     {
         public static float GeometricMean(this IEnumerable<float> source) => 
-            Mathf.Pow(source.Aggregate(1f, ProductAccumulate), 1f / source.Count());
+            (float)Math.Pow(source.Aggregate(1f, ProductAccumulate), 1.0 / source.Count());
         public static double GeometricMean(this IEnumerable<double> source) =>
             Math.Pow(source.Aggregate(1.0, ProductAccumulate), 1.0 / source.Count());
 

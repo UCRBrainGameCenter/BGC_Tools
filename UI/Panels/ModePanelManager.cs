@@ -183,7 +183,7 @@ namespace BGC.UI.Panels
                 lastActivePanel.gameObject.SetActive(false);
                 newPanel.gameObject.SetActive(true);
             }
-            
+
             newPanel.LerpHandler.Activate(
                 duration: flipTime,
                 lerpAction: new ModePanelTranslator(
@@ -203,9 +203,7 @@ namespace BGC.UI.Panels
 
             lastActivePanel = newPanel;
         }
-        
+
         private void DisableModePanel(ModePanel panel) => panel.gameObject.SetActive(false);
     }
-
-
 }

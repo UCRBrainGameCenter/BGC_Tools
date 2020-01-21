@@ -1,5 +1,6 @@
 ﻿using System;
 using UnityEngine;
+using BGC.Mathematics;
 
 namespace BGC.Audio
 {
@@ -292,11 +293,11 @@ namespace BGC.Audio
 
             int lastSample = startSample + windowWidth - 1;
 
-            float cosineArgument = Mathf.PI / (smoothingSamples - 1);
+            double cosineArgument = Math.PI / (smoothingSamples - 1);
 
             for (int i = 0; i < smoothingSamples; i++)
             {
-                float factor = alpha - beta * Mathf.Cos(i * cosineArgument);
+                float factor = alpha - beta * (float)Math.Cos(i * cosineArgument);
 
                 for (int chan = 0; chan < channels; chan++)
                 {
@@ -336,11 +337,11 @@ namespace BGC.Audio
 
             int lastSample = startSample + windowWidth - 1;
 
-            float cosineArgument = Mathf.PI / (smoothingSamples - 1);
+            double cosineArgument = Math.PI / (smoothingSamples - 1);
 
             for (int i = 0; i < smoothingSamples; i++)
             {
-                float factor = alpha - beta * Mathf.Cos(i * cosineArgument);
+                float factor = alpha - beta * (float)Math.Cos(i * cosineArgument);
 
                 for (int chan = 0; chan < channels; chan++)
                 {
@@ -377,11 +378,11 @@ namespace BGC.Audio
 
             int lastSample = startSample + windowWidth - 1;
 
-            float sineArgument = Mathf.PI / (2 * smoothingSamples - 1);
+            double sineArgument = Math.PI / (2 * smoothingSamples - 1);
 
             for (int i = 0; i < smoothingSamples; i++)
             {
-                float factor = Mathf.Sin(i * sineArgument);
+                float factor = (float)Math.Sin(i * sineArgument);
 
                 for (int chan = 0; chan < channels; chan++)
                 {
@@ -398,11 +399,11 @@ namespace BGC.Audio
 
             float[] window = new float[sampleCount];
 
-            float cosineArgument = Mathf.PI / (sampleCount - 1);
+            double cosineArgument = Math.PI / (sampleCount - 1);
 
             for (int i = 0; i < sampleCount; i++)
             {
-                window[i] = alpha - beta * Mathf.Cos(i * cosineArgument);
+                window[i] = alpha - beta * (float)Math.Cos(i * cosineArgument);
             }
 
             return window;
@@ -415,11 +416,11 @@ namespace BGC.Audio
 
             float[] window = new float[sampleCount];
 
-            float cosineArgument = Mathf.PI / (sampleCount - 1);
+            double cosineArgument = Math.PI / (sampleCount - 1);
 
             for (int i = 0; i < sampleCount; i++)
             {
-                window[i] = alpha - beta * Mathf.Cos(i * cosineArgument);
+                window[i] = alpha - beta * (float)Math.Cos(i * cosineArgument);
             }
 
             return window;
@@ -429,11 +430,11 @@ namespace BGC.Audio
         {
             float[] window = new float[sampleCount];
 
-            float sineArgument = Mathf.PI / (2 * sampleCount - 1);
+            double sineArgument = Math.PI / (2 * sampleCount - 1);
 
             for (int i = 0; i < sampleCount; i++)
             {
-                window[i] = Mathf.Sin(i * sineArgument);
+                window[i] = (float)Math.Sin(i * sineArgument);
             }
 
             return window;

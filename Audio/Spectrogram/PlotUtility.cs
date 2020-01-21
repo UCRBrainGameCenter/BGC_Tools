@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using BGC.Mathematics;
 
 namespace BGC.Audio.Visualization
 {
-
     public static class PlotUtility
     {
         public static Color JetMap(float value, float min, float max)
@@ -12,9 +12,9 @@ namespace BGC.Audio.Visualization
             float z = 4f * (value - min) / (max - min);
 
             return new Color(
-                r: Mathf.Clamp(1.5f - Mathf.Abs(z - 3f), 0f, 1f),
-                g: Mathf.Clamp(1.5f - Mathf.Abs(z - 2f), 0f, 1f),
-                b: Mathf.Clamp(1.5f - Mathf.Abs(z - 1f), 0f, 1f));
+                r: GeneralMath.Clamp(1.5f - Math.Abs(z - 3f), 0f, 1f),
+                g: GeneralMath.Clamp(1.5f - Math.Abs(z - 2f), 0f, 1f),
+                b: GeneralMath.Clamp(1.5f - Math.Abs(z - 1f), 0f, 1f));
         }
 
         public static PlotData GetLinePlot(
@@ -72,10 +72,10 @@ namespace BGC.Audio.Visualization
 
                 //Find the magnitude of the difference
                 float diff = yMax - yMin;
-                float orderOfMag = Mathf.Log10(diff);
+                float orderOfMag = (float)Math.Log10(diff);
 
-                float newYMin = Mathf.Floor(yMin * Mathf.Pow(10f, orderOfMag)) / Mathf.Pow(10f, orderOfMag);
-                float newYMax = Mathf.Ceil(yMax * Mathf.Pow(10f, orderOfMag)) / Mathf.Pow(10f, orderOfMag);
+                float newYMin = (float)(Math.Floor(yMin * Math.Pow(10.0, orderOfMag)) / Math.Pow(10.0, orderOfMag));
+                float newYMax = (float)(Math.Ceiling(yMax * Math.Pow(10.0, orderOfMag)) / Math.Pow(10.0, orderOfMag));
 
                 yRange = new Vector2(newYMin, newYMax);
             }
@@ -100,7 +100,7 @@ namespace BGC.Audio.Visualization
             if (yRange.x < 0f && 0f < yRange.y)
             {
                 //Draw XAxis
-                yPixel = Mathf.FloorToInt(texH * -yRange.x / (yRange.y - yRange.x));
+                yPixel = (int)(texH * -yRange.x / (yRange.y - yRange.x));
                 for (xPixel = 0; xPixel < texW; xPixel++)
                 {
                     tex.SetPixel(xPixel, yPixel, Color.black);
@@ -110,7 +110,7 @@ namespace BGC.Audio.Visualization
             if (xRange.x < 0f && 0f < xRange.y)
             {
                 //Draw YAxis
-                xPixel = Mathf.FloorToInt(texW * -xRange.x / (xRange.y - xRange.x));
+                xPixel = (int)(texW * -xRange.x / (xRange.y - xRange.x));
                 for (yPixel = 0; yPixel < texH; xPixel++)
                 {
                     tex.SetPixel(xPixel, yPixel, Color.black);
@@ -118,18 +118,18 @@ namespace BGC.Audio.Visualization
             }
 
             int x0;
-            int x1 = Mathf.FloorToInt(xScaleFactor * (1 - xRange.x));
+            int x1 = (int)(xScaleFactor * (1 - xRange.x));
             int y0;
-            int y1 = Mathf.FloorToInt(yScaleFactor * (dataPoints[0] - yRange.x));
+            int y1 = (int)(yScaleFactor * (dataPoints[0] - yRange.x));
 
             //Draw Lines
             for (int sample = 1; sample < dataPoints.Length; sample++)
             {
                 x0 = x1;
-                x1 = Mathf.FloorToInt(xScaleFactor * (1 + sample - xRange.x));
+                x1 = (int)(xScaleFactor * (1 + sample - xRange.x));
 
                 y0 = y1;
-                y1 = Mathf.FloorToInt(yScaleFactor * (dataPoints[sample] - yRange.x));
+                y1 = (int)(yScaleFactor * (dataPoints[sample] - yRange.x));
 
                 DrawLine(x0, y0, x1, y1, tex, lineColor);
             }
@@ -145,8 +145,6 @@ namespace BGC.Audio.Visualization
 
             return data;
         }
-
-
 
         public static PlotData GetPointAndLinePlot(
             List<PlotPoint> dataPoints,
@@ -214,10 +212,10 @@ namespace BGC.Audio.Visualization
 
                 //Find the magnitude of the difference
                 float diff = yMax - yMin;
-                float orderOfMag = Mathf.Floor(Mathf.Log10(diff));
+                float orderOfMag = (float)Math.Floor(Math.Log10(diff));
 
-                float newYMin = Mathf.Floor(yMin / Mathf.Pow(10f, orderOfMag) - 1) * Mathf.Pow(10f, orderOfMag);
-                float newYMax = Mathf.Ceil(yMax / Mathf.Pow(10f, orderOfMag) + 1) * Mathf.Pow(10f, orderOfMag);
+                float newYMin = (float)(Math.Floor(yMin / Math.Pow(10.0, orderOfMag) - 1) * Math.Pow(10.0, orderOfMag));
+                float newYMax = (float)(Math.Ceiling(yMax / Math.Pow(10.0, orderOfMag) + 1) * Math.Pow(10.0, orderOfMag));
 
                 yRange = new Vector2(newYMin, newYMax);
             }
@@ -242,7 +240,7 @@ namespace BGC.Audio.Visualization
             //Draw XAxis
             if (yRange.x < 0f && 0f < yRange.y)
             {
-                yPixel = Mathf.FloorToInt(yScaleFactor - yRange.x);
+                yPixel = (int)(yScaleFactor - yRange.x);
                 for (xPixel = 0; xPixel < texW; xPixel++)
                 {
                     tex.SetPixel(xPixel, yPixel, Color.black);
@@ -252,7 +250,7 @@ namespace BGC.Audio.Visualization
             //Draw YAxis
             if (xRange.x < 0f && 0f < xRange.y)
             {
-                xPixel = Mathf.FloorToInt(xScaleFactor * -xRange.x);
+                xPixel = (int)(xScaleFactor * -xRange.x);
                 for (yPixel = 0; yPixel < texH; xPixel++)
                 {
                     tex.SetPixel(xPixel, yPixel, Color.black);
@@ -267,11 +265,11 @@ namespace BGC.Audio.Visualization
 
                 //Draw X Gridlines
                 diff = yRange.y - yRange.x;
-                gridDelta = Mathf.Pow(10f, Mathf.Floor(Mathf.Log10(diff / 5)));
-                gridLineCount = Mathf.RoundToInt(diff / gridDelta) + 1;
+                gridDelta = (float)Math.Pow(10f, Math.Floor(Math.Log10(diff / 5.0)));
+                gridLineCount = (int)Math.Round(diff / gridDelta) + 1;
                 for (int i = 0; i < gridLineCount; i++)
                 {
-                    yPixel = Mathf.Clamp(Mathf.FloorToInt(yScaleFactor * i * gridDelta), 0, texH - 1);
+                    yPixel = GeneralMath.Clamp((int)(yScaleFactor * i * gridDelta), 0, texH - 1);
                     for (xPixel = 0; xPixel < texW; xPixel++)
                     {
                         tex.SetPixel(xPixel, yPixel, Color.gray);
@@ -280,11 +278,11 @@ namespace BGC.Audio.Visualization
 
                 //Draw Y Gridlines
                 diff = xRange.y - xRange.x;
-                gridDelta = Mathf.Pow(10f, Mathf.Floor(Mathf.Log10(diff / 5)));
-                gridLineCount = Mathf.RoundToInt(diff / gridDelta) + 1;
+                gridDelta = (float)Math.Pow(10.0, Math.Floor(Math.Log10(diff / 5.0)));
+                gridLineCount = (int)Math.Round(diff / gridDelta) + 1;
                 for (int i = 0; i < gridLineCount; i++)
                 {
-                    xPixel = Mathf.Clamp(Mathf.FloorToInt(xScaleFactor * i * gridDelta), 0, texW - 1);
+                    xPixel = GeneralMath.Clamp((int)(xScaleFactor * i * gridDelta), 0, texW - 1);
                     for (yPixel = 0; yPixel < texH; yPixel++)
                     {
                         tex.SetPixel(xPixel, yPixel, Color.gray);
@@ -295,17 +293,17 @@ namespace BGC.Audio.Visualization
 
             int x0;
             int y0;
-            int x1 = Mathf.FloorToInt(xScaleFactor * (1 - xRange.x));
-            int y1 = Mathf.FloorToInt(yScaleFactor * (dataPoints[0].parameterValue - yRange.x));
+            int x1 = (int)(xScaleFactor * (1 - xRange.x));
+            int y1 = (int)(yScaleFactor * (dataPoints[0].parameterValue - yRange.x));
 
             //Draw Lines
             for (int sample = 1; sample < dataPoints.Count; sample++)
             {
                 x0 = x1;
-                x1 = Mathf.FloorToInt(xScaleFactor * (1 + sample - xRange.x));
+                x1 = (int)(xScaleFactor * (1 + sample - xRange.x));
 
                 y0 = y1;
-                y1 = Mathf.FloorToInt(yScaleFactor * (dataPoints[sample].parameterValue - yRange.x));
+                y1 = (int)(yScaleFactor * (dataPoints[sample].parameterValue - yRange.x));
 
                 DrawLine(x0, y0, x1, y1, tex, lineColor);
             }
@@ -313,8 +311,8 @@ namespace BGC.Audio.Visualization
             //Draw Points
             for (int sample = 0; sample < dataPoints.Count; sample++)
             {
-                x0 = Mathf.FloorToInt(xScaleFactor * (1 + sample - xRange.x));
-                y0 = Mathf.FloorToInt(yScaleFactor * (dataPoints[sample].parameterValue - yRange.x));
+                x0 = (int)(xScaleFactor * (1 + sample - xRange.x));
+                y0 = (int)(yScaleFactor * (dataPoints[sample].parameterValue - yRange.x));
 
                 if (dataPoints[sample].responseCorrect)
                 {
@@ -377,7 +375,7 @@ namespace BGC.Audio.Visualization
                 y0 = temp;
             }
 
-            float deltaErr = Mathf.Abs(((float)y1 - y0) / (x1 - x0));
+            float deltaErr = Math.Abs(((float)y1 - y0) / (x1 - x0));
 
             float Err;
             int adj = 1;
@@ -417,7 +415,7 @@ namespace BGC.Audio.Visualization
                     y0 = temp;
                 }
 
-                deltaErr = Mathf.Abs(((float)x1 - x0) / (y1 - y0));
+                deltaErr = Math.Abs(((float)x1 - x0) / (y1 - y0));
                 Err = deltaErr - 0.5f;
 
 
@@ -434,7 +432,7 @@ namespace BGC.Audio.Visualization
                     if (Err >= 0.5f)
                     {
                         x += adj;
-                        Err -= 1.0f;
+                        Err -= 1f;
                     }
                 }
             }
@@ -467,5 +465,4 @@ namespace BGC.Audio.Visualization
             }
         }
     }
-
 }

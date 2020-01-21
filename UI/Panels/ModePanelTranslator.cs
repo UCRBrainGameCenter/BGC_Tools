@@ -55,9 +55,11 @@ namespace BGC.UI.Panels
                 case Orientation.Superior:
                     //Do Nothing
                     break;
+
                 case Orientation.Inferior:
                     displacement *= -1f;
                     break;
+
                 default:
                     Debug.LogError($"Orientation unsupported: {orientation}");
                     return;
@@ -70,9 +72,11 @@ namespace BGC.UI.Panels
                     finalPosition = Vector2.zero;
                     break;
                 case Direction.Hide:
+
                     initialPosition = Vector2.zero;
                     finalPosition = displacement;
                     break;
+
                 default:
                     Debug.LogError($"Direction unsupported: {direction}");
                     return;
@@ -82,9 +86,9 @@ namespace BGC.UI.Panels
 
         void ILerpAction<ModePanel>.Initialize(ModePanel modelPanel)
         {
-            rt = modelPanel.GetComponent<RectTransform>();
+            rt = modelPanel.RectTransform;
 
-            RectTransform parent = rt.parent.GetComponent<RectTransform>();
+            RectTransform parent = modelPanel.ParentRectTransform;
             rt.pivot = parent.pivot;
 
             //Scale positions by the size, and add the local offset

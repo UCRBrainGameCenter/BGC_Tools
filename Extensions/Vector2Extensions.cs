@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
+using BGC.Mathematics;
 
 namespace BGC.Extensions
 {
@@ -15,9 +17,9 @@ namespace BGC.Extensions
         /// <returns></returns>
         public static Vector2 Rotate(this Vector2 v, float degrees)
         {
-            float radians = degrees * Mathf.Deg2Rad;
-            float sin = Mathf.Sin(radians);
-            float cos = Mathf.Cos(radians);
+            double radians = degrees * GeneralMath.dDeg2Rad;
+            float sin = (float)Math.Sin(radians);
+            float cos = (float)Math.Cos(radians);
 
             return new Vector2(cos * v.x - sin * v.y, sin * v.x + cos * v.y);
         }
@@ -27,9 +29,6 @@ namespace BGC.Extensions
         /// </summary>
         /// <param name="v"></param>
         /// <returns></returns>
-        public static float Min(this Vector2 v)
-        {
-            return Mathf.Min(v.x, v.y);
-        }
+        public static float Min(this Vector2 v) => Math.Min(v.x, v.y);
     }
 }

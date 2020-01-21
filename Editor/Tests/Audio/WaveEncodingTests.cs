@@ -5,6 +5,7 @@ using System.Linq;
 using System.IO;
 using UnityEngine;
 using NUnit.Framework;
+using BGC.Mathematics;
 using BGC.IO;
 using BGC.Audio;
 
@@ -86,20 +87,19 @@ namespace BGC.Tests
 
             float[] samples = new float[sampleCount];
 
-            float arg = 2 * Mathf.PI * freq;
+            float arg = GeneralMath.f2PI * freq;
 
             for (int i = 0; i < samplesPerChannel; i++)
             {
                 float time = i / samplingRate;
                 for (int j = 0; j < channels; j++)
                 {
-                    samples[channels * i + j] = 0.25f * Mathf.Sin(arg * time);
+                    samples[channels * i + j] = 0.25f * (float)Math.Sin(arg * time);
                 }
             }
 
             return samples;
         }
-
 
         [Test]
         public void UpScalingTest()
@@ -119,6 +119,5 @@ namespace BGC.Tests
                 stream: stream,
                 overwrite: true));
         }
-
     }
 }

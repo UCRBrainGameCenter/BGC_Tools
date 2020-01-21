@@ -24,6 +24,6 @@ namespace BGC.Audio
             new CarrierTone(frequency, amplitude, newPhase);
 
         public CarrierTone RotatePhase(float rotator) =>
-            new CarrierTone(frequency, amplitude, GeneralMath.Repeat(phase + rotator, -Mathf.PI, Mathf.PI));
+            new CarrierTone(frequency, amplitude, GeneralMath.Repeat(phase + rotator, -GeneralMath.fPI, GeneralMath.fPI));
     }
 }

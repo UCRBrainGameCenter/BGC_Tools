@@ -102,8 +102,16 @@ namespace BGC.Mathematics
         /// <summary>
         /// Retrieve the next double and cast it to a float.
         /// </summary>
-        /// <param name="random"></param>
-        /// <returns></returns>
         public static float NextFloat(this Random random) => (float)random.NextDouble();
+
+        /// <summary>
+        /// Retrieve the next double mapped to the specified range and cast it to a float.
+        /// </summary>
+        public static float NextFloat(this Random random, float min, float max) => (float)NextDouble(random, min, max);
+
+        /// <summary>
+        /// Retrieve the next double mapped to the specified range.
+        /// </summary>
+        public static double NextDouble(this Random random, double min, double max) => min + (max - min) * random.NextDouble();
     }
 }

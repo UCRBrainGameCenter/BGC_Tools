@@ -233,8 +233,10 @@ namespace BGC.Mathematics
         private static void Radix2Step(Complex32[] samples, int exponentSign, int levelSize, int k)
         {
             // Twiddle Factor
-            float exponent = (exponentSign * k) * Mathf.PI / levelSize;
-            Complex32 w = new Complex32(Mathf.Cos(exponent), Mathf.Sin(exponent));
+            double exponent = exponentSign * k * GeneralMath.dPI / levelSize;
+            Complex32 w = new Complex32(
+                (float)Math.Cos(exponent),
+                (float)Math.Sin(exponent));
 
             int step = levelSize << 1;
             for (int i = k; i < samples.Length; i += step)
@@ -260,8 +262,8 @@ namespace BGC.Mathematics
             CommonParallel.Invoke(
                 () =>
                 {
-                        // Build and transform padded sequence b_k = exp(I*Pi*k^2/N)
-                        for (int i = 0; i < n; i++)
+                    // Build and transform padded sequence b_k = exp(I*Pi*k^2/N)
+                    for (int i = 0; i < n; i++)
                     {
                         b[i] = sequence[i];
                     }
@@ -275,8 +277,8 @@ namespace BGC.Mathematics
                 },
                 () =>
                 {
-                        // Build and transform padded sequence a_k = x_k * exp(-I*Pi*k^2/N)
-                        for (int i = 0; i < samples.Length; i++)
+                    // Build and transform padded sequence a_k = x_k * exp(-I*Pi*k^2/N)
+                    for (int i = 0; i < samples.Length; i++)
                     {
                         a[i] = sequence[i].Conjugate() * samples[i];
                     }
@@ -321,7 +323,7 @@ namespace BGC.Mathematics
         /// <returns>Bluestein sequence exp(I*Pi*k^2/N)</returns>
         private static Complex32[] BluesteinSequence32(int n)
         {
-            float s = Mathf.PI / n;
+            double s = GeneralMath.dPI / n;
             Complex32[] sequence = new Complex32[n];
 
             // TODO: benchmark whether the second variation is significantly
@@ -330,16 +332,16 @@ namespace BGC.Mathematics
             {
                 for (int k = 0; k < sequence.Length; k++)
                 {
-                    float t = (s * k) * k;
-                    sequence[k] = new Complex32(Mathf.Cos(t), Mathf.Sin(t));
+                    double t = (s * k) * k;
+                    sequence[k] = new Complex32((float)Math.Cos(t), (float)Math.Sin(t));
                 }
             }
             else
             {
                 for (int k = 0; k < sequence.Length; k++)
                 {
-                    float t = s * (k * k);
-                    sequence[k] = new Complex32(Mathf.Cos(t), Mathf.Sin(t));
+                    double t = s * (k * k);
+                    sequence[k] = new Complex32((float)Math.Cos(t), (float)Math.Sin(t));
                 }
             }
 
@@ -454,8 +456,8 @@ namespace BGC.Mathematics
         private static void Radix2Step(Complex64[] samples, int exponentSign, int levelSize, int k)
         {
             // Twiddle Factor
-            float exponent = (exponentSign * k) * Mathf.PI / levelSize;
-            Complex64 w = new Complex64(Mathf.Cos(exponent), Mathf.Sin(exponent));
+            double exponent = (exponentSign * k) * GeneralMath.dPI / levelSize;
+            Complex64 w = new Complex64(Math.Cos(exponent), Math.Sin(exponent));
 
             int step = levelSize << 1;
             for (int i = k; i < samples.Length; i += step)
@@ -511,7 +513,7 @@ namespace BGC.Mathematics
 
             Radix2InverseParallel(a);
 
-            float nbinv = 1.0f / m;
+            double nbinv = 1.0 / m;
             for (int i = 0; i < samples.Length; i++)
             {
                 samples[i] = nbinv * sequence[i].Conjugate() * a[i];
@@ -535,7 +537,7 @@ namespace BGC.Mathematics
         /// <returns>Bluestein sequence exp(I*Pi*k^2/N)</returns>
         private static Complex64[] BluesteinSequence64(int n)
         {
-            float s = Mathf.PI / n;
+            double s = GeneralMath.dPI / n;
             Complex64[] sequence = new Complex64[n];
 
             // TODO: benchmark whether the second variation is significantly
@@ -544,16 +546,16 @@ namespace BGC.Mathematics
             {
                 for (int k = 0; k < sequence.Length; k++)
                 {
-                    float t = (s * k) * k;
-                    sequence[k] = new Complex64(Mathf.Cos(t), Mathf.Sin(t));
+                    double t = (s * k) * k;
+                    sequence[k] = new Complex64(Math.Cos(t), Math.Sin(t));
                 }
             }
             else
             {
                 for (int k = 0; k < sequence.Length; k++)
                 {
-                    float t = s * (k * k);
-                    sequence[k] = new Complex64(Mathf.Cos(t), Mathf.Sin(t));
+                    double t = s * (k * k);
+                    sequence[k] = new Complex64(Math.Cos(t), Math.Sin(t));
                 }
             }
 
@@ -577,7 +579,7 @@ namespace BGC.Mathematics
         /// </summary>
         private static void Rescale(Complex64[] samples)
         {
-            float scalingFactor = 1f / samples.Length;
+            double scalingFactor = 1.0 / samples.Length;
             for (int i = 0; i < samples.Length; i++)
             {
                 samples[i] *= scalingFactor;

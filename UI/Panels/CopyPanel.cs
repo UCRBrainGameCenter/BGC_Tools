@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.UI;
 
 namespace BGC.UI.Panels
@@ -14,10 +15,13 @@ namespace BGC.UI.Panels
         [SerializeField]
         private Camera mainCamera = null;
 
+        [NonSerialized]
         private Image _image = null;
         public Image Image => _image ?? (_image = GetComponent<Image>());
-        
+
+        [NonSerialized]
         private RenderTexture rt;
+        [NonSerialized]
         private Texture2D tex;
 
         private const float scalefactor = 4f;
@@ -46,13 +50,13 @@ namespace BGC.UI.Panels
 
             Vector2 position = corners[0] / scalefactor;
 
-            position.x = Mathf.Floor(position.x);
-            position.y = Mathf.Floor(position.y);
+            position.x = (float)Math.Floor(position.x);
+            position.y = (float)Math.Floor(position.y);
 
             Vector2 size = (corners[2] - corners[0]) / scalefactor;
 
-            size.x = Mathf.Floor(size.x);
-            size.y = Mathf.Floor(size.y);
+            size.x = (float)Math.Floor(size.x);
+            size.y = (float)Math.Floor(size.y);
 
             Rect worldRect = new Rect(Vector2.zero, size);
 

@@ -7,4 +7,3 @@ namespace BGC.UI.Panels
 
     }
 }
-

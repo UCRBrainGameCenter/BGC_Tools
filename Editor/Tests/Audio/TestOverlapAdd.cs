@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -77,11 +78,11 @@ namespace BGC.Tests
                 filepath: DataManagement.PathForDataFile("Test", $"{baseFile}.wav"),
                 simpleAudioClip: out SimpleAudioClip song);
 
-            Debug.Log($"Pre  RMS: {Mathf.Sqrt(song.Samples.Sum(x => x * x) / song.Samples.Length)}   N:{song.Samples.Length}");
+            Debug.Log($"Pre  RMS: {Math.Sqrt(song.Samples.Sum(x => x * x) / song.Samples.Length)}   N:{song.Samples.Length}");
 
             song = song.CarlileShuffle().Cache();
 
-            Debug.Log($"Post RMS: {Mathf.Sqrt(song.Samples.Sum(x => x * x) / song.Samples.Length)}   N:{song.Samples.Length}");
+            Debug.Log($"Post RMS: {Math.Sqrt(song.Samples.Sum(x => x * x) / song.Samples.Length)}   N:{song.Samples.Length}");
 
             //Write to File
             WaveEncoding.SaveFile(
@@ -113,7 +114,7 @@ namespace BGC.Tests
 
                 for (int i = 0; i < 150; i++)
                 {
-                    filter2[i] = 1f / Mathf.Sqrt(150);
+                    filter2[i] = 1f / (float)Math.Sqrt(150);
                 }
 
                 IBGCStream convolved = stream.MultiConvolve(filter1, filter2);
@@ -132,8 +133,8 @@ namespace BGC.Tests
 
             {
                 float[] filter1 = new float[150];
-                filter1[25] = 1f / Mathf.Sqrt(2);
-                filter1[26] = 1f / Mathf.Sqrt(2);
+                filter1[25] = 1f / (float)Math.Sqrt(2);
+                filter1[26] = 1f / (float)Math.Sqrt(2);
 
 
                 float[] filter2 = new float[150];
@@ -145,7 +146,6 @@ namespace BGC.Tests
 
                 IBGCStream convolved = stream.MultiConvolve(filter1, filter2);
 
-
                 string rms = string.Join(", ", convolved.CalculateRMS().Select(x => x.ToString()).ToArray());
 
                 Debug.Log($"Post RMS: {rms}");
@@ -156,7 +156,6 @@ namespace BGC.Tests
                     stream: convolved,
                     overwrite: true);
             }
-
         }
 
         [Test]

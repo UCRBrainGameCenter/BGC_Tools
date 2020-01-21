@@ -114,13 +114,13 @@ namespace BGC.Mathematics
                     return float.PositiveInfinity;
                 }
 
-                float a = Mathf.Abs(_real);
-                float b = Mathf.Abs(_imag);
+                float a = Math.Abs(_real);
+                float b = Math.Abs(_imag);
 
                 if (a > b)
                 {
-                    float tmp = b / a;
-                    return a * Mathf.Sqrt(1f + tmp * tmp);
+                    double tmp = b / (double)a;
+                    return a * (float)Math.Sqrt(1.0 + tmp * tmp);
 
                 }
 
@@ -130,8 +130,8 @@ namespace BGC.Mathematics
                 }
                 else
                 {
-                    float tmp = a / b;
-                    return b * Mathf.Sqrt(1f + tmp * tmp);
+                    double tmp = a / (double)b;
+                    return b * (float)Math.Sqrt(1.0 + tmp * tmp);
                 }
             }
         }
@@ -139,7 +139,7 @@ namespace BGC.Mathematics
         /// <summary>
         /// Gets the phase of a complex number in radians.
         /// </summary>
-        public float Phase => _imag == 0f && _real < 0f ? Mathf.PI : Mathf.Atan2(_imag, _real);
+        public float Phase => _imag == 0f && _real < 0f ? GeneralMath.fPI : (float)Math.Atan2(_imag, _real);
 
         /// <summary>
         /// Gets the absolute value (or magnitude) of a complex number.
@@ -156,7 +156,7 @@ namespace BGC.Mathematics
         {
             if (value.Imaginary < 0f || value.Imaginary == 0f && value.Real > 0f)
             {
-                return Mathf.PI - Acos(-value);
+                return GeneralMath.fPI - Acos(-value);
             }
 
             return -ImaginaryOne * (value + (ImaginaryOne * (1f - value.Square()).SquareRoot())).NaturalLogarithm();
@@ -210,12 +210,12 @@ namespace BGC.Mathematics
         {
             if (value.IsReal())
             {
-                return new Complex32(Mathf.Cos(value.Real), 0f);
+                return new Complex32((float)Math.Cos(value.Real), 0f);
             }
 
             return new Complex32(
-                Mathf.Cos(value.Real) * GeneralMath.Cosh(value.Imaginary),
-                -Mathf.Sin(value.Real) * GeneralMath.Sinh(value.Imaginary));
+                (float)(Math.Cos(value.Real) * GeneralMath.Cosh(value.Imaginary)),
+                (float)(-Math.Sin(value.Real) * GeneralMath.Sinh(value.Imaginary)));
         }
 
         /// <summary>
@@ -234,17 +234,17 @@ namespace BGC.Mathematics
             // cosh(x + j*y) = cosh(x)*cos(y) + j*sinh(x)*sin(y)
             // if x > huge, cosh(x + j*y) = exp(|x|)/2*cos(y) + j*sign(x)*exp(|x|)/2*sin(y)
 
-            if (Mathf.Abs(value.Real) >= 22f) // Taken from the msun library in FreeBSD
+            if (Math.Abs(value.Real) >= 22f) // Taken from the msun library in FreeBSD
             {
-                float h = Mathf.Exp(Mathf.Abs(value.Real)) * 0.5f;
+                double h = Math.Exp(Math.Abs(value.Real)) * 0.5;
                 return new Complex32(
-                    h * Mathf.Cos(value.Imaginary),
-                    Mathf.Sign(value.Real) * h * Mathf.Sin(value.Imaginary));
+                    (float)(h * Math.Cos(value.Imaginary)),
+                    (float)(Math.Sign(value.Real) * h * Math.Sin(value.Imaginary)));
             }
 
             return new Complex32(
-                GeneralMath.Cosh(value.Real) * Mathf.Cos(value.Imaginary),
-                GeneralMath.Sinh(value.Real) * Mathf.Sin(value.Imaginary));
+                (float)(GeneralMath.Cosh(value.Real) * Math.Cos(value.Imaginary)),
+                (float)(GeneralMath.Sinh(value.Real) * Math.Sin(value.Imaginary)));
         }
 
         /// <summary>
@@ -261,13 +261,17 @@ namespace BGC.Mathematics
         /// Creates a complex number from a point's polar coordinates.
         /// </summary>
         public static Complex32 FromPolarCoordinates(float magnitude, float phase) =>
-            new Complex32(magnitude * Mathf.Cos(phase), magnitude * Mathf.Sin(phase));
+            new Complex32(
+                (float)(magnitude * Math.Cos(phase)),
+                (float)(magnitude * Math.Sin(phase)));
 
         /// <summary>
         /// Creates a complex number from a point's polar coordinates.
         /// </summary>
         public static Complex32 FromPolarCoordinates(double magnitude, double phase) =>
-            new Complex32((float)(magnitude * Math.Cos(phase)), (float)(magnitude * Math.Sin(phase)));
+            new Complex32(
+                (float)(magnitude * Math.Cos(phase)),
+                (float)(magnitude * Math.Sin(phase)));
 
         /// <summary>
         /// Returns the natural (base e) logarithm of a specified complex number.
@@ -319,12 +323,12 @@ namespace BGC.Mathematics
         {
             if (value.IsReal())
             {
-                return new Complex32(Mathf.Sin(value.Real), 0f);
+                return new Complex32((float)Math.Sin(value.Real), 0f);
             }
 
             return new Complex32(
-                Mathf.Sin(value.Real) * GeneralMath.Cosh(value.Imaginary),
-                Mathf.Cos(value.Real) * GeneralMath.Sinh(value.Imaginary));
+                (float)(Math.Sin(value.Real) * GeneralMath.Cosh(value.Imaginary)),
+                (float)(Math.Cos(value.Real) * GeneralMath.Sinh(value.Imaginary)));
         }
 
         /// <summary>
@@ -343,17 +347,17 @@ namespace BGC.Mathematics
             // sinh(x + j y) = sinh(x)*cos(y) + j*cosh(x)*sin(y)
             // if x > huge, sinh(x + jy) = sign(x)*exp(|x|)/2*cos(y) + j*exp(|x|)/2*sin(y)
 
-            if (Mathf.Abs(value.Real) >= 22f) // Taken from the msun library in FreeBSD
+            if (Math.Abs(value.Real) >= 22f) // Taken from the msun library in FreeBSD
             {
-                float h = Mathf.Exp(Mathf.Abs(value.Real)) * 0.5f;
+                double h = Math.Exp(Math.Abs(value.Real)) * 0.5;
                 return new Complex32(
-                    Mathf.Sign(value.Real) * h * Mathf.Cos(value.Imaginary),
-                    h * Mathf.Sin(value.Imaginary));
+                    (float)(Math.Sign(value.Real) * h * Math.Cos(value.Imaginary)),
+                    (float)(h * Math.Sin(value.Imaginary)));
             }
 
             return new Complex32(
-                GeneralMath.Sinh(value.Real) * Mathf.Cos(value.Imaginary),
-                GeneralMath.Cosh(value.Real) * Mathf.Sin(value.Imaginary));
+                (float)(GeneralMath.Sinh(value.Real) * Math.Cos(value.Imaginary)),
+                (float)(GeneralMath.Cosh(value.Real) * Math.Sin(value.Imaginary)));
         }
 
         /// <summary>
@@ -395,7 +399,7 @@ namespace BGC.Mathematics
         {
             if (value.IsReal())
             {
-                return new Complex32(Mathf.Tan(value.Real), 0f);
+                return new Complex32((float)Math.Tan(value.Real), 0f);
             }
 
             // tan(z) = - j*tanh(j*z)
@@ -426,20 +430,20 @@ namespace BGC.Mathematics
 
             if (Math.Abs(value.Real) >= 22f) // Taken from the msun library in FreeBSD
             {
-                float e = Mathf.Exp(-Mathf.Abs(value.Real));
-                if (e == 0f)
+                double e = Math.Exp(-Math.Abs(value.Real));
+                if (e == 0.0)
                 {
-                    return new Complex32(Mathf.Sign(value.Real), 0f);
+                    return new Complex32(Math.Sign(value.Real), 0f);
                 }
                 else
                 {
                     return new Complex32(
-                        Mathf.Sign(value.Real),
-                        4f * Mathf.Cos(value.Imaginary) * Mathf.Sin(value.Imaginary) * e * e);
+                        Math.Sign(value.Real),
+                        (float)(4.0 * Math.Cos(value.Imaginary) * Math.Sin(value.Imaginary) * e * e));
                 }
             }
 
-            float tani = Mathf.Tan(value.Imaginary);
+            float tani = (float)Math.Tan(value.Imaginary);
             float beta = 1 + tani * tani; // beta = 1/cos^2(y) = 1 + t^2
             float sinhr = GeneralMath.Sinh(value.Real);
             float coshr = GeneralMath.Cosh(value.Real);
@@ -458,8 +462,8 @@ namespace BGC.Mathematics
         /// </summary>
         public Complex32 Rotation(float phase)
         {
-            float cosPhase = Mathf.Cos(phase);
-            float sinePhase = Mathf.Sin(phase);
+            float cosPhase = (float)Math.Cos(phase);
+            float sinePhase = (float)Math.Sin(phase);
             return new Complex32(
                 _real * cosPhase - _imag * sinePhase,
                 _real * sinePhase + _imag * cosPhase);
@@ -468,7 +472,7 @@ namespace BGC.Mathematics
         /// <summary>
         /// Retuns the real value of the Complex32 number after rotation by <paramref name="phase"/> radians, or exp(i*phase) 
         /// </summary>
-        public float RealRotation(float phase) => _real * Mathf.Cos(phase) - _imag * Mathf.Sin(phase);
+        public float RealRotation(float phase) => _real * (float)Math.Cos(phase) - _imag * (float)Math.Sin(phase);
 
 
         /// <summary>
@@ -579,7 +583,7 @@ namespace BGC.Mathematics
             float b = dividend.Imaginary;
             float c = divisor.Real;
             float d = divisor.Imaginary;
-            if (Mathf.Abs(d) <= Mathf.Abs(c))
+            if (Math.Abs(d) <= Math.Abs(c))
             {
                 return InternalDiv(a, b, c, d, false);
             }
@@ -760,10 +764,10 @@ namespace BGC.Mathematics
         {
             if (IsRealNonNegative())
             {
-                return new Complex32(Mathf.Log(_real), 0f);
+                return new Complex32((float)Math.Log(_real), 0f);
             }
 
-            return new Complex32(0.5f * Mathf.Log(MagnitudeSquared), Phase);
+            return new Complex32(0.5f * (float)Math.Log(MagnitudeSquared), Phase);
         }
 
         /// <summary>
@@ -774,17 +778,17 @@ namespace BGC.Mathematics
         {
             if (IsRealNonNegative())
             {
-                return new Complex32(Mathf.Log10(_real), 0f);
+                return new Complex32((float)Math.Log10(_real), 0f);
             }
 
-            return new Complex32(0.5f * Mathf.Log10(MagnitudeSquared), Phase);
+            return new Complex32(0.5f * (float)Math.Log10(MagnitudeSquared), Phase);
         }
 
         /// <summary>
         /// Logarithm of this Complex32 with custom base.
         /// </summary>
         /// <returns>The logarithm of this complex number.</returns>
-        public Complex32 Logarithm(float baseValue) => NaturalLogarithm() / Mathf.Log(baseValue);
+        public Complex32 Logarithm(float baseValue) => NaturalLogarithm() / (float)Math.Log(baseValue);
 
         /// <summary>
         /// Exponential of this Complex32 (exp(x), E^x).
@@ -794,13 +798,15 @@ namespace BGC.Mathematics
         /// </returns>
         public Complex32 Exponential()
         {
-            float exp = Mathf.Exp(_real);
+            double exp = Math.Exp(_real);
             if (IsReal())
             {
-                return new Complex32(exp, 0f);
+                return new Complex32((float)exp, 0f);
             }
 
-            return new Complex32(exp * Mathf.Cos(_imag), exp * Mathf.Sin(_imag));
+            return new Complex32(
+                (float)(exp * Math.Cos(_imag)),
+                (float)(exp * Math.Sin(_imag)));
         }
 
         /// <summary>
@@ -832,36 +838,42 @@ namespace BGC.Mathematics
         {
             if (IsRealNonNegative())
             {
-                return new Complex32(Mathf.Sqrt(_real), 0f);
+                return new Complex32((float)Math.Sqrt(_real), 0f);
             }
 
             Complex32 result;
 
-            float absReal = Mathf.Abs(Real);
-            float absImag = Mathf.Abs(Imaginary);
-            float w;
+            double absReal = Math.Abs(Real);
+            double absImag = Math.Abs(Imaginary);
+            double w;
             if (absReal >= absImag)
             {
-                float ratio = Imaginary / Real;
-                w = Mathf.Sqrt(absReal) * Mathf.Sqrt(0.5f * (1f + Mathf.Sqrt(1f + (ratio * ratio))));
+                double ratio = Imaginary / (double)Real;
+                w = Math.Sqrt(absReal) * Math.Sqrt(0.5 * (1.0 + Math.Sqrt(1.0 + (ratio * ratio))));
             }
             else
             {
-                float ratio = Real / Imaginary;
-                w = Mathf.Sqrt(absImag) * Mathf.Sqrt(0.5f * (Mathf.Abs(ratio) + Mathf.Sqrt(1f + (ratio * ratio))));
+                double ratio = Real / (double)Imaginary;
+                w = Math.Sqrt(absImag) * Math.Sqrt(0.5 * (Math.Abs(ratio) + Math.Sqrt(1.0 + (ratio * ratio))));
             }
 
             if (Real >= 0f)
             {
-                result = new Complex32(w, (Imaginary / (2f * w)));
+                result = new Complex32(
+                    (float)w,
+                    (float)(Imaginary / (2.0 * w)));
             }
             else if (Imaginary >= 0f)
             {
-                result = new Complex32((absImag / (2f * w)), w);
+                result = new Complex32(
+                    (float)(absImag / (2.0 * w)),
+                    (float)w);
             }
             else
             {
-                result = new Complex32((absImag / (2f * w)), -w);
+                result = new Complex32(
+                    (float)(absImag / (2.0 * w)),
+                    -(float)w);
             }
 
             return result;
