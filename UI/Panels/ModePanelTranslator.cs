@@ -1,5 +1,6 @@
 ﻿using System;
 using UnityEngine;
+using BGC.Mathematics;
 using BGC.MonoUtility.Interpolation;
 
 namespace BGC.UI.Panels
@@ -71,8 +72,8 @@ namespace BGC.UI.Panels
                     initialPosition = displacement;
                     finalPosition = Vector2.zero;
                     break;
-                case Direction.Hide:
 
+                case Direction.Hide:
                     initialPosition = Vector2.zero;
                     finalPosition = displacement;
                     break;
@@ -81,7 +82,6 @@ namespace BGC.UI.Panels
                     Debug.LogError($"Direction unsupported: {direction}");
                     return;
             }
-
         }
 
         void ILerpAction<ModePanel>.Initialize(ModePanel modelPanel)
@@ -100,8 +100,7 @@ namespace BGC.UI.Panels
 
         void ILerpAction<ModePanel>.CallAction(float t)
         {
-            rt.localPosition = Vector2.Lerp(initialPosition, finalPosition, Mathf.SmoothStep(0f, 1f, t));
+            rt.localPosition = Vector2.Lerp(initialPosition, finalPosition, GeneralMath.SmoothStep(0f, 1f, t));
         }
     }
-
 }

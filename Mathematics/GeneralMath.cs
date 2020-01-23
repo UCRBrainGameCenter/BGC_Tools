@@ -268,6 +268,18 @@ namespace BGC.Mathematics
         }
 
         /// <summary>
+        /// Interpolates between <paramref name="initial"/> and <paramref name="final"/>
+        /// by <paramref name="t"/> with smoothing at the limits.
+        /// Clamps <paramref name="t"/> to range [0,1]
+        /// </summary>
+        public static decimal SmoothStep(decimal initial, decimal final, decimal t)
+        {
+            t = Clamp01(t);
+            t = (3 - 2 * t) * t * t;
+            return initial * (1 - t) + final * t;
+        }
+
+        /// <summary>
         /// Linearly interpolates between <paramref name="initial"/> and <paramref name="final"/>
         /// by <paramref name="t"/>, clamps <paramref name="t"/> to range [0,1]
         /// </summary>
@@ -301,6 +313,18 @@ namespace BGC.Mathematics
         }
 
         /// <summary>
+        /// Interpolates between <paramref name="initial"/> and <paramref name="final"/>
+        /// by <paramref name="t"/> with smoothing at the limits.
+        /// Clamps <paramref name="t"/> to range [0,1]
+        /// </summary>
+        public static double SmoothStep(double initial, double final, double t)
+        {
+            t = Clamp01(t);
+            t = (3 - 2 * t) * t * t;
+            return initial * (1 - t) + final * t;
+        }
+
+        /// <summary>
         /// Linearly interpolates between <paramref name="initial"/> and <paramref name="final"/>
         /// by <paramref name="t"/>, clamps <paramref name="t"/> to range [0,1]
         /// </summary>
@@ -331,6 +355,18 @@ namespace BGC.Mathematics
             }
 
             return Clamp01((value - initial) / (final - initial));
+        }
+
+        /// <summary>
+        /// Interpolates between <paramref name="initial"/> and <paramref name="final"/>
+        /// by <paramref name="t"/> with smoothing at the limits.
+        /// Clamps <paramref name="t"/> to range [0,1]
+        /// </summary>
+        public static float SmoothStep(float initial, float final, float t)
+        {
+            t = Clamp01(t);
+            t = (3 - 2 * t) * t * t;
+            return initial * (1 - t) + final * t;
         }
 
         #endregion Lerp
@@ -485,6 +521,123 @@ namespace BGC.Mathematics
         }
 
         #endregion PingPong
+        #region SmoothDamp
+
+        /// <summary>
+        /// Gradually changes a value towards a desired goal over time.
+        /// Based on Game Programming Gems 4 Chapter 1.10 and Unity's implementation
+        /// </summary>
+        public static (decimal newPosition, decimal newVelocity) SmoothDamp(
+            decimal currentPosition,
+            decimal targetPosition,
+            decimal currentVelocity,
+            decimal smoothTime,
+            decimal maxSpeed,
+            decimal deltaTime)
+        {
+            smoothTime = Math.Max(0.0001M, smoothTime);
+            decimal omega = 2M / smoothTime;
+
+            decimal x = omega * deltaTime;
+            decimal exp = 1M / (1M + x * (1M + x * (0.48M + 0.235M * x)));
+            decimal change = currentPosition - targetPosition;
+            decimal originalTo = targetPosition;
+
+            // Clamp maximum speed
+            decimal maxChange = maxSpeed * smoothTime;
+            change = Clamp(change, -maxChange, maxChange);
+            targetPosition = currentPosition - change;
+
+            decimal temp = (currentVelocity + omega * change) * deltaTime;
+            decimal outputVelocity = (currentVelocity - omega * temp) * exp;
+            decimal outputPosition = targetPosition + (change + temp) * exp;
+
+            // Prevent overshooting
+            if (originalTo - currentPosition > 0M == outputPosition > originalTo)
+            {
+                return (originalTo, (outputPosition - originalTo) / deltaTime);
+            }
+
+            return (outputPosition, outputVelocity);
+        }
+
+        /// <summary>
+        /// Gradually changes a value towards a desired goal over time.
+        /// Based on Game Programming Gems 4 Chapter 1.10 and Unity's implementation
+        /// </summary>
+        public static (double newPosition, double newVelocity) SmoothDamp(
+            double currentPosition,
+            double targetPosition,
+            double currentVelocity,
+            double smoothTime,
+            double maxSpeed,
+            double deltaTime)
+        {
+            smoothTime = Math.Max(0.0001, smoothTime);
+            double omega = 2.0 / smoothTime;
+
+            double x = omega * deltaTime;
+            double exp = 1.0 / (1.0 + x * (1.0 + x * (0.48 + 0.235 * x)));
+            double change = currentPosition - targetPosition;
+            double originalTo = targetPosition;
+
+            // Clamp maximum speed
+            double maxChange = maxSpeed * smoothTime;
+            change = Clamp(change, -maxChange, maxChange);
+            targetPosition = currentPosition - change;
+
+            double temp = (currentVelocity + omega * change) * deltaTime;
+            double outputVelocity = (currentVelocity - omega * temp) * exp;
+            double outputPosition = targetPosition + (change + temp) * exp;
+
+            // Prevent overshooting
+            if (originalTo - currentPosition > 0.0 == outputPosition > originalTo)
+            {
+                return (originalTo, (outputPosition - originalTo) / deltaTime);
+            }
+
+            return (outputPosition, outputVelocity);
+        }
+
+        /// <summary>
+        /// Gradually changes a value towards a desired goal over time.
+        /// Based on Game Programming Gems 4 Chapter 1.10 and Unity's implementation
+        /// </summary>
+        public static (float newPosition, float newVelocity) SmoothDamp(
+            float currentPosition,
+            float targetPosition,
+            float currentVelocity,
+            float smoothTime,
+            float maxSpeed,
+            float deltaTime)
+        {
+            smoothTime = Math.Max(0.0001f, smoothTime);
+            float omega = 2f / smoothTime;
+
+            float x = omega * deltaTime;
+            float exp = 1f / (1f + x * (1f + x * (0.48f + 0.235f * x)));
+            float change = currentPosition - targetPosition;
+            float originalTo = targetPosition;
+
+            // Clamp maximum speed
+            float maxChange = maxSpeed * smoothTime;
+            change = Clamp(change, -maxChange, maxChange);
+            targetPosition = currentPosition - change;
+
+            float temp = (currentVelocity + omega * change) * deltaTime;
+            float outputVelocity = (currentVelocity - omega * temp) * exp;
+            float outputPosition = targetPosition + (change + temp) * exp;
+
+            // Prevent overshooting
+            if (originalTo - currentPosition > 0f == outputPosition > originalTo)
+            {
+                return (originalTo, (outputPosition - originalTo) / deltaTime);
+            }
+
+            return (outputPosition, outputVelocity);
+        }
+
+        #endregion SmoothDamp
         #region Approximately
 
         private const float FLOAT_MANTISSA_LOWER_BOUND = 1.1920929E-7f;
