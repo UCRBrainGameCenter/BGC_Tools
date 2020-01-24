@@ -37,6 +37,8 @@ namespace BGC.Audio.Filters
             System.Random randomizer = null)
             : base(stream)
         {
+            System.Diagnostics.Debug.Assert(stream.Channels == 1);
+
             this.randomizer = randomizer ?? new System.Random(CustomRandom.Next());
             this.recalculateRMS = recalculateRMS;
 
@@ -50,6 +52,8 @@ namespace BGC.Audio.Filters
             System.Random randomizer = null)
             : base(stream)
         {
+            System.Diagnostics.Debug.Assert(stream.Channels == 1);
+
             this.randomizer = randomizer ?? new System.Random(CustomRandom.Next());
             this.recalculateRMS = recalculateRMS;
 
