@@ -155,6 +155,16 @@ namespace BGC.Audio.AnalyticStreams
         /// <summary> Slowest Backup Alternative for calculating RMS </summary>
         public static double CalculateRMS(this IAnalyticStream stream)
         {
+            if (stream.Samples == 0)
+            {
+                return 0.0;
+            }
+
+            if (stream.Samples == int.MaxValue)
+            {
+                return double.NaN;
+            }
+
             double rms = 0.0;
             int readSamples;
             const int BUFFER_SIZE = 512;

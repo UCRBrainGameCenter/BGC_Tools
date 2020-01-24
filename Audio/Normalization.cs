@@ -2,6 +2,7 @@
 using System.Linq;
 using UnityEngine;
 using BGC.Mathematics;
+using System.Collections.Generic;
 
 namespace BGC.Audio
 {
@@ -695,7 +696,26 @@ namespace BGC.Audio
                 factorR: out double levelFactorR,
                 source: source);
 
-            double maxRMS = stream.GetChannelRMS().Where(x => !double.IsNaN(x)).Max();
+            IEnumerable<double> channelRMS = stream.GetChannelRMS();
+
+            if (channelRMS.Any(double.IsNaN))
+            {
+                if (stream.ChannelSamples == int.MaxValue)
+                {
+                    throw new StreamCompositionException("Unable to calculate the RMS of an infinite, unknowable stream.  Try truncating.");
+                }
+                else
+                {
+                    channelRMS = stream.CalculateRMS();
+
+                    if (channelRMS.All(double.IsNaN))
+                    {
+                        throw new StreamCompositionException("Unable to calculate the RMS of stream.");
+                    }
+                }
+            }
+
+            double maxRMS = channelRMS.Where(x => !double.IsNaN(x)).Max();
 
             scalingFactorL = levelFactorL * (TARGET_RMS / maxRMS);
             scalingFactorR = levelFactorR * (TARGET_RMS / maxRMS);

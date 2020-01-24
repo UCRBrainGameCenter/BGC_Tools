@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using BGC.Mathematics;
 using BGC.Audio.Envelopes;
 
@@ -17,7 +18,7 @@ namespace BGC.Audio.Filters
 
         private readonly IBGCEnvelopeStream envelopeStream;
 
-        private readonly bool recalculateRMS;
+        private readonly TransformRMSBehavior rmsBehavior;
         private int position = 0;
 
         private const int BUFFER_SIZE = 512;
@@ -26,10 +27,10 @@ namespace BGC.Audio.Filters
         public StreamEnveloper(
             IBGCStream stream,
             IBGCEnvelopeStream envelopeStream,
-            bool recalculateRMS = false)
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
             : base(stream)
         {
-            this.recalculateRMS = recalculateRMS;
+            this.rmsBehavior = rmsBehavior;
             this.envelopeStream = envelopeStream;
 
             ChannelSamples = Math.Min(envelopeStream.Samples, stream.ChannelSamples);
@@ -106,18 +107,27 @@ namespace BGC.Audio.Filters
         {
             if (_channelRMS == null)
             {
-                if (recalculateRMS)
+                switch (rmsBehavior)
                 {
-                    _channelRMS = this.CalculateRMS();
-                }
-                else
-                {
-                    _channelRMS = stream.GetChannelRMS();
+                    case TransformRMSBehavior.Recalculate:
+                        _channelRMS = this.CalculateRMS();
+                        break;
+
+                    case TransformRMSBehavior.Passthrough:
+                        _channelRMS = stream.GetChannelRMS();
+
+                        if (_channelRMS.Any(double.IsNaN) && ChannelSamples != int.MaxValue)
+                        {
+                            goto case TransformRMSBehavior.Recalculate;
+                        }
+                        break;
+
+                    default:
+                        throw new Exception($"Unexpected rmsBehavior: {rmsBehavior}");
                 }
             }
 
             return _channelRMS;
         }
     }
-
 }

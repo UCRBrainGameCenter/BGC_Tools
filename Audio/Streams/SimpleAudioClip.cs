@@ -51,7 +51,7 @@ namespace BGC.Audio
             return copyLength;
         }
 
-        public override void Seek(int position) => 
+        public override void Seek(int position) =>
             Position = GeneralMath.Clamp(position, 0, ChannelSamples);
 
         public override void Reset() => RawPosition = 0;
@@ -68,7 +68,7 @@ namespace BGC.Audio
                     rms[i % Channels] += Samples[i] * Samples[i];
                 }
 
-                for(int i = 0; i < Channels; i++)
+                for (int i = 0; i < Channels; i++)
                 {
                     rms[i] = Math.Sqrt(rms[i] / ChannelSamples);
                 }

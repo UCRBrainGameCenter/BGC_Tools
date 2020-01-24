@@ -22,7 +22,7 @@ namespace BGC.Audio.Filters
         {
             if (stream.Channels != 1)
             {
-                throw new ArgumentException("UpChannelMonoFilter inner stream but have only one channel.");
+                throw new StreamCompositionException("UpChannelMonoFilter inner stream must have only one channel.");
             }
 
             Channels = channelCount;

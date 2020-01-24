@@ -164,7 +164,6 @@ namespace BGC.Audio.Synthesis
                 case AmplitudeDistribution.Pink: return 1.0;
                 case AmplitudeDistribution.Brown: return 1.0 / Math.Sqrt(frequency);
 
-                case AmplitudeDistribution.MAX:
                 default:
                     UnityEngine.Debug.LogError($"Unexpected AmplitudeFactor: {amplitudeDistribution}");
                     return 1.0;

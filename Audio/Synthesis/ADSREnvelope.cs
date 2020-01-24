@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using BGC.Audio.Filters;
 using BGC.Mathematics;
@@ -240,10 +241,24 @@ namespace BGC.Audio.Synthesis
                     Math.Pow(sustainDecayRate, sustainEndSample - attackDownEndSample) *
                     Math.Pow(releaseDecayRate, position - sustainEndSample);
             }
-
         }
 
-        public override IEnumerable<double> GetChannelRMS() => stream.GetChannelRMS();
+        private IEnumerable<double> _channelRMS = null;
+        public override IEnumerable<double> GetChannelRMS()
+        {
+            if (_channelRMS == null)
+            {
+                _channelRMS = stream.GetChannelRMS();
+
+                //If the rms was previously unknowable
+                if (_channelRMS.Any(double.IsNaN))
+                {
+                    _channelRMS = this.CalculateRMS();
+                }
+            }
+
+            return _channelRMS;
+        }
 
         private double EnvelopeRate(EnvelopeState state)
         {

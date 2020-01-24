@@ -25,7 +25,7 @@ namespace BGC.Audio.Filters
 
         private int bufferIndex = 0;
         private int bufferCount = 0;
-        private readonly bool recalculateRMS;
+        private readonly TransformRMSBehavior rmsBehavior;
 
         public override int Channels => stream.Channels;
 
@@ -36,7 +36,7 @@ namespace BGC.Audio.Filters
         public ConvolutionFilter(
             IBGCStream stream,
             float[] filter,
-            bool recalculateRMS = false)
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
             : base(stream)
         {
             filterLength = filter.Length;
@@ -70,16 +70,19 @@ namespace BGC.Audio.Filters
 
             initialized = false;
 
-            this.recalculateRMS = recalculateRMS;
+            this.rmsBehavior = rmsBehavior;
         }
 
         public ConvolutionFilter(
             IBGCStream stream,
             IBGCStream filter,
-            bool recalculateRMS = false)
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
             : base(stream)
         {
-            Debug.Assert(filter.Channels == 1);
+            if (filter.Channels != 1)
+            {
+                throw new StreamCompositionException($"ConvolutionFilter expects a single-channel filter.");
+            }
 
             filterLength = filter.ChannelSamples;
 
@@ -107,7 +110,7 @@ namespace BGC.Audio.Filters
 
             initialized = false;
 
-            this.recalculateRMS = recalculateRMS;
+            this.rmsBehavior = rmsBehavior;
         }
 
         protected override void _Initialize()
@@ -244,18 +247,22 @@ namespace BGC.Audio.Filters
         {
             if (_channelRMS == null)
             {
-                if (recalculateRMS)
+                switch (rmsBehavior)
                 {
-                    _channelRMS = this.CalculateRMS();
-                }
-                else
-                {
-                    _channelRMS = stream.GetChannelRMS();
+                    case TransformRMSBehavior.Recalculate:
+                        _channelRMS = this.CalculateRMS();
+                        break;
+
+                    case TransformRMSBehavior.Passthrough:
+                        _channelRMS = stream.GetChannelRMS();
+                        break;
+
+                    default:
+                        throw new Exception($"Unexpected rmsBehavior: {rmsBehavior}");
                 }
             }
 
             return _channelRMS;
         }
     }
-
 }

@@ -22,7 +22,7 @@ namespace BGC.Audio.Filters
         {
             if (stream.Channels != 1)
             {
-                throw new ArgumentException("StreamRMSStandardizer inner stream must have one channel.");
+                throw new StreamCompositionException("StreamRMSStandardizer inner stream must have only one channel.");
             }
 
             this.rms = rms;
@@ -30,7 +30,19 @@ namespace BGC.Audio.Filters
 
         protected override void _Initialize()
         {
-            scalar = (float)(rms / stream.GetChannelRMS().First());
+            double channelRMS = stream.GetChannelRMS().First();
+
+            if (double.IsNaN(channelRMS))
+            {
+                if (stream.ChannelSamples == int.MaxValue)
+                {
+                    throw new StreamCompositionException("Unable to scale inifinte stream with unknowable RMS.");
+                }
+
+                channelRMS = stream.CalculateRMS().First();
+            }
+
+            scalar = (float)(rms / channelRMS);
 
             //Protect against some NaN Poisoning
             if (float.IsNaN(scalar) || float.IsInfinity(scalar))

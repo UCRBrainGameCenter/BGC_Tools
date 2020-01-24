@@ -18,7 +18,7 @@ namespace BGC.Audio.AnalyticStreams
         private readonly int endOpeningWindow;
         private readonly int startClosingWindow;
 
-        private readonly bool recalculateRMS;
+        private readonly TransformRMSBehavior rmsBehavior;
 
         public int Position { get; private set; }
 
@@ -28,7 +28,7 @@ namespace BGC.Audio.AnalyticStreams
             double totalDuration = double.NaN,
             int smoothingSamples = 1000,
             int sampleOffset = 0,
-            bool recalculateRMS = false)
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
             : base(stream)
         {
             if (sampleOffset > stream.Samples)
@@ -50,7 +50,7 @@ namespace BGC.Audio.AnalyticStreams
                 Samples = stream.Samples - sampleOffset;
             }
 
-            this.recalculateRMS = recalculateRMS;
+            this.rmsBehavior = rmsBehavior;
 
             smoothingSamples = Math.Min(smoothingSamples, Samples / 2);
 
@@ -143,18 +143,27 @@ namespace BGC.Audio.AnalyticStreams
         {
             if (double.IsNaN(_channelRMS))
             {
-                if (recalculateRMS)
+                switch (rmsBehavior)
                 {
-                    _channelRMS = this.CalculateRMS();
-                }
-                else
-                {
-                    _channelRMS = stream.GetRMS();
+                    case TransformRMSBehavior.Recalculate:
+                        _channelRMS = this.CalculateRMS();
+                        break;
+
+                    case TransformRMSBehavior.Passthrough:
+                        _channelRMS = stream.GetRMS();
+
+                        if (double.IsNaN(_channelRMS) && Samples != int.MaxValue)
+                        {
+                            goto case TransformRMSBehavior.Recalculate;
+                        }
+                        break;
+
+                    default:
+                        throw new Exception($"Unexpected rmsBehavior: {rmsBehavior}");
                 }
             }
 
             return _channelRMS;
         }
     }
-
 }

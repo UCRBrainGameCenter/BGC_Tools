@@ -32,7 +32,7 @@ namespace BGC.Audio.Filters
         {
             if (stream.Channels != 2)
             {
-                throw new ArgumentException("NormalizerFilter inner stream but have two channels.");
+                throw new StreamCompositionException("NormalizerFilter inner stream must have two channels.");
             }
 
             this.leftFactor = (float)leftFactor;
@@ -51,7 +51,7 @@ namespace BGC.Audio.Filters
         {
             if (stream.Channels != 2)
             {
-                throw new ArgumentException("NormalizerFilter inner stream but have two channels.");
+                throw new StreamCompositionException("NormalizerFilter inner stream must have two channels.");
             }
 
             presentationLevels = (presentationLevel, presentationLevel);
@@ -67,7 +67,7 @@ namespace BGC.Audio.Filters
         {
             if (stream.Channels != 2)
             {
-                throw new ArgumentException("NormalizerFilter inner stream but have two channels.");
+                throw new StreamCompositionException("NormalizerFilter inner stream must have two channels.");
             }
 
             presentationLevels = presentationLevel;
@@ -84,7 +84,7 @@ namespace BGC.Audio.Filters
         {
             if (stream.Channels != 2)
             {
-                throw new ArgumentException("NormalizerFilter inner stream but have two channels.");
+                throw new StreamCompositionException("NormalizerFilter inner stream must have two channels.");
             }
 
             presentationLevels = (presentationLevel, presentationLevel);
@@ -160,9 +160,11 @@ namespace BGC.Audio.Filters
         {
             if (_channelRMS == null)
             {
-                double innerRMS = stream.GetChannelRMS().First();
+                double[] innerRMS = stream.GetChannelRMS().ToArray();
+                innerRMS[0] *= leftFactor;
+                innerRMS[1] *= rightFactor;
 
-                _channelRMS = new double[2] { leftFactor * innerRMS, rightFactor * innerRMS };
+                _channelRMS = innerRMS;
             }
 
             return _channelRMS;

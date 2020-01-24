@@ -27,7 +27,10 @@ namespace BGC.Audio.Filters
         public StreamCenterer(IBGCStream stream, double totalDuration)
             : base(stream)
         {
-            Debug.Assert(stream.Duration() <= totalDuration);
+            if (stream.Duration() > totalDuration)
+            {
+                throw new StreamCompositionException("StreamCenterer cannot center a stream inside a window of greater duration.");
+            }
 
             totalChannelSamples = (int)Math.Ceiling(totalDuration * SamplingRate);
             int delaySamples = totalChannelSamples - stream.ChannelSamples;
@@ -40,7 +43,10 @@ namespace BGC.Audio.Filters
         public StreamCenterer(IBGCStream stream, int preDelaySamples, int postDelaySamples)
             : base(stream)
         {
-            Debug.Assert(stream.ChannelSamples != int.MaxValue);
+            if (stream.ChannelSamples == int.MaxValue)
+            {
+                throw new StreamCompositionException("StreamCenterer cannot operate on infinite streams.");
+            }
 
             this.postDelaySamples = postDelaySamples;
             this.preDelaySamples = preDelaySamples;
@@ -116,5 +122,4 @@ namespace BGC.Audio.Filters
 
         public override IEnumerable<double> GetChannelRMS() => stream.GetChannelRMS();
     }
-
 }

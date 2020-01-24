@@ -21,6 +21,24 @@ namespace BGC.Audio
         public static IEnumerable<double> CalculateRMS(this IBGCStream stream)
         {
             double[] rms = new double[stream.Channels];
+
+            if (stream.ChannelSamples == 0)
+            {
+                //Default to 0 for empty streams
+                return rms;
+            }
+
+            if (stream.ChannelSamples == int.MaxValue)
+            {
+                //Can't calculate the RMS of an infinite stream
+                for (int i = 0; i < rms.Length; i++)
+                {
+                    rms[i] = double.NaN;
+                }
+
+                return rms;
+            }
+
             int readSamples;
 
             const int BUFFER_SIZE = 512;
@@ -101,7 +119,8 @@ namespace BGC.Audio
             ContinuousFilter.FilterType filterType,
             double freqLB,
             double freqUB,
-            double qFactor = double.NaN)
+            double qFactor = double.NaN,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Recalculate)
         {
             return new ContinuousFilter(
                 stream: stream,
@@ -109,7 +128,8 @@ namespace BGC.Audio
                 filterType: filterType,
                 freqLB: freqLB,
                 freqUB: freqUB,
-                qFactor: qFactor);
+                qFactor: qFactor,
+                rmsBehavior: rmsBehavior);
         }
 
         public static IBGCStream ADSR(
@@ -243,18 +263,18 @@ namespace BGC.Audio
             this IBGCStream stream,
             double totalDuration,
             int offset = 0,
-            bool recalculateRMS = false)
+            TransformRMSBehavior transformRMSBehavior = TransformRMSBehavior.Passthrough)
         {
-            return new StreamTruncator(stream, totalDuration, offset, recalculateRMS);
+            return new StreamTruncator(stream, totalDuration, offset, transformRMSBehavior);
         }
 
         public static IBGCStream Truncate(
             this IBGCStream stream,
             int totalChannelSamples,
             int offset = 0,
-            bool recalculateRMS = false)
+            TransformRMSBehavior transformRMSBehavior = TransformRMSBehavior.Passthrough)
         {
-            return new StreamTruncator(stream, totalChannelSamples, offset, recalculateRMS);
+            return new StreamTruncator(stream, totalChannelSamples, offset, transformRMSBehavior);
         }
 
         public static IBGCStream IsolateChannel(
@@ -268,33 +288,33 @@ namespace BGC.Audio
             this IBGCStream stream,
             double angle)
         {
-            return new MultiConvolutionFilter(stream, Spatial.GetFilter(angle), false);
+            return new MultiConvolutionFilter(stream, Spatial.GetFilter(angle), TransformRMSBehavior.Passthrough);
         }
 
         public static IBGCStream MultiConvolve(
             this IBGCStream stream,
             IBGCStream filter,
-            bool recalculateRMS = false)
+            TransformRMSBehavior transformRMSBehavior = TransformRMSBehavior.Passthrough)
         {
-            return new MultiConvolutionFilter(stream, filter, recalculateRMS);
+            return new MultiConvolutionFilter(stream, filter, transformRMSBehavior);
         }
 
         public static IBGCStream MultiConvolve(
             this IBGCStream stream,
             float[] filter1,
             float[] filter2,
-            bool recalculateRMS = false)
+            TransformRMSBehavior transformRMSBehavior = TransformRMSBehavior.Passthrough)
         {
-            return new MultiConvolutionFilter(stream, filter1, filter2, recalculateRMS);
+            return new MultiConvolutionFilter(stream, filter1, filter2, transformRMSBehavior);
         }
 
         public static IBGCStream MultiConvolve(
             this IBGCStream stream,
             double[] filter1,
             double[] filter2,
-            bool recalculateRMS = false)
+            TransformRMSBehavior transformRMSBehavior = TransformRMSBehavior.Passthrough)
         {
-            return new MultiConvolutionFilter(stream, filter1, filter2, recalculateRMS);
+            return new MultiConvolutionFilter(stream, filter1, filter2, transformRMSBehavior);
         }
 
         public static IBGCStream Normalize(
@@ -310,7 +330,7 @@ namespace BGC.Audio
                 return new NormalizerFilter(stream, presentationLevel);
             }
 
-            throw new NotSupportedException("Cannot normalize stream of more than 2 channels");
+            throw new StreamCompositionException("Cannot normalize stream of more than 2 channels");
         }
 
         public static IBGCStream Normalize(
@@ -326,7 +346,7 @@ namespace BGC.Audio
                 return new NormalizerFilter(stream, presentationLevels);
             }
 
-            throw new NotSupportedException("Cannot normalize stream of more than 2 channels");
+            throw new StreamCompositionException("Cannot normalize stream of more than 2 channels");
         }
 
         public static IBGCStream SlowRangeFitter(
@@ -351,7 +371,7 @@ namespace BGC.Audio
                 case 2: return stream;
 
                 default:
-                    throw new ArgumentException($"Cannot Stereo upchannel a stream with {stream.Channels} channels");
+                    throw new StreamCompositionException($"Cannot Stereo upchannel a stream with {stream.Channels} channels");
             }
 
         }
@@ -365,9 +385,10 @@ namespace BGC.Audio
 
         public static IBGCStream PhaseVocode(
             this IBGCStream stream,
-            double speed)
+            double speed,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
         {
-            return new PhaseVocoder(stream, speed);
+            return new PhaseVocoder(stream, speed, rmsBehavior);
         }
 
         public static IBGCStream CarlileShuffle(
@@ -375,7 +396,7 @@ namespace BGC.Audio
             double freqLowerBound = 20.0,
             double freqUpperBound = 16000.0,
             int bandCount = 22,
-            bool recalculateRMS = false,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough,
             System.Random randomizer = null)
         {
             return new CarlileShuffler(
@@ -383,29 +404,30 @@ namespace BGC.Audio
                 freqLowerBound: freqLowerBound,
                 freqUpperBound: freqUpperBound,
                 bandCount: bandCount,
-                recalculateRMS: recalculateRMS,
+                rmsBehavior: rmsBehavior,
                 randomizer: randomizer);
         }
 
         public static IBGCStream CarlileShuffle(
             this IBGCStream stream,
             IEnumerable<double> frequencyDistribution,
-            bool recalculateRMS = false,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough,
             System.Random randomizer = null)
         {
             return new CarlileShuffler(
                 stream: stream,
                 frequencyDistribution: frequencyDistribution,
-                recalculateRMS: recalculateRMS,
+                rmsBehavior: rmsBehavior,
                 randomizer: randomizer);
         }
 
         public static IBGCStream AllPass(
             this IBGCStream stream,
             in Complex64 coefficient,
-            int delay)
+            int delay,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
         {
-            return new AllPassFilter(stream, coefficient, delay);
+            return new AllPassFilter(stream, coefficient, delay, rmsBehavior);
         }
 
         public static IBGCStream FrequencyModulation(
@@ -445,9 +467,9 @@ namespace BGC.Audio
         public static IBGCStream ApplyEnvelope(
             this IBGCStream stream,
             IBGCEnvelopeStream envelope,
-            bool recalculateRMS = false)
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
         {
-            return new StreamEnveloper(stream, envelope, recalculateRMS);
+            return new StreamEnveloper(stream, envelope, rmsBehavior);
         }
 
         public static IBGCStream TimeShift(
@@ -595,13 +617,12 @@ namespace BGC.Audio
         /// <returns>New cached audio clip</returns>
         public static SimpleAudioClip Cache(this IBGCStream stream)
         {
-            if (stream.TotalSamples == int.MaxValue)
+            if (stream.ChannelSamples == int.MaxValue)
             {
                 Debug.LogError($"Tried to cache infinite stream. Truncating to 10 seconds");
 
                 return stream.Truncate(10.0).Cache();
             }
-
 
             stream.Reset();
             float[] samples = new float[stream.TotalSamples];

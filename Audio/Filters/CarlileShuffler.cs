@@ -22,9 +22,9 @@ namespace BGC.Audio.Filters
         public int Position { get; private set; } = 0;
         public float[] Samples { get; private set; } = null;
 
-        private readonly bool recalculateRMS;
+        private readonly TransformRMSBehavior rmsBehavior;
 
-        private readonly System.Random randomizer;
+        private readonly Random randomizer;
 
         private readonly IEnumerable<double> frequencyDistribution;
 
@@ -33,14 +33,24 @@ namespace BGC.Audio.Filters
             double freqLowerBound = 20.0,
             double freqUpperBound = 16000.0,
             int bandCount = 22,
-            bool recalculateRMS = false,
-            System.Random randomizer = null)
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough,
+            Random randomizer = null)
             : base(stream)
         {
-            System.Diagnostics.Debug.Assert(stream.Channels == 1);
+            if (stream.Channels != 1)
+            {
+                throw new StreamCompositionException(
+                    $"Carlile Shuffler requires a mono input stream. Input stream has {stream.Channels} channels.");
+            }
 
-            this.randomizer = randomizer ?? new System.Random(CustomRandom.Next());
-            this.recalculateRMS = recalculateRMS;
+            if (stream.ChannelSamples == int.MaxValue)
+            {
+                throw new StreamCompositionException(
+                    $"Carlile Shuffler cannot be performed on a stream of infinite duration. Try truncating first.");
+            }
+
+            this.randomizer = randomizer ?? new Random(CustomRandom.Next());
+            this.rmsBehavior = rmsBehavior;
 
             frequencyDistribution = GetExponentialDistribution(freqLowerBound, freqUpperBound, bandCount);
         }
@@ -48,14 +58,24 @@ namespace BGC.Audio.Filters
         public CarlileShuffler(
             IBGCStream stream,
             IEnumerable<double> frequencyDistribution,
-            bool recalculateRMS = false,
-            System.Random randomizer = null)
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough,
+            Random randomizer = null)
             : base(stream)
         {
-            System.Diagnostics.Debug.Assert(stream.Channels == 1);
+            if (stream.Channels != 1)
+            {
+                throw new StreamCompositionException(
+                    $"Carlile Shuffler requires a mono input stream. Input stream has {stream.Channels} channels.");
+            }
 
-            this.randomizer = randomizer ?? new System.Random(CustomRandom.Next());
-            this.recalculateRMS = recalculateRMS;
+            if (stream.ChannelSamples == int.MaxValue)
+            {
+                throw new StreamCompositionException(
+                    $"Carlile Shuffler cannot be performed on a stream of infinite duration. Try truncating first.");
+            }
+
+            this.randomizer = randomizer ?? new Random(CustomRandom.Next());
+            this.rmsBehavior = rmsBehavior;
 
             this.frequencyDistribution = frequencyDistribution;
         }
@@ -132,13 +152,18 @@ namespace BGC.Audio.Filters
         {
             if (_channelRMS == null)
             {
-                if (recalculateRMS)
+                switch (rmsBehavior)
                 {
-                    _channelRMS = this.CalculateRMS();
-                }
-                else
-                {
-                    _channelRMS = stream.GetChannelRMS();
+                    case TransformRMSBehavior.Recalculate:
+                        _channelRMS = this.CalculateRMS();
+                        break;
+
+                    case TransformRMSBehavior.Passthrough:
+                        _channelRMS = stream.GetChannelRMS();
+                        break;
+
+                    default:
+                        throw new Exception($"Unexpected rmsBehavior: {rmsBehavior}");
                 }
             }
 
@@ -170,5 +195,4 @@ namespace BGC.Audio.Filters
 
         #endregion Helper Generator
     }
-
 }

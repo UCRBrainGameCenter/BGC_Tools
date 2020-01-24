@@ -13,6 +13,7 @@ namespace BGC.Audio.Filters
 
         public override int ChannelSamples => stream.ChannelSamples + 2 * delay;
 
+        private readonly TransformRMSBehavior rmsBehavior;
         private readonly Complex64 coeff;
         private readonly Complex64 coeffConj;
         private readonly int delay;
@@ -24,11 +25,18 @@ namespace BGC.Audio.Filters
 
         private int position = 0;
 
-        public AllPassFilter(IBGCStream stream, in Complex64 coeff, int delay)
+        public AllPassFilter(
+            IBGCStream stream,
+            in Complex64 coeff,
+            int delay,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
             : base(stream)
         {
-            UnityEngine.Debug.Assert(stream.Channels == 1);
-            UnityEngine.Debug.Assert(coeff.MagnitudeSquared <= 1f);
+            if (stream.Channels != 1)
+            {
+                throw new StreamCompositionException(
+                    $"AllPass Filter requires a mono input stream.  Input stream has {stream.Channels} channels");
+            }
 
             this.delay = delay;
 
@@ -48,6 +56,8 @@ namespace BGC.Audio.Filters
 
             inputBuffer.ZeroOut();
             outputBuffer.ZeroOut();
+
+            this.rmsBehavior = rmsBehavior;
         }
 
         public override int Read(float[] data, int offset, int count)
@@ -142,6 +152,27 @@ namespace BGC.Audio.Filters
             position = 0;
         }
 
-        public override IEnumerable<double> GetChannelRMS() => stream.GetChannelRMS();
+        private IEnumerable<double> _channelRMS = null;
+        public override IEnumerable<double> GetChannelRMS()
+        {
+            if (_channelRMS == null)
+            {
+                switch (rmsBehavior)
+                {
+                    case TransformRMSBehavior.Recalculate:
+                        _channelRMS = this.CalculateRMS();
+                        break;
+
+                    case TransformRMSBehavior.Passthrough:
+                        _channelRMS = stream.GetChannelRMS();
+                        break;
+
+                    default:
+                        throw new Exception($"Unexpected rmsBehavior: {rmsBehavior}");
+                }
+            }
+
+            return _channelRMS;
+        }
     }
 }

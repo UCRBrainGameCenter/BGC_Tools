@@ -11,37 +11,43 @@ namespace BGC.Audio.Filters
         public static IBGCStream BiQuadBandpassFilter(
             this IBGCStream stream,
             double criticalFrequency,
-            double qFactor = double.NaN) =>
-            BiQuadFilter.BandpassFilter(stream, criticalFrequency, qFactor);
+            double qFactor = double.NaN,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Recalculate) =>
+            BiQuadFilter.BandpassFilter(stream, criticalFrequency, qFactor, rmsBehavior);
 
         public static IBGCStream BiQuadHighpassFilter(
             this IBGCStream stream,
             double criticalFrequency,
-            double qFactor = double.NaN) =>
-            BiQuadFilter.HighpassFilter(stream, criticalFrequency, qFactor);
+            double qFactor = double.NaN,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Recalculate) =>
+            BiQuadFilter.HighpassFilter(stream, criticalFrequency, qFactor, rmsBehavior);
 
         public static IBGCStream BiQuadLowpassFilter(
             this IBGCStream stream,
             double criticalFrequency,
-            double qFactor = double.NaN) =>
-            BiQuadFilter.LowpassFilter(stream, criticalFrequency, qFactor);
+            double qFactor = double.NaN,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Recalculate) =>
+            BiQuadFilter.LowpassFilter(stream, criticalFrequency, qFactor, rmsBehavior);
 
         public static IBGCStream BiQuadNotchFilter(
             this IBGCStream stream,
             double criticalFrequency,
-            double qFactor = double.NaN) =>
-            BiQuadFilter.NotchFilter(stream, criticalFrequency, qFactor);
+            double qFactor = double.NaN,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Recalculate) =>
+            BiQuadFilter.NotchFilter(stream, criticalFrequency, qFactor, rmsBehavior);
 
         public static IBGCStream BiQuadLowShelfFilter(
             this IBGCStream stream,
             double criticalFrequency,
-            double dbGain) =>
-            BiQuadFilter.LowShelfFilter(stream, criticalFrequency, dbGain);
+            double dbGain,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Recalculate) =>
+            BiQuadFilter.LowShelfFilter(stream, criticalFrequency, dbGain, rmsBehavior);
 
         public static IBGCStream BiQuadHighShelfFilter(
             this IBGCStream stream,
             double criticalFrequency,
-            double dbGain) =>
-            BiQuadFilter.HighShelfFilter(stream, criticalFrequency, dbGain);
+            double dbGain,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Recalculate) =>
+            BiQuadFilter.HighShelfFilter(stream, criticalFrequency, dbGain, rmsBehavior);
     }
 }

@@ -27,6 +27,8 @@ namespace BGC.Audio.Filters
         private readonly double inputScalar;
         private readonly double outputScalar;
 
+        private readonly TransformRMSBehavior rmsBehavior;
+
         /// <summary>
         /// Holds samples from underlying stream
         /// </summary>
@@ -47,7 +49,6 @@ namespace BGC.Audio.Filters
         private readonly double[] windowInput;
         private readonly double[] windowOutput;
 
-
         private int bufferIndex = 0;
         private int bufferCount = 0;
 
@@ -57,7 +58,10 @@ namespace BGC.Audio.Filters
 
         public override int ChannelSamples { get; }
 
-        public PhaseVocoder(IBGCStream stream, double speed)
+        public PhaseVocoder(
+            IBGCStream stream,
+            double speed,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
             : base(stream)
         {
             baseFFTSamples = (int)Math.Pow(2, BASE_FFT_SIZE);
@@ -116,6 +120,8 @@ namespace BGC.Audio.Filters
                 //Square
                 windowOutput[i] = 1.0;
             }
+
+            this.rmsBehavior = rmsBehavior;
         }
 
         public override int Read(float[] data, int offset, int count)
@@ -260,8 +266,28 @@ namespace BGC.Audio.Filters
             stream.Seek((int)(position * effectiveSpeed));
         }
 
+        private IEnumerable<double> _channelRMS = null;
         //Phase vocoder should preserve RMS
-        public override IEnumerable<double> GetChannelRMS() => stream.GetChannelRMS();
-    }
+        public override IEnumerable<double> GetChannelRMS()
+        {
+            if (_channelRMS == null)
+            {
+                switch (rmsBehavior)
+                {
+                    case TransformRMSBehavior.Recalculate:
+                        _channelRMS = this.CalculateRMS();
+                        break;
 
+                    case TransformRMSBehavior.Passthrough:
+                        _channelRMS = stream.GetChannelRMS();
+                        break;
+
+                    default:
+                        throw new Exception($"Unexpected rmsBehavior: {rmsBehavior}");
+                }
+            }
+
+            return _channelRMS;
+        }
+    }
 }

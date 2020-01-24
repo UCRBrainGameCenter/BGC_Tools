@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace BGC.Audio.Filters
 {
@@ -16,6 +17,10 @@ namespace BGC.Audio.Filters
         public StreamRepeater(IBGCStream stream)
             : base(stream)
         {
+            if (stream.ChannelSamples == int.MaxValue)
+            {
+                throw new StreamCompositionException("Cannot apply a StreamRepeater to an infinite stream.");
+            }
         }
 
         public override void Reset() => stream.Reset();
@@ -61,7 +66,21 @@ namespace BGC.Audio.Filters
             return count - remainingSamples;
         }
 
-        public override IEnumerable<double> GetChannelRMS() => stream.GetChannelRMS();
-    }
+        private IEnumerable<double> _channelRMS = null;
+        public override IEnumerable<double> GetChannelRMS()
+        {
+            if (_channelRMS == null)
+            {
+                _channelRMS = stream.GetChannelRMS();
 
+                //Fix previously unknowable RMS before looping
+                if (_channelRMS.Any(double.IsNaN))
+                {
+                    _channelRMS = stream.CalculateRMS();
+                }
+            }
+
+            return _channelRMS;
+        }
+    }
 }

@@ -25,7 +25,7 @@ namespace BGC.Audio.Filters
         {
             if (stream.Channels != 1)
             {
-                throw new ArgumentException("StreamSelectiveUpChanneler inner stream but have only one channel.");
+                throw new StreamCompositionException("StreamSelectiveUpChanneler inner stream must have only one channel.");
             }
 
             this.channels = channels;
@@ -82,8 +82,28 @@ namespace BGC.Audio.Filters
         {
             if (_channelRMS == null)
             {
-                double innerRMS = stream.GetChannelRMS().First();
-                _channelRMS = Enumerable.Repeat(innerRMS, Channels).ToArray();
+                double[] rms = Enumerable.Repeat(stream.GetChannelRMS().First(), Channels).ToArray();
+
+                switch (channels)
+                {
+                    case AudioChannel.Left:
+                        rms[1] = 0;
+                        break;
+
+                    case AudioChannel.Right:
+                        rms[0] = 0;
+                        break;
+
+                    case AudioChannel.Both:
+                        //nothing
+                        break;
+
+                    default:
+                        Debug.LogError($"Unexpected AudioChannel: {channels}");
+                        goto case AudioChannel.Both;
+                }
+
+                _channelRMS = rms;
             }
 
             return _channelRMS;

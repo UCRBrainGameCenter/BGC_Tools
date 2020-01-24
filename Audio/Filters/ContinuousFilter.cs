@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using BGC.Mathematics;
 using BGC.Audio.Envelopes;
 
@@ -37,6 +38,8 @@ namespace BGC.Audio.Filters
         private double Z1;
         private double Z2;
 
+        private readonly TransformRMSBehavior rmsBehavior;
+
         private float lastFilterSample = float.NaN;
 
         public override int Channels => 1;
@@ -55,14 +58,23 @@ namespace BGC.Audio.Filters
         {
             if (_channelRMS == null)
             {
-                if (ChannelSamples == int.MaxValue)
+                switch (rmsBehavior)
                 {
-                    //Let's not actually calculate infinite streams
-                    _channelRMS = stream.GetChannelRMS();
-                }
-                else
-                {
-                    _channelRMS = this.CalculateRMS();
+                    case TransformRMSBehavior.Recalculate:
+                        _channelRMS = this.CalculateRMS();
+                        break;
+
+                    case TransformRMSBehavior.Passthrough:
+                        _channelRMS = stream.GetChannelRMS();
+
+                        if (_channelRMS.Any(double.IsNaN) && ChannelSamples != int.MaxValue)
+                        {
+                            goto case TransformRMSBehavior.Recalculate;
+                        }
+                        break;
+
+                    default:
+                        throw new Exception($"Unexpected rmsBehavior: {rmsBehavior}");
                 }
             }
 
@@ -75,10 +87,16 @@ namespace BGC.Audio.Filters
             FilterType filterType,
             double freqLB,
             double freqUB,
-            double qFactor = double.NaN)
+            double qFactor = double.NaN,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Recalculate)
             : base(stream)
         {
-            UnityEngine.Debug.Assert(stream.Channels == 1);
+            if (stream.Channels != 1)
+            {
+                throw new StreamCompositionException(
+                    $"ContinuousFilter expects a mono stream. " +
+                    $"Received a stream with {stream.Channels} channels,");
+            }
 
             this.filterType = filterType;
 
@@ -97,6 +115,8 @@ namespace BGC.Audio.Filters
             this.freqUB = freqUB;
             freqMid = Math.PI * (this.freqUB + this.freqLB) / (2.0 * stream.SamplingRate);
             freqFactor = Math.PI * (this.freqUB - this.freqLB) / (2.0 * stream.SamplingRate);
+
+            this.rmsBehavior = rmsBehavior;
         }
 
         public override int Read(float[] data, int offset, int count)

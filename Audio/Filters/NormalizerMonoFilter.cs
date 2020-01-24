@@ -27,7 +27,7 @@ namespace BGC.Audio.Filters
         {
             if (stream.Channels != 1)
             {
-                throw new ArgumentException("NormalizerMonoFilter inner stream but have only one channel.");
+                throw new StreamCompositionException("NormalizerMonoFilter inner stream must have only one channel.");
             }
 
             this.leftFactor = (float)leftFactor;
@@ -41,7 +41,7 @@ namespace BGC.Audio.Filters
         {
             if (stream.Channels != 1)
             {
-                throw new ArgumentException("NormalizerMonoFilter inner stream but have only one channel.");
+                throw new StreamCompositionException("NormalizerMonoFilter inner stream must have only one channel.");
             }
 
             presentationLevels = (presentationLevel, presentationLevel);
@@ -53,7 +53,7 @@ namespace BGC.Audio.Filters
         {
             if (stream.Channels != 1)
             {
-                throw new ArgumentException("NormalizerMonoFilter inner stream but have only one channel.");
+                throw new StreamCompositionException("NormalizerMonoFilter inner stream must have only one channel.");
             }
 
             presentationLevels = levels;
@@ -72,7 +72,6 @@ namespace BGC.Audio.Filters
                     scalingFactorL: out double tempLeftFactor,
                     scalingFactorR: out double tempRightFactor);
 
-
                 if (presentationLevels.levelL != presentationLevels.levelR)
                 {
                     Normalization.GetRMSScalingFactors(
@@ -81,7 +80,6 @@ namespace BGC.Audio.Filters
                         scalingFactorL: out double _,
                         scalingFactorR: out tempRightFactor);
                 }
-
 
                 leftFactor = (float)tempLeftFactor;
                 rightFactor = (float)tempRightFactor;

@@ -29,14 +29,24 @@ namespace BGC.Audio.Filters
         public StreamChannelSplitter(IBGCStream stream)
             : base(stream)
         {
-            Debug.Assert(stream.Channels == 2);
+            if (stream.Channels != 2)
+            {
+                throw new StreamCompositionException(
+                    $"StreamChannelSplitter expects to receive stereo streams. Input stream had {stream.Channels} channels.");
+            }
+
             splitStream = new InternalStreamSplit(this);
         }
 
         public StreamChannelSplitter(IBGCStream stream, out IBGCStream splitStream)
             : base(stream)
         {
-            Debug.Assert(stream.Channels == 2);
+            if (stream.Channels != 2)
+            {
+                throw new StreamCompositionException(
+                    $"StreamChannelSplitter expects to receive stereo streams. Input stream had {stream.Channels} channels.");
+            }
+
             this.splitStream = new InternalStreamSplit(this);
             splitStream = this.splitStream;
         }

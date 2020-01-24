@@ -27,11 +27,9 @@ namespace BGC.Audio.Filters
 
             if (channelIndex >= stream.Channels)
             {
-                throw new ArgumentException(
-                    "ChannelIsolaterFilter requires a multi-channel input.",
-                    nameof(stream));
+                throw new StreamCompositionException(
+                    "ChannelIsolaterFilter channel index out of range.");
             }
-
         }
 
         public override int Read(float[] data, int offset, int count)

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 
+using System.Linq;
+
 namespace BGC.Audio.Filters
 {
     /// <summary>
@@ -18,6 +20,8 @@ namespace BGC.Audio.Filters
         private double Z1;
         private double Z2;
 
+        private readonly TransformRMSBehavior rmsBehavior;
+
         public override int Channels => 1;
 
         public override int TotalSamples => stream.ChannelSamples;
@@ -29,14 +33,18 @@ namespace BGC.Audio.Filters
         {
             if (_channelRMS == null)
             {
-                if (ChannelSamples == int.MaxValue)
+                switch (rmsBehavior)
                 {
-                    //Let's not actually calculate infinite streams
-                    _channelRMS = stream.GetChannelRMS();
-                }
-                else
-                {
-                    _channelRMS = this.CalculateRMS();
+                    case TransformRMSBehavior.Recalculate:
+                        _channelRMS = this.CalculateRMS();
+                        break;
+
+                    case TransformRMSBehavior.Passthrough:
+                        _channelRMS = stream.GetChannelRMS();
+                        break;
+
+                    default:
+                        throw new Exception($"Unexpected rmsBehavior: {rmsBehavior}");
                 }
             }
 
@@ -49,22 +57,29 @@ namespace BGC.Audio.Filters
             double a1,
             double a2,
             double b1,
-            double b2)
+            double b2,
+            TransformRMSBehavior rmsBehavior)
             : base(stream)
         {
-            UnityEngine.Debug.Assert(stream.Channels == 1);
+            if (stream.Channels != 1)
+            {
+                throw new StreamCompositionException($"BiQuad Filter requires a mono input stream. Input stream has {stream.Channels} channels.");
+            }
 
             A0 = a0;
             A1 = a1;
             A2 = a2;
             B1 = b1;
             B2 = b2;
+
+            this.rmsBehavior = rmsBehavior;
         }
 
         public static BiQuadFilter BandpassFilter(
             IBGCStream stream,
             double centralFrequency,
-            double qFactor = double.NaN)
+            double qFactor = double.NaN,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Recalculate)
         {
             if (double.IsNaN(qFactor))
             {
@@ -79,13 +94,14 @@ namespace BGC.Audio.Filters
             double b1 = 2.0 * (k * k - 1.0) * norm;
             double b2 = (1.0 - k / qFactor + k * k) * norm;
 
-            return new BiQuadFilter(stream, a0, a1, a2, b1, b2);
+            return new BiQuadFilter(stream, a0, a1, a2, b1, b2, rmsBehavior);
         }
 
         public static BiQuadFilter HighpassFilter(
             IBGCStream stream,
             double criticalFrequency,
-            double qFactor = double.NaN)
+            double qFactor = double.NaN,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Recalculate)
         {
             if (double.IsNaN(qFactor))
             {
@@ -100,13 +116,14 @@ namespace BGC.Audio.Filters
             double b1 = 2.0 * (k * k - 1.0) * norm;
             double b2 = (1.0 - k / qFactor + k * k) * norm;
 
-            return new BiQuadFilter(stream, a0, a1, a2, b1, b2);
+            return new BiQuadFilter(stream, a0, a1, a2, b1, b2, rmsBehavior);
         }
 
         public static BiQuadFilter LowpassFilter(
             IBGCStream stream,
             double criticalFrequency,
-            double qFactor = double.NaN)
+            double qFactor = double.NaN,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Recalculate)
         {
             if (double.IsNaN(qFactor))
             {
@@ -121,13 +138,14 @@ namespace BGC.Audio.Filters
             double b1 = 2.0 * (k * k - 1.0) * norm;
             double b2 = (1.0 - k / qFactor + k * k) * norm;
 
-            return new BiQuadFilter(stream, a0, a1, a2, b1, b2);
+            return new BiQuadFilter(stream, a0, a1, a2, b1, b2, rmsBehavior);
         }
 
         public static BiQuadFilter NotchFilter(
             IBGCStream stream,
             double criticalFrequency,
-            double qFactor = double.NaN)
+            double qFactor = double.NaN,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Recalculate)
         {
             if (double.IsNaN(qFactor))
             {
@@ -142,13 +160,14 @@ namespace BGC.Audio.Filters
             double b1 = a1;
             double b2 = (1.0 - k / qFactor + k * k) * norm;
 
-            return new BiQuadFilter(stream, a0, a1, a2, b1, b2);
+            return new BiQuadFilter(stream, a0, a1, a2, b1, b2, rmsBehavior);
         }
 
         public static BiQuadFilter LowShelfFilter(
             IBGCStream stream,
             double criticalFrequency,
-            double dbGain)
+            double dbGain,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Recalculate)
         {
             double k = Math.Tan(Math.PI * criticalFrequency / stream.SamplingRate);
             double gainFactor = Math.Pow(10.0, Math.Abs(dbGain) / 20.0);
@@ -176,13 +195,14 @@ namespace BGC.Audio.Filters
                 b2 = (1.0 - Math.Sqrt(2.0 * gainFactor) * k + gainFactor * k * k) * norm;
             }
 
-            return new BiQuadFilter(stream, a0, a1, a2, b1, b2);
+            return new BiQuadFilter(stream, a0, a1, a2, b1, b2, rmsBehavior);
         }
 
         public static BiQuadFilter HighShelfFilter(
             IBGCStream stream,
             double criticalFrequency,
-            double dbGain)
+            double dbGain,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Recalculate)
         {
             double k = Math.Tan(Math.PI * criticalFrequency / stream.SamplingRate);
             double gainFactor = Math.Pow(10.0, Math.Abs(dbGain) / 20.0);
@@ -210,7 +230,7 @@ namespace BGC.Audio.Filters
                 b2 = (gainFactor - Math.Sqrt(2.0 * gainFactor) * k + k * k) * norm;
             }
 
-            return new BiQuadFilter(stream, a0, a1, a2, b1, b2);
+            return new BiQuadFilter(stream, a0, a1, a2, b1, b2, rmsBehavior);
         }
 
         public override int Read(float[] data, int offset, int count)
@@ -223,6 +243,22 @@ namespace BGC.Audio.Filters
             }
 
             return samplesRead;
+        }
+
+        public override void Seek(int position)
+        {
+            base.Seek(position);
+
+            Z1 = 0;
+            Z2 = 0;
+        }
+
+        public override void Reset()
+        {
+            base.Reset();
+
+            Z1 = 0;
+            Z2 = 0;
         }
 
         public float ProcessSample(float sample)

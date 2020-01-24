@@ -36,14 +36,14 @@ namespace BGC.Audio.Filters
         {
             if (stream.ChannelSamples == int.MaxValue)
             {
-                throw new ArgumentException("Cannot Single-Pass Phase Rencode an infinite stream.  " +
+                throw new StreamCompositionException("Cannot Single-Pass Phase Reencode an infinite stream. " +
                     "Truncate first or use a Frame-based Reencoder.");
             }
 
             if (stream.Channels != 1)
             {
-                throw new ArgumentException("Cannot Single-Pass Phase Rencode a stereo stream with " +
-                    "only one argument.   Use two arguments or Split first.");
+                throw new StreamCompositionException("Cannot Single-Pass Phase Reencode a stereo stream with " +
+                    "only one argument. Use two arguments or Split first.");
             }
 
             Channels = 1;
@@ -62,13 +62,13 @@ namespace BGC.Audio.Filters
         {
             if (stream.ChannelSamples == int.MaxValue)
             {
-                throw new ArgumentException("Cannot Single-Pass Phase Rencode an infinite stream.  " +
+                throw new StreamCompositionException("Cannot Single-Pass Phase Reencode an infinite stream. " +
                     "Truncate first or use a Frame-based Reencoder.");
             }
 
             if (stream.Channels > 2)
             {
-                throw new ArgumentException("Cannot Single-Pass Phase Rencode a stream with more than " +
+                throw new StreamCompositionException("Cannot Single-Pass Phase Reencode a stream with more than " +
                     "2 channels.");
             }
 

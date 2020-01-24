@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using BGC.Mathematics;
 
@@ -19,10 +20,10 @@ namespace BGC.Audio.Filters
         private readonly float[] closingWindow;
         private readonly int sampleShift;
 
+        private readonly TransformRMSBehavior rmsBehavior;
+
         private readonly int endOpeningWindow;
         private readonly int startClosingWindow;
-
-        private readonly bool recalculateRMS;
 
         public int Position { get; private set; }
 
@@ -32,7 +33,7 @@ namespace BGC.Audio.Filters
             double totalDuration = double.NaN,
             int smoothingSamples = 1000,
             int sampleShift = 0,
-            bool recalculateRMS = false)
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
             : base(stream)
         {
             if (sampleShift > stream.ChannelSamples)
@@ -64,7 +65,7 @@ namespace BGC.Audio.Filters
                 }
             }
 
-            this.recalculateRMS = recalculateRMS;
+            this.rmsBehavior = rmsBehavior;
 
             smoothingSamples = Math.Min(smoothingSamples, ChannelSamples / 2);
 
@@ -85,7 +86,7 @@ namespace BGC.Audio.Filters
             int closingSmoothingSamples = 1000,
             int sampleShift = 0,
             int totalChannelSamples = -1,
-            bool recalculateRMS = false)
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
             : base(stream)
         {
             if (sampleShift > stream.ChannelSamples)
@@ -95,7 +96,7 @@ namespace BGC.Audio.Filters
             }
 
             this.sampleShift = sampleShift;
-            this.recalculateRMS = recalculateRMS;
+            this.rmsBehavior = rmsBehavior;
 
             if (totalChannelSamples != -1)
             {
@@ -241,18 +242,27 @@ namespace BGC.Audio.Filters
         {
             if (_channelRMS == null)
             {
-                if (recalculateRMS)
+                switch (rmsBehavior)
                 {
-                    _channelRMS = this.CalculateRMS();
-                }
-                else
-                {
-                    _channelRMS = stream.GetChannelRMS();
+                    case TransformRMSBehavior.Recalculate:
+                        _channelRMS = this.CalculateRMS();
+                        break;
+
+                    case TransformRMSBehavior.Passthrough:
+                        _channelRMS = stream.GetChannelRMS();
+
+                        if (_channelRMS.Any(double.IsNaN) && ChannelSamples != int.MaxValue)
+                        {
+                            goto case TransformRMSBehavior.Recalculate;
+                        }
+                        break;
+
+                    default:
+                        throw new Exception($"Unexpected rmsBehavior: {rmsBehavior}");
                 }
             }
 
             return _channelRMS;
         }
     }
-
 }

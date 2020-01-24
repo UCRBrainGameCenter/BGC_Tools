@@ -28,7 +28,7 @@ namespace BGC.Audio.Filters
 
         private int bufferIndex = 0;
         private int bufferCount = 0;
-        private readonly bool recalculateRMS;
+        private readonly TransformRMSBehavior rmsBehavior;
 
         public override int Channels { get; }
 
@@ -40,11 +40,20 @@ namespace BGC.Audio.Filters
             IBGCStream stream,
             float[] filterL,
             float[] filterR,
-            bool recalculateRMS = false)
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
             : base(stream)
         {
-            Debug.Assert(stream.Channels == 1);
-            Debug.Assert(filterL.Length == filterR.Length);
+            if (stream.Channels != 1)
+            {
+                throw new StreamCompositionException(
+                    $"MultiConvolutionFilter expects a mono input stream. Input stream had {stream.Channels} channels.");
+            }
+
+            if (filterL.Length != filterR.Length)
+            {
+                throw new StreamCompositionException(
+                    $"MultiConvolutionFilter expects filterL and filterR lengths match. Filter lengths: {filterL.Length} {filterR.Length}.");
+            }
 
             filterLength = filterL.Length;
             Channels = 2;
@@ -82,18 +91,27 @@ namespace BGC.Audio.Filters
 
             initialized = false;
 
-            this.recalculateRMS = recalculateRMS;
+            this.rmsBehavior = rmsBehavior;
         }
 
         public MultiConvolutionFilter(
             IBGCStream stream,
             double[] filterL,
             double[] filterR,
-            bool recalculateRMS = false)
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
             : base(stream)
         {
-            Debug.Assert(stream.Channels == 1);
-            Debug.Assert(filterL.Length == filterR.Length);
+            if (stream.Channels != 1)
+            {
+                throw new StreamCompositionException(
+                    $"MultiConvolutionFilter expects a mono input stream. Input stream had {stream.Channels} channels.");
+            }
+
+            if (filterL.Length != filterR.Length)
+            {
+                throw new StreamCompositionException(
+                    $"MultiConvolutionFilter expects filterL and filterR lengths match. Filter lengths: {filterL.Length} {filterR.Length}.");
+            }
 
             filterLength = filterL.Length;
             Channels = 2;
@@ -131,16 +149,20 @@ namespace BGC.Audio.Filters
 
             initialized = false;
 
-            this.recalculateRMS = recalculateRMS;
+            this.rmsBehavior = rmsBehavior;
         }
 
         public MultiConvolutionFilter(
             IBGCStream stream,
             IBGCStream filter,
-            bool recalculateRMS = false)
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
             : base(stream)
         {
-            Debug.Assert(stream.Channels == 1);
+            if (stream.Channels != 1)
+            {
+                throw new StreamCompositionException(
+                    $"MultiConvolutionFilter expects a mono input stream. Input stream had {stream.Channels} channels.");
+            }
 
             filterLength = filter.ChannelSamples;
             Channels = filter.Channels;
@@ -175,7 +197,7 @@ namespace BGC.Audio.Filters
 
             initialized = false;
 
-            this.recalculateRMS = recalculateRMS;
+            this.rmsBehavior = rmsBehavior;
         }
 
         protected override void _Initialize()
@@ -314,13 +336,18 @@ namespace BGC.Audio.Filters
         {
             if (_channelRMS == null)
             {
-                if (recalculateRMS)
+                switch (rmsBehavior)
                 {
-                    _channelRMS = this.CalculateRMS();
-                }
-                else
-                {
-                    _channelRMS = Enumerable.Repeat(stream.GetChannelRMS().First(), Channels);
+                    case TransformRMSBehavior.Recalculate:
+                        _channelRMS = this.CalculateRMS();
+                        break;
+
+                    case TransformRMSBehavior.Passthrough:
+                        _channelRMS = stream.GetChannelRMS();
+                        break;
+
+                    default:
+                        throw new Exception($"Unexpected rmsBehavior: {rmsBehavior}");
                 }
             }
 

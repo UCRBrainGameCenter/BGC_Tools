@@ -21,30 +21,29 @@ namespace BGC.Audio.Synthesis
         public float[] Samples { get; }
         public int Position { get; private set; } = 0;
 
-        private readonly bool recalculateRMS;
+        private readonly TransformRMSBehavior rmsBehavior;
 
         public SingleFrequencyDomainToneComposer(
             IEnumerable<ComplexCarrierTone> carrierTones,
             int sampleCount,
-            bool recalculateRMS = false)
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
         {
             this.carrierTones = carrierTones.ToArray();
             Samples = new float[sampleCount];
 
-            this.recalculateRMS = recalculateRMS;
+            this.rmsBehavior = rmsBehavior;
         }
 
         public SingleFrequencyDomainToneComposer(
             IEnumerable<ComplexCarrierTone> carrierTones,
             double duration,
-            bool recalculateRMS = false)
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
         {
             this.carrierTones = carrierTones.ToArray();
             int sampleCount = (int)Math.Ceiling(duration * SamplingRate);
             Samples = new float[sampleCount];
 
-
-            this.recalculateRMS = recalculateRMS;
+            this.rmsBehavior = rmsBehavior;
         }
 
         protected override void _Initialize()
@@ -101,21 +100,25 @@ namespace BGC.Audio.Synthesis
         private IEnumerable<double> _channelRMS = null;
         public override IEnumerable<double> GetChannelRMS()
         {
-            if (_channelRMS is null)
+            if (_channelRMS == null)
             {
-                if (recalculateRMS)
+                switch (rmsBehavior)
                 {
-                    if (!initialized)
-                    {
-                        Initialize();
-                    }
+                    case TransformRMSBehavior.Recalculate:
+                        if (!initialized)
+                        {
+                            Initialize();
+                        }
+                        _channelRMS = this.CalculateRMS();
+                        break;
 
-                    _channelRMS = this.CalculateRMS();
-                }
-                else
-                {
-                    double rms = carrierTones.Select(x => 0.5 * x.amplitude.MagnitudeSquared).Sum();
-                    _channelRMS = new double[] { Math.Sqrt(rms) };
+                    case TransformRMSBehavior.Passthrough:
+                        double rms = carrierTones.Select(x => 0.5 * x.amplitude.MagnitudeSquared).Sum();
+                        _channelRMS = new double[] { Math.Sqrt(rms) };
+                        break;
+
+                    default:
+                        throw new Exception($"Unexpected rmsBehavior: {rmsBehavior}");
                 }
             }
 
