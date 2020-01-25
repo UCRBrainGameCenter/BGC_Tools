@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Scripting;
 
 namespace BGC.DataStructures.Generic
 {
@@ -9,6 +10,7 @@ namespace BGC.DataStructures.Generic
     /// An unstable-sort set structure that acts as a select-without-replace bag.
     /// </summary>
     [Serializable]
+    [Preserve]
     public class DepletableBag<T> : IDepletable<T>
     {
         [SerializeField]

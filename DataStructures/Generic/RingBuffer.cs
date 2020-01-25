@@ -2,12 +2,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine.Scripting;
 
 namespace BGC.DataStructures.Generic
 {
     /// <summary>
     /// Statically-sized ring buffer container.
     /// </summary>
+    [Preserve]
     public class RingBuffer<T> : IEnumerable<T>, ICollection<T>
     {
         private T[] values = null;

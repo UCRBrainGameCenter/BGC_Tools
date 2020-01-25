@@ -2,12 +2,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Scripting;
 
 namespace BGC.DataStructures.Generic
 {
     /// <summary>
     /// A depletable/refillable set with an underlying list and defined order.
     /// </summary>
+    [Preserve]
     public class DepletableList<T> : IDepletable<T>
     {
         protected List<T> values;
