@@ -550,101 +550,101 @@ namespace BGC.Scripting
 
         #endregion
 
-        //public void UsedOnlyForAOTCodeGeneration()
-        //{
-        //    new DataStructures.Generic.RingBuffer<bool>(1);
-        //    new DataStructures.Generic.RingBuffer<bool>(new[] { false });
-        //    new DataStructures.Generic.RingBuffer<double>(1);
-        //    new DataStructures.Generic.RingBuffer<double>(new[] { 1.0 });
-        //    new DataStructures.Generic.RingBuffer<int>(1);
-        //    new DataStructures.Generic.RingBuffer<int>(new[] { 1 });
-        //    new DataStructures.Generic.RingBuffer<string>(1);
-        //    new DataStructures.Generic.RingBuffer<string>(new[] { "" });
+        public void UsedOnlyForAOTCodeGeneration()
+        {
+            new DataStructures.Generic.RingBuffer<bool>(1);
+            new DataStructures.Generic.RingBuffer<bool>(new[] { false });
+            new DataStructures.Generic.RingBuffer<double>(1);
+            new DataStructures.Generic.RingBuffer<double>(new[] { 1.0 });
+            new DataStructures.Generic.RingBuffer<int>(1);
+            new DataStructures.Generic.RingBuffer<int>(new[] { 1 });
+            new DataStructures.Generic.RingBuffer<string>(1);
+            new DataStructures.Generic.RingBuffer<string>(new[] { "" });
 
-        //    new List<bool>();
-        //    new List<bool>(1);
-        //    new List<bool>(new[] { false });
-        //    new List<double>();
-        //    new List<double>(1);
-        //    new List<double>(new[] { 1.0 });
-        //    new List<int>();
-        //    new List<int>(1);
-        //    new List<int>(new[] { 1 });
-        //    new List<string>();
-        //    new List<string>(1);
-        //    new List<string>(new[] { "" });
+            new List<bool>();
+            new List<bool>(1);
+            new List<bool>(new[] { false });
+            new List<double>();
+            new List<double>(1);
+            new List<double>(new[] { 1.0 });
+            new List<int>();
+            new List<int>(1);
+            new List<int>(new[] { 1 });
+            new List<string>();
+            new List<string>(1);
+            new List<string>(new[] { "" });
 
-        //    new Queue<bool>();
-        //    new Queue<bool>(1);
-        //    new Queue<bool>(new[] { false });
-        //    new Queue<double>();
-        //    new Queue<double>(1);
-        //    new Queue<double>(new[] { 1.0 });
-        //    new Queue<int>();
-        //    new Queue<int>(1);
-        //    new Queue<int>(new[] { 1 });
-        //    new Queue<string>();
-        //    new Queue<string>(1);
-        //    new Queue<string>(new[] { "" });
+            new Queue<bool>();
+            new Queue<bool>(1);
+            new Queue<bool>(new[] { false });
+            new Queue<double>();
+            new Queue<double>(1);
+            new Queue<double>(new[] { 1.0 });
+            new Queue<int>();
+            new Queue<int>(1);
+            new Queue<int>(new[] { 1 });
+            new Queue<string>();
+            new Queue<string>(1);
+            new Queue<string>(new[] { "" });
 
-        //    new Stack<bool>();
-        //    new Stack<bool>(1);
-        //    new Stack<bool>(new[] { false });
-        //    new Stack<double>();
-        //    new Stack<double>(1);
-        //    new Stack<double>(new[] { 1.0 });
-        //    new Stack<int>();
-        //    new Stack<int>(1);
-        //    new Stack<int>(new[] { 1 });
-        //    new Stack<string>();
-        //    new Stack<string>(1);
-        //    new Stack<string>(new[] { "" });
+            new Stack<bool>();
+            new Stack<bool>(1);
+            new Stack<bool>(new[] { false });
+            new Stack<double>();
+            new Stack<double>(1);
+            new Stack<double>(new[] { 1.0 });
+            new Stack<int>();
+            new Stack<int>(1);
+            new Stack<int>(new[] { 1 });
+            new Stack<string>();
+            new Stack<string>(1);
+            new Stack<string>(new[] { "" });
 
-        //    new DataStructures.Generic.DepletableBag<bool>();
-        //    new DataStructures.Generic.DepletableBag<bool>(new[] { false });
-        //    new DataStructures.Generic.DepletableBag<double>();
-        //    new DataStructures.Generic.DepletableBag<double>(new[] { 1.0 });
-        //    new DataStructures.Generic.DepletableBag<int>();
-        //    new DataStructures.Generic.DepletableBag<int>(new[] { 1 });
-        //    new DataStructures.Generic.DepletableBag<string>();
-        //    new DataStructures.Generic.DepletableBag<string>(new[] { "" });
+            new DataStructures.Generic.DepletableBag<bool>();
+            new DataStructures.Generic.DepletableBag<bool>(new[] { false });
+            new DataStructures.Generic.DepletableBag<double>();
+            new DataStructures.Generic.DepletableBag<double>(new[] { 1.0 });
+            new DataStructures.Generic.DepletableBag<int>();
+            new DataStructures.Generic.DepletableBag<int>(new[] { 1 });
+            new DataStructures.Generic.DepletableBag<string>();
+            new DataStructures.Generic.DepletableBag<string>(new[] { "" });
 
-        //    new DataStructures.Generic.DepletableList<bool>();
-        //    new DataStructures.Generic.DepletableList<bool>(new[] { false });
-        //    new DataStructures.Generic.DepletableList<double>();
-        //    new DataStructures.Generic.DepletableList<double>(new[] { 1.0 });
-        //    new DataStructures.Generic.DepletableList<int>();
-        //    new DataStructures.Generic.DepletableList<int>(new[] { 1 });
-        //    new DataStructures.Generic.DepletableList<string>();
-        //    new DataStructures.Generic.DepletableList<string>(new[] { "" });
+            new DataStructures.Generic.DepletableList<bool>();
+            new DataStructures.Generic.DepletableList<bool>(new[] { false });
+            new DataStructures.Generic.DepletableList<double>();
+            new DataStructures.Generic.DepletableList<double>(new[] { 1.0 });
+            new DataStructures.Generic.DepletableList<int>();
+            new DataStructures.Generic.DepletableList<int>(new[] { 1 });
+            new DataStructures.Generic.DepletableList<string>();
+            new DataStructures.Generic.DepletableList<string>(new[] { "" });
 
-        //    new Dictionary<bool, bool>();
-        //    new Dictionary<bool, int>();
-        //    new Dictionary<bool, double>();
-        //    new Dictionary<bool, string>();
+            new Dictionary<bool, bool>();
+            new Dictionary<bool, int>();
+            new Dictionary<bool, double>();
+            new Dictionary<bool, string>();
 
-        //    new Dictionary<int, bool>();
-        //    new Dictionary<int, int>();
-        //    new Dictionary<int, double>();
-        //    new Dictionary<int, string>();
+            new Dictionary<int, bool>();
+            new Dictionary<int, int>();
+            new Dictionary<int, double>();
+            new Dictionary<int, string>();
 
-        //    new Dictionary<double, bool>();
-        //    new Dictionary<double, int>();
-        //    new Dictionary<double, double>();
-        //    new Dictionary<double, string>();
+            new Dictionary<double, bool>();
+            new Dictionary<double, int>();
+            new Dictionary<double, double>();
+            new Dictionary<double, string>();
 
-        //    new Dictionary<string, bool>();
-        //    new Dictionary<string, int>();
-        //    new Dictionary<string, double>();
-        //    new Dictionary<string, string>();
+            new Dictionary<string, bool>();
+            new Dictionary<string, int>();
+            new Dictionary<string, double>();
+            new Dictionary<string, string>();
 
-        //    new HashSet<bool>();
-        //    new HashSet<int>();
-        //    new HashSet<double>();
-        //    new HashSet<string>();
+            new HashSet<bool>();
+            new HashSet<int>();
+            new HashSet<double>();
+            new HashSet<string>();
 
-        //    // Include an exception so we can be sure to know if this method is ever called.
-        //    throw new InvalidOperationException("This method is used for AOT code generation only. Do not call it at runtime.");
-        //}
+            // Include an exception so we can be sure to know if this method is ever called.
+            throw new InvalidOperationException("This method is used for AOT code generation only. Do not call it at runtime.");
+        }
     }
 }
