@@ -73,7 +73,7 @@ namespace BGC.Scripting
             switch (operatorType)
             {
                 case Operator.CastDouble: return (T)(object)arg.GetAs<double>(context);
-                case Operator.CastInteger: return (T)(object)Math.Floor(arg.GetAs<double>(context));
+                case Operator.CastInteger: return (T)(object)(int)Math.Floor(arg.GetAs<double>(context));
 
                 default: throw new ArgumentException($"Unexpected Operator: {operatorType}");
             }
