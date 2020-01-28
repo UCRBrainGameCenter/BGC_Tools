@@ -66,6 +66,11 @@ namespace BGC.Scripting
         {
             Type returnType = typeof(T);
 
+            if (returnType == typeof(object))
+            {
+                returnType = valueType;
+            }
+
             if (!(returnType == typeof(int) || returnType == typeof(double)))
             {
                 throw new ScriptRuntimeException($"Tried to retrieve result of applying {operatorType} to {arg} of type {valueType.Name} as type {returnType.Name}");
