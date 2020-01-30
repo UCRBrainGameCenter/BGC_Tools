@@ -43,12 +43,6 @@ namespace BGC.Audio.Visualization
                 throw new ArgumentException("Clip too short to evaluate");
             }
 
-            if (maxFreq == double.PositiveInfinity)
-            {
-                //Default MaxFrequency to be determined by the size of the window
-                maxFreq = FrequencyDomain.GetComplexSampleFrequency(windowSize, windowSize / 2);
-            }
-
             //Limit Max Frquency by the size of the window
             maxFreq = Math.Min(maxFreq, FrequencyDomain.GetComplexSampleFrequency(windowSize, windowSize / 2));
 
@@ -163,5 +157,4 @@ namespace BGC.Audio.Visualization
                 (frequency - freqs[lowerBound]) / (freqs[lowerBound + 1] - freqs[lowerBound]));
         }
     }
-
 }
