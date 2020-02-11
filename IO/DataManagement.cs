@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace BGC.IO
 {
-    public class DataManagement
+    public static class DataManagement
     {
         private static string rootDirectory = null;
 
