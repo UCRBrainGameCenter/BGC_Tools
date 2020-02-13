@@ -12,13 +12,22 @@ namespace BGC.Audio
     /// </summary>
     public static class Calibration
     {
+        private const int VERSION = 2;
+
+        public const double TARGET_RMS = 1.0 / 32.0;
+        public const double RMS_TO_PEAK = 2.8;
+        public const double TARGET_PEAK = TARGET_RMS * RMS_TO_PEAK;
+
+        public static bool RecalibrationNeeded = false;
+
         private static class Keys
         {
-            public const string CustomCalibration = "Custom";
+            public const string Version = "Version";
 
-            public const string Level = "Level";
-            public const string LAdjustment = "LAdj";
-            public const string RAdjustment = "RAdj";
+            public const string Custom = "Custom";
+
+            public const string LeftLevel = "LeftLevel";
+            public const string RightLevel = "RightLevel";
         }
 
         public enum Tone
@@ -38,13 +47,12 @@ namespace BGC.Audio
             Default = 0,
             Custom,
             Results,
-            InProgress,
             MAX
         }
 
-        private static List<CalibrationPoint> customCalibration = null;
-        private static List<CalibrationPoint> resultsCalibration = null;
-        private static List<CalibrationPoint> inProgressCalibration = null;
+        private static readonly CalibrationValue defaultCalibration = new CalibrationValue(89.0, 89.0);
+        private static CalibrationValue? customCalibration = null;
+        private static CalibrationValue? resultsCalibration = null;
 
         private static readonly string dataDir = "System";
         private static readonly string configFileName = "Calibration.json";
@@ -65,23 +73,25 @@ namespace BGC.Audio
             }
         }
 
-
         private static void DeserializeCalibration(JsonObject parsedValue)
         {
-            JsonArray calibrationValues = parsedValue[Keys.CustomCalibration].AsJsonArray;
-
-            if (calibrationValues.Count == 0)
+            if (!parsedValue.ContainsKey(Keys.Version))
             {
+                //Version 1
+                RecalibrationNeeded = true;
+                Serialize();
                 return;
             }
 
-            customCalibration = new List<CalibrationPoint>(calibrationValues.Count);
-            foreach (JsonObject calibrationPoint in calibrationValues)
+            if (parsedValue.ContainsKey(Keys.Custom))
             {
-                customCalibration.Add(new CalibrationPoint(
-                    levelIn: calibrationPoint[Keys.Level],
-                    levelOffsetL: calibrationPoint[Keys.LAdjustment].AsNumber,
-                    levelOffsetR: calibrationPoint[Keys.RAdjustment].AsNumber));
+                customCalibration = new CalibrationValue(
+                    levelLeft: parsedValue[Keys.Custom][Keys.LeftLevel],
+                    levelRight: parsedValue[Keys.Custom][Keys.RightLevel]);
+            }
+            else
+            {
+                customCalibration = null;
             }
         }
 
@@ -95,92 +105,49 @@ namespace BGC.Audio
 
         private static JsonObject SerializeCalibration()
         {
-            JsonArray jsonCalibrationArray = new JsonArray();
-            if (customCalibration != null)
+            JsonObject data = new JsonObject()
             {
-                foreach (CalibrationPoint point in customCalibration)
-                {
-                    jsonCalibrationArray.Add(new JsonObject()
+                { Keys.Version, VERSION }
+            };
+
+            if (customCalibration.HasValue)
+            {
+                data.Add(Keys.Custom,
+                    new JsonObject()
                     {
-                        { Keys.Level, point.levelIn },
-                        { Keys.LAdjustment, point.levelOffsetL },
-                        { Keys.RAdjustment, point.levelOffsetR }
+                        { Keys.LeftLevel, customCalibration.Value.levelLeft },
+                        { Keys.RightLevel, customCalibration.Value.levelRight }
                     });
-                }
             }
 
-            return new JsonObject()
-            {
-                { Keys.CustomCalibration, jsonCalibrationArray }
-            };
+            return data;
         }
 
-        public static void FinishCalibration()
+        public static void FinishCalibration(
+            double levelLeft,
+            double levelRight)
         {
-            resultsCalibration = inProgressCalibration;
-            inProgressCalibration = null;
+            resultsCalibration = new CalibrationValue(levelLeft, levelRight);
         }
 
-        public static void InitiateCalibration(int[] testLevels)
+        public static (double initialLeft, double initialRight) InitiateCalibration()
         {
             //Make a new inProgressList that's a copy of the appropriate values
             switch (GetSourceForVerificationPanel())
             {
                 case Source.Custom:
-                    inProgressCalibration = new List<CalibrationPoint>(customCalibration);
-                    break;
+                    return (customCalibration.Value.levelLeft, customCalibration.Value.levelRight);
 
                 case Source.Results:
-                    inProgressCalibration = new List<CalibrationPoint>(resultsCalibration);
-                    break;
+                    return (resultsCalibration.Value.levelLeft, resultsCalibration.Value.levelRight);
 
                 case Source.Default:
-                    inProgressCalibration = new List<CalibrationPoint>(testLevels.Length);
+                    return (defaultCalibration.levelLeft, defaultCalibration.levelRight);
 
-                    foreach (int level in testLevels)
-                    {
-                        inProgressCalibration.Add(new CalibrationPoint(
-                            levelIn: level,
-                            levelOffsetL: 0.0,
-                            levelOffsetR: 0.0));
-                    }
-                    break;
-
-                case Source.InProgress:
                 default:
                     Debug.LogError($"Unexpected Source: {GetSourceForVerificationPanel()}");
-                    break;
+                    goto case Source.Default;
             }
-        }
-
-        public static void SubmitCalibrationValue(
-            int step,
-            AudioChannel channel,
-            double offset)
-        {
-            double left = inProgressCalibration[step].levelOffsetL;
-            double right = inProgressCalibration[step].levelOffsetR;
-
-            switch (channel)
-            {
-                case AudioChannel.Left:
-                    left += offset;
-                    break;
-
-                case AudioChannel.Right:
-                    right += offset;
-                    break;
-
-                default:
-                    Debug.LogError($"Unexpected Channel: {channel}");
-                    break;
-            }
-
-            inProgressCalibration[step] = new CalibrationPoint(
-                levelIn: inProgressCalibration[step].levelIn,
-                levelOffsetL: left,
-                levelOffsetR: right);
-
         }
 
         public static void PushCalibrationResults()
@@ -210,10 +177,6 @@ namespace BGC.Audio
                     resultsCalibration = null;
                     break;
 
-                case Source.InProgress:
-                    inProgressCalibration = null;
-                    break;
-
                 case Source.Default:
                 default:
                     Debug.LogError($"Unexpected Source: {source}");
@@ -223,11 +186,11 @@ namespace BGC.Audio
 
         public static Source GetSourceForVerificationPanel()
         {
-            if (resultsCalibration != null)
+            if (resultsCalibration.HasValue)
             {
                 return Source.Results;
             }
-            else if (customCalibration != null)
+            else if (customCalibration.HasValue)
             {
                 return Source.Custom;
             }
@@ -235,86 +198,74 @@ namespace BGC.Audio
             return Source.Default;
         }
 
-        public static void GetLevelOffset(
-            double level,
-            out double levelOffsetL,
-            out double levelOffsetR,
+        /// <summary>
+        /// Returns the scale factor per RMS.
+        /// To use, multiple every sample by the output of this divided by the stream RMS.
+        /// </summary>
+        public static (double levelFactorL, double levelFactorR) GetLevelFactors(
+            double levelL,
+            double levelR,
             Source source = Source.Custom)
         {
-            List<CalibrationPoint> points;
-
+            CalibrationValue calibrationValue = defaultCalibration;
             switch (source)
             {
-                case Source.InProgress:
-                    if (inProgressCalibration == null || inProgressCalibration.Count == 0)
-                    {
-                        goto case Source.Results;
-                    }
-                    points = inProgressCalibration;
-                    break;
-
                 case Source.Results:
-                    if (resultsCalibration == null || resultsCalibration.Count == 0)
+                    if (resultsCalibration == null)
                     {
                         goto case Source.Custom;
                     }
-                    points = resultsCalibration;
+                    calibrationValue = resultsCalibration.Value;
                     break;
 
                 case Source.Custom:
-                    if (customCalibration == null || customCalibration.Count == 0)
+                    if (customCalibration == null)
                     {
                         goto case Source.Default;
                     }
-                    points = customCalibration;
+                    calibrationValue = customCalibration.Value;
                     break;
 
                 case Source.Default:
-                    levelOffsetL = 0.0;
-                    levelOffsetR = 0.0;
-                    return;
+                    //Already set to default
+                    break;
 
                 default:
                     Debug.LogError($"Unexpected Source: {source}");
                     goto case Source.Default;
             }
 
-            if (points.Count == 1)
+            return (TARGET_RMS * Math.Pow(10.0, (levelL - calibrationValue.levelLeft) / 20.0),
+                TARGET_RMS * Math.Pow(10.0, (levelR - calibrationValue.levelRight) / 20.0));
+        }
+
+        public static (double softLimit, double hardLimit) GetLimitRecommendations(Source source)
+        {
+            double minLevel;
+
+            switch (source)
             {
-                levelOffsetL = points[0].levelOffsetL;
-                levelOffsetR = points[0].levelOffsetR;
-                return;
+                case Source.Default:
+                    minLevel = Math.Min(defaultCalibration.levelLeft, defaultCalibration.levelRight);
+                    break;
+
+                case Source.Custom:
+                    minLevel = Math.Min(customCalibration.Value.levelLeft, customCalibration.Value.levelRight);
+                    break;
+
+                case Source.Results:
+                    minLevel = Math.Min(resultsCalibration.Value.levelLeft, resultsCalibration.Value.levelRight);
+                    break;
+
+                default:
+                    Debug.LogError($"Unexpected CalibrationSource: {source}");
+                    goto case Source.Default;
             }
 
-            //If the requested level is before the first or after the last, use its assocaited offset
-            if (level <= points[0].levelIn)
-            {
-                levelOffsetL = points[0].levelOffsetL;
-                levelOffsetR = points[0].levelOffsetR;
-                return;
-            }
+            double softLimit = minLevel + 20.0 * Math.Log10(0.1 / TARGET_RMS);
+            double hardLimit = minLevel + 20.0 * Math.Log10(1.0 / (Math.Sqrt(2.0) * TARGET_RMS));
 
-            //Else, we will LERP between the surrounding offsets
-            for (int index = 0; index < points.Count - 1; index++)
-            {
-                if (level >= points[index].levelIn && level < points[index + 1].levelIn)
-                {
-                    
-                    levelOffsetL = GeneralMath.Lerp(points[index].levelOffsetL,
-                        points[index + 1].levelOffsetL,
-                        (level - points[index].levelIn) / (points[index + 1].levelIn - points[index].levelIn));
-
-                    levelOffsetR = GeneralMath.Lerp(points[index].levelOffsetR,
-                        points[index + 1].levelOffsetR,
-                        (level - points[index].levelIn) / (points[index + 1].levelIn - points[index].levelIn));
-
-                    return;
-                }
-            }
-
-            //Else, we return the last value
-            levelOffsetL = points[points.Count - 1].levelOffsetL;
-            levelOffsetR = points[points.Count - 1].levelOffsetR;
+            return (softLimit, hardLimit);
         }
 
         public static string GetToneName(this Tone tone)
@@ -353,17 +304,15 @@ namespace BGC.Audio
             }
         }
 
-        private readonly struct CalibrationPoint
+        private readonly struct CalibrationValue
         {
-            public readonly int levelIn;
-            public readonly double levelOffsetL;
-            public readonly double levelOffsetR;
+            public readonly double levelLeft;
+            public readonly double levelRight;
 
-            public CalibrationPoint(int levelIn, double levelOffsetL, double levelOffsetR)
+            public CalibrationValue(double levelLeft, double levelRight)
             {
-                this.levelIn = levelIn;
-                this.levelOffsetL = levelOffsetL;
-                this.levelOffsetR = levelOffsetR;
+                this.levelLeft = levelLeft;
+                this.levelRight = levelRight;
             }
         }
     }

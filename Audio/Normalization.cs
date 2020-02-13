@@ -15,65 +15,31 @@ namespace BGC.Audio
         {
             RMS = 0,
             Peak,
-            RMSProscribed,
+            RMSAssigned,
             MAX
         }
 
-        public const double dbMax = 90.0;
-        public const double dbOffset = 80.0;
-
-        public const double RMS_TO_PEAK = 2.8;
-        public const double TARGET_RMS = 1.0 / 128.0;
-        public const double TARGET_PEAK = TARGET_RMS * RMS_TO_PEAK;
-
-        public static void SPLToAdjustmentDB(
-            double dbSPLL,
-            double dbSPLR,
-            out double dbAdjustL,
-            out double dbAdjustR,
-            Calibration.Source source = Calibration.Source.Custom)
-        {
-            dbSPLL = GeneralMath.Clamp(dbSPLL, -60, dbMax);
-            dbSPLR = GeneralMath.Clamp(dbSPLR, -60, dbMax);
-
-            //Start with Left calculation
-            Calibration.GetLevelOffset(
-                level: dbSPLL,
-                levelOffsetL: out double dbOffsetL,
-                levelOffsetR: out double dbOffsetR,
-                source: source);
-
-            dbAdjustL = dbOffsetL + dbSPLL - dbOffset;
-
-            //If they're not the same, then generate a new set of offsets
-            if (dbSPLL != dbSPLR)
-            {
-                //To right calculation if it's different
-                Calibration.GetLevelOffset(
-                    level: dbSPLR,
-                    levelOffsetL: out _,
-                    levelOffsetR: out dbOffsetR,
-                    source: source);
-            }
-            dbAdjustR = dbOffsetR + dbSPLR - dbOffset;
-        }
+        public const double dbSafetyLimit = 90.0;
 
         public static void GetAmplitudeFactors(
             double dbSPLL,
             double dbSPLR,
             out double factorL,
             out double factorR,
-            Calibration.Source source = Calibration.Source.Custom)
+            Calibration.Source source = Calibration.Source.Custom,
+            bool safetyLimit = true)
         {
-            SPLToAdjustmentDB(
-                dbSPLL: dbSPLL,
-                dbSPLR: dbSPLR,
-                dbAdjustL: out double dbLevelL,
-                dbAdjustR: out double dbLevelR,
-                source: source);
+            if (safetyLimit && (dbSPLL > dbSafetyLimit || dbSPLR > dbSafetyLimit))
+            {
+                throw new StreamCompositionException(
+                    $"Tried to exceed safety limit of 90dB without disengaging safety. " +
+                    $"Requested Level: {Math.Max(dbSPLL, dbSPLR)} dB");
+            }
 
-            factorL = Math.Pow(10.0, dbLevelL / 20.0);
-            factorR = Math.Pow(10.0, dbLevelR / 20.0);
+            (factorL, factorR) = Calibration.GetLevelFactors(
+                levelL: dbSPLL,
+                levelR: dbSPLR,
+                source: source);
         }
 
         /// <summary>
@@ -86,14 +52,16 @@ namespace BGC.Audio
             float[] samples,
             float[] destination = null,
             Scheme scheme = Scheme.RMS,
-            Calibration.Source source = Calibration.Source.Custom)
+            Calibration.Source source = Calibration.Source.Custom,
+            bool safetyLimit = true)
         {
             GetAmplitudeFactors(
                 dbSPLL: desiredLevel,
                 dbSPLR: desiredLevel,
                 factorL: out double levelFactorL,
                 factorR: out double levelFactorR,
-                source: source);
+                source: source,
+                safetyLimit: safetyLimit);
 
             if (samples == destination)
             {
@@ -120,7 +88,7 @@ namespace BGC.Audio
                         destination: destination);
                     break;
 
-                case Scheme.RMSProscribed:
+                case Scheme.RMSAssigned:
                     Debug.LogError($"You must provide a effectiveRMS to use this Scheme.");
                     goto case Scheme.RMS;
 
@@ -140,15 +108,17 @@ namespace BGC.Audio
             double effectiveRMS,
             float[] samples,
             float[] destination = null,
-            Scheme scheme = Scheme.RMSProscribed,
-            Calibration.Source source = Calibration.Source.Custom)
+            Scheme scheme = Scheme.RMSAssigned,
+            Calibration.Source source = Calibration.Source.Custom,
+            bool safetyLimit = true)
         {
             GetAmplitudeFactors(
                 dbSPLL: desiredLevel,
                 dbSPLR: desiredLevel,
                 factorL: out double levelFactorL,
                 factorR: out double levelFactorR,
-                source: source);
+                source: source,
+                safetyLimit: safetyLimit);
 
             if (samples == destination)
             {
@@ -177,7 +147,7 @@ namespace BGC.Audio
                         destination: destination);
                     break;
 
-                case Scheme.RMSProscribed:
+                case Scheme.RMSAssigned:
                     NormalizeStereo_TargetRMS(
                         levelFactorL: levelFactorL,
                         levelFactorR: levelFactorR,
@@ -188,7 +158,7 @@ namespace BGC.Audio
 
                 default:
                     Debug.LogError($"Unexpected Scheme: {scheme}");
-                    goto case Scheme.RMSProscribed;
+                    goto case Scheme.RMSAssigned;
             }
         }
 
@@ -204,14 +174,16 @@ namespace BGC.Audio
             int outputOffset = 0,
             int sampleCount = int.MaxValue,
             Scheme scheme = Scheme.RMS,
-            Calibration.Source source = Calibration.Source.Custom)
+            Calibration.Source source = Calibration.Source.Custom,
+            bool safetyLimit = true)
         {
             GetAmplitudeFactors(
                 dbSPLL: desiredLevel,
                 dbSPLR: desiredLevel,
                 factorL: out double levelFactorL,
                 factorR: out double levelFactorR,
-                source: source);
+                source: source,
+                safetyLimit: safetyLimit);
 
             switch (scheme)
             {
@@ -235,7 +207,7 @@ namespace BGC.Audio
                         outputOffset: outputOffset,
                         sampleCount: sampleCount);
 
-                case Scheme.RMSProscribed:
+                case Scheme.RMSAssigned:
                     Debug.LogError($"You must provide a effectiveRMS to use this Scheme.");
                     goto case Scheme.RMS;
 
@@ -258,14 +230,16 @@ namespace BGC.Audio
             int outputOffset = 0,
             int sampleCount = int.MaxValue,
             Scheme scheme = Scheme.RMS,
-            Calibration.Source source = Calibration.Source.Custom)
+            Calibration.Source source = Calibration.Source.Custom,
+            bool safetyLimit = true)
         {
             GetAmplitudeFactors(
                 dbSPLL: desiredLevel,
                 dbSPLR: desiredLevel,
                 factorL: out double levelFactorL,
                 factorR: out double levelFactorR,
-                source: source);
+                source: source,
+                safetyLimit: safetyLimit);
 
             switch (scheme)
             {
@@ -291,7 +265,7 @@ namespace BGC.Audio
                         outputOffset: outputOffset,
                         sampleCount: sampleCount);
 
-                case Scheme.RMSProscribed:
+                case Scheme.RMSAssigned:
                     Debug.LogError($"You must provide a effectiveRMS to use this Scheme.");
                     return NormalizeMono_TargetRMS(
                         levelFactorL: levelFactorL,
@@ -339,8 +313,8 @@ namespace BGC.Audio
 
             double maxRMS = Math.Max(sampleSquaredSum[0], sampleSquaredSum[1]);
 
-            float scalingFactorL = (float)(levelFactorL * (TARGET_RMS / maxRMS));
-            float scalingFactorR = (float)(levelFactorR * (TARGET_RMS / maxRMS));
+            float scalingFactorL = (float)(levelFactorL / maxRMS);
+            float scalingFactorR = (float)(levelFactorR / maxRMS);
 
             //Protect against some NaN Poisoning
             if (float.IsNaN(scalingFactorL) || float.IsInfinity(scalingFactorL))
@@ -388,8 +362,8 @@ namespace BGC.Audio
 
             int sampleCount = samples.Length / 2;
 
-            float scalingFactorL = (float)(levelFactorL * (TARGET_RMS / effectiveRMS));
-            float scalingFactorR = (float)(levelFactorR * (TARGET_RMS / effectiveRMS));
+            float scalingFactorL = (float)(levelFactorL / effectiveRMS);
+            float scalingFactorR = (float)(levelFactorR / effectiveRMS);
 
             if (inplace)
             {
@@ -435,8 +409,8 @@ namespace BGC.Audio
                 maxPeak = Math.Max(samples[2 * i + 1], maxPeak);
             }
 
-            float scalingFactorL = (float)(levelFactorL * (TARGET_PEAK / maxPeak));
-            float scalingFactorR = (float)(levelFactorR * (TARGET_PEAK / maxPeak));
+            float scalingFactorL = (float)(levelFactorL * Calibration.RMS_TO_PEAK / maxPeak);
+            float scalingFactorR = (float)(levelFactorR * Calibration.RMS_TO_PEAK / maxPeak);
 
             if (float.IsNaN(scalingFactorL) || float.IsInfinity(scalingFactorL))
             {
@@ -523,8 +497,8 @@ namespace BGC.Audio
 
             double maxRMS = Math.Sqrt(sampleSquaredSum / sampleCount);
 
-            float scalingFactorL = (float)(levelFactorL * (TARGET_RMS / maxRMS));
-            float scalingFactorR = (float)(levelFactorR * (TARGET_RMS / maxRMS));
+            float scalingFactorL = (float)(levelFactorL / maxRMS);
+            float scalingFactorR = (float)(levelFactorR / maxRMS);
 
             //Protect against some NaN Poisoning
             if (float.IsNaN(scalingFactorL) || float.IsInfinity(scalingFactorL))
@@ -592,8 +566,8 @@ namespace BGC.Audio
                 return stereoOutput;
             }
 
-            float scalingFactorL = (float)(levelFactorL * (TARGET_RMS / effectiveRMS));
-            float scalingFactorR = (float)(levelFactorR * (TARGET_RMS / effectiveRMS));
+            float scalingFactorL = (float)(levelFactorL / effectiveRMS);
+            float scalingFactorR = (float)(levelFactorR / effectiveRMS);
 
             for (int i = 0; i < sampleCount; i++)
             {
@@ -658,8 +632,8 @@ namespace BGC.Audio
                 maxPeak = Math.Max(monoInput[i + inputOffset], maxPeak);
             }
 
-            float scalingFactorL = (float)(levelFactorL * (TARGET_PEAK / maxPeak));
-            float scalingFactorR = (float)(levelFactorR * (TARGET_PEAK / maxPeak));
+            float scalingFactorL = (float)(levelFactorL * Calibration.RMS_TO_PEAK / maxPeak);
+            float scalingFactorR = (float)(levelFactorR * Calibration.RMS_TO_PEAK / maxPeak);
 
             if (float.IsNaN(scalingFactorL) || float.IsInfinity(scalingFactorL))
             {
@@ -687,14 +661,16 @@ namespace BGC.Audio
             double desiredLevel,
             out double scalingFactorL,
             out double scalingFactorR,
-            Calibration.Source source = Calibration.Source.Custom)
+            Calibration.Source source = Calibration.Source.Custom,
+            bool safetyLimit = true)
         {
             GetAmplitudeFactors(
                 dbSPLL: desiredLevel,
                 dbSPLR: desiredLevel,
                 factorL: out double levelFactorL,
                 factorR: out double levelFactorR,
-                source: source);
+                source: source,
+                safetyLimit: safetyLimit);
 
             IEnumerable<double> channelRMS = stream.GetChannelRMS();
 
@@ -717,8 +693,8 @@ namespace BGC.Audio
 
             double maxRMS = channelRMS.Where(x => !double.IsNaN(x)).Max();
 
-            scalingFactorL = levelFactorL * (TARGET_RMS / maxRMS);
-            scalingFactorR = levelFactorR * (TARGET_RMS / maxRMS);
+            scalingFactorL = levelFactorL / maxRMS;
+            scalingFactorR = levelFactorR / maxRMS;
 
             //Protect against some NaN Poisoning
             if (double.IsNaN(scalingFactorL) || double.IsInfinity(scalingFactorL))
@@ -737,14 +713,16 @@ namespace BGC.Audio
             double desiredLevel,
             out float scalingFactorL,
             out float scalingFactorR,
-            Calibration.Source source = Calibration.Source.Custom)
+            Calibration.Source source = Calibration.Source.Custom,
+            bool safetyLimit = true)
         {
             GetAmplitudeFactors(
                 dbSPLL: desiredLevel,
                 dbSPLR: desiredLevel,
                 factorL: out double levelFactorL,
                 factorR: out double levelFactorR,
-                source: source);
+                source: source,
+                safetyLimit: safetyLimit);
 
             double[] sampleSquaredSum = new double[2];
             int sampleCount = stereoSamples.Length / 2;
@@ -760,8 +738,8 @@ namespace BGC.Audio
 
             double maxRMS = Math.Max(sampleSquaredSum[0], sampleSquaredSum[1]);
 
-            scalingFactorL = (float)(levelFactorL * (TARGET_RMS / maxRMS));
-            scalingFactorR = (float)(levelFactorR * (TARGET_RMS / maxRMS));
+            scalingFactorL = (float)(levelFactorL / maxRMS);
+            scalingFactorR = (float)(levelFactorR / maxRMS);
 
             //Protect against some NaN Poisoning
             if (float.IsNaN(scalingFactorL) || float.IsInfinity(scalingFactorL))
@@ -780,14 +758,16 @@ namespace BGC.Audio
             double desiredLevel,
             out double scalingFactorL,
             out double scalingFactorR,
-            Calibration.Source source = Calibration.Source.Custom)
+            Calibration.Source source = Calibration.Source.Custom,
+            bool safetyLimit = true)
         {
             GetAmplitudeFactors(
                 dbSPLL: desiredLevel,
                 dbSPLR: desiredLevel,
                 factorL: out double levelFactorL,
                 factorR: out double levelFactorR,
-                source: source);
+                source: source,
+                safetyLimit: safetyLimit);
 
             double sampleSquaredSum = 0.0;
 
@@ -798,8 +778,8 @@ namespace BGC.Audio
 
             sampleSquaredSum = Math.Sqrt(sampleSquaredSum / monoSamples.Length);
 
-            scalingFactorL = levelFactorL * (TARGET_RMS / sampleSquaredSum);
-            scalingFactorR = levelFactorR * (TARGET_RMS / sampleSquaredSum);
+            scalingFactorL = levelFactorL / sampleSquaredSum;
+            scalingFactorR = levelFactorR / sampleSquaredSum;
 
             //Protect against some NaN Poisoning
             if (double.IsNaN(scalingFactorL) || double.IsInfinity(scalingFactorL))
@@ -813,53 +793,7 @@ namespace BGC.Audio
             }
         }
 
-        public static double CalculateRMSLevel(float[] samples)
-        {
-            double[] sampleSquaredSum = new double[2];
-            int sampleCount = samples.Length / 2;
-
-            for (int i = 0; i < sampleCount; i++)
-            {
-                sampleSquaredSum[0] += samples[2 * i] * samples[2 * i];
-                sampleSquaredSum[1] += samples[2 * i + 1] * samples[2 * i + 1];
-            }
-
-            sampleSquaredSum[0] = Math.Sqrt(sampleSquaredSum[0] / sampleCount);
-            sampleSquaredSum[1] = Math.Sqrt(sampleSquaredSum[1] / sampleCount);
-
-            double rmsL = sampleSquaredSum[0];
-            double rmsR = sampleSquaredSum[1];
-
-            double levelL = 20.0 * Math.Log10(rmsL / TARGET_RMS) + dbOffset;
-            double levelR = 20.0 * Math.Log10(rmsR / TARGET_RMS) + dbOffset;
-
-            if (double.IsNaN(levelL) || double.IsInfinity(levelL))
-            {
-                levelL = -60.0;
-            }
-
-            if (double.IsNaN(levelR) || double.IsInfinity(levelR))
-            {
-                levelR = -60.0;
-            }
-
-            Calibration.GetLevelOffset(
-                level: levelL,
-                levelOffsetL: out double dbOffsetL,
-                levelOffsetR: out double dbOffsetR);
-
-            if (levelL != levelR)
-            {
-                Calibration.GetLevelOffset(
-                    level: levelR,
-                    levelOffsetL: out _,
-                    levelOffsetR: out dbOffsetR);
-            }
-
-            return Math.Max(levelL - dbOffsetL, levelR - dbOffsetR);
-        }
-
-        public static void StandardizeSoundRMSMono(float[] samples)
+        public static void NormalizeRMSMono(float[] samples)
         {
             double squaredSum = 0.0;
             int sampleCount = samples.Length;
@@ -871,7 +805,7 @@ namespace BGC.Audio
 
             squaredSum = Math.Sqrt(squaredSum / sampleCount);
 
-            float scalingFactor = (float)(TARGET_RMS / squaredSum);
+            float scalingFactor = (float)(1.0 / squaredSum);
 
             //Protect against some NaN Poisoning
             if (float.IsNaN(scalingFactor) || float.IsInfinity(scalingFactor))
@@ -885,7 +819,7 @@ namespace BGC.Audio
             }
         }
 
-        public static void StandardizeSoundRMSStereo(float[] samples)
+        public static void NormalizeRMSStereo(float[] samples)
         {
             double squaredSumL = 0.0;
             double squaredSumR = 0.0;
@@ -902,7 +836,7 @@ namespace BGC.Audio
 
             double squaredSum = Math.Max(squaredSumL, squaredSumR);
 
-            float scalingFactor = (float)(TARGET_RMS / squaredSum);
+            float scalingFactor = (float)(1.0 / squaredSum);
 
             //Protect against some NaN Poisoning
             if (float.IsNaN(scalingFactor) || float.IsInfinity(scalingFactor))

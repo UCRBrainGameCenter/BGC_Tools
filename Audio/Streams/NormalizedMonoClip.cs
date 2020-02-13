@@ -26,20 +26,32 @@ namespace BGC.Audio
         private float leftFactor;
         private float rightFactor;
         private readonly double presentationLevel;
+        private readonly bool safetyLimit;
 
-        public NormalizedMonoClip(float[] monoSamples, double leftFactor, double rightFactor)
+        public NormalizedMonoClip(
+            float[] monoSamples,
+            double leftFactor,
+            double rightFactor)
         {
             Samples = monoSamples;
             this.leftFactor = (float)leftFactor;
             this.rightFactor = (float)rightFactor;
             factorsInitialized = true;
+
+            //Normalizer bypassed
+            safetyLimit = false;
         }
 
-        public NormalizedMonoClip(float[] monoSamples, double presentationLevel)
+        public NormalizedMonoClip(
+            float[] monoSamples,
+            double presentationLevel,
+            bool safetyLimit = true)
         {
             Samples = monoSamples;
             this.presentationLevel = presentationLevel;
             factorsInitialized = false;
+
+            this.safetyLimit = safetyLimit;
         }
 
         protected override void _Initialize()
@@ -52,7 +64,8 @@ namespace BGC.Audio
                     monoSamples: Samples,
                     desiredLevel: presentationLevel,
                     scalingFactorL: out double tempLeftFactor,
-                    scalingFactorR: out double tempRightFactor);
+                    scalingFactorR: out double tempRightFactor,
+                    safetyLimit: safetyLimit);
 
                 leftFactor = (float)tempLeftFactor;
                 rightFactor = (float)tempRightFactor;

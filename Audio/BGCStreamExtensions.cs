@@ -319,15 +319,16 @@ namespace BGC.Audio
 
         public static IBGCStream Normalize(
             this IBGCStream stream,
-            double presentationLevel)
+            double presentationLevel,
+            bool safetyLimit = true)
         {
             if (stream.Channels == 1)
             {
-                return new NormalizerMonoFilter(stream, presentationLevel);
+                return new NormalizerMonoFilter(stream, presentationLevel, safetyLimit);
             }
             else if (stream.Channels == 2)
             {
-                return new NormalizerFilter(stream, presentationLevel);
+                return new NormalizerFilter(stream, presentationLevel, safetyLimit);
             }
 
             throw new StreamCompositionException("Cannot normalize stream of more than 2 channels");
@@ -335,15 +336,16 @@ namespace BGC.Audio
 
         public static IBGCStream Normalize(
             this IBGCStream stream,
-            (double levelL, double levelR) presentationLevels)
+            (double levelL, double levelR) presentationLevels,
+            bool safetyLimit = true)
         {
             if (stream.Channels == 1)
             {
-                return new NormalizerMonoFilter(stream, presentationLevels);
+                return new NormalizerMonoFilter(stream, presentationLevels, safetyLimit);
             }
             else if (stream.Channels == 2)
             {
-                return new NormalizerFilter(stream, presentationLevels);
+                return new NormalizerFilter(stream, presentationLevels, safetyLimit);
             }
 
             throw new StreamCompositionException("Cannot normalize stream of more than 2 channels");

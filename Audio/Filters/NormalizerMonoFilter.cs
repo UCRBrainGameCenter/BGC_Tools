@@ -18,11 +18,15 @@ namespace BGC.Audio.Filters
         private float leftFactor;
         private float rightFactor;
         private readonly (double levelL, double levelR) presentationLevels;
+        private readonly bool safetyLimit;
 
         private const int BUFFER_SIZE = 512;
         private readonly float[] buffer = new float[BUFFER_SIZE];
 
-        public NormalizerMonoFilter(IBGCStream stream, double leftFactor, double rightFactor)
+        public NormalizerMonoFilter(
+            IBGCStream stream,
+            double leftFactor,
+            double rightFactor)
             : base(stream)
         {
             if (stream.Channels != 1)
@@ -34,9 +38,15 @@ namespace BGC.Audio.Filters
             this.rightFactor = (float)rightFactor;
             presentationLevels = (0, 0);
             factorsInitialized = true;
+
+            //Normalizer is bypassed
+            safetyLimit = false;
         }
 
-        public NormalizerMonoFilter(IBGCStream stream, double presentationLevel)
+        public NormalizerMonoFilter(
+            IBGCStream stream,
+            double presentationLevel,
+            bool safetyLimit = true)
             : base(stream)
         {
             if (stream.Channels != 1)
@@ -46,9 +56,13 @@ namespace BGC.Audio.Filters
 
             presentationLevels = (presentationLevel, presentationLevel);
             factorsInitialized = false;
+            this.safetyLimit = safetyLimit;
         }
 
-        public NormalizerMonoFilter(IBGCStream stream, (double levelL, double levelR) levels)
+        public NormalizerMonoFilter(
+            IBGCStream stream,
+            (double levelL, double levelR) levels,
+            bool safetyLimit = true)
             : base(stream)
         {
             if (stream.Channels != 1)
@@ -58,6 +72,7 @@ namespace BGC.Audio.Filters
 
             presentationLevels = levels;
             factorsInitialized = false;
+            this.safetyLimit = safetyLimit;
         }
 
         protected override void _Initialize()
@@ -70,7 +85,8 @@ namespace BGC.Audio.Filters
                     stream: stream,
                     desiredLevel: presentationLevels.levelL,
                     scalingFactorL: out double tempLeftFactor,
-                    scalingFactorR: out double tempRightFactor);
+                    scalingFactorR: out double tempRightFactor,
+                    safetyLimit: safetyLimit);
 
                 if (presentationLevels.levelL != presentationLevels.levelR)
                 {
@@ -78,7 +94,8 @@ namespace BGC.Audio.Filters
                         stream: stream,
                         desiredLevel: presentationLevels.levelR,
                         scalingFactorL: out double _,
-                        scalingFactorR: out tempRightFactor);
+                        scalingFactorR: out tempRightFactor,
+                        safetyLimit: safetyLimit);
                 }
 
                 leftFactor = (float)tempLeftFactor;

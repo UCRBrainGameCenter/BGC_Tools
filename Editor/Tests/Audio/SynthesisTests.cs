@@ -1104,7 +1104,7 @@ namespace BGC.Tests
                             new SineWave(0.5, 330.0))
                             .ADSR(0.01f, 0.125f, 1.0f, 0.05f)
                             .Window(0.5f, smoothingSamples: 10),
-                        LEVEL)
+                        LEVEL, false)
                     .Center(1f),
                 overwrite: true);
         }

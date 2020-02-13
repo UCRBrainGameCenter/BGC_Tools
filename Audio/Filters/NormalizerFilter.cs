@@ -20,6 +20,7 @@ namespace BGC.Audio.Filters
         private readonly (double levelL, double levelR) presentationLevels;
 
         private readonly Calibration.Source source;
+        private readonly bool safetyLimit;
 
         private const int BUFFER_SIZE = 512;
         private readonly float[] buffer = new float[BUFFER_SIZE];
@@ -40,13 +41,15 @@ namespace BGC.Audio.Filters
             presentationLevels = (0.0, 0.0);
             factorsInitialized = true;
 
-            //Doesn't matter, we won't use this.
+            //Doesn't matter, we bypass the normalizer.
+            safetyLimit = false;
             source = Calibration.Source.MAX;
         }
 
         public NormalizerFilter(
             IBGCStream stream,
-            double presentationLevel)
+            double presentationLevel,
+            bool safetyLimit = true)
             : base(stream)
         {
             if (stream.Channels != 2)
@@ -58,11 +61,13 @@ namespace BGC.Audio.Filters
             factorsInitialized = false;
 
             source = Calibration.Source.Custom;
+            this.safetyLimit = safetyLimit;
         }
 
         public NormalizerFilter(
             IBGCStream stream,
-            (double levelL, double levelR) presentationLevel)
+            (double levelL, double levelR) presentationLevel,
+            bool safetyLimit = true)
             : base(stream)
         {
             if (stream.Channels != 2)
@@ -74,12 +79,14 @@ namespace BGC.Audio.Filters
             factorsInitialized = false;
 
             source = Calibration.Source.Custom;
+            this.safetyLimit = safetyLimit;
         }
 
         public NormalizerFilter(
             IBGCStream stream,
             double presentationLevel,
-            Calibration.Source source)
+            Calibration.Source source,
+            bool safetyLimit = true)
             : base(stream)
         {
             if (stream.Channels != 2)
@@ -91,6 +98,7 @@ namespace BGC.Audio.Filters
             factorsInitialized = false;
 
             this.source = source;
+            this.safetyLimit = safetyLimit;
         }
 
         protected override void _Initialize()
@@ -104,17 +112,18 @@ namespace BGC.Audio.Filters
                     desiredLevel: presentationLevels.levelL,
                     scalingFactorL: out double tempLeftFactor,
                     scalingFactorR: out double tempRightFactor,
-                    source: source);
+                    source: source,
+                    safetyLimit: safetyLimit);
 
                 if (presentationLevels.levelL != presentationLevels.levelR)
                 {
                     Normalization.GetRMSScalingFactors(
                         stream: stream,
-                        desiredLevel: presentationLevels.levelL,
+                        desiredLevel: presentationLevels.levelR,
                         scalingFactorL: out double _,
                         scalingFactorR: out tempRightFactor,
-                        source: source);
-
+                        source: source,
+                        safetyLimit: safetyLimit);
                 }
 
                 leftFactor = (float)tempLeftFactor;
