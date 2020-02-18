@@ -170,8 +170,8 @@ namespace BGC.Audio.Filters
             if (_channelRMS == null)
             {
                 double[] innerRMS = stream.GetChannelRMS().ToArray();
-                innerRMS[0] *= leftFactor;
-                innerRMS[1] *= rightFactor;
+                innerRMS[0] *= Math.Abs(leftFactor);
+                innerRMS[1] *= Math.Abs(rightFactor);
 
                 _channelRMS = innerRMS;
             }
