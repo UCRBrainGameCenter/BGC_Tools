@@ -317,6 +317,14 @@ namespace BGC.Audio
             return new MultiConvolutionFilter(stream, filter1, filter2, transformRMSBehavior);
         }
 
+        public static IBGCStream Convolve(
+            this IBGCStream stream,
+            double[] filter,
+            TransformRMSBehavior transformRMSBehavior = TransformRMSBehavior.Passthrough)
+        {
+            return new ConvolutionFilter(stream, filter, transformRMSBehavior);
+        }
+
         public static IBGCStream Normalize(
             this IBGCStream stream,
             double presentationLevel,

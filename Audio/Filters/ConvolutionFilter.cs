@@ -75,6 +75,46 @@ namespace BGC.Audio.Filters
 
         public ConvolutionFilter(
             IBGCStream stream,
+            double[] filter,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
+            : base(stream)
+        {
+            filterLength = filter.Length;
+
+            int fftSize = Math.Max(FFT_EXP_MIN, filterLength.ToNextExponentOf2() + FFT_SIZE_BUMP);
+            fftLength = 1 << fftSize;
+            samplesPerOverlap = fftLength - filterLength;
+
+            //Protect against infinite streams
+            if (stream.ChannelSamples == int.MaxValue)
+            {
+                ChannelSamples = int.MaxValue;
+                TotalSamples = int.MaxValue;
+            }
+            else
+            {
+                ChannelSamples = filterLength + stream.ChannelSamples - 1;
+                TotalSamples = Channels * ChannelSamples;
+            }
+
+            inputBuffer = new float[Channels * samplesPerOverlap];
+            outputAccumulation = new float[Channels * fftLength];
+
+            fftBuffer = new Complex64[fftLength];
+            filterFD = new Complex64[fftLength];
+
+            for (int i = 0; i < filterLength; i++)
+            {
+                filterFD[i] = filter[i];
+            }
+
+            initialized = false;
+
+            this.rmsBehavior = rmsBehavior;
+        }
+
+        public ConvolutionFilter(
+            IBGCStream stream,
             IBGCStream filter,
             TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
             : base(stream)
