@@ -1238,5 +1238,29 @@ namespace BGC.Tests
 
             return success;
         }
+
+        [Test]
+        public void GenerateButterworthCoeff()
+        {
+            double[] coeffs = Mathematics.FIRFilters.FIRButterworth.BandpassCoefficients(
+                order: 510,
+                f1: 1682,
+                f2: 2378,
+                samplingRate: 24414);
+
+            File.WriteAllLines(
+                path: DataManagement.PathForDataFile("Test", "ButterWorth_510_2k.txt"),
+                contents: coeffs.Select(x => x.ToString()));
+
+            double[] coeffs2 = Mathematics.FIRFilters.FIRButterworth.BandpassCoefficients(
+                order: 511,
+                f1: 1682,
+                f2: 2378,
+                samplingRate: 24414);
+
+            File.WriteAllLines(
+                path: DataManagement.PathForDataFile("Test", "ButterWorth_511_2k.txt"),
+                contents: coeffs2.Select(x => x.ToString()));
+        }
     }
 }

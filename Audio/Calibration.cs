@@ -50,7 +50,7 @@ namespace BGC.Audio
             MAX
         }
 
-        private static readonly CalibrationValue defaultCalibration = new CalibrationValue(89.0, 89.0);
+        private static readonly CalibrationValue defaultCalibration = new CalibrationValue(91.0, 91.0);
         private static CalibrationValue? customCalibration = null;
         private static CalibrationValue? resultsCalibration = null;
 

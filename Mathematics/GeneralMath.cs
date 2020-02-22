@@ -119,6 +119,17 @@ namespace BGC.Mathematics
         public static float Cosh(float angle) => (float)(Math.Exp(angle) + Math.Exp(-angle)) * 0.5f;
 
 
+        public static double Sinc(double value)
+        {
+            if (value == 0.0)
+            {
+                return 1.0;
+            }
+
+            double temp = Math.PI * value;
+            return Math.Sin(temp) / temp;
+        }
+
         /// <summary>
         /// Find out whether the provided 32 bit integer is a perfect power of two.
         /// </summary>
