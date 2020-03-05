@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using BGC.Audio.Envelopes;
 using BGC.Extensions;
 using BGC.Mathematics;
@@ -43,16 +44,16 @@ namespace BGC.Audio.Visualization
 
             Complex64[] fftBuffer = new Complex64[windowSize];
 
-            IBGCEnvelopeStream hammingWindow = new EnvelopeConcatenator(
-                CosineEnvelope.HammingWindow(windowSize / 2, true),
-                CosineEnvelope.HammingWindow(windowSize / 2, false));
+            IBGCEnvelopeStream windowStream = new BlackmanHarrisEnvelope(windowSize);
 
-            double amplitudeAdjustant = 10.0 * Math.Log10(windowSize);
+            // 2 x due to negative frequencies
+            // 0.5 x due to overlap
+            double amplitudeAdjustant = 1.0 / (windowCount * windowSize);
 
             for (int window = 0; window < windowCount; window++)
             {
                 int specificOffset = sampleOffset * window;
-                hammingWindow.Reset();
+                windowStream.Reset();
 
                 //Copy samples into buffer
                 for (int i = 0; i < windowSize; i++)
@@ -64,7 +65,7 @@ namespace BGC.Audio.Visualization
                     }
                     else
                     {
-                        fftBuffer[i] = samples[specificOffset + i] * hammingWindow.ReadNextSample();
+                        fftBuffer[i] = samples[specificOffset + i] * windowStream.ReadNextSample();
                     }
                 }
 
@@ -72,13 +73,42 @@ namespace BGC.Audio.Visualization
 
                 for (int i = 0; i < fftBuffer.Length / 2; i++)
                 {
-                    spectralValues[i] =+ amplitudeAdjustant + 10.0 * Math.Log10(2 * fftBuffer[i].Magnitude);
+                    spectralValues[i] =+ amplitudeAdjustant * fftBuffer[i].MagnitudeSquared;
+                }
+            }
+
+            double maxValue = double.MinValue;
+            double minValue = double.MaxValue;
+
+
+            for (int i = 0; i < spectralValues.Length; i++)
+            {
+                spectralValues[i] = 10.0 * Math.Log10(spectralValues[i]);
+
+                if (!double.IsNaN(spectralValues[i]))
+                {
+                    if (spectralValues[i] > maxValue)
+                    {
+                        maxValue = spectralValues[i];
+                    }
+
+                    if (spectralValues[i] < minValue)
+                    {
+                        minValue = spectralValues[i];
+                    }
                 }
             }
 
             for (int i = 0; i < spectralValues.Length; i++)
             {
-                spectralValues[i] /= windowCount;
+                if (double.IsNaN(spectralValues[i]))
+                {
+                    spectralValues[i] = minValue - maxValue;
+                }
+                else
+                {
+                    spectralValues[i] -= maxValue;
+                }
             }
 
             return spectralValues;

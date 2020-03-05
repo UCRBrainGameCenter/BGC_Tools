@@ -54,20 +54,18 @@ namespace BGC.Audio.Visualization
 
             Complex64[] fftBuffer = new Complex64[windowSize];
 
-            IBGCEnvelopeStream hammingWindow = new EnvelopeConcatenator(
-                CosineEnvelope.HammingWindow(windowSize / 2, true),
-                CosineEnvelope.HammingWindow(windowSize / 2, false));
+            IBGCEnvelopeStream windowStream = new BlackmanHarrisEnvelope(windowSize);
 
             for (int window = 0; window < windowCount; window++)
             {
                 int specificOffset = sampleOffset * window;
-                hammingWindow.Reset();
+                windowStream.Reset();
 
                 //Copy samples into buffer
                 for (int i = 0; i < windowSize; i++)
                 {
                     //Set real value
-                    fftBuffer[i] = samples[specificOffset + i] * hammingWindow.ReadNextSample();
+                    fftBuffer[i] = samples[specificOffset + i] * windowStream.ReadNextSample();
                 }
 
                 Fourier.Forward(fftBuffer);

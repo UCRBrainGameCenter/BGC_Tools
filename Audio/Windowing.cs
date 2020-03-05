@@ -13,6 +13,7 @@ namespace BGC.Audio
         {
             Hamming = 0,
             Hann,
+            BlackmanHarris,
             Sine,
             Linear,
             Square,
@@ -28,6 +29,7 @@ namespace BGC.Audio
             {
                 case Function.Hamming: return HammingHalfWindow(sampleCount);
                 case Function.Hann: return HannHalfWindow(sampleCount);
+                case Function.BlackmanHarris: return BlackmanHarrisHalfWindow(sampleCount);
                 case Function.Sine: return SineHalfWindow(sampleCount);
                 case Function.Linear: return LinearHalfWindow(sampleCount);
                 case Function.Square: return SquareHalfWindow(sampleCount);
@@ -47,6 +49,7 @@ namespace BGC.Audio
             {
                 case Function.Hamming: return HammingHalfWindow64(sampleCount);
                 case Function.Hann: return HannHalfWindow64(sampleCount);
+                case Function.BlackmanHarris: return BlackmanHarrisHalfWindow64(sampleCount);
                 case Function.Sine: return SineHalfWindow64(sampleCount);
                 case Function.Linear: return LinearHalfWindow64(sampleCount);
                 case Function.Square: return SquareHalfWindow64(sampleCount);
@@ -83,6 +86,15 @@ namespace BGC.Audio
 
                 case Function.Hann:
                     Hann(
+                        samples: samples,
+                        startSample: startSample,
+                        windowWidth: windowWidth,
+                        smoothingSamples: smoothingSamples,
+                        channels: channels);
+                    break;
+
+                case Function.BlackmanHarris:
+                    BlackmanHarris(
                         samples: samples,
                         startSample: startSample,
                         windowWidth: windowWidth,
@@ -154,6 +166,15 @@ namespace BGC.Audio
 
                 case Function.Hann:
                     Hann(
+                        samples: samples,
+                        startSample: startSample,
+                        windowWidth: windowWidth,
+                        smoothingSamples: smoothingSamples,
+                        channels: channels);
+                    break;
+
+                case Function.BlackmanHarris:
+                    BlackmanHarris(
                         samples: samples,
                         startSample: startSample,
                         windowWidth: windowWidth,
@@ -351,6 +372,54 @@ namespace BGC.Audio
             }
         }
 
+        public static void BlackmanHarris(
+            float[] samples,
+            int startSample = -1,
+            int windowWidth = -1,
+            int smoothingSamples = 1000,
+            int channels = 2)
+        {
+            const double a0 = 0.35875f;
+            const double a1 = 0.48829f;
+            const double a2 = 0.14128f;
+            const double a3 = 0.01168f;
+
+            //Default value of startSample
+            if (startSample == -1)
+            {
+                startSample = 0;
+            }
+
+            //Default value of windowWidth
+            if (windowWidth == -1)
+            {
+                windowWidth = (samples.Length / channels) - startSample;
+            }
+
+            //Correct smoothingSamples for small windows
+            if (2 * smoothingSamples > windowWidth)
+            {
+                smoothingSamples = windowWidth / 2;
+            }
+
+            int lastSample = startSample + windowWidth - 1;
+
+            double a1Arg = Math.PI / (smoothingSamples - 1);
+            double a2Arg = 2 * a1Arg;
+            double a3Arg = 3 * a1Arg;
+
+            for (int i = 0; i < smoothingSamples; i++)
+            {
+                float factor = (float)(a0 - a1 * Math.Cos(i * a1Arg) + a2 * Math.Cos(i * a2Arg) - a3 * Math.Cos(i * a3Arg));
+
+                for (int chan = 0; chan < channels; chan++)
+                {
+                    samples[(startSample + i) * channels + chan] *= factor;
+                    samples[(lastSample - i) * channels + chan] *= factor;
+                }
+            }
+        }
+
         public static void Sine(
             float[] samples,
             int startSample = -1,
@@ -421,6 +490,27 @@ namespace BGC.Audio
             for (int i = 0; i < sampleCount; i++)
             {
                 window[i] = alpha - beta * (float)Math.Cos(i * cosineArgument);
+            }
+
+            return window;
+        }
+
+        private static float[] BlackmanHarrisHalfWindow(int sampleCount)
+        {
+            const double a0 = 0.35875f;
+            const double a1 = 0.48829f;
+            const double a2 = 0.14128f;
+            const double a3 = 0.01168f;
+
+            float[] window = new float[sampleCount];
+
+            double a1Arg = Math.PI / (sampleCount - 1);
+            double a2Arg = 2 * a1Arg;
+            double a3Arg = 3 * a1Arg;
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                window[i] = (float)(a0 - a1 * Math.Cos(i * a1Arg) + a2 * Math.Cos(i * a2Arg) - a3 * Math.Cos(i * a3Arg));
             }
 
             return window;
@@ -500,6 +590,27 @@ namespace BGC.Audio
             for (int i = 0; i < sampleCount; i++)
             {
                 window[i] = alpha - beta * Math.Cos(i * cosineArgument);
+            }
+
+            return window;
+        }
+
+        private static double[] BlackmanHarrisHalfWindow64(int sampleCount)
+        {
+            const double a0 = 0.35875f;
+            const double a1 = 0.48829f;
+            const double a2 = 0.14128f;
+            const double a3 = 0.01168f;
+
+            double[] window = new double[sampleCount];
+
+            double a1Arg = Math.PI / (sampleCount - 1);
+            double a2Arg = 2 * a1Arg;
+            double a3Arg = 3 * a1Arg;
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                window[i] = a0 - a1 * Math.Cos(i * a1Arg) + a2 * Math.Cos(i * a2Arg) - a3 * Math.Cos(i * a3Arg);
             }
 
             return window;
