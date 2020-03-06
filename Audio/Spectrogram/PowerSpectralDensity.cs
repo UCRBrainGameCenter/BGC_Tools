@@ -73,7 +73,7 @@ namespace BGC.Audio.Visualization
 
                 for (int i = 0; i < fftBuffer.Length / 2; i++)
                 {
-                    spectralValues[i] =+ amplitudeAdjustant * fftBuffer[i].MagnitudeSquared;
+                    spectralValues[i] += amplitudeAdjustant * fftBuffer[i].MagnitudeSquared;
                 }
             }
 
