@@ -17,6 +17,36 @@ namespace BGC.Audio.Visualization
                 b: GeneralMath.Clamp(1.5f - Math.Abs(z - 1f), 0f, 1f));
         }
 
+        public static Color JetMap(double value, double min, double max)
+        {
+            double z = 4.0 * (value - min) / (max - min);
+
+            return new Color(
+                r: (float)GeneralMath.Clamp(1.5 - Math.Abs(z - 3.0), 0.0, 1.0),
+                g: (float)GeneralMath.Clamp(1.5 - Math.Abs(z - 2.0), 0.0, 1.0),
+                b: (float)GeneralMath.Clamp(1.5 - Math.Abs(z - 1.0), 0.0, 1.0));
+        }
+
+        public static Color JetMapLimit(double value, double min, double max)
+        {
+            if (value < min)
+            {
+                return Color.black;
+            }
+
+            if (value > max)
+            {
+                return Color.white;
+            }
+
+            double z = 4.0 * (value - min) / (max - min);
+
+            return new Color(
+                r: (float)GeneralMath.Clamp(1.5 - Math.Abs(z - 3.0), 0.0, 1.0),
+                g: (float)GeneralMath.Clamp(1.5 - Math.Abs(z - 2.0), 0.0, 1.0),
+                b: (float)GeneralMath.Clamp(1.5 - Math.Abs(z - 1.0), 0.0, 1.0));
+        }
+
         public static PlotData GetLinePlot(
             float[] dataPoints,
             Vector2? xRangeOpt = null,

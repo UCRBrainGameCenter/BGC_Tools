@@ -372,6 +372,12 @@ namespace BGC.Audio
             return new UpChannelMonoFilter(stream, channelCount);
         }
 
+        public static IBGCStream HardClip(
+            this IBGCStream stream)
+        {
+            return new HardClipFilter(stream);
+        }
+
         public static IBGCStream SafeStereoUpChannel(
             this IBGCStream stream)
         {
@@ -383,7 +389,6 @@ namespace BGC.Audio
                 default:
                     throw new StreamCompositionException($"Cannot Stereo upchannel a stream with {stream.Channels} channels");
             }
-
         }
 
         public static IBGCStream SelectiveUpChannel(

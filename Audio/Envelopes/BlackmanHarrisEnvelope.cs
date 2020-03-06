@@ -5,6 +5,10 @@ using BGC.Mathematics;
 
 namespace BGC.Audio.Envelopes
 {
+    /// <summary>
+    /// A buffered Blackman-Harris Window Envelope.
+    /// This class buffers the window because it's reused *frequently* in every case it's currently used at all.
+    /// </summary>
     public class BlackmanHarrisEnvelope : BGCEnvelopeStream
     {
         public override float SamplingRate => 44100f;
@@ -13,42 +17,58 @@ namespace BGC.Audio.Envelopes
 
         private int position = 0;
 
-        private readonly double a1Arg;
-        private readonly double a2Arg;
-        private readonly double a3Arg;
-
-        const double a0 = 0.35875f;
-        const double a1 = 0.48829f;
-        const double a2 = 0.14128f;
-        const double a3 = 0.01168f;
+        private readonly float[] samples;
 
         public BlackmanHarrisEnvelope(double duration)
         {
             Samples = (int)Math.Ceiling(duration * SamplingRate);
 
-            a1Arg = 2 * Math.PI / (Samples - 1);
-            a2Arg = 2 * a1Arg;
-            a3Arg = 3 * a1Arg;
+            samples = new float[Samples];
         }
 
         public BlackmanHarrisEnvelope(int samples)
         {
             Samples = samples;
 
-            a1Arg = 2 * Math.PI / (Samples - 1);
-            a2Arg = 2 * a1Arg;
-            a3Arg = 3 * a1Arg;
+            this.samples = new float[Samples];
+        }
+
+        protected override void _Initialize()
+        {
+            double a1Arg = 2 * Math.PI / (Samples - 1);
+            double a2Arg = 2 * a1Arg;
+            double a3Arg = 3 * a1Arg;
+
+            const double a0 = 0.35875f;
+            const double a1 = 0.48829f;
+            const double a2 = 0.14128f;
+            const double a3 = 0.01168f;
+
+            for (int i = 0; i < Samples / 2; i++)
+            {
+                samples[i] = (float)(a0 - a1 * Math.Cos(i * a1Arg) + a2 * Math.Cos(i * a2Arg) - a3 * Math.Cos(i * a3Arg));
+                samples[Samples - i - 1] = samples[i];
+            }
+
+            //Odd number of samples
+            if (Samples % 2 == 1)
+            {
+                samples[Samples / 2 + 1] = 1f;
+            }
         }
 
         public override int Read(float[] data, int offset, int count)
         {
+            if (!initialized)
+            {
+                Initialize();
+            }
+
             int samplesToReturn = Math.Min(count, Samples - position);
-            int tempSample;
 
             for (int i = 0; i < samplesToReturn; i++)
             {
-                tempSample = position + i;
-                data[offset + i] = (float)(a0 - a1 * Math.Cos(tempSample * a1Arg) + a2 * Math.Cos(tempSample * a2Arg) - a3 * Math.Cos(tempSample * a3Arg));
+                data[offset + i] = samples[position + i];
             }
 
             position += samplesToReturn;
@@ -70,10 +90,14 @@ namespace BGC.Audio.Envelopes
 
         public override float ReadNextSample()
         {
+            if (!initialized)
+            {
+                Initialize();
+            }
+
             if (HasMoreSamples())
             {
-                int tempSample = position++;
-                return (float)(a0 - a1 * Math.Cos(tempSample * a1Arg) + a2 * Math.Cos(tempSample * a2Arg) - a3 * Math.Cos(tempSample * a3Arg));
+                return samples[position++];
             }
 
             return 0f;

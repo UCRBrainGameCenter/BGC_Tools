@@ -8,7 +8,7 @@ namespace BGC.Audio.Visualization
 {
     public static class PowerSpectralDensity
     {
-        public static double[] Decompose(
+        public static (double[] psd, double offset) Decompose(
             IBGCStream stream,
             int windowOrder = 12,
             int targetChannel = 0)
@@ -23,7 +23,7 @@ namespace BGC.Audio.Visualization
                     nameof(targetChannel));
             }
 
-            float[] samples = stream.IsolateChannel(targetChannel).Cache().Samples;
+            float[] samples = stream.IsolateChannel(targetChannel).HardClip().Cache().Samples;
 
             int sampleOffset = windowSize / 2;
 
@@ -111,7 +111,7 @@ namespace BGC.Audio.Visualization
                 }
             }
 
-            return spectralValues;
+            return (spectralValues, maxValue);
         }
     }
 }

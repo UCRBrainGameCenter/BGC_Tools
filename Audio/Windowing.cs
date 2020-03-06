@@ -379,10 +379,10 @@ namespace BGC.Audio
             int smoothingSamples = 1000,
             int channels = 2)
         {
-            const double a0 = 0.35875f;
-            const double a1 = 0.48829f;
-            const double a2 = 0.14128f;
-            const double a3 = 0.01168f;
+            const double a0 = 0.35875;
+            const double a1 = 0.48829;
+            const double a2 = 0.14128;
+            const double a3 = 0.01168;
 
             //Default value of startSample
             if (startSample == -1)
@@ -497,10 +497,10 @@ namespace BGC.Audio
 
         private static float[] BlackmanHarrisHalfWindow(int sampleCount)
         {
-            const double a0 = 0.35875f;
-            const double a1 = 0.48829f;
-            const double a2 = 0.14128f;
-            const double a3 = 0.01168f;
+            const double a0 = 0.35875;
+            const double a1 = 0.48829;
+            const double a2 = 0.14128;
+            const double a3 = 0.01168;
 
             float[] window = new float[sampleCount];
 
@@ -597,10 +597,10 @@ namespace BGC.Audio
 
         private static double[] BlackmanHarrisHalfWindow64(int sampleCount)
         {
-            const double a0 = 0.35875f;
-            const double a1 = 0.48829f;
-            const double a2 = 0.14128f;
-            const double a3 = 0.01168f;
+            const double a0 = 0.35875;
+            const double a1 = 0.48829;
+            const double a2 = 0.14128;
+            const double a3 = 0.01168;
 
             double[] window = new double[sampleCount];
 

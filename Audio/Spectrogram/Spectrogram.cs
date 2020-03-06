@@ -25,7 +25,7 @@ namespace BGC.Audio.Visualization
                     nameof(targetChannel));
             }
 
-            float[] samples = stream.IsolateChannel(targetChannel).Cache().Samples;
+            float[] samples = stream.IsolateChannel(targetChannel).HardClip().Cache().Samples;
 
             int sampleOffset = (int)((samples.Length - windowSize) / (double)(windowCount - 1));
 
@@ -73,6 +73,8 @@ namespace BGC.Audio.Visualization
                 decomp.Add(window, fftBuffer);
             }
 
+            decomp.Rescale();
+
             return decomp;
         }
     }
@@ -86,12 +88,13 @@ namespace BGC.Audio.Visualization
         public double[,] spectralValues;
         public double[] freqs;
 
-        public double minAmplitude;
-        public double maxAmplitude;
+        public double minAmplitude = double.PositiveInfinity;
+        public double maxAmplitude = double.NegativeInfinity;
+
+        public double scale = 0.0;
 
         private readonly int fftMinFreqBin;
         private readonly int fftMaxFreqBin;
-        private readonly double amplitudeAdjustant;
 
         public SpectralDecomp(double minFreq, double maxFreq, int windowSize, int windowCount)
         {
@@ -109,11 +112,6 @@ namespace BGC.Audio.Visualization
             {
                 freqs[i] = FrequencyDomain.GetComplexSampleFrequency(windowSize, fftMinFreqBin + i);
             }
-
-            amplitudeAdjustant = 10.0 * Math.Log10(windowSize);
-
-            minAmplitude = double.PositiveInfinity;
-            maxAmplitude = double.NegativeInfinity;
         }
 
         public void Add(int window, Complex64[] fftBuffer)
@@ -121,7 +119,7 @@ namespace BGC.Audio.Visualization
             //Copy the data into the output array
             for (int i = 0; i < freqs.Length; i++)
             {
-                spectralValues[window, i] = amplitudeAdjustant + 10.0 * Math.Log10(fftBuffer[fftMinFreqBin + i].Magnitude);
+                spectralValues[window, i] = 10.0 * Math.Log10(fftBuffer[fftMinFreqBin + i].Magnitude);
 
                 if (spectralValues[window, i] > maxAmplitude && spectralValues[window, i] != double.PositiveInfinity)
                 {
@@ -153,6 +151,28 @@ namespace BGC.Audio.Visualization
                 spectralValues[window, lowerBound],
                 spectralValues[window, lowerBound + 1],
                 (frequency - freqs[lowerBound]) / (freqs[lowerBound + 1] - freqs[lowerBound]));
+        }
+
+        public void Rescale()
+        {
+            for (int window = 0; window < spectralValues.GetLength(0); window++)
+            {
+                for (int freq = 0; freq < freqs.Length; freq++)
+                {
+                    if (double.IsNaN(spectralValues[window, freq]))
+                    {
+                        spectralValues[window, freq] = minAmplitude - maxAmplitude;
+                    }
+                    else
+                    {
+                        spectralValues[window, freq] -= maxAmplitude;
+                    }
+                }
+            }
+
+            scale += maxAmplitude;
+            minAmplitude -= maxAmplitude;
+            maxAmplitude = 0;
         }
     }
 }
