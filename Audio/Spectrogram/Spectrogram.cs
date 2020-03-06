@@ -121,12 +121,12 @@ namespace BGC.Audio.Visualization
             {
                 spectralValues[window, i] = 10.0 * Math.Log10(fftBuffer[fftMinFreqBin + i].Magnitude);
 
-                if (spectralValues[window, i] > maxAmplitude && spectralValues[window, i] != double.PositiveInfinity)
+                if (spectralValues[window, i] > maxAmplitude && !double.IsInfinity(spectralValues[window, i]))
                 {
                     maxAmplitude = spectralValues[window, i];
                 }
 
-                if (spectralValues[window, i] < minAmplitude && spectralValues[window, i] != double.NegativeInfinity)
+                if (spectralValues[window, i] < minAmplitude && !double.IsInfinity(spectralValues[window, i]))
                 {
                     minAmplitude = spectralValues[window, i];
                 }
@@ -155,11 +155,17 @@ namespace BGC.Audio.Visualization
 
         public void Rescale()
         {
+            if (double.IsInfinity(minAmplitude) || double.IsInfinity(maxAmplitude))
+            {
+                UnityEngine.Debug.LogError($"Spectrogram with all infinite samples Rescaled.");
+                return;
+            }
+
             for (int window = 0; window < spectralValues.GetLength(0); window++)
             {
                 for (int freq = 0; freq < freqs.Length; freq++)
                 {
-                    if (double.IsNaN(spectralValues[window, freq]))
+                    if (double.IsNaN(spectralValues[window, freq]) || double.IsNegativeInfinity(spectralValues[window, freq]))
                     {
                         spectralValues[window, freq] = minAmplitude - maxAmplitude;
                     }
@@ -173,6 +179,36 @@ namespace BGC.Audio.Visualization
             scale += maxAmplitude;
             minAmplitude -= maxAmplitude;
             maxAmplitude = 0;
+        }
+
+        public void RescaleTo(double newScale)
+        {
+            double scaleDiff = newScale - scale;
+
+            if (double.IsInfinity(minAmplitude) || double.IsInfinity(maxAmplitude))
+            {
+                UnityEngine.Debug.LogError($"Spectrogram with all infinite samples Rescaled.");
+                return;
+            }
+
+            scale = newScale;
+            minAmplitude -= scaleDiff;
+            maxAmplitude = -scaleDiff;
+
+            for (int window = 0; window < spectralValues.GetLength(0); window++)
+            {
+                for (int freq = 0; freq < freqs.Length; freq++)
+                {
+                    if (double.IsNaN(spectralValues[window, freq]) || double.IsNegativeInfinity(spectralValues[window, freq]))
+                    {
+                        spectralValues[window, freq] = minAmplitude;
+                    }
+                    else
+                    {
+                        spectralValues[window, freq] -= scaleDiff;
+                    }
+                }
+            }
         }
     }
 }

@@ -80,12 +80,11 @@ namespace BGC.Audio.Visualization
             double maxValue = double.MinValue;
             double minValue = double.MaxValue;
 
-
             for (int i = 0; i < spectralValues.Length; i++)
             {
                 spectralValues[i] = 10.0 * Math.Log10(spectralValues[i]);
 
-                if (!double.IsNaN(spectralValues[i]))
+                if (!double.IsNaN(spectralValues[i]) && !double.IsNegativeInfinity(spectralValues[i]))
                 {
                     if (spectralValues[i] > maxValue)
                     {
@@ -101,7 +100,7 @@ namespace BGC.Audio.Visualization
 
             for (int i = 0; i < spectralValues.Length; i++)
             {
-                if (double.IsNaN(spectralValues[i]))
+                if (double.IsNaN(spectralValues[i]) || double.IsNegativeInfinity(spectralValues[i]))
                 {
                     spectralValues[i] = minValue - maxValue;
                 }
