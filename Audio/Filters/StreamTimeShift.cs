@@ -11,7 +11,7 @@ namespace BGC.Audio.Filters
     {
         public override int Channels => stream.Channels;
 
-        public override int TotalSamples => Channels * ChannelSamples;
+        public override int TotalSamples { get; }
         public override int ChannelSamples { get; }
 
         private readonly int sampleOffset;
@@ -28,10 +28,31 @@ namespace BGC.Audio.Filters
             if (stream.ChannelSamples == int.MaxValue)
             {
                 ChannelSamples = int.MaxValue;
+                TotalSamples = int.MaxValue;
             }
             else
             {
                 ChannelSamples = stream.ChannelSamples - sampleOffset;
+                TotalSamples = Channels * ChannelSamples;
+            }
+        }
+
+        public StreamTimeShiftFilter(
+            IBGCStream stream,
+            int sampleShift)
+            : base(stream)
+        {
+            sampleOffset = sampleShift;
+
+            if (stream.ChannelSamples == int.MaxValue)
+            {
+                ChannelSamples = int.MaxValue;
+                TotalSamples = int.MaxValue;
+            }
+            else
+            {
+                ChannelSamples = stream.ChannelSamples - sampleOffset;
+                TotalSamples = Channels * ChannelSamples;
             }
         }
 
@@ -76,7 +97,7 @@ namespace BGC.Audio.Filters
 
                     for (int i = 0; i < deadSampleLength; i++)
                     {
-                        data[offset + i] *= 0f;
+                        data[offset + i] = 0f;
                     }
 
                     remainingSamples -= deadSampleLength;

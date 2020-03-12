@@ -494,6 +494,13 @@ namespace BGC.Audio
             return new StreamTimeShiftFilter(stream, timeShift);
         }
 
+        public static IBGCStream SampleShift(
+            this IBGCStream stream,
+            int sampleShift)
+        {
+            return new StreamTimeShiftFilter(stream, sampleShift);
+        }
+
         public static IBGCStream SinglePassPhaseReencode(
             this IBGCStream stream,
             double leftTimeShift,
