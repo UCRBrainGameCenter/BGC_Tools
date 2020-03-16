@@ -62,7 +62,7 @@ namespace BGC.UI.Dialogs
             ABC,
             InputInputConfirmCancel,
             DropdownInput,
-			InputABC
+            InputABC
         }
 
         public delegate void ModalButtonCallback(Response response);
@@ -117,7 +117,7 @@ namespace BGC.UI.Dialogs
                 mode == Mode.InputConfirmCancel ||
                 mode == Mode.InputToggleConfirmCancel ||
                 mode == Mode.InputInputConfirmCancel ||
-				mode == Mode.InputABC);
+                mode == Mode.InputABC);
 
             secondaryBodyText.gameObject.SetActive(mode == Mode.InputInputConfirmCancel || mode == Mode.DropdownInput);
 
@@ -148,7 +148,7 @@ namespace BGC.UI.Dialogs
                     SetButtonText(c: "Ok");
                     break;
 
-				case Mode.InputABC:
+                case Mode.InputABC:
                 case Mode.ABC:
                     //Do nothing - Text set separately
                     break;
@@ -381,44 +381,44 @@ namespace BGC.UI.Dialogs
             instance.secondaryInputField.contentType = inputType;
         }
 
-		/// <summary>
-		/// Show the modal dialog in the indicated mode, and call the callback when it receives a response
-		/// </summary>
-		public static void ShowInputModalABC(
-			string headerText,
-			string bodyText,
-			string buttonALabel,
-			string buttonBLabel,
-			string buttonCLabel,
-			ModalInputCallback inputCallback,
-			ModalButtonCallback buttonCallback = null,
-			InputField.ContentType inputType = InputField.ContentType.Alphanumeric)
-		{
-			//Update text
-			instance.SetHeaderText(headerText);
-			instance.SetBodyText(bodyText);
+        /// <summary>
+        /// Show the modal dialog in the indicated mode, and call the callback when it receives a response
+        /// </summary>
+        public static void ShowInputModalABC(
+            string headerText,
+            string bodyText,
+            string buttonALabel,
+            string buttonBLabel,
+            string buttonCLabel,
+            ModalInputCallback inputCallback,
+            ModalButtonCallback buttonCallback = null,
+            InputField.ContentType inputType = InputField.ContentType.Alphanumeric)
+        {
+            //Update text
+            instance.SetHeaderText(headerText);
+            instance.SetBodyText(bodyText);
 
-			//Update buttons
-			instance.SetMode(Mode.InputABC);
-			instance.SetButtonText(buttonALabel, buttonBLabel, buttonCLabel);
+            //Update buttons
+            instance.SetMode(Mode.InputABC);
+            instance.SetButtonText(buttonALabel, buttonBLabel, buttonCLabel);
 
-			//Set dialog visible
-			instance.gameObject.SetActive(true);
+            //Set dialog visible
+            instance.gameObject.SetActive(true);
 
-			//Update callbacks
-			instance.buttonCallback = buttonCallback;
-			instance.inputCallback = inputCallback;
-			instance.inputToggleCallback = null;
-			instance.doubleInputCallback = null;
-			instance.dropdownInputCallback = null;
+            //Update callbacks
+            instance.buttonCallback = buttonCallback;
+            instance.inputCallback = inputCallback;
+            instance.inputToggleCallback = null;
+            instance.doubleInputCallback = null;
+            instance.dropdownInputCallback = null;
 
-			instance.primaryInputField.contentType = inputType;
-		}
+            instance.primaryInputField.contentType = inputType;
+        }
 
-		/// <summary>
-		/// Accept the button repsonse as input, invoke and clear the callbacks, and hide the dialog
-		/// </summary>
-		private void HandleButtons(Response response)
+        /// <summary>
+        /// Accept the button repsonse as input, invoke and clear the callbacks, and hide the dialog
+        /// </summary>
+        private void HandleButtons(Response response)
         {
             //Temporary copy to allow for the calling of the dialog within a callback
             ModalButtonCallback tmpCallback = buttonCallback;
