@@ -2,8 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using System.Web;
 using UnityEngine.Networking;
 using BGC.Utility;
+using LightJson;
 
 namespace BGC.Web.Utility
 {
@@ -18,7 +20,9 @@ namespace BGC.Web.Utility
             Action<UnityWebRequest, bool> callBack = null,
             int timeout = 0)
         {
-            CoroutineUtility.Mono.StartCoroutine(RunGet(
+			// convert URL to HTTP-friendly URL
+			url = Uri.EscapeUriString(url);
+			CoroutineUtility.Mono.StartCoroutine(RunGet(
                 url,
                 callBack,
                 timeout));
