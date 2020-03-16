@@ -20,9 +20,9 @@ namespace BGC.Web.Utility
             Action<UnityWebRequest, bool> callBack = null,
             int timeout = 0)
         {
-			// convert URL to HTTP-friendly URL
-			url = Uri.EscapeUriString(url);
-			CoroutineUtility.Mono.StartCoroutine(RunGet(
+            // convert URL to HTTP-friendly URL
+            url = Uri.EscapeUriString(url);
+            CoroutineUtility.Mono.StartCoroutine(RunGet(
                 url,
                 callBack,
                 timeout));

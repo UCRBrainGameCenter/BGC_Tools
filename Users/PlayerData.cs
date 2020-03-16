@@ -67,7 +67,7 @@ namespace BGC.Users
 
         /// <summary> The Current Profile UserName </summary>
         public static string UserName => ProfileData.UserName;
-		public static string LoggingName => GetString("LoggingName");
+        public static string LoggingName => GetString("LoggingName");
 
         /// <summary> The Current Profile IsDefault Status </summary>
         public static bool IsDefault => ProfileData.IsDefault;
