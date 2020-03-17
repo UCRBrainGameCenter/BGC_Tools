@@ -233,7 +233,7 @@ namespace BGC.Users
                 {
                     migrationData.Add(new MigrationData
                     {
-                        userName = data.UserName,
+                        userName = string.IsNullOrEmpty(data.LoggingName) ? data.UserName : data.LoggingName,
                         organization = data.GetString(organizationKey, "braingamecenter"),
                         study = data.GetString(studyKey, "default")
                     });
