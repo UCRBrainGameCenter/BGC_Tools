@@ -16,23 +16,25 @@ namespace BGC.Web.Utility
         /// Send a get request
         /// </summary>
         /// <param name="callBack">false means there was a local parsing error</param>
-        /// <param name="queryParams">Array of value tuples that contain the parameter name for item 1 and the parameter value for item 2</param>
+        /// <param name="queryParams">Dictionary of key names hashed to their values of any type</param>
         public static void GetRequest(
             string url,
             Action<UnityWebRequest, bool> callBack = null,
             int timeout = 0,
-            params ValueTuple<string, dynamic>[] queryParams)
+            IDictionary<string, IConvertible> queryParams = default)
         {
-            if(queryParams.Length > 0)
+            if(queryParams != default)
             {
                 string queryParameter = "?";
-                foreach(ValueTuple<string, dynamic> param in queryParams)
+                foreach(KeyValuePair<string, IConvertible> param in queryParams)
                 {
-                    queryParameter += $"{param.Item1}={WebUtility.UrlEncode(param.Item2)}&";
+                    queryParameter += $"{param.Key}={WebUtility.UrlEncode(param.Value.ToString())}&";
                 }
+
                 queryParameter = queryParameter.Remove(queryParameter.Length - 1); // Remove last & sign
                 url += queryParameter;
             }
+
             // convert URL to HTTP-friendly URL
             CoroutineUtility.Mono.StartCoroutine(RunGet(
                 url,
