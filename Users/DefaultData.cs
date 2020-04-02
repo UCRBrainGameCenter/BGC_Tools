@@ -11,7 +11,7 @@ namespace BGC.Users
         public override bool IsDefault => true;
 
         public DefaultData()
-            : base("Default")
+            : base("Default", "Default")
         {
             if (File.Exists(PlayerFilePath))
             {

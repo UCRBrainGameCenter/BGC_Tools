@@ -178,7 +178,7 @@ namespace BGC.Users
 
         /// <summary> Add a new user. </summary>
         /// <returns>Returns if the operation was successful</returns>
-        public static bool AddUser(string userName)
+        public static bool AddUser(string userName, string loggingName = "")
         {
             if (!initialized)
             {
@@ -192,7 +192,7 @@ namespace BGC.Users
                 return false;
             }
 
-            UserData newUser = new UserData(userName);
+            UserData newUser = new UserData(userName, loggingName);
             users.Add(userName);
             newUser.Serialize();
 

@@ -9,15 +9,17 @@ namespace BGC.Users
     public abstract class ProfileData
     {
         public string UserName { get; }
-        public string LoggingName => GetString("LoggingName", UserName);
+        private string loggingName;
+        public string LoggingName => loggingName;
 
         private JsonObject userData = new JsonObject();
 
         private const int userDataSerializationVersion = 1;
 
-        public ProfileData(string userName)
+        public ProfileData(string userName, string loggingName)
         {
             UserName = userName;
+            this.loggingName = string.IsNullOrEmpty(loggingName) ? userName : loggingName;
         }
 
         /// <summary> Is this an instance of default data? </summary>
@@ -278,7 +280,7 @@ namespace BGC.Users
         public void Serialize()
         {
             //Don't serialize out blank usernames
-            if (UserName.CompareTo("") == 0)
+            if (string.IsNullOrEmpty(UserName))
             {
                 Debug.LogError("Tried to serialize out a profile with a blank username.");
                 return;
@@ -290,6 +292,7 @@ namespace BGC.Users
                 {
                     { "Version", userDataSerializationVersion },
                     { "UserName", UserName },
+                    { "LoggingName", loggingName },
                     { "UserDicts", userData }
                 },
                 pretty: true);
@@ -303,6 +306,18 @@ namespace BGC.Users
                 //If it is parsable, mark it as successfully loaded
                 successCallback: (JsonObject readData) =>
                 {
+                    if (readData.ContainsKey("LoggingName"))
+                    {
+                        string deserializedLoggingName = readData["LoggingName"];
+
+                        // Only assign logging name if it's not empty. Otherwise, this is an anonymous user and we use their user name
+                        loggingName = string.IsNullOrEmpty(deserializedLoggingName) ? UserName : deserializedLoggingName;
+                    }
+                    else
+                    {
+                        // Handle backwards compatibility with older profiles that don't have logging names
+                        loggingName = UserName;
+                    }
                     if (readData.ContainsKey("UserDicts"))
                     {
                         userData = readData["UserDicts"];

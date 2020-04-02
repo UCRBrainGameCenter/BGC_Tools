@@ -5,11 +5,10 @@
         public override bool IsDefault => false;
 
         //Constructor
-        public UserData(string userName)
-            : base(userName)
+        public UserData(string userName, string loggingName = "")
+            : base(userName, loggingName)
         {
-        }
 
+        }
     }
 }
-
