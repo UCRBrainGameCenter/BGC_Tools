@@ -2,11 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
-using System.Web;
 using UnityEngine.Networking;
 using BGC.Utility;
-using LightJson;
-using System.Net;
 
 namespace BGC.Web.Utility
 {
@@ -28,7 +25,7 @@ namespace BGC.Web.Utility
                 string queryParameter = "?";
                 foreach(KeyValuePair<string, IConvertible> param in queryParams)
                 {
-                    queryParameter += $"{param.Key}={WebUtility.UrlEncode(param.Value.ToString())}&";
+                    queryParameter += $"{param.Key}={Uri.EscapeDataString(param.Value.ToString())}&";
                 }
 
                 queryParameter = queryParameter.Remove(queryParameter.Length - 1); // Remove last & sign
