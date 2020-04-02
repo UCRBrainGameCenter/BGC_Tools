@@ -9,7 +9,7 @@ namespace BGC.Users
     public abstract class ProfileData
     {
         public string UserName { get; }
-        public string LoggingName => GetString("LoggingName");
+        public string LoggingName => GetString("LoggingName", UserName);
 
         private JsonObject userData = new JsonObject();
 

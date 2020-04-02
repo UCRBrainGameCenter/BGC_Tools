@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using UnityEngine.Networking;
 using BGC.Utility;
+using BGC.Extensions;
 
 namespace BGC.Web.Utility
 {
@@ -20,16 +22,9 @@ namespace BGC.Web.Utility
             int timeout = 0,
             IDictionary<string, IConvertible> queryParams = default)
         {
-            if(queryParams != default)
+            if (queryParams != default)
             {
-                string queryParameter = "?";
-                foreach(KeyValuePair<string, IConvertible> param in queryParams)
-                {
-                    queryParameter += $"{param.Key}={Uri.EscapeDataString(param.Value.ToString())}&";
-                }
-
-                queryParameter = queryParameter.Remove(queryParameter.Length - 1); // Remove last & sign
-                url += queryParameter;
+                url += $"?{string.Join("&", queryParams.Select(WriteQueryParam))}";
             }
 
             // convert URL to HTTP-friendly URL
@@ -45,7 +40,7 @@ namespace BGC.Web.Utility
         /// <param name="callBack">false means there was a local parsing error</param>
         public static void PostRequest(
             string url,
-            Dictionary<string, string> headers,
+            IDictionary<string, string> headers,
             string body,
             Action<UnityWebRequest, bool> callBack = null,
             int timeout = 0)
@@ -66,11 +61,13 @@ namespace BGC.Web.Utility
             Action<UnityWebRequest, bool> callBack,
             int timeout = 0)
         {
-            UnityWebRequest request = UnityWebRequest.Get(url);
-            request.timeout = timeout;
-            yield return request.SendWebRequest();
+            using (UnityWebRequest request = UnityWebRequest.Get(url))
+            {
+                request.timeout = timeout;
+                yield return request.SendWebRequest();
 
-            callBack?.Invoke(request, true);
+                callBack?.Invoke(request, true);
+            }
         }
 
         /// <summary>
@@ -78,22 +75,26 @@ namespace BGC.Web.Utility
         /// </summary>
         private static IEnumerator RunPost(
             string url,
-            Dictionary<string, string> headers,
+            IDictionary<string, string> headers,
             string body,
             Action<UnityWebRequest, bool> callBack,
             int timeout = 0)
         {
-            UnityWebRequest request = UnityWebRequest.Post(url, "");
-            request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
-            request.timeout = timeout;
-
-            foreach (KeyValuePair<string, string> pair in headers)
+            using (UnityWebRequest request = UnityWebRequest.Post(url, ""))
             {
-                request.SetRequestHeader(pair.Key, pair.Value);
-            }
+                request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
+                request.timeout = timeout;
 
-            yield return request.SendWebRequest();
-            callBack?.Invoke(request, true);
+                foreach (KeyValuePair<string, string> pair in headers)
+                {
+                    request.SetRequestHeader(pair.Key, pair.Value);
+                }
+
+                yield return request.SendWebRequest();
+                callBack?.Invoke(request, true);
+            }
         }
+
+        private static string WriteQueryParam(KeyValuePair<string, IConvertible> param) => $"{param.Key}={param.Value.Encode()}";
     }
 }

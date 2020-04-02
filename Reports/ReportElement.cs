@@ -32,7 +32,7 @@ namespace BGC.Reports
             this.batteryName = batteryName;
             this.startTime = startTime;
 
-            fileName = $"{userName}_{CleanedBatteryName}_{startTime.ToString("yy_MM_dd_HH_mm_ss")}";
+            fileName = $"{userName}_{CleanedBatteryName}_{startTime:yy_MM_dd_HH_mm_ss}";
 
             filePath = DataManagement.PathForDataFile(
                 dataDirectory: "Reports",
@@ -50,7 +50,7 @@ namespace BGC.Reports
                 data[value.Key] = value.Value.AsString;
             }
 
-            fileName = $"{userName}_{CleanedBatteryName}_{startTime.ToString("yy_MM_dd_HH_mm_ss")}";
+            fileName = $"{userName}_{CleanedBatteryName}_{startTime:yy_MM_dd_HH_mm_ss}";
 
             filePath = DataManagement.PathForDataFile(
                 dataDirectory: "Reports",

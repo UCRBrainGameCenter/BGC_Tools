@@ -67,7 +67,7 @@ namespace BGC.Users
 
         /// <summary> The Current Profile UserName </summary>
         public static string UserName => ProfileData.UserName;
-        public static string LoggingName => GetString("LoggingName");
+        public static string LoggingName => ProfileData.LoggingName;
 
         /// <summary> The Current Profile IsDefault Status </summary>
         public static bool IsDefault => ProfileData.IsDefault;
@@ -233,7 +233,7 @@ namespace BGC.Users
                 {
                     migrationData.Add(new MigrationData
                     {
-                        userName = string.IsNullOrEmpty(data.LoggingName) ? data.UserName : data.LoggingName,
+                        userName = data.LoggingName,
                         organization = data.GetString(organizationKey, "braingamecenter"),
                         study = data.GetString(studyKey, "default")
                     });
