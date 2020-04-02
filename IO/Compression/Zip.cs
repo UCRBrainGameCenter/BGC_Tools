@@ -33,7 +33,7 @@ namespace BGC.IO.Compression
             }
             catch (Exception ex)
             {
-                Debug.LogError($"Exception Caught during processing: {ex}");
+                Debug.LogError($"Zip Exception Caught during compression: {ex}");
                 return false;
             }
 
@@ -44,51 +44,21 @@ namespace BGC.IO.Compression
             byte[] compressedMemory,
             string outputPath)
         {
-            if (!Directory.Exists(outputPath))
+            using (Stream data = new MemoryStream(compressedMemory))
+            using (ZipArchive archive = new ZipArchive(data, ZipArchiveMode.Read, false))
             {
-                Directory.CreateDirectory(outputPath);
+                return Decompress(archive, outputPath);
             }
-
-            try
-            {
-                using (Stream data = new MemoryStream(compressedMemory))
-                using (ZipArchive archive = new ZipArchive(data, ZipArchiveMode.Read, false))
-                {
-                    archive.ExtractToDirectory(outputPath);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"Exception Caught during processing of Zip Memory: {ex}");
-                return false;
-            }
-
-            return true;
         }
 
         public static bool DecompressStream(
             Stream compressedStream,
             string outputPath)
         {
-            if (!Directory.Exists(outputPath))
+            using (ZipArchive archive = new ZipArchive(compressedStream, ZipArchiveMode.Read, false))
             {
-                Directory.CreateDirectory(outputPath);
+                return Decompress(archive, outputPath);
             }
-
-            try
-            {
-                using (ZipArchive archive = new ZipArchive(compressedStream, ZipArchiveMode.Read, false))
-                {
-                    archive.ExtractToDirectory(outputPath);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"Exception Caught during processing of Zip Stream: {ex}");
-                return false;
-            }
-
-            return true;
         }
 
         public static bool DecompressFile(
@@ -97,7 +67,7 @@ namespace BGC.IO.Compression
         {
             if (!File.Exists(inputFilePath))
             {
-                Debug.LogError($"Input File not found: {inputFilePath}");
+                Debug.LogError($"Zip Decompress Input File not found: {inputFilePath}");
                 return false;
             }
 
@@ -109,14 +79,97 @@ namespace BGC.IO.Compression
             try
             {
                 ZipFile.ExtractToDirectory(inputFilePath, outputPath);
+                return true;
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                Debug.LogError($"Exception Caught during processing of ZipFile: {ex}");
-                return false;
+                Debug.LogWarning($"Preferred Zip extraction of {inputFilePath} failed with \"{e.Message}\".  Trying fallback extraction to: {outputPath}");
             }
 
-            return true;
+            try
+            {
+                using (ZipArchive archive = ZipFile.Open(inputFilePath, ZipArchiveMode.Read))
+                {
+                    DecompressFallback(archive, outputPath);
+                }
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Fallback Zip extraction of {inputFilePath} failed with \"{e.Message}\" to: {outputPath}");
+            }
+
+            return false;
+        }
+
+        private static bool Decompress(ZipArchive archive, string outputPath)
+        {
+            if (!Directory.Exists(outputPath))
+            {
+                Directory.CreateDirectory(outputPath);
+            }
+
+            try
+            {
+                DecompressPreferred(archive, outputPath);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Preferred Zip extraction failed with \"{e.Message}\".  Trying fallback extraction to: {outputPath}");
+            }
+
+            try
+            {
+                DecompressFallback(archive, outputPath);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Fallback Zip extraction failed with \"{e.Message}\" to: {outputPath}");
+            }
+
+            return false;
+        }
+
+        /// <summary> Simpler and more performant zip extraction </summary>
+        private static void DecompressPreferred(ZipArchive archive, string outputPath)
+        {
+            archive.ExtractToDirectory(outputPath);
+        }
+
+        /// <summary> Fallback method for some older android devices </summary>
+        private static void DecompressFallback(ZipArchive archive, string outputPath)
+        {
+            foreach (ZipArchiveEntry entry in archive.Entries)
+            {
+                string filepath = Path.Combine(outputPath, entry.FullName);
+                if (entry.FullName.EndsWith("/") || entry.FullName.EndsWith("\\"))
+                {
+                    //Create the subdirectory if it doesn't already exist
+                    if (!Directory.Exists(filepath))
+                    {
+                        Directory.CreateDirectory(filepath);
+                    }
+
+                    //Skip directories
+                    continue;
+                }
+
+                //Delete file if it already exists
+                if (File.Exists(filepath))
+                {
+                    File.Delete(filepath);
+                }
+
+                //Copy binary data into new file
+                using (Stream entryStream = entry.Open())
+                using (FileStream fileStream = File.OpenWrite(filepath))
+                {
+                    entryStream.CopyTo(fileStream);
+                }
+            }
         }
     }
 }
