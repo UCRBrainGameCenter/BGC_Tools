@@ -5,7 +5,6 @@ using UnityEngine;
 using LightJson;
 using BGC.IO;
 using BGC.Users;
-using BGC.Utility;
 
 namespace BGC.Study
 {
@@ -281,18 +280,6 @@ namespace BGC.Study
             prepareNextElement?.Invoke(resuming);
 
             currentSessionElement.ExecuteElement(resuming);
-
-            if (nextSessionElementIndex + 1 == currentSession.Count)
-            {
-                double lastCompleteSessionTime = PlayerData.GetDouble("LastCompleteSessionTime", -1d);
-
-                if (lastCompleteSessionTime != -1d)
-                {
-                    PlayerData.SetDouble("SecondToLastCompleteSessionTime", lastCompleteSessionTime);
-                }
-
-                PlayerData.SetDouble("LastCompleteSessionTime", Epoch.Time);
-            }
 
             PlayerData.Save();
 
