@@ -2,9 +2,9 @@
 using System.IO;
 using System.Collections.Generic;
 using UnityEngine;
+using LightJson;
 using BGC.IO;
 using BGC.Utility;
-using LightJson;
 
 namespace BGC.Users
 {
@@ -120,6 +120,21 @@ namespace BGC.Users
 
         /// <summary> Returns an enumeration of all loaded usernames </summary>
         public static IEnumerable<string> GetUserNames() => users.ToArray();
+
+        /// <summary> Returns an enumeration of all UserData </summary>
+        public static IEnumerable<UserData> GetAllUserData()
+        {
+            foreach (string userName in users)
+            {
+                UserData data = new UserData(userName);
+                //Load in the data first
+
+                if (data.Deserialize())
+                {
+                    yield return data;
+                }
+            }
+        }
 
         /// <summary> Does the requested user already exist? </summary>
         public static bool UserExists(string userName) => users.Contains(userName);
