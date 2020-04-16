@@ -16,6 +16,10 @@ namespace BGC.Users
         /// <summary> The default profile data. </summary>
         public static DefaultData DefaultData => _defaultData ?? (_defaultData = new DefaultData());
 
+        private static GlobalData _globalData = null;
+        /// <summary> The global profile data. </summary>
+        public static GlobalData GlobalData => _globalData ?? (_globalData = new GlobalData());
+
         private static UserData _currentUserData = null;
         /// <summary> Profile Data of the current user.  Or default if none are logged in. </summary>
         public static ProfileData ProfileData => _currentUserData as ProfileData ?? DefaultData;
@@ -27,42 +31,6 @@ namespace BGC.Users
 
         private static readonly List<string> users = new List<string>();
 
-        #region Lock Accessors
-        private const string LockStateKey = "LockState";
-        private const string EverUnlockedKey = "EverUnlocked";
-
-        /// <summary> Is the device currently in a Locked mode? </summary>
-        public static bool IsLocked
-        {
-            get { return PlayerPrefs.GetInt(LockStateKey, 0) == 0; }
-            set
-            {
-                if (value)
-                {
-                    PlayerPrefs.SetInt(LockStateKey, 0);
-                }
-                else
-                {
-                    EverUnlocked = true;
-                    PlayerPrefs.SetInt(LockStateKey, 1);
-                }
-            }
-        }
-
-        /// <summary> Has the device ever been unlocked? </summary>
-        public static bool EverUnlocked
-        {
-            get { return PlayerPrefs.GetInt(EverUnlockedKey, 0) != 0; }
-            set
-            {
-                if (value)
-                {
-                    PlayerPrefs.SetInt(EverUnlockedKey, 1);
-                }
-            }
-        }
-
-        #endregion Lock Accessors
         #region Convenience ProfileData Access
 
         /// <summary> The Current Profile UserName </summary>
@@ -102,16 +70,15 @@ namespace BGC.Users
             //Load up saved information
             users.Clear();
 
+            //Extra safety to guarantee deserialization and conversion of Default and Global profiles
+            _defaultData = new DefaultData();
+            _globalData = new GlobalData();
+
             foreach (string fileName in DataManagement.GetDataFiles(UserDataDir))
             {
                 if (Path.GetExtension(fileName) == FileExtensions.JSON)
                 {
-                    string newUserName = Path.GetFileNameWithoutExtension(fileName);
-
-                    if (newUserName != "Default")
-                    {
-                        users.Add(newUserName);
-                    }
+                    users.Add(Path.GetFileNameWithoutExtension(fileName));
                 }
             }
 

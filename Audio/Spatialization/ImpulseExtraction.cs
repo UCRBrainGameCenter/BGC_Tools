@@ -5,6 +5,7 @@ using UnityEngine;
 using BGC.IO;
 using BGC.IO.Compression;
 using BGC.MonoUtility;
+using BGC.Users;
 
 namespace BGC.Audio.Spatialization
 {
@@ -27,18 +28,19 @@ namespace BGC.Audio.Spatialization
 
         protected override bool PrepareRun()
         {
-            if (PlayerPrefs.GetInt(ImpulseVersionKey, 0) < ImpulseVersion &&
+            if (PlayerData.GlobalData.GetInt(ImpulseVersionKey, 0) < ImpulseVersion &&
                 DataManagement.DataDirectoryExists(HRTFDirectory))
             {
                 //Delete the old HRTF directory.
                 Directory.Delete(DataManagement.PathForDataDirectory(HRTFDirectory), true);
             }
 
-            if (PlayerPrefs.GetInt(ImpulseVersionKey, 0) < ImpulseVersion ||
+            if (PlayerData.GlobalData.GetInt(ImpulseVersionKey, 0) < ImpulseVersion ||
                 !File.Exists(DataManagement.PathForDataFile(HRTFDirectory, "0_impulse.wav", false)))
             {
                 rawData = (byte[])impulseZip.bytes.Clone();
                 outputPath = DataManagement.PathForDataDirectory(HRTFDirectory);
+
                 return true;
             }
 
@@ -49,7 +51,8 @@ namespace BGC.Audio.Spatialization
         {
             if (runSuccessful)
             {
-                PlayerPrefs.SetInt(ImpulseVersionKey, ImpulseVersion);
+                PlayerData.GlobalData.SetInt(ImpulseVersionKey, ImpulseVersion);
+                PlayerData.GlobalData.Serialize();
             }
         }
 

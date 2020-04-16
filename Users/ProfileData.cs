@@ -26,7 +26,7 @@ namespace BGC.Users
         public abstract bool IsDefault { get; }
 
         /// <summary> Path of the user datafile </summary>
-        protected string PlayerFilePath => DataManagement.PathForDataFile(
+        protected virtual string PlayerFilePath => DataManagement.PathForDataFile(
             dataDirectory: PlayerData.UserDataDir,
             fileName: FileExtensions.AddJsonExtension(UserName));
 
@@ -49,7 +49,7 @@ namespace BGC.Users
                 //Check existing data for type match
                 if (userData[key].IsInteger == false)
                 {
-                    Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type.ToString()} to Int");
+                    Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type} to Int");
                 }
 
                 //Set data
@@ -73,11 +73,11 @@ namespace BGC.Users
                 {
                     if (userData[key].IsInteger)
                     {
-                        Debug.LogWarning($"PlayerData \"{key}\" Datatype changed from {userData[key].Type.ToString()} to Bool");
+                        Debug.LogWarning($"PlayerData \"{key}\" Datatype changed from {userData[key].Type} to Bool");
                     }
                     else
                     {
-                        Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type.ToString()} to Bool");
+                        Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type} to Bool");
                     }
                 }
 
@@ -99,7 +99,7 @@ namespace BGC.Users
                 //Check existing data for type match
                 if (userData[key].IsString == false)
                 {
-                    Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type.ToString()} to String");
+                    Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type} to String");
                 }
 
                 //Set data
@@ -120,7 +120,7 @@ namespace BGC.Users
                 //Check existing data for type match
                 if (userData[key].IsNumber == false)
                 {
-                    Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type.ToString()} to Number");
+                    Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type} to Number");
                 }
 
                 //Set data
@@ -141,7 +141,7 @@ namespace BGC.Users
                 //Check existing data for type match
                 if (userData[key].IsNumber == false)
                 {
-                    Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type.ToString()} to Number");
+                    Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type} to Number");
                 }
 
                 //Set data
@@ -318,6 +318,7 @@ namespace BGC.Users
                         // Handle backwards compatibility with older profiles that don't have logging names
                         loggingName = UserName;
                     }
+
                     if (readData.ContainsKey("UserDicts"))
                     {
                         userData = readData["UserDicts"];

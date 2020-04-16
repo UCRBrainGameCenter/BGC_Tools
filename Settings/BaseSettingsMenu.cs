@@ -45,7 +45,7 @@ namespace BGC.Settings
             SettingsMenu = 0,
             EnterValue,
             SelectValue
-        };
+        }
 
         protected enum SettingType
         {
@@ -54,20 +54,20 @@ namespace BGC.Settings
             String,
             Boolean,
             Color
-        };
+        }
 
         protected enum SettingProtection
         {
             Open = 0,
             Admin,
             AlwaysLocked
-        };
+        }
 
         protected enum SettingScope
         {
             User = 0,
             Global
-        };
+        }
 
         private static readonly List<SettingBase> settings = new List<SettingBase>();
         private static readonly Dictionary<string, SettingBase> nameSettingsMap = new Dictionary<string, SettingBase>();
@@ -356,7 +356,7 @@ namespace BGC.Settings
                     setting.SettingWidget.SetActive(GetSettingActive(setting.name));
 
                     //Set the interactable setting based on current lock state
-                    setting.SettingModifyButton.interactable = setting.GetModifiable(PlayerData.IsLocked);
+                    setting.SettingModifyButton.interactable = setting.GetModifiable(PlayerData.GlobalData.IsLocked);
                     if (setting.NameNeedsUpdate() || allSettingsDirty)
                     {
                         setting.ApplyValuesToButton();
@@ -375,7 +375,7 @@ namespace BGC.Settings
                 applyChangesButton.interactable = settingDirty;
 
                 cancelChangesButton.GetComponentInChildren<Text>().text = settingDirty ? "Cancel" : "Menu";
-                cancelChangesButton.interactable = !PlayerData.IsDefault;
+                cancelChangesButton.interactable = true;
             }
         }
 
@@ -459,17 +459,6 @@ namespace BGC.Settings
             ExitMenu();
         }
 
-        public static void PullPushableSettings()
-        {
-            foreach (SettingBase setting in settings)
-            {
-                if (setting.scope == SettingScope.User && setting.pushOnCopy)
-                {
-                    setting.PullDefaultProfileValue();
-                }
-            }
-        }
-
         private static void AddToMaskerMap(
             string maskerName,
             string settingName,
@@ -492,16 +481,14 @@ namespace BGC.Settings
             string name,
             bool defaultVal,
             string maskerName = "",
-            Func<SettingBase, bool> maskingEvaluator = null,
-            bool pushOnCopy = true)
+            Func<SettingBase, bool> maskingEvaluator = null)
         {
             SettingBase newSetting = new BoolSetting(
                 scope,
                 protectionLevel,
                 label,
                 name,
-                defaultVal,
-                pushOnCopy);
+                defaultVal);
 
             settings.Add(newSetting);
             nameSettingsMap.Add(name, newSetting);
@@ -524,7 +511,6 @@ namespace BGC.Settings
             string postFix = "",
             string maskerName = "",
             Func<SettingBase, bool> maskingEvaluator = null,
-            bool pushOnCopy = true,
             bool dropdown = false)
         {
             SettingBase newSetting = new IntSetting(
@@ -537,8 +523,7 @@ namespace BGC.Settings
                 maxVal: maxVal,
                 translator: translator,
                 dropdown: dropdown,
-                postFix: postFix,
-                pushOnCopy: pushOnCopy);
+                postFix: postFix);
 
             settings.Add(newSetting);
             nameSettingsMap.Add(name, newSetting);
@@ -568,16 +553,14 @@ namespace BGC.Settings
             string name,
             string defaultVal,
             string maskerName = "",
-            Func<SettingBase, bool> maskingEvaluator = null,
-            bool pushOnCopy = true)
+            Func<SettingBase, bool> maskingEvaluator = null)
         {
             SettingBase newSetting = new StrSetting(
                 scope,
                 protectionLevel,
                 label,
                 name,
-                defaultVal,
-                pushOnCopy);
+                defaultVal);
 
             settings.Add(newSetting);
             nameSettingsMap.Add(name, newSetting);
@@ -599,8 +582,7 @@ namespace BGC.Settings
             Func<float, string> translator = null,
             string postFix = "",
             string maskerName = "",
-            Func<SettingBase, bool> maskingEvaluator = null,
-            bool pushOnCopy = true)
+            Func<SettingBase, bool> maskingEvaluator = null)
         {
             SettingBase newSetting = new FloatSetting(
                 scope,
@@ -611,8 +593,7 @@ namespace BGC.Settings
                 minVal: minVal,
                 maxVal: maxVal,
                 translator: translator,
-                postFix: postFix,
-                pushOnCopy: pushOnCopy);
+                postFix: postFix);
 
             settings.Add(newSetting);
             nameSettingsMap.Add(name, newSetting);
@@ -669,7 +650,6 @@ namespace BGC.Settings
             public readonly SettingProtection protectionLevel;
             public readonly string label;
             public readonly string name;
-            public readonly bool pushOnCopy;
 
             /// <summary>
             /// Stores submitted value until it is applied or discarded
@@ -695,14 +675,12 @@ namespace BGC.Settings
                 SettingScope scope,
                 SettingProtection protectionLevel,
                 string label,
-                string name,
-                bool pushOnCopy)
+                string name)
             {
                 this.scope = scope;
                 this.protectionLevel = protectionLevel;
                 this.label = label;
                 this.name = name;
-                this.pushOnCopy = pushOnCopy;
 
                 tmpNewValue = "";
                 nameDirty = false;
@@ -737,11 +715,6 @@ namespace BGC.Settings
             /// Apply any value stored in tmpNewValue to the actual setting
             /// </summary>
             public abstract void ApplyValue();
-
-            /// <summary>
-            /// Copy the relevant value from the Default profile
-            /// </summary>
-            public abstract void PullDefaultProfileValue();
 
             public virtual List<string> GetValueList() => null;
             public virtual void SetValueFromDropdown(int index) { }
@@ -806,7 +779,7 @@ namespace BGC.Settings
                         return false;
                 }
             }
-        };
+        }
 
 
         protected class IntSetting : SettingBase
@@ -833,14 +806,12 @@ namespace BGC.Settings
                 int maxVal = int.MaxValue,
                 Func<int, string> translator = null,
                 string postFix = "",
-                bool dropdown = false,
-                bool pushOnCopy = true)
+                bool dropdown = false)
                 : base(
                     scope: scope,
                     protectionLevel: protectionLevel,
                     label: label,
-                    name: name,
-                    pushOnCopy: pushOnCopy)
+                    name: name)
             {
                 this.defaultVal = defaultVal;
 
@@ -936,7 +907,7 @@ namespace BGC.Settings
                 switch (scope)
                 {
                     case SettingScope.Global:
-                        returnVal = PlayerPrefs.GetInt(name, defaultVal);
+                        returnVal = PlayerData.GlobalData.GetInt(name, defaultVal);
                         break;
 
                     case SettingScope.User:
@@ -956,29 +927,11 @@ namespace BGC.Settings
                 switch (scope)
                 {
                     case SettingScope.Global:
-                        PlayerPrefs.SetInt(name, newValue);
+                        PlayerData.GlobalData.SetInt(name, newValue);
                         break;
 
                     case SettingScope.User:
                         PlayerData.SetInt(name, newValue);
-                        break;
-
-                    default:
-                        Debug.LogError($"Unexpected SettingScope: {scope}");
-                        break;
-                }
-            }
-
-            public override void PullDefaultProfileValue()
-            {
-                switch (scope)
-                {
-                    case SettingScope.Global:
-                        Debug.LogError("Tried to pull a global setting");
-                        return;
-
-                    case SettingScope.User:
-                        PlayerData.SetInt(name, PlayerData.DefaultData.GetInt(name, defaultVal));
                         break;
 
                     default:
@@ -1033,7 +986,7 @@ namespace BGC.Settings
                     }
                 }
             }
-        };
+        }
 
         protected class FloatSetting : SettingBase
         {
@@ -1056,14 +1009,12 @@ namespace BGC.Settings
                 float minVal = float.MinValue,
                 float maxVal = float.MaxValue,
                 Func<float, string> translator = null,
-                string postFix = "",
-                bool pushOnCopy = true)
+                string postFix = "")
                 : base(
                     scope: scope,
                     protectionLevel: protectionLevel,
                     label: label,
-                    name: name,
-                    pushOnCopy: pushOnCopy)
+                    name: name)
             {
                 this.defaultVal = defaultVal;
 
@@ -1109,7 +1060,7 @@ namespace BGC.Settings
                 switch (scope)
                 {
                     case SettingScope.Global:
-                        returnValue = PlayerPrefs.GetFloat(name, defaultVal);
+                        returnValue = PlayerData.GlobalData.GetFloat(name, defaultVal);
                         break;
 
                     case SettingScope.User:
@@ -1129,29 +1080,11 @@ namespace BGC.Settings
                 switch (scope)
                 {
                     case SettingScope.Global:
-                        PlayerPrefs.SetFloat(name, newValue);
+                        PlayerData.GlobalData.SetFloat(name, newValue);
                         break;
 
                     case SettingScope.User:
                         PlayerData.SetFloat(name, newValue);
-                        break;
-
-                    default:
-                        Debug.LogError($"Unexpected SettingScope: {scope}");
-                        break;
-                }
-            }
-
-            public override void PullDefaultProfileValue()
-            {
-                switch (scope)
-                {
-                    case SettingScope.Global:
-                        Debug.LogError("Tried to pull a global setting");
-                        return;
-
-                    case SettingScope.User:
-                        PlayerData.SetFloat(name, PlayerData.DefaultData.GetFloat(name, defaultVal));
                         break;
 
                     default:
@@ -1206,7 +1139,7 @@ namespace BGC.Settings
                     }
                 }
             }
-        };
+        }
 
         protected class StrSetting : SettingBase
         {
@@ -1217,14 +1150,12 @@ namespace BGC.Settings
                 SettingProtection protectionLevel,
                 string label,
                 string name,
-                string defaultVal = "",
-                bool pushOnCopy = true)
+                string defaultVal = "")
                 : base(
                     scope: scope,
                     protectionLevel: protectionLevel,
                     label: label,
-                    name: name,
-                    pushOnCopy: pushOnCopy)
+                    name: name)
             {
                 this.defaultVal = defaultVal;
             }
@@ -1264,7 +1195,7 @@ namespace BGC.Settings
             {
                 switch (scope)
                 {
-                    case SettingScope.Global: return PlayerPrefs.GetString(name, defaultVal);
+                    case SettingScope.Global: return PlayerData.GlobalData.GetString(name, defaultVal);
                     case SettingScope.User: return PlayerData.GetString(name, defaultVal);
 
                     default:
@@ -1278,29 +1209,11 @@ namespace BGC.Settings
                 switch (scope)
                 {
                     case SettingScope.Global:
-                        PlayerPrefs.SetString(name, newValue);
+                        PlayerData.GlobalData.SetString(name, newValue);
                         break;
 
                     case SettingScope.User:
                         PlayerData.SetString(name, newValue);
-                        break;
-
-                    default:
-                        Debug.LogError($"Unexpected SettingScope: {scope}");
-                        break;
-                }
-            }
-
-            public override void PullDefaultProfileValue()
-            {
-                switch (scope)
-                {
-                    case SettingScope.Global:
-                        Debug.LogError("Tried to pull a global setting");
-                        return;
-
-                    case SettingScope.User:
-                        PlayerData.SetString(name, PlayerData.DefaultData.GetString(name, defaultVal));
                         break;
 
                     default:
@@ -1330,7 +1243,7 @@ namespace BGC.Settings
                     tmpNewValue = "";
                 }
             }
-        };
+        }
 
         protected abstract class ColorSetting : SettingBase
         {
@@ -1349,14 +1262,12 @@ namespace BGC.Settings
                 SettingScope scope,
                 SettingProtection protectionLevel,
                 string label,
-                string name,
-                bool pushOnCopy = true)
+                string name)
                 : base(
                     scope: scope,
                     protectionLevel: protectionLevel,
                     label: label,
-                    name: name,
-                    pushOnCopy: pushOnCopy)
+                    name: name)
             {
             }
 
@@ -1446,7 +1357,7 @@ namespace BGC.Settings
             {
                 colorWidget.SetColor(GetCurrentColor());
             }
-        };
+        }
 
         protected class SettingColorSetting : ColorSetting
         {
@@ -1459,14 +1370,12 @@ namespace BGC.Settings
                 SettingProtection protectionLevel,
                 string label,
                 string name,
-                Color defaultVal,
-                bool pushOnCopy = true)
+                Color defaultVal)
                 : base(
                     scope: scope,
                     protectionLevel: protectionLevel,
                     label: label,
-                    name: name,
-                    pushOnCopy: pushOnCopy)
+                    name: name)
             {
                 this.defaultVal = defaultVal;
             }
@@ -1478,7 +1387,7 @@ namespace BGC.Settings
                 switch (scope)
                 {
                     case SettingScope.Global:
-                        colorString = PlayerPrefs.GetString(name, "");
+                        colorString = PlayerData.GlobalData.GetString(name, "");
                         break;
 
                     case SettingScope.User:
@@ -1508,31 +1417,11 @@ namespace BGC.Settings
                 switch (scope)
                 {
                     case SettingScope.Global:
-                        PlayerPrefs.SetString(name, newValue);
+                        PlayerData.GlobalData.SetString(name, newValue);
                         break;
 
                     case SettingScope.User:
                         PlayerData.SetString(name, newValue);
-                        break;
-
-                    default:
-                        Debug.LogError($"Unexpected SettingScope: {scope}");
-                        break;
-                }
-            }
-
-            public override void PullDefaultProfileValue()
-            {
-                switch (scope)
-                {
-                    case SettingScope.Global:
-                        Debug.LogError("Tried to pull a global setting");
-                        return;
-
-                    case SettingScope.User:
-                        PlayerData.SetString(name,
-                            PlayerData.DefaultData.GetString(
-                                name, $"#{ColorUtility.ToHtmlStringRGBA(defaultVal)}"));
                         break;
 
                     default:
@@ -1551,14 +1440,12 @@ namespace BGC.Settings
                 SettingProtection protectionLevel,
                 string label,
                 string name,
-                bool defaultVal = false,
-                bool pushOnCopy = true)
+                bool defaultVal = false)
                 : base(
                     scope: scope,
                     protectionLevel: protectionLevel,
                     label: label,
-                    name: name,
-                    pushOnCopy: pushOnCopy)
+                    name: name)
             {
                 this.defaultVal = defaultVal;
             }
@@ -1611,7 +1498,7 @@ namespace BGC.Settings
             {
                 switch (scope)
                 {
-                    case SettingScope.Global: return ((PlayerPrefs.GetInt(name, defaultVal ? 1 : 0)) != 0);
+                    case SettingScope.Global: return PlayerData.GlobalData.GetBool(name, defaultVal);
                     case SettingScope.User: return PlayerData.GetBool(name, defaultVal);
 
                     default:
@@ -1625,29 +1512,11 @@ namespace BGC.Settings
                 switch (scope)
                 {
                     case SettingScope.Global:
-                        PlayerPrefs.SetInt(name, (newValue ? 1 : 0));
+                        PlayerData.GlobalData.SetBool(name, newValue);
                         break;
 
                     case SettingScope.User:
                         PlayerData.SetBool(name, newValue);
-                        break;
-
-                    default:
-                        Debug.LogError($"Unexpected SettingScope: {scope}");
-                        break;
-                }
-            }
-
-            public override void PullDefaultProfileValue()
-            {
-                switch (scope)
-                {
-                    case SettingScope.Global:
-                        Debug.LogError("Tried to pull a global setting");
-                        return;
-
-                    case SettingScope.User:
-                        PlayerData.SetBool(name, PlayerData.DefaultData.GetBool(name, defaultVal));
                         break;
 
                     default:
@@ -1688,6 +1557,6 @@ namespace BGC.Settings
                     }
                 }
             }
-        };
+        }
     }
 }
