@@ -23,7 +23,7 @@ namespace BGC.Study
         private const string protocolDataDir = "Protocols";
         public const int protocolDataVersion = 2;
 
-        private static string loadedProtocol = "";
+        private static string loadedProtocolSet = "";
 
         public static class DataKeys
         {
@@ -32,7 +32,7 @@ namespace BGC.Study
             public const string SessionInProgress = "SessionInProgress";
         }
 
-        public static Dictionary<int, Protocol> protocolDictionary = new Dictionary<int, Protocol>();
+        public static Dictionary<string, Protocol> protocolDictionary = new Dictionary<string, Protocol>();
         public static Dictionary<int, Session> sessionDictionary = new Dictionary<int, Session>();
         public static Dictionary<int, SessionElement> sessionElementDictionary =
             new Dictionary<int, SessionElement>();
@@ -45,20 +45,20 @@ namespace BGC.Study
 
         public static int ElementNumber
         {
-            get { return PlayerData.GetInt(DataKeys.ElementNumber, 0); }
-            set { PlayerData.SetInt(DataKeys.ElementNumber, value); }
+            get => PlayerData.GetInt(DataKeys.ElementNumber, 0);
+            set => PlayerData.SetInt(DataKeys.ElementNumber, value);
         }
 
         public static int SessionNumber
         {
-            get { return PlayerData.GetInt(DataKeys.SessionNumber, 0); }
-            set { PlayerData.SetInt(DataKeys.SessionNumber, value); }
+            get => PlayerData.GetInt(DataKeys.SessionNumber, 0);
+            set => PlayerData.SetInt(DataKeys.SessionNumber, value);
         }
 
         public static bool SessionInProgress
         {
-            get { return PlayerData.GetBool(DataKeys.SessionInProgress, false); }
-            set { PlayerData.SetBool(DataKeys.SessionInProgress, value); }
+            get => PlayerData.GetBool(DataKeys.SessionInProgress, false);
+            set => PlayerData.SetBool(DataKeys.SessionInProgress, value);
         }
 
         public delegate void MigrateProtocols(ref JsonObject protocols);
@@ -71,26 +71,52 @@ namespace BGC.Study
         private static MigrateProtocols migrateProtocols = null;
         private static ParseSessionElement parseSessionElement = null;
 
-        public static void PrepareProtocol(string protocolName, int protocolID)
+        [Obsolete("Transition to string-based Protocol IDs when convenient")]
+        public static void PrepareProtocol(
+            string protocolName,
+            int protocolID)
         {
             currentProtocol = null;
             currentSession = null;
             currentSessionElement = null;
             nextSessionElementIndex = -1;
-            loadedProtocol = "";
+            loadedProtocolSet = "";
 
             LoadProtocolSet(protocolName);
-            if (protocolDictionary.ContainsKey(protocolID))
+            if (protocolDictionary.ContainsKey(protocolID.ToString()))
             {
-                currentProtocol = protocolDictionary[protocolID];
+                currentProtocol = protocolDictionary[protocolID.ToString()];
             }
             else
             {
-                Debug.LogError($"Loaded Protocol \"{loadedProtocol}\" does not contain requested protocolID {protocolID}.");
+                Debug.LogError($"Loaded Protocol \"{loadedProtocolSet}\" does not contain requested protocolID {protocolID}.");
                 return;
             }
         }
 
+        public static void PrepareProtocol(
+            string protocolSetName,
+            string protocolKey)
+        {
+            currentProtocol = null;
+            currentSession = null;
+            currentSessionElement = null;
+            nextSessionElementIndex = -1;
+            loadedProtocolSet = "";
+
+            LoadProtocolSet(protocolSetName);
+            if (protocolDictionary.ContainsKey(protocolKey))
+            {
+                currentProtocol = protocolDictionary[protocolKey];
+            }
+            else
+            {
+                Debug.LogError($"Loaded Protocol \"{loadedProtocolSet}\" does not contain requested protocolKey {protocolKey}.");
+                return;
+            }
+        }
+
+        [Obsolete("Transition to string-based Protocol IDs when convenient")]
         public static ProtocolStatus TryUpdateProtocol(
             string protocolName,
             int protocolID,
@@ -99,15 +125,38 @@ namespace BGC.Study
         {
             if (LoadProtocolSet(protocolName))
             {
-                if (protocolDictionary.ContainsKey(protocolID))
+                if (protocolDictionary.ContainsKey(protocolID.ToString()))
                 {
-                    currentProtocol = protocolDictionary[protocolID];
+                    currentProtocol = protocolDictionary[protocolID.ToString()];
 
                     return SetSession(sessionIndex, sessionElementIndex);
                 }
                 else
                 {
-                    Debug.LogError($"Loaded Protocol \"{loadedProtocol}\" does not contain requested protocolID {protocolID}.");
+                    Debug.LogError($"Loaded Protocol \"{loadedProtocolSet}\" does not contain requested protocolID {protocolID}.");
+                    return ProtocolStatus.InvalidProtocol;
+                }
+            }
+
+            return ProtocolStatus.Uninitialized;
+        }
+
+        public static ProtocolStatus TryUpdateProtocol(
+            string protocolSetName,
+            string protocolKey,
+            int sessionIndex,
+            int sessionElementIndex = 0)
+        {
+            if (LoadProtocolSet(protocolSetName))
+            {
+                if (protocolDictionary.ContainsKey(protocolKey))
+                {
+                    currentProtocol = protocolDictionary[protocolKey];
+                    return SetSession(sessionIndex, sessionElementIndex);
+                }
+                else
+                {
+                    Debug.LogError($"Loaded Protocol \"{loadedProtocolSet}\" does not contain requested protocolKey {protocolKey}.");
                     return ProtocolStatus.InvalidProtocol;
                 }
             }
@@ -121,12 +170,12 @@ namespace BGC.Study
             currentSessionElement = null;
             nextSessionElementIndex = -1;
 
-            if (loadedProtocol == "")
+            if (loadedProtocolSet == "")
             {
                 return ProtocolStatus.Uninitialized;
             }
 
-            if (!protocolDictionary.ContainsKey(currentProtocol.id))
+            if (!protocolDictionary.ContainsKey(currentProtocol.key))
             {
                 return ProtocolStatus.InvalidProtocol;
             }
@@ -152,7 +201,7 @@ namespace BGC.Study
 
         public static JsonValue GetEnvValue(string key, JsonValue defaultReturn = default(JsonValue))
         {
-            if (loadedProtocol == "" ||
+            if (loadedProtocolSet == "" ||
                 currentProtocol == null || currentSession == null || currentSessionElement == null)
             {
                 Debug.Log($"EnvVal not ready for query: {key}");
@@ -290,7 +339,7 @@ namespace BGC.Study
 
         public static void SaveAs(string protocolName)
         {
-            loadedProtocol = protocolName;
+            loadedProtocolSet = protocolName;
             RemoveRedundancies();
             SerializeAll();
         }
@@ -336,7 +385,7 @@ namespace BGC.Study
                 }
 
                 JsonObject serializedSession = session.Value.SerializeSession();
-                serializedSession.Remove(ProtocolKeys.Session.Id);
+                serializedSession.Remove(Session.Keys.Id);
 
                 string serialization = serializedSession.ToString();
                 if (sessions.ContainsKey(serialization))
@@ -352,10 +401,10 @@ namespace BGC.Study
                 }
             }
 
-            foreach (KeyValuePair<int, Protocol> protocol in protocolDictionary)
+            foreach (Protocol protocol in protocolDictionary.Values)
             {
                 //Apply Remapping To Protocols
-                List<SessionID> sessionIDs = protocol.Value.sessions;
+                List<SessionID> sessionIDs = protocol.sessions;
 
                 for (int i = 0; i < sessionIDs.Count; i++)
                 {
@@ -381,14 +430,14 @@ namespace BGC.Study
 
         public static void SerializeAll()
         {
-            if (loadedProtocol == "")
+            if (loadedProtocolSet == "")
             {
                 Debug.LogError("Can't serialize protocol - none loaded");
                 return;
             }
 
             FileWriter.WriteJson(
-                path: Path.Combine(DataManagement.PathForDataDirectory(protocolDataDir), $"{loadedProtocol}.json"),
+                path: Path.Combine(DataManagement.PathForDataDirectory(protocolDataDir), $"{loadedProtocolSet}.json"),
                 createJson: () => new JsonObject()
                 {
                     { ProtocolKeys.Version, protocolDataVersion },
@@ -399,105 +448,88 @@ namespace BGC.Study
                 pretty: false);
         }
 
-        public static bool LoadProtocolSet(string protocolName)
+        public static bool LoadProtocolSet(string protocolSet)
         {
-            if (protocolName == "")
+            if (protocolSet == "")
             {
-                protocolName = "DefaultSet";
+                protocolSet = "DefaultSet";
             }
 
-            if (loadedProtocol == protocolName)
+            if (loadedProtocolSet == protocolSet)
             {
                 return true;
             }
 
-            string previousLoadedProtocol = loadedProtocol;
-            loadedProtocol = protocolName;
+            string previousLoadedProtocol = loadedProtocolSet;
+            loadedProtocolSet = protocolSet;
             foreach (char c in Path.GetInvalidFileNameChars())
             {
-                loadedProtocol = loadedProtocol.Replace(c.ToString(), "");
+                loadedProtocolSet = loadedProtocolSet.Replace(c.ToString(), "");
             }
 
             return FileReader.ReadJsonFile(
-                path: Path.Combine(DataManagement.PathForDataDirectory(protocolDataDir), $"{loadedProtocol}.json"),
+                path: Path.Combine(DataManagement.PathForDataDirectory(protocolDataDir), $"{loadedProtocolSet}.json"),
                 successCallback: (JsonObject jsonProtocols) =>
                 {
                     migrateProtocols?.Invoke(ref jsonProtocols);
 
-                    DeserializeProtocols(jsonProtocols[ProtocolKeys.Protocols]);
+                    if (jsonProtocols[ProtocolKeys.Protocols].IsJsonObject)
+                    {
+                        DeserializeProtocols(jsonProtocols[ProtocolKeys.Protocols].AsJsonObject);
+                    }
+                    else
+                    {
+                        //Backwards Compatible with old style 
+                        DeserializeProtocols(jsonProtocols[ProtocolKeys.Protocols].AsJsonArray);
+                    }
+
                     DeserializeSessions(jsonProtocols[ProtocolKeys.Sessions]);
                     DeserializeSessionElements(jsonProtocols[ProtocolKeys.SessionElements]);
                 },
                 failCallback: () =>
                 {
-                    loadedProtocol = "";
+                    loadedProtocolSet = "";
                     protocolDictionary.Clear();
                     sessionDictionary.Clear();
                     sessionElementDictionary.Clear();
                 },
-                fileNotFoundCallback: () => loadedProtocol = previousLoadedProtocol);
+                fileNotFoundCallback: () => loadedProtocolSet = previousLoadedProtocol);
         }
 
-        public static JsonArray SerializeProtocols()
+        public static JsonObject SerializeProtocols()
         {
-            JsonArray protocols = new JsonArray();
+            JsonObject protocols = new JsonObject();
 
-            foreach (Protocol protocol in protocolDictionary.Values)
+            foreach (var protocolKVP in protocolDictionary)
             {
-                JsonArray jsonSessionIDs = new JsonArray();
-                foreach (SessionID sessionID in protocol.sessions)
-                {
-                    jsonSessionIDs.Add(sessionID.id);
-                }
-
-                JsonObject newProtocol = new JsonObject()
-                {
-                    { ProtocolKeys.Protocol.Id, protocol.id },
-                    { ProtocolKeys.Protocol.Name, protocol.name },
-                    { ProtocolKeys.Protocol.SessionIDs, jsonSessionIDs }
-                };
-
-                if (protocol.envVals.Count > 0)
-                {
-                    newProtocol.Add(ProtocolKeys.Protocol.EnvironmentValues, protocol.envVals);
-                }
-
-                protocols.Add(newProtocol);
+                protocols.Add(protocolKVP.Key, protocolKVP.Value.ToJson());
             }
 
             return protocols;
         }
 
+        public static void DeserializeProtocols(JsonObject protocols)
+        {
+            protocolDictionary.Clear();
+
+            foreach (var protocolKVP in protocols)
+            {
+                protocolDictionary.Add(
+                    protocolKVP.Key,
+                    new Protocol(protocolKVP.Value.AsJsonObject, protocolKVP.Key));
+            }
+        }
+
+        //Method for loading outdated protocols
         public static void DeserializeProtocols(JsonArray protocols)
         {
             protocolDictionary.Clear();
 
             foreach (JsonObject protocol in protocols)
             {
-                List<SessionID> sessions = new List<SessionID>();
-                foreach (int sessionID in protocol[ProtocolKeys.Protocol.SessionIDs].AsJsonArray)
-                {
-                    sessions.Add(sessionID);
-                }
-
-                JsonObject envVals;
-                if (protocol.ContainsKey(ProtocolKeys.Protocol.EnvironmentValues))
-                {
-                    envVals = protocol[ProtocolKeys.Protocol.EnvironmentValues].AsJsonObject;
-                }
-                else
-                {
-                    envVals = new JsonObject();
-                }
-
                 protocolDictionary.Add(
-                    protocol[ProtocolKeys.Protocol.Id],
-                    new Protocol(protocol[ProtocolKeys.Protocol.Id].AsInteger)
-                    {
-                        name = protocol[ProtocolKeys.Protocol.Name],
-                        sessions = sessions,
-                        envVals = envVals
-                    });
+                    protocol["Id"],
+                    new Protocol(protocol, protocol["Id"]));
             }
         }
 
@@ -567,11 +599,14 @@ namespace BGC.Study
             }
         }
 
-        public static string GetProtocolName(int protocolID)
+        [Obsolete("Transition to string-based Protocol IDs")]
+        public static string GetProtocolName(int protocolID) => GetProtocolName(protocolID.ToString());
+
+        public static string GetProtocolName(string protocolKey)
         {
-            if (protocolDictionary.ContainsKey(protocolID))
+            if (protocolDictionary.ContainsKey(protocolKey))
             {
-                return protocolDictionary[protocolID].name;
+                return protocolDictionary[protocolKey].name;
             }
 
             return "Invalid";
@@ -579,7 +614,7 @@ namespace BGC.Study
 
         public static void HardClearAll()
         {
-            loadedProtocol = "";
+            loadedProtocolSet = "";
             protocolDictionary.Clear();
             sessionDictionary.Clear();
             sessionElementDictionary.Clear();

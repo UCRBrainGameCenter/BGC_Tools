@@ -1,4 +1,6 @@
-﻿namespace BGC.Study
+﻿using System;
+
+namespace BGC.Study
 {
     public static class ProtocolKeys
     {
@@ -13,26 +15,6 @@
         //
         //Elements
         //
-        public static class Protocol
-        {
-            //Attributes
-            public const string Id = "Id";
-            public const string Name = "Name";
-            public const string SessionIDs = "Sessions";
-
-            //Dictionary
-            public const string EnvironmentValues = "Env";
-        }
-
-        public static class Session
-        {
-            //Attributes
-            public const string Id = "Id";
-            public const string SessionElementIDs = "Elements";
-
-            //Dictionary
-            public const string EnvironmentValues = "Env";
-        }
 
         public static class SessionElement
         {

@@ -9,33 +9,57 @@ namespace BGC.Study
     public class Protocol : IEnumerable<SessionID>
     {
         private static int nextProtocolID = 1;
-        public readonly int id;
+        public readonly string key;
 
         public string name;
         public List<SessionID> sessions;
         public JsonObject envVals;
 
-        //Explicitly created Protocols are added to the Protocol dictionary
-        public Protocol()
+        private static class Keys
         {
-            id = nextProtocolID++;
-            sessions = new List<SessionID>();
-            envVals = new JsonObject();
+            //Attributes
+            public const string Name = "Name";
+            public const string SessionIDs = "Sessions";
 
-            ProtocolManager.protocolDictionary.Add(id, this);
+            //Dictionary
+            public const string EnvironmentValues = "Env";
         }
 
         //Explicitly created Protocols are added to the Protocol dictionary
+        [Obsolete("Transition to string-based Protocol IDs")]
+        public Protocol()
+        {
+            key = (nextProtocolID++).ToString();
+            sessions = new List<SessionID>();
+            envVals = new JsonObject();
+
+            ProtocolManager.protocolDictionary.Add(key, this);
+        }
+
+        //Explicitly created Protocols are added to the Protocol dictionary
+        [Obsolete("Transition to string-based Protocol IDs")]
         public Protocol(string name)
             : this()
         {
             this.name = name;
         }
 
+        //Explicitly created Protocols are added to the Protocol dictionary
+        public Protocol(string name, string key)
+        {
+            this.name = name;
+            this.key = key;
+            sessions = new List<SessionID>();
+            envVals = new JsonObject();
+
+            ProtocolManager.protocolDictionary.Add(key, this);
+        }
+
         //Deserialized Protocols are not added to the Protocol dictionary
+        [Obsolete("Transition to string-based Protocol IDs")]
         public Protocol(int id)
         {
-            this.id = id;
+            key = id.ToString();
             if (nextProtocolID <= id)
             {
                 nextProtocolID = id + 1;
@@ -43,6 +67,50 @@ namespace BGC.Study
 
             //Should be assigned by constructing caller
             envVals = null;
+        }
+
+        //Deserializing constructor - not added to the Protocol dictionary
+        public Protocol(JsonObject data, string key)
+        {
+            name = data[Keys.Name];
+            this.key = key;
+
+            sessions = new List<SessionID>();
+            foreach (int sessionID in data[Keys.SessionIDs].AsJsonArray)
+            {
+                sessions.Add(sessionID);
+            }
+
+            if (data.ContainsKey(Keys.EnvironmentValues))
+            {
+                envVals = data[Keys.EnvironmentValues].AsJsonObject;
+            }
+            else
+            {
+                envVals = new JsonObject();
+            }
+        }
+
+        public JsonObject ToJson()
+        {
+            JsonArray jsonSessionIDs = new JsonArray();
+            foreach (SessionID sessionID in sessions)
+            {
+                jsonSessionIDs.Add(sessionID.id);
+            }
+
+            JsonObject serializedData = new JsonObject()
+            {
+                { Keys.Name, name },
+                { Keys.SessionIDs, jsonSessionIDs }
+            };
+
+            if (envVals.Count > 0)
+            {
+                serializedData.Add(Keys.EnvironmentValues, envVals);
+            }
+
+            return serializedData;
         }
 
         public int Count => sessions.Count;
@@ -80,6 +148,16 @@ namespace BGC.Study
         public List<SessionElementID> sessionElements;
         public JsonObject envVals;
 
+        public static class Keys
+        {
+            //Attributes
+            public const string Id = "Id";
+            public const string SessionElementIDs = "Elements";
+
+            //Dictionary
+            public const string EnvironmentValues = "Env";
+        }
+
         //Explicitly created sessions are added to the Session dictionary
         public Session()
         {
@@ -96,7 +174,7 @@ namespace BGC.Study
         /// </summary>
         public Session(JsonObject sessionData)
         {
-            id = sessionData[ProtocolKeys.Session.Id];
+            id = sessionData[Keys.Id];
 
             if (nextSessionID <= id)
             {
@@ -104,14 +182,14 @@ namespace BGC.Study
             }
 
             sessionElements = new List<SessionElementID>();
-            foreach (int sessionElementID in sessionData[ProtocolKeys.Session.SessionElementIDs].AsJsonArray)
+            foreach (int sessionElementID in sessionData[Keys.SessionElementIDs].AsJsonArray)
             {
                 sessionElements.Add(sessionElementID);
             }
 
-            if (sessionData.ContainsKey(ProtocolKeys.Session.EnvironmentValues))
+            if (sessionData.ContainsKey(Keys.EnvironmentValues))
             {
-                envVals = sessionData[ProtocolKeys.Session.EnvironmentValues].AsJsonObject;
+                envVals = sessionData[Keys.EnvironmentValues].AsJsonObject;
             }
             else
             {
@@ -155,13 +233,13 @@ namespace BGC.Study
 
             JsonObject newSession = new JsonObject()
             {
-                { ProtocolKeys.Session.Id, id },
-                { ProtocolKeys.Session.SessionElementIDs, jsonElementsIDs }
+                { Keys.Id, id },
+                { Keys.SessionElementIDs, jsonElementsIDs }
             };
 
             if (envVals.Count > 0)
             {
-                newSession.Add(ProtocolKeys.Session.EnvironmentValues, envVals);
+                newSession.Add(Keys.EnvironmentValues, envVals);
             }
 
             return newSession;
@@ -182,17 +260,25 @@ namespace BGC.Study
 
     public readonly struct ProtocolID
     {
-        public readonly int id;
+        public readonly string id;
         public Protocol Protocol => ProtocolManager.protocolDictionary.ContainsKey(id) ?
             ProtocolManager.protocolDictionary[id] : null;
 
+        [Obsolete("Transition to string-based protocol IDs")]
         public ProtocolID(int id)
+        {
+            this.id = id.ToString();
+        }
+
+        public ProtocolID(string id)
         {
             this.id = id;
         }
 
-        public static implicit operator ProtocolID(Protocol protocol) => new ProtocolID(protocol.id);
+        public static implicit operator ProtocolID(Protocol protocol) => new ProtocolID(protocol.key);
+        [Obsolete("Transition to string-based protocol IDs")]
         public static implicit operator ProtocolID(int id) => new ProtocolID(id);
+        public static implicit operator ProtocolID(string id) => new ProtocolID(id);
     }
 
     public readonly struct SessionID
