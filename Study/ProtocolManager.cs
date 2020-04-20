@@ -473,16 +473,7 @@ namespace BGC.Study
                 {
                     migrateProtocols?.Invoke(ref jsonProtocols);
 
-                    if (jsonProtocols[ProtocolKeys.Protocols].IsJsonObject)
-                    {
-                        DeserializeProtocols(jsonProtocols[ProtocolKeys.Protocols].AsJsonObject);
-                    }
-                    else
-                    {
-                        //Backwards Compatible with old style 
-                        DeserializeProtocols(jsonProtocols[ProtocolKeys.Protocols].AsJsonArray);
-                    }
-
+                    DeserializeProtocols(jsonProtocols[ProtocolKeys.Protocols]);
                     DeserializeSessions(jsonProtocols[ProtocolKeys.Sessions]);
                     DeserializeSessionElements(jsonProtocols[ProtocolKeys.SessionElements]);
                 },
@@ -517,19 +508,6 @@ namespace BGC.Study
                 protocolDictionary.Add(
                     protocolKVP.Key,
                     new Protocol(protocolKVP.Value.AsJsonObject, protocolKVP.Key));
-            }
-        }
-
-        //Method for loading outdated protocols
-        public static void DeserializeProtocols(JsonArray protocols)
-        {
-            protocolDictionary.Clear();
-
-            foreach (JsonObject protocol in protocols)
-            {
-                protocolDictionary.Add(
-                    protocol["Id"],
-                    new Protocol(protocol, protocol["Id"]));
             }
         }
 
@@ -584,18 +562,6 @@ namespace BGC.Study
                 }
 
                 sessionElementDictionary.Add(parsedElement.id, parsedElement);
-            }
-        }
-
-        public static void UpdateDefaults()
-        {
-            string path = DataManagement.PathForDataDirectory(protocolDataDir);
-            TextAsset[] assets = Resources.LoadAll<TextAsset>(protocolDataDir);
-            foreach (TextAsset asset in assets)
-            {
-                string currentFile = Path.Combine(path, FileExtensions.AddJsonExtension(asset.name));
-
-                File.WriteAllText(currentFile, asset.text);
             }
         }
 
