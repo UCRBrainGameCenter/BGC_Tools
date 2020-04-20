@@ -41,7 +41,12 @@ namespace BGC.Users
         public static bool IsDefault => ProfileData.IsDefault;
 
         /// <summary> Serialize the current user's data </summary>
-        public static void Save() => ProfileData.Serialize();
+        public static void Save()
+        {
+            ProfileData.Serialize();
+            DefaultData.Serialize();
+            GlobalData.Serialize();
+        }
 
         public static bool HasKey(string key) => ProfileData.HasKey(key);
         public static void RemoveKey(string key) => ProfileData.RemoveKey(key);
