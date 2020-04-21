@@ -552,6 +552,7 @@ namespace BGC.Settings
             string label,
             string name,
             string defaultVal,
+            Func<string, string> translator = null,
             string maskerName = "",
             Func<SettingBase, bool> maskingEvaluator = null)
         {
@@ -560,7 +561,8 @@ namespace BGC.Settings
                 protectionLevel,
                 label,
                 name,
-                defaultVal);
+                defaultVal,
+                translator: translator);
 
             settings.Add(newSetting);
             nameSettingsMap.Add(name, newSetting);
@@ -1143,6 +1145,8 @@ namespace BGC.Settings
 
         protected class StrSetting : SettingBase
         {
+            private readonly Func<string, string> translator;
+
             public override SettingType SettingType => SettingType.String;
 
             public StrSetting(
@@ -1150,7 +1154,8 @@ namespace BGC.Settings
                 SettingProtection protectionLevel,
                 string label,
                 string name,
-                string defaultVal = "")
+                string defaultVal = "",
+                Func<string, string> translator = null)
                 : base(
                     scope: scope,
                     protectionLevel: protectionLevel,
@@ -1158,12 +1163,14 @@ namespace BGC.Settings
                     name: name)
             {
                 this.defaultVal = defaultVal;
+                this.translator = translator;
             }
 
             public string defaultVal;
 
             public override string GetValueLabel()
             {
+                string displayVal;
                 string val = GetInnerValue();
 
                 if (!string.IsNullOrEmpty(tmpNewValue))
@@ -1171,7 +1178,16 @@ namespace BGC.Settings
                     val = tmpNewValue;
                 }
 
-                return val;
+                if (translator != null)
+                {
+                    displayVal = $"({val}) {translator(val)}";
+                }
+                else
+                {
+                    displayVal = val;
+                }
+
+                return displayVal;
             }
 
             public override UIState EditButtonPressed()
