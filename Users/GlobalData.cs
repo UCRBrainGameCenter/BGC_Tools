@@ -25,6 +25,8 @@ namespace BGC.Users
                 {
                     EverUnlocked = true;
                 }
+
+                Serialize();
             }
         }
 
