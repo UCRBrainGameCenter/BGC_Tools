@@ -377,7 +377,11 @@ namespace BGC.Settings
                 cancelChangesButton.GetComponentInChildren<Text>().text = settingDirty ? "Cancel" : "Menu";
                 cancelChangesButton.interactable = true;
             }
+
+            OnRefreshView(currentState);
         }
+
+        protected virtual void OnRefreshView(UIState currentState) { }
 
         private bool GetSettingActive(string settingName)
         {
@@ -763,9 +767,11 @@ namespace BGC.Settings
             {
                 SettingWidget = Instantiate(menu.settingWidgetTemplate, parent, false);
 
-                SettingLabelText = SettingWidget.GetComponentInChildren<Text>();
-                SettingModifyButton = SettingWidget.GetComponentInChildren<Button>();
-                SettingButtonLabel = SettingModifyButton.GetComponentInChildren<Text>();
+                SettingWidgetContainer widgetContainer = SettingWidget.GetComponent<SettingWidgetContainer>();
+
+                SettingLabelText = widgetContainer.LabelText;
+                SettingModifyButton = widgetContainer.SettingButton;
+                SettingButtonLabel = widgetContainer.ValueText;
             }
 
             public virtual bool GetModifiable(bool locked)
@@ -1351,9 +1357,9 @@ namespace BGC.Settings
 
                 colorWidget = SettingWidget.GetComponent<ColorWidget>();
 
-                SettingLabelText = colorWidget.label;
-                SettingModifyButton = colorWidget.settingButton;
-                SettingButtonLabel = SettingModifyButton.GetComponentInChildren<Text>();
+                SettingLabelText = colorWidget.LabelText;
+                SettingModifyButton = colorWidget.SettingButton;
+                SettingButtonLabel = colorWidget.ValueText;
             }
 
             protected Color GetCurrentColor()

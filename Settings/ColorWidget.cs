@@ -7,10 +7,20 @@ namespace BGC.Settings
 {
     public class ColorWidget : MonoBehaviour
     {
-        public Text label;
-        public Image colorSwatch;
-        public Button settingButton;
-        public RectTransform alphaSwatchFiller;
+        [SerializeField]
+        private Text label = null;
+        [SerializeField]
+        private Image colorSwatch = null;
+        [SerializeField]
+        private Button settingButton = null;
+        [SerializeField]
+        private RectTransform alphaSwatchFiller = null;
+        [SerializeField]
+        private Text valueText = null;
+
+        public Text LabelText => label;
+        public Text ValueText => valueText;
+        public Button SettingButton => settingButton;
 
         public void SetColor(Color newColor)
         {
