@@ -101,6 +101,22 @@ namespace BGC.Extensions
         }
 
         /// <summary>
+        /// Randomize a list
+        /// </summary>
+        /// <param name="list"></param>
+        public static void Shuffle(this IList list, System.Random randomizer)
+        {
+            int length = list.Count;
+            for (int i = 0; i < length; ++i)
+            {
+                int randomIndex = randomizer.Next(i, list.Count);
+                object temp = list[i];
+                list[i] = list[randomIndex];
+                list[randomIndex] = temp;
+            }
+        }
+
+        /// <summary>
         /// Get last index of the list
         /// </summary>
         /// <param name="list"></param>

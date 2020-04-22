@@ -164,24 +164,29 @@ namespace BGC.Audio.Filters
         {
             if (_channelRMS == null)
             {
-                double[] rms = new double[Channels];
+                //WTF, this was soo wrong...
+                //
+                //double[] rms = new double[Channels];
 
-                foreach (IBGCStream stream in streams)
-                {
-                    double[] streamRMS = stream.GetChannelRMS().ToArray();
+                //foreach (IBGCStream stream in streams)
+                //{
+                //    double[] streamRMS = stream.GetChannelRMS().ToArray();
 
-                    for (int i = 0; i < Channels; i++)
-                    {
-                        rms[i] += (stream.ChannelSamples / (double)ChannelSamples) * streamRMS[i];
-                    }
-                }
+                //    for (int i = 0; i < Channels; i++)
+                //    {
+                //        rms[i] += (stream.ChannelSamples / (double)ChannelSamples) * streamRMS[i] * streamRMS[i];
+                //    }
+                //}
 
-                for (int i = 0; i < Channels; i++)
-                {
-                    rms[i] = Math.Sqrt(rms[i]);
-                }
+                //for (int i = 0; i < Channels; i++)
+                //{
+                //    rms[i] = Math.Sqrt(rms[i]);
+                //}
 
-                _channelRMS = rms;
+                //_channelRMS = rms;
+
+
+                _channelRMS = this.CalculateRMS();
             }
 
             return _channelRMS;
