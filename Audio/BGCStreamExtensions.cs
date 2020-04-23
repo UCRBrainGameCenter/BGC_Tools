@@ -113,6 +113,42 @@ namespace BGC.Audio
             return new StreamCenterer(stream, preDelaySamples, postDelaySamples);
         }
 
+        /// <summary>
+        /// Returns of stream <paramref name="duration"/> in duration, with the stream placed accordingly
+        /// </summary>
+        public static IBGCStream PadTo(
+            this IBGCStream stream,
+            double duration,
+            StreamPadder.StimulusPlacement placement,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
+        {
+            return new StreamPadder(stream, duration, placement, rmsBehavior);
+        }
+
+        /// <summary>
+        /// Returns of stream padded by <paramref name="prependDuration"/> and <paramref name="appendDuration"/>
+        /// </summary>
+        public static IBGCStream PadBy(
+            this IBGCStream stream,
+            double prependDuration,
+            double appendDuration,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
+        {
+            return new StreamPadder(stream, prependDuration, appendDuration, rmsBehavior);
+        }
+
+        /// <summary>
+        /// Returns of stream padded by <paramref name="prependSamples"/> and <paramref name="appendSamples"/>
+        /// </summary>
+        public static IBGCStream PadBy(
+            this IBGCStream stream,
+            int prependSamples,
+            int appendSamples,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
+        {
+            return new StreamPadder(stream, prependSamples, appendSamples, rmsBehavior);
+        }
+
         public static IBGCStream ContinuousFilter(
             this IBGCStream stream,
             IBGCEnvelopeStream envelopeStream,
