@@ -11,16 +11,15 @@ namespace BGC.Web.Utility
 {
     public static class Rest
     {
-        /// <summary>
-        /// Send a get request
-        /// </summary>
+        /// <summary>Send a get request</summary>
         /// <param name="callBack">false means there was a local parsing error</param>
         /// <param name="queryParams">Dictionary of key names hashed to their values of any type</param>
         public static void GetRequest(
             string url,
             Action<UnityWebRequest, bool> callBack = null,
             int timeout = 0,
-            IDictionary<string, IConvertible> queryParams = default)
+            IDictionary<string, IConvertible> queryParams = default,
+            IDictionary<string, string> headers = default)
         {
             if (queryParams != default)
             {
@@ -29,9 +28,10 @@ namespace BGC.Web.Utility
 
             // convert URL to HTTP-friendly URL
             CoroutineUtility.Mono.StartCoroutine(RunGet(
-                url,
-                callBack,
-                timeout));
+                url: url,
+                callBack: callBack,
+                timeout: timeout,
+                headers: headers));
         }
 
         /// <summary>
@@ -59,11 +59,18 @@ namespace BGC.Web.Utility
         private static IEnumerator RunGet(
             string url,
             Action<UnityWebRequest, bool> callBack,
+            IDictionary<string, string> headers,
             int timeout = 0)
         {
             using (UnityWebRequest request = UnityWebRequest.Get(url))
             {
                 request.timeout = timeout;
+
+                foreach (KeyValuePair<string, string> pair in headers)
+                {
+                    request.SetRequestHeader(pair.Key, pair.Value);
+                }
+
                 yield return request.SendWebRequest();
 
                 callBack?.Invoke(request, true);
