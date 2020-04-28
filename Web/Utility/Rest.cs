@@ -16,10 +16,10 @@ namespace BGC.Web.Utility
         /// <param name="queryParams">Dictionary of key names hashed to their values of any type</param>
         public static void GetRequest(
             string url,
+            IDictionary<string, string> headers,
             Action<UnityWebRequest, bool> callBack = null,
             int timeout = 0,
-            IDictionary<string, IConvertible> queryParams = default,
-            IDictionary<string, string> headers = default)
+            IDictionary<string, IConvertible> queryParams = default)
         {
             if (queryParams != default)
             {
