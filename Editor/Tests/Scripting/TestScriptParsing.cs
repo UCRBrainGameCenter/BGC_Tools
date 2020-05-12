@@ -1602,5 +1602,95 @@ namespace BGC.Tests
 
             Debug.Log($"Ran {tests.Count} const tests");
         }
+
+        [Test]
+        public void GlobalDelcarationErrorTest()
+        {
+            GlobalRuntimeContext globalContext = new GlobalRuntimeContext();
+
+            string testScript = @"
+            //Initialized with integer literal
+            global double testDouble = 25;
+            const double testConstDouble = 50;
+            double localDouble = 75;
+
+            void RunTest()
+            {
+                double testA = testDouble + 1.0;
+                double testB = testDouble + 1;
+                double testC = testConstDouble + 1;
+                double testD = testConstDouble + 1.0;
+                double testE = localDouble + 1;
+                double testF = localDouble + 1.0;
+            }";
+
+            Script script;
+
+            try
+            {
+                script = ScriptParser.LexAndParseScript(
+                    script: testScript,
+                    new FunctionSignature(
+                        identifier: "RunTest",
+                        returnType: typeof(void)));
+            }
+            catch (ScriptParsingException parseEx)
+            {
+                throw new Exception(
+                    message: $"Parsing exception on Line {parseEx.line}, Column {parseEx.column}: {parseEx.Message}",
+                    innerException: parseEx);
+            }
+
+            ScriptRuntimeContext context = script.PrepareScript(globalContext);
+            script.ExecuteFunction("RunTest", context);
+        }
+
+        [Test]
+        public void ConstantEqualityTests()
+        {
+            GlobalRuntimeContext globalContext = new GlobalRuntimeContext();
+
+            string testScript = @"
+            int RunTests()
+            {
+                if ( 1.0 != 1 )
+                {
+                    return 1;
+                }
+
+                if ( 1.0 == 1 )
+                {
+                    //Continue
+                }
+                else
+                {
+                    return 2;
+                }
+
+                return 0;
+            }";
+
+            Script script;
+
+            try
+            {
+                script = ScriptParser.LexAndParseScript(
+                    script: testScript,
+                    new FunctionSignature(
+                        identifier: "RunTests",
+                        returnType: typeof(int)));
+            }
+            catch (ScriptParsingException parseEx)
+            {
+                throw new Exception(
+                    message: $"Parsing exception on Line {parseEx.line}, Column {parseEx.column}: {parseEx.Message}",
+                    innerException: parseEx);
+            }
+
+            ScriptRuntimeContext context = script.PrepareScript(globalContext);
+            int failedTest = script.ExecuteFunction<int>("RunTests", context);
+
+            Debug.Assert(failedTest == 0, $"Failed test {failedTest}");
+        }
     }
 }

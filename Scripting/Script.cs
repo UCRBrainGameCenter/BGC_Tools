@@ -107,10 +107,17 @@ namespace BGC.Scripting
                                         message: $"The value of Const declarations must be constant");
                                 }
 
+                                object value = litToken.GetAs<object>();
+
+                                if (!valueType.IsAssignableFrom(litToken.GetValueType()))
+                                {
+                                    value = Convert.ChangeType(value, valueType);
+                                }
+
                                 context.DeclareConstant(
                                     identifierToken: identToken,
                                     type: valueType,
-                                    value: litToken.GetAs<object>());
+                                    value: value);
                             }
                             return;
 

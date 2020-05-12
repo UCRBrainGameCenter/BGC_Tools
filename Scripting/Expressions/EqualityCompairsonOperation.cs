@@ -40,10 +40,23 @@ namespace BGC.Scripting
             //Constant case
             if (arg1 is LiteralToken litArg1 && arg2 is LiteralToken litArg2)
             {
+                object value1 = litArg1.GetAs<object>();
+                object value2 = litArg2.GetAs<object>();
+
+                if (argType != arg1Type)
+                {
+                    value1 = Convert.ChangeType(value1, argType);
+                }
+
+                if (argType != arg2Type)
+                {
+                    value2 = Convert.ChangeType(value2, argType);
+                }
+
                 switch (operatorToken.operatorType)
                 {
-                    case Operator.IsEqualTo: return new LiteralToken<bool>(operatorToken, litArg1.GetAs<object>().Equals(litArg2.GetAs<object>()));
-                    case Operator.IsNotEqualTo: return new LiteralToken<bool>(operatorToken, !litArg1.GetAs<object>().Equals(litArg2.GetAs<object>()));
+                    case Operator.IsEqualTo: return new LiteralToken<bool>(operatorToken, value1.Equals(value2));
+                    case Operator.IsNotEqualTo: return new LiteralToken<bool>(operatorToken, !value1.Equals(value2));
 
                     default: throw new ArgumentException($"Unexpected Operator: {operatorToken.operatorType}");
                 }

@@ -55,6 +55,11 @@ namespace BGC.Scripting
             else
             {
                 defaultValue = initializer.GetAs<object>(context);
+
+                if (!valueType.IsAssignableFrom(initializer.GetValueType()))
+                {
+                    defaultValue = Convert.ChangeType(defaultValue, valueType);
+                }
             }
 
             context.DeclareNewGlobal(identifier, valueType, defaultValue);
