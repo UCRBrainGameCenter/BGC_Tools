@@ -975,7 +975,6 @@ namespace BGC.Parameters
             foreach (PropertyInfo property in propertyGroup.GetPropertyGroupProperties())
             {
                 IPropertyGroup internalPropertyGroup = property.GetValue(propertyGroup) as IPropertyGroup;
-
                 if (internalPropertyGroup == null)
                 {
                     //Construct a new instance from first selection
