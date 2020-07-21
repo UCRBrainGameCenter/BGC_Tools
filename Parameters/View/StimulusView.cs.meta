@@ -3,7 +3,16 @@ guid: 427150f53a3e2d0428c95fc839ddaa20
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - widgetFactory: {instanceID: 0}
+  - propertyGroupPrefab: {fileID: 1933396924770050, guid: fd835c5a4a0f00141bc9a87feb680bca,
+      type: 3}
+  - nestedPropertyGroupPrefab: {fileID: 1037210324462626, guid: 7e2618b7dd3959e4cac1a79c1cac5408,
+      type: 3}
+  - flatPropertyGroupPrefab: {fileID: 1037210324462626, guid: 0eb1692d5a1f72d438dbf7b10509dec6,
+      type: 3}
+  - nestedPropertyListItemPrefab: {fileID: 6058466296309273783, guid: 874ea8997aa61094db7a1d4aa7c0dfe1,
+      type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

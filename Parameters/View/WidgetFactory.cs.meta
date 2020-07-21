@@ -3,7 +3,20 @@ guid: 37a350c433a2f084180a0a49b79231cd
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - optionWidgetPrefab: {fileID: 126292, guid: 8c34fb508a603e34c83ba0528218b5f7, type: 3}
+  - optionLabelPrefab: {fileID: 130490, guid: 62ef6e8bffd0c3c4488bd85324f275d1, type: 3}
+  - optionInputFieldPrefab: {fileID: 197344, guid: de9bae5b2ed007c4ea1a451caa4d473b,
+      type: 3}
+  - optionButtonPrefab: {fileID: 1286173995020862, guid: 6972fe11c8065204bafd3496a72daaa0,
+      type: 3}
+  - optionTogglePrefab: {fileID: 141584, guid: 46b6f837df5ec8646848cba67a454735, type: 3}
+  - optionDropdownPrefab: {fileID: 199540, guid: 4c003b424d620e545bbdb745327ffb4a,
+      type: 3}
+  - scriptFieldPrefab: {fileID: 7935550269260727608, guid: 67f930a8a3075e242bfee986ed42e7e7,
+      type: 3}
+  - inputFieldPrefab: {fileID: 7935550269260727608, guid: dd003b675a32e42408862db7acf7f1c5,
+      type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 
