@@ -7,6 +7,7 @@ Developers:
 - [Trevor Stavropoulos](https://tstavropoulos.github.io/) ([@tstavropoulos](https://github.com/tstavropoulos))
 - [Colan Biemer](https://bi3mer.github.io/#resume) ([@bi3mer](https://github.com/bi3mer))
 - Randy Mester ([@randymester](https://github.com/randymester))
+- Mark Philipp ([@mphilipp622](https://github.com/mphilipp622))
 - Lorenzo Alamillo ([@nadnbuds](https://github.com/nadnbuds))
 - [Jordan Whiting](https://jaerdon.com/) ([@Jaerdon](https://github.com/Jaerdon))
 
