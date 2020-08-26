@@ -36,6 +36,11 @@ namespace BGC.DataStructures.Generic
         void CheckIn(T value);
 
         /// <summary>
+        /// Check in all checked-out objects.
+        /// </summary>
+        void CheckInAll();
+
+        /// <summary>
         /// Mark the value as CheckedOut.
         /// This method is somewhat internal and meant to bypass higher-level checks.
         /// </summary>

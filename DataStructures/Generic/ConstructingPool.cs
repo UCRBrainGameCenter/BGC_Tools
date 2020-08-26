@@ -132,6 +132,19 @@ namespace BGC.DataStructures.Generic
             checkedOut.Remove(value);
         }
 
+        public void CheckInAll()
+        {
+            if (onCheckIn != null)
+            {
+                foreach (var value in checkedOut)
+                {
+                    onCheckIn(value);
+                }
+            }
+            available.UnionWith(checkedOut);
+            checkedOut.Clear();
+        }
+
         public bool ContainsAnywhere(T value) => available.Contains(value) || checkedOut.Contains(value);
 
         public void CopyAllTo(T[] array, int arrayIndex)
