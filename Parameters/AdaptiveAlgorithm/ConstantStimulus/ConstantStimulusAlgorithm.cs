@@ -80,7 +80,11 @@ namespace BGC.Parameters.Algorithms.ConstantStimulus
                     {
                         for (int dim4 = 0; dim4 < dim4Limit; dim4++)
                         {
-                            stepBag.Add(new ConstantStimSet(dim1, dim2, dim3, dim4));
+                            //One copy for each track
+                            for (int track = 0; track < Tracks; track++)
+                            {
+                                stepBag.Add(new ConstantStimSet(dim1, dim2, dim3, dim4));
+                            }
                         }
                     }
                 }
