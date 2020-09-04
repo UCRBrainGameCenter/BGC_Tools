@@ -28,22 +28,27 @@ namespace BGC.UI.Panels
 
         public void TakeSnapshot(RectTransform copyRect)
         {
-            if (rt == null)
+            int rtWidth = (int)(mainCanvas.pixelRect.width / scalefactor);
+            int rtHeight = (int)(mainCanvas.pixelRect.height / scalefactor);
+            if (rt == null || rt.width != rtWidth || rt.height != rtHeight)
             {
-                rt = new RenderTexture(
-                    (int)(mainCanvas.pixelRect.width / scalefactor),
-                    (int)(mainCanvas.pixelRect.height / scalefactor),
-                    16);
+                if (rt != null)
+                {
+                    Destroy(rt);
+                }
+                rt = new RenderTexture(rtWidth, rtHeight, 16);
             }
 
-            if (tex == null)
+            int texWidth = (int)(mainCamera.pixelWidth / scalefactor);
+            int texHeight = (int)(mainCamera.pixelHeight / scalefactor);
+            if (tex == null || tex.width != texWidth || tex.height != texHeight)
             {
-                tex = new Texture2D(
-                    (int)(mainCamera.pixelWidth / scalefactor),
-                    (int)(mainCamera.pixelHeight / scalefactor),
-                    TextureFormat.RGB24, false);
+                if (tex != null)
+                {
+                    Destroy(tex);
+                }
+                tex = new Texture2D(texWidth, texHeight, TextureFormat.RGB24, false);
             }
-
 
             Vector3[] corners = new Vector3[4];
             copyRect.GetWorldCorners(corners);

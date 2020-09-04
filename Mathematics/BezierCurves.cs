@@ -737,6 +737,47 @@ namespace BGC.Mathematics
             }
         }
 
+        public delegate void SetPixelDelegate(int x, int y);
+
+        public static void SetPixel(
+            int x,
+            int y,
+            int texWidth,
+            int texHeight,
+            SetPixelDelegate setPixelDelegate,
+            int rad = 2)
+        {
+            if (x + rad < 0 || y + rad < 0)
+            {
+                return;
+            }
+
+            if (x - rad >= texWidth || y - rad >= texHeight)
+            {
+                return;
+            }
+
+            int dx_start = x - rad >= 0 ? -rad : -x;
+            int dx_end = x + rad < texWidth ? rad : texWidth - x - 1;
+            int dy_start = y - rad >= 0 ? -rad : -y;
+            int dy_end = y + rad < texHeight ? rad : texHeight - y - 1;
+
+            int rad_sq = rad * rad;
+
+            for (int dx = dx_start; dx <= dx_end; dx++)
+            {
+                int cur_x = x + dx;
+                int dx_sq = dx * dx;
+                for (int dy = dy_start; dy <= dy_end; dy++)
+                {
+                    if (dx_sq + dy * dy <= rad_sq)
+                    {
+                        setPixelDelegate(cur_x, y + dy);
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// Use a curried version of this method for the AddPoint action above.
         /// Invoke like (x,y) => SetPixel(x, y, localContourTex, localColor, 2); 
@@ -748,23 +789,7 @@ namespace BGC.Mathematics
             Color contourColor,
             int rad = 2)
         {
-            int rad_sq = rad * rad;
-
-            for (int dx = -rad; dx <= rad; dx++)
-            {
-                for (int dy = -rad; dy <= rad; dy++)
-                {
-                    if (dx * dx + dy * dy <= rad_sq)
-                    {
-                        if (x + dx >= 0 && x + dx < contourTex.width &&
-                            y + dy >= 0 && y + dy < contourTex.height)
-                        {
-                            contourTex.SetPixel(x + dx, y + dy, contourColor);
-                        }
-                    }
-                }
-            }
+            SetPixel(x, y, contourTex.width, contourTex.height, (curX, curY) => contourTex.SetPixel(curX, curY, contourColor), rad);
         }
-
     }
 }
