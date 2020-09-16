@@ -140,6 +140,24 @@ namespace LightJson
         public bool ContainsKey(string key, out JsonValue value) => properties.TryGetValue(key, out value);
 
         /// <summary>
+        /// Returns the value associated with a key, or a default value if not found.
+        /// </summary>
+        /// <param name="key">The key to locate in this collection.</param>
+        /// <param name="defaultValue">The default JsonValue to use if the key is not found</param>
+        /// <returns>Returns the JsonValue that was found, or defaultValue if no key was found.</returns>
+        public JsonValue Get(string key, JsonValue defaultValue)
+        {
+            JsonValue value;
+
+            if (properties.TryGetValue(key, out value))
+            {
+                return value;
+            }
+
+            return defaultValue;
+        }
+
+        /// <summary>
         /// Determines whether this collection contains the given JsonValue.
         /// </summary>
         /// <param name="value">The value to locate in this collection.</param>
