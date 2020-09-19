@@ -7,7 +7,7 @@ using LightJson;
 namespace BGC.Parameters
 {
     [PropertyChoiceTitle("", "Default")]
-    public abstract class StimulusPropertyGroup : IPropertyGroup
+    public abstract class StimulusPropertyGroup : CommonPropertyGroup
     {
         #region Constructor
 
@@ -23,24 +23,5 @@ namespace BGC.Parameters
         #endregion Constructor
 
         public virtual void InitiatePhase(GenerationPhase phase) { }
-
-        #region IPropertyGroup
-
-        private IPropertyGroup _parentPropertyGroup;
-
-        IPropertyGroup IPropertyGroup.GetParent() => _parentPropertyGroup;
-        void IPropertyGroup.SetParent(IPropertyGroup parent)
-        {
-            _parentPropertyGroup = parent;
-            foreach (PropertyInfo property in this.GetInitializeableFieldProperties())
-            {
-                this.InitializeProperty(property);
-            }
-        }
-
-        JsonObject IPropertyGroup.Serialize() => this.Internal_GetSerializedData();
-        void IPropertyGroup.Deserialize(JsonObject data) => this.Internal_Deserialize(data);
-
-        #endregion IPropertyGroup
     }
 }

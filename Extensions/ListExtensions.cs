@@ -39,7 +39,7 @@ namespace BGC.Extensions
                 Debug.LogError(
                     "Received list of length 0 which doesn't allow for random value, " +
                     "returning default value");
-                return default(T);
+                return default;
             }
 
             return (T)list[list.RandomIndex()];
@@ -60,7 +60,7 @@ namespace BGC.Extensions
                 Debug.LogError(
                     "Received list of length 0 which doesn't allow for random value, " +
                     "returning default value");
-                return default(T);
+                return default;
             }
 
             List<int> indexes = new List<int>();
@@ -71,14 +71,14 @@ namespace BGC.Extensions
                     indexes.Add(i);
                 }
             }
-        
-            if(indexes.Count == 0)
+
+            if (indexes.Count == 0)
             {
                 Debug.LogError(
                     "Recieved array of excludedIndicies that does not allow for any values to be returned, " +
                     "returning default value");
 
-                return default(T);
+                return default;
             }
 
             return (T)list[indexes.RandomValue<int>()];
@@ -270,7 +270,7 @@ namespace BGC.Extensions
                     Debug.LogError("List size is less than or equal to 0.");
                 }
 
-                return default(T);
+                return default;
             }
 
             T max = list[0];
@@ -302,7 +302,7 @@ namespace BGC.Extensions
                     Debug.LogError("List size is less than or equal to 0.");
                 }
 
-                return default(T);
+                return default;
             }
 
             T min = list[0];
@@ -360,9 +360,9 @@ namespace BGC.Extensions
             List<T> instances = new List<T>();
 
             int length = list.Count;
-            for(int i = 0; i < length; ++i)
+            for (int i = 0; i < length; ++i)
             {
-                if(list[i].Equals(value))
+                if (list[i].Equals(value))
                 {
                     instances.Add(list[i]);
                 }
@@ -378,7 +378,7 @@ namespace BGC.Extensions
         /// <param name="list"></param>
         /// <param name="separator">defaults to a comma</param>
         /// <returns></returns>
-        public static string Join<T>(this List<T> list, string separator=",")
+        public static string Join<T>(this List<T> list, string separator = ",")
         {
             Assert.IsNotNull(list);
             Assert.IsFalse(string.IsNullOrEmpty(separator));
@@ -392,7 +392,7 @@ namespace BGC.Extensions
 
                 for (int i = 1; i < length; ++i)
                 {
-                    result = $"{result}{separator}{list[i].ToString()}";
+                    result = $"{result}{separator}{list[i]}";
                 }
             }
 
@@ -409,7 +409,7 @@ namespace BGC.Extensions
         public static string Join<T>(this T[] arr, string separator)
         {
             int length = arr.Length;
-            if(length == 0)
+            if (length == 0)
             {
                 return "";
             }
@@ -417,7 +417,7 @@ namespace BGC.Extensions
             string result = arr[0].ToString();
             for (int i = 1; i < length; ++i)
             {
-                result = $"{result}{separator}{arr[i].ToString()}";
+                result = $"{result}{separator}{arr[i]}";
             }
 
             return result;
@@ -444,7 +444,7 @@ namespace BGC.Extensions
             }
             else
             {
-                value = default(T);
+                value = default;
             }
 
             return result;

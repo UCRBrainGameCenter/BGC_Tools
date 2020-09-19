@@ -33,12 +33,12 @@ namespace BGC.Parameters.Algorithms.FixedCollection
         [DisplayInputFieldKey("ExpandedTrials")]
         public string ExpandedTrialsKey { get; set; }
 
-
         [OutputField("Expanded")]
         public bool Expanded { get; set; }
 
         [DisplayOutputFieldKey("Expanded")]
         public string ExpandedKey { get; set; }
+
 
         #region IControlSource
 

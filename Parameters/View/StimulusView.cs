@@ -10,6 +10,7 @@ using BGC.UI.Dialogs;
 
 namespace BGC.Parameters.View
 {
+#pragma warning disable IDE0019 // Use pattern matching
     public enum SpawningBehavior
     {
         PropertyFrame = 0,
@@ -62,7 +63,7 @@ namespace BGC.Parameters.View
                 }
             }
 
-            foreach (PropertyInfo property in propertyContainer.GetType().GetProperties())
+            foreach (PropertyInfo property in propertyContainer.GetType().GetSortedProperties())
             {
                 if (property.GetCustomAttribute<PropertyGroupListAttribute>() != null)
                 {
@@ -98,7 +99,7 @@ namespace BGC.Parameters.View
             Transform parentTransform,
             SpawningBehavior spawningBehavior = SpawningBehavior.PropertyFrame)
         {
-            foreach (PropertyInfo property in propertyContainer.GetType().GetProperties())
+            foreach (PropertyInfo property in propertyContainer.GetType().GetSortedProperties())
             {
                 if (property.GetCustomAttribute<DisplayInputFieldAttribute>() != null)
                 {
@@ -198,6 +199,77 @@ namespace BGC.Parameters.View
                         spawningBehavior: spawningBehavior);
                 }
             }
+        }
+
+        protected void VisualizePropertyGroupSeparated(
+            IPropertyGroup propertyContainer,
+            PropertyInfo property,
+            Dropdown dropdown,
+            Transform parentTransform)
+        {
+            if (!typeof(IPropertyGroup).IsAssignableFrom(property.PropertyType))
+            {
+                Debug.LogError($"Unable to assign IPropertyGroup to {property.PropertyType}");
+                return;
+            }
+
+            IPropertyGroup propertyGroup = property.GetValue(propertyContainer) as IPropertyGroup;
+
+            if (propertyGroup == null)
+            {
+                //Construct a new instance from first selection
+                propertyGroup = property.GetDefaultSelectionType().Build();
+                property.SetValue(propertyContainer, propertyGroup);
+                propertyGroup.SetParent(propertyContainer);
+            }
+
+            if (propertyGroup == null)
+            {
+                Debug.LogError($"Unable to resolve PropertyGroup: {property}");
+            }
+
+
+            List<Dropdown.OptionData> propertyGroupChoices = new List<Dropdown.OptionData>();
+            Type[] propertyGroupChoiceTypes = property.GetSelectionTypes().ToArray();
+
+            int currentDataIndex = 0;
+
+            foreach (Type type in propertyGroupChoiceTypes)
+            {
+                propertyGroupChoices.Add(new Dropdown.OptionData(type.GetSelectionTitle()));
+
+                if (type == propertyGroup.GetType())
+                {
+                    currentDataIndex = propertyGroupChoices.Count - 1;
+                }
+            }
+
+            string title = property.GetGroupTitle();
+
+            dropdown.options = propertyGroupChoices;
+            dropdown.value = currentDataIndex;
+            dropdown.RefreshShownValue();
+            dropdown.onValueChanged.RemoveAllListeners();
+
+            dropdown.onValueChanged.AddListener((int index) =>
+            {
+                IPropertyGroup newPropertyGroup = propertyGroupChoiceTypes[index].Build();
+                newPropertyGroup.SetParent(propertyContainer);
+
+                property.SetValue(propertyContainer, newPropertyGroup);
+
+                SpawnPropertyWidgets(
+                    propertyGroup: newPropertyGroup,
+                    container: parentTransform,
+                    protectedWidget: null,
+                    spawningBehavior: SpawningBehavior.NestedInternal);
+            });
+
+            SpawnPropertyWidgets(
+                propertyGroup: propertyGroup,
+                container: parentTransform,
+                protectedWidget: null,
+                spawningBehavior: SpawningBehavior.NestedInternal);
         }
 
         private void SpawnPropertyGroupList(
@@ -443,10 +515,11 @@ namespace BGC.Parameters.View
                 //Build class-selection dropdown
 
                 List<Dropdown.OptionData> propertyGroupChoices = new List<Dropdown.OptionData>();
+                Type[] propertyGroupChoiceTypes = property.GetSelectionTypes().ToArray();
 
                 int currentDataIndex = 0;
 
-                foreach (Type type in property.GetSelectionTypes())
+                foreach (Type type in propertyGroupChoiceTypes)
                 {
                     propertyGroupChoices.Add(new Dropdown.OptionData(type.GetSelectionTitle()));
 
@@ -484,7 +557,7 @@ namespace BGC.Parameters.View
 
                 propertyGroupContainer.options.onValueChanged.AddListener((int index) =>
                 {
-                    IPropertyGroup newPropertyGroup = property.GetSelectionType(index).Build();
+                    IPropertyGroup newPropertyGroup = propertyGroupChoiceTypes[index].Build();
                     newPropertyGroup.SetParent(propertyContainer);
 
                     property.SetValue(propertyContainer, newPropertyGroup);
@@ -497,7 +570,8 @@ namespace BGC.Parameters.View
                     {
                         SpawnPropertyWidgets(
                             propertyGroup: newPropertyGroup,
-                            container: propertyGroupContainer,
+                            container: propertyGroupContainer.propertyFrame.transform,
+                            protectedWidget: propertyGroupContainer.titleBox,
                             spawningBehavior: childSpawningBehavior);
                     }
 
@@ -543,20 +617,22 @@ namespace BGC.Parameters.View
             {
                 SpawnPropertyWidgets(
                     propertyGroup: propertyGroup,
-                    container: propertyGroupContainer,
+                    container: propertyGroupContainer.propertyFrame.transform,
+                    protectedWidget: propertyGroupContainer.titleBox,
                     spawningBehavior: childSpawningBehavior);
             }
         }
 
         protected void SpawnPropertyWidgets(
             IPropertyGroup propertyGroup,
-            PropertyGroupContainer container,
+            Transform container,
+            Transform protectedWidget,
             SpawningBehavior spawningBehavior)
         {
             //Clear
-            foreach (Transform t in container.propertyFrame.transform)
+            foreach (Transform t in container)
             {
-                if (container.titleBox != t)
+                if (protectedWidget != t)
                 {
                     GameObject.Destroy(t.gameObject);
                 }
@@ -564,7 +640,7 @@ namespace BGC.Parameters.View
 
             VisualizePropertyGroup(
                 propertyContainer: propertyGroup,
-                parentTransform: container.propertyFrame.transform,
+                parentTransform: container,
                 spawningBehavior: spawningBehavior);
         }
 
@@ -759,6 +835,22 @@ namespace BGC.Parameters.View
                     onEndEdit: input => SubmitString(propertyGroup, property, input),
                     index: 0);
             }
+            else if (attribute is MultiLineStringFieldDisplayAttribute)
+            {
+                GameObject multilineBaseWidget = widgetFactory.GetContainerWidget(
+                    config: WidgetFactory.ContainerConfig.Config_Normal_Even,
+                    parent: baseWidget.transform.parent.gameObject,
+                    slots: 1);
+
+                LayoutElement layoutElement = multilineBaseWidget.AddComponent<LayoutElement>();
+                layoutElement.minHeight = 400;
+
+                widgetFactory.CreateLargeInputFieldWidget(
+                    parent: multilineBaseWidget,
+                    text: (string)property.GetValue(propertyGroup),
+                    onEndEdit: input => SubmitString(propertyGroup, property, input),
+                    index: 0);
+            }
             else
             {
                 SpawnValueInputWidget(
@@ -817,6 +909,7 @@ namespace BGC.Parameters.View
                         index: 1);
 
                 case MultiLineStringFieldDisplayAttribute _:
+                    Debug.LogError($"Not the proper way to spawn a script field!");
                     return widgetFactory.CreateLargeInputFieldWidget(
                         parent: baseWidget,
                         text: (string)property.GetValue(owningPropertyGroup),
@@ -853,8 +946,7 @@ namespace BGC.Parameters.View
                             throw new Exception($"Invalid ChoiceListMethodName: {enumAtt.choiceListMethodName}");
                         }
 
-                        List<ValueNamePair> choiceList = choiceListMethod
-                            .Invoke(owningPropertyGroup, null) as List<ValueNamePair>;
+                        List<ValueNamePair> choiceList = choiceListMethod.Invoke(owningPropertyGroup, null) as List<ValueNamePair>;
 
                         List<string> choiceTitles = new List<string>();
                         List<int> choiceValues = new List<int>();
@@ -878,9 +970,107 @@ namespace BGC.Parameters.View
                             parent: baseWidget,
                             value: choiceIndex,
                             formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_StringEntry,
-                            onValueChanged: (int value) =>
-                                SubmitEnum(owningPropertyGroup, property, choiceValues, value),
+                            onValueChanged: value => SubmitEnum(owningPropertyGroup, property, choiceValues, value),
                             optionList: choiceTitles);
+                    }
+
+                case StringDropdownDisplayAttribute stringDropAtt:
+                    {
+                        //Check local class first
+                        Type owningType = owningPropertyGroup.GetType();
+                        MethodInfo choiceListMethod = owningType.GetMethod(stringDropAtt.choiceListMethodName);
+
+                        if (choiceListMethod == null)
+                        {
+                            //If local class check fails, try from SetupMethods
+                            choiceListMethod = typeof(SetupMethods).GetMethod(stringDropAtt.choiceListMethodName);
+                        }
+
+                        if (choiceListMethod == null && FallbackSetupMethodsClass != null)
+                        {
+                            //If local class check fails, try from Fallback
+                            choiceListMethod = FallbackSetupMethodsClass.GetMethod(stringDropAtt.choiceListMethodName);
+                        }
+
+                        //If that still fails, throw exception
+                        if (choiceListMethod == null)
+                        {
+                            throw new Exception($"Invalid ChoiceListMethodName: {stringDropAtt.choiceListMethodName}");
+                        }
+
+                        List<string> choiceList = choiceListMethod.Invoke(owningPropertyGroup, null) as List<string>;
+                        List<string> displayList = choiceList;
+
+                        int choiceIndex = 0;
+
+                        string currentValue = (string)property.GetValue(owningPropertyGroup);
+
+                        if (!string.IsNullOrEmpty(currentValue))
+                        {
+                            choiceIndex = choiceList.IndexOf(currentValue);
+                            if (choiceIndex == -1)
+                            {
+                                if (stringDropAtt.retainMissingValues)
+                                {
+                                    //DisplayList needs to be separated now, since it will hold different values in the 0 slot.
+                                    displayList = new List<string>(choiceList);
+                                    displayList.Insert(0, $"Missing: {currentValue}");
+                                    choiceList.Insert(0, currentValue);
+                                    choiceIndex = 0;
+                                }
+                                else
+                                {
+                                    Debug.Log($"Resetting Property due to missing prior value: {currentValue}");
+                                    choiceIndex = 0;
+                                }
+                            }
+                        }
+
+                        if (choiceList.Count > 0)
+                        {
+                            currentValue = choiceList[choiceIndex];
+                            property.SetValue(owningPropertyGroup, currentValue);
+                        }
+
+                        if (stringDropAtt.forceRefreshOnChange)
+                        {
+                            //Find the propertygroupcontainer
+                            Transform parent = baseWidget.transform;
+                            PropertyGroupContainer groupContainer = null;
+                            do
+                            {
+                                parent = parent.parent;
+                                if (parent != null)
+                                {
+                                    groupContainer = parent.GetComponent<PropertyGroupContainer>();
+                                }
+                            }
+                            while (groupContainer == null && parent != null);
+
+                            return widgetFactory.CreateDropdownWidget(
+                                parent: baseWidget,
+                                value: choiceIndex,
+                                formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_StringEntry,
+                                onValueChanged: value =>
+                                    {
+                                        SubmitStringDropdown(owningPropertyGroup, property, choiceList, value);
+                                        SpawnPropertyWidgets(
+                                            propertyGroup: owningPropertyGroup,
+                                            container: groupContainer.propertyFrame.transform,
+                                            protectedWidget: groupContainer.titleBox,
+                                            spawningBehavior: SpawningBehavior.PropertyFrame);
+                                    },
+                                optionList: displayList);
+                        }
+                        else
+                        {
+                            return widgetFactory.CreateDropdownWidget(
+                                parent: baseWidget,
+                                value: choiceIndex,
+                                formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_StringEntry,
+                                onValueChanged: value => SubmitStringDropdown(owningPropertyGroup, property, choiceList, value),
+                                optionList: displayList);
+                        }
                     }
 
                 case FieldMirrorDisplayAttribute _:
@@ -892,7 +1082,7 @@ namespace BGC.Parameters.View
                         baseWidget: baseWidget);
 
                 default:
-                    Debug.LogError($"Unexpected PropertyType: {property.PropertyType.ToString()}");
+                    Debug.LogError($"Unexpected PropertyType: {property.PropertyType}");
                     return null;
             }
         }
@@ -986,6 +1176,15 @@ namespace BGC.Parameters.View
             property.SetValue(group, choiceValues[value]);
         }
 
+        public static void SubmitStringDropdown(
+            IPropertyGroup group,
+            PropertyInfo property,
+            List<string> choiceValues,
+            int value)
+        {
+            property.SetValue(group, choiceValues[value]);
+        }
+
         private static string GetUniqueListItemName(
             string name,
             IList propertyGroupList,
@@ -1064,4 +1263,5 @@ namespace BGC.Parameters.View
 
         #endregion Helper Methods
     }
+#pragma warning restore IDE0019 // Use pattern matching
 }

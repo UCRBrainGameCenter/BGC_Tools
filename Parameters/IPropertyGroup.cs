@@ -10,6 +10,8 @@ using Debug = UnityEngine.Debug;
 
 namespace BGC.Parameters
 {
+#pragma warning disable IDE0019 // Use pattern matching
+
     public interface IPropertyGroup
     {
         IPropertyGroup GetParent();
@@ -205,32 +207,14 @@ namespace BGC.Parameters
             {
                 string propertyGroupName = property.GetGroupSerializationName();
 
-                IPropertyGroup propertyGroup;
-
                 if (!propertyGroupData.ContainsKey(propertyGroupName))
                 {
                     Debug.Log($"Data not found for group {propertyGroupName}.  Creating default.");
-
-                    propertyGroup = property.GetDefaultSelectionType().Build();
-                    property.SetValue(container, propertyGroup);
-                    propertyGroup.SetParent(container);
+                    container.ConstructNewInternalPropertyGroup(property);
                     continue;
                 }
 
-                Type matchingType = property.FindMatchingSelectionType(
-                    typeName: propertyGroupData[propertyGroupName]["Type"].AsString);
-
-                if (matchingType == null)
-                {
-                    matchingType = property.GetDefaultSelectionType();
-                }
-
-                propertyGroup = matchingType.Build();
-
-                property.SetValue(container, propertyGroup);
-                propertyGroup.SetParent(container);
-
-                propertyGroup.Deserialize(propertyGroupData[propertyGroupName]);
+                container.DeserializeInternalPropertyGroup(property, propertyGroupData[propertyGroupName]);
             }
 
             //Deserialize Property Group Lists
@@ -251,20 +235,11 @@ namespace BGC.Parameters
 
                 foreach (JsonObject listElement in propertyGroupData[propertyGroupListName].AsJsonArray)
                 {
-                    Type matchingType = property.FindMatchingListType(listElement["Type"].AsString);
-
-                    if (matchingType == null)
-                    {
-                        Debug.LogError($"Requested type not recognized for list: {listElement["Type"].AsString}");
-                        continue;
-                    }
-
-                    IPropertyGroup propertyGroup = matchingType.Build();
-
-                    groupList.Add(propertyGroup);
-                    propertyGroup.SetParent(container);
-
-                    propertyGroup.Deserialize(listElement);
+                    DeserializeListItem(
+                        container: container,
+                        property: property,
+                        groupList: groupList,
+                        listElement: listElement);
                 }
             }
 
@@ -358,6 +333,72 @@ namespace BGC.Parameters
                     }
                 }
             }
+        }
+
+        public static void ConstructNewInternalPropertyGroup(
+            this IPropertyGroup container,
+            PropertyInfo property)
+        {
+            IPropertyGroup propertyGroup = property.GetDefaultSelectionType().Build();
+            property.SetValue(container, propertyGroup);
+            propertyGroup.SetParent(container);
+        }
+
+        public static void DeserializeInternalPropertyGroup(
+            this IPropertyGroup container,
+            PropertyInfo property,
+            JsonObject internalPropertyGroupData)
+        {
+            Type matchingType = property.FindMatchingSelectionType(internalPropertyGroupData["Type"].AsString);
+
+            if (matchingType == null)
+            {
+                Debug.LogError($"Missing Matching Type for construction: {internalPropertyGroupData["Type"].AsString}.  Proceeding with default");
+                matchingType = property.GetDefaultSelectionType();
+            }
+
+            IPropertyGroup propertyGroup = matchingType.Build();
+
+            property.SetValue(container, propertyGroup);
+            propertyGroup.SetParent(container);
+
+            propertyGroup.Deserialize(internalPropertyGroupData);
+        }
+
+        public static void DeserializeListItem(
+            this IPropertyGroup container,
+            PropertyInfo property,
+            IList groupList,
+            JsonObject listElement,
+            int index = -1)
+        {
+            Type matchingType = property.FindMatchingListType(listElement["Type"].AsString);
+
+            if (matchingType == null)
+            {
+                Debug.LogError($"Requested type not recognized for list: {listElement["Type"].AsString}");
+                return;
+            }
+
+            IPropertyGroup propertyGroup = matchingType.Build();
+
+            if (index == -1)
+            {
+                groupList.Add(propertyGroup);
+            }
+            else if (index < 0 || index > groupList.Count)
+            {
+                Debug.LogError($"Tried to insert PropertyGroup {container.GetGroupPath()} in invalid index {index}");
+                groupList.Add(propertyGroup);
+            }
+            else
+            {
+                groupList.Insert(index, propertyGroup);
+            }
+
+            propertyGroup.SetParent(container);
+
+            propertyGroup.Deserialize(listElement);
         }
 
         public static void Internal_Deserialize(this IPropertyGroup container, JsonObject data)
@@ -843,6 +884,9 @@ namespace BGC.Parameters
             throw new Exception($"Failed to locate a Selection for property: {info}");
         }
 
+        /// <summary>
+        /// Returns the valid Types for this PropertyGroup.
+        /// </summary>
         public static IEnumerable<Type> GetListAdditionTypes(this PropertyInfo propertyInfo)
         {
             foreach (AppendAdditionAttribute additionAttribute in
@@ -855,6 +899,9 @@ namespace BGC.Parameters
             }
         }
 
+        /// <summary>
+        /// Returns the valid Types for this PropertyGroup.
+        /// </summary>
         public static IEnumerable<Type> GetSelectionTypes(this PropertyInfo propertyInfo)
         {
             foreach (AppendSelectionAttribute selectionAttribute in
@@ -867,22 +914,9 @@ namespace BGC.Parameters
             }
         }
 
-        public static Type GetSelectionType(this PropertyInfo propertyInfo, int index)
-        {
-            int i = 0;
-            foreach (Type type in propertyInfo.GetSelectionTypes())
-            {
-                if (i == index)
-                {
-                    return type;
-                }
-                i++;
-            }
-
-            Debug.LogError($"Requested type index {index} for property {propertyInfo} out of range.");
-            return null;
-        }
-
+        /// <summary>
+        /// Used when deserializing to determine which object to construct.
+        /// </summary>
         public static Type FindMatchingSelectionType(this PropertyInfo propertyInfo, string typeName)
         {
             foreach (Type type in propertyInfo.GetSelectionTypes())
@@ -897,6 +931,9 @@ namespace BGC.Parameters
             return null;
         }
 
+        /// <summary>
+        /// Used when deserializing to determine which object to construct.
+        /// </summary>
         public static Type FindMatchingListType(this PropertyInfo propertyInfo, string typeName)
         {
             foreach (Type type in propertyInfo.GetListAdditionTypes())
@@ -1138,5 +1175,24 @@ namespace BGC.Parameters
 
             return propertyGroup;
         }
+
+        public static IEnumerable<PropertyInfo> GetSortedProperties(this Type type)
+        {
+            Dictionary<Type, int> orderLookup = new Dictionary<Type, int>();
+            Type iteratingType = type;
+            int index = 0;
+
+            do
+            {
+                orderLookup.Add(iteratingType, index);
+                iteratingType = iteratingType.BaseType;
+                index++;
+            }
+            while (iteratingType != null);
+
+            return type.GetProperties().OrderByDescending(x => orderLookup[x.DeclaringType]);
+        }
     }
+
+#pragma warning restore IDE0019 // Use pattern matching
 }

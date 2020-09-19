@@ -1,5 +1,6 @@
 ﻿namespace BGC.MonoUtility.Interpolation
 {
+#pragma warning disable UNT0014 // Invalid type for call to GetComponent
     /// <summary>
     /// Monobehavior to execute and manage animation-like actions on a GameObject Component.
     /// T does not have to be a MonoBehavior.  It still works if it's an interface that a
@@ -24,3 +25,5 @@
         }
     }
 }
+
+#pragma warning restore UNT0014 // Invalid type for call to GetComponent

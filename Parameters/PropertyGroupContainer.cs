@@ -6,6 +6,7 @@ using BGC.UI.Dialogs;
 
 namespace BGC.Parameters
 {
+#pragma warning disable UNT0013 // Remove invalid SerializeField attribute
     public class PropertyGroupContainer : MonoBehaviour
     {
         [SerializeField]
@@ -81,3 +82,4 @@ namespace BGC.Parameters
     }
 }
 
+#pragma warning restore UNT0013 // Remove invalid SerializeField attribute

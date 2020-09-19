@@ -1,5 +1,6 @@
 ﻿namespace BGC.MonoUtility.Interaction
 {
+#pragma warning disable UNT0014 // Invalid type for call to GetComponent
     public abstract class ClickComponentChannel<T> : ClickChannel<T>
     {
         protected T _component = default;
@@ -18,3 +19,5 @@
         }
     }
 }
+
+#pragma warning restore UNT0014 // Invalid type for call to GetComponent

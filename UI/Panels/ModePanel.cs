@@ -3,13 +3,13 @@ using UnityEngine;
 
 namespace BGC.UI.Panels
 {
+#pragma warning disable UNT0007 // Null coalescing on Unity objects
     public abstract class ModePanel : MonoBehaviour
     {
-        [NonSerialized]
+        [NonSerialized] //Added to fix Unity Serialization issue
         private RectTransform rt = null;
         public RectTransform RectTransform => rt ?? (rt = GetComponent<RectTransform>());
 
-        [NonSerialized]
         private RectTransform parentRT = null;
         public RectTransform ParentRectTransform => parentRT ?? (parentRT = RectTransform.parent.GetComponent<RectTransform>());
 
@@ -28,4 +28,5 @@ namespace BGC.UI.Panels
             RectTransform.localPosition = visible ? Vector2.zero : new Vector2(Screen.width, Screen.height);
         }
     }
+#pragma warning restore UNT0007 // Null coalescing on Unity objects
 }

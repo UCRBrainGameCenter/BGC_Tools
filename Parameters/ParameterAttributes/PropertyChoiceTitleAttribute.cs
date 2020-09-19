@@ -2,11 +2,10 @@
 
 namespace BGC.Parameters
 {
-    [Flags]
     public enum ChoiceRenderingModifier
     {
         Normal = 0,
-        Controlled = 1 << 0
+        Controlled
     }
 
     [AttributeUsage(AttributeTargets.Class)]
