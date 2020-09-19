@@ -5,6 +5,8 @@ using UnityEngine.UI;
 
 namespace BGC.Parameters.View
 {
+#pragma warning disable IDE0051 // Remove unused private members
+
     public class WidgetFactory : MonoBehaviour
     {
         [Header("Prefabs")]
@@ -235,24 +237,6 @@ namespace BGC.Parameters.View
 
             Config_BatteryText = ThemeType_SystemText,
             Config_InfoText = ThemeType_InfoText
-
-        }
-
-        private static WidgetFactory _instance;
-        public static WidgetFactory instance
-        {
-            get
-            {
-                if (_instance == null)
-                {
-                    _instance = new WidgetFactory();
-                }
-                return _instance;
-            }
-        }
-
-        private WidgetFactory()
-        {
 
         }
 
@@ -1086,6 +1070,7 @@ namespace BGC.Parameters.View
                 default: return false;
             }
         }
-
     }
+
+#pragma warning restore IDE0051 // Remove unused private members
 }

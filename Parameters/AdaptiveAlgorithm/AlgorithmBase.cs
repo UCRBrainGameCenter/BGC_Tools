@@ -8,7 +8,7 @@ using BGC.Scripting;
 namespace BGC.Parameters.Algorithms
 {
     [PropertyGroupTitle("Algorithm")]
-    public abstract class AlgorithmBase : IPropertyGroup, IControlSource
+    public abstract class AlgorithmBase : CommonPropertyGroup, IControlSource
     {
         protected abstract void FinishInitialization();
         public abstract bool IsDone();
@@ -57,25 +57,6 @@ namespace BGC.Parameters.Algorithms
         }
 
         #endregion IControlSource
-        #region IPropertyGroup
-
-        private IPropertyGroup _parentPropertyGroup;
-
-        IPropertyGroup IPropertyGroup.GetParent() => _parentPropertyGroup;
-        void IPropertyGroup.SetParent(IPropertyGroup parent)
-        {
-            _parentPropertyGroup = parent;
-            foreach (PropertyInfo property in this.GetInitializeableFieldProperties())
-            {
-                this.InitializeProperty(property);
-            }
-        }
-
-        JsonObject IPropertyGroup.Serialize() => this.Internal_GetSerializedData();
-
-        void IPropertyGroup.Deserialize(JsonObject data) => this.Internal_Deserialize(data);
-
-        #endregion IPropertyGroup
     }
 
 

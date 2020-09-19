@@ -6,6 +6,8 @@ using UnityEngine.UI;
 
 namespace BGC.Parameters.View
 {
+#pragma warning disable UNT0013 // Remove invalid SerializeField attribute
+
     [RequireComponent(typeof(InputField))]
     public class OptionInputField : MonoBehaviour
     {
@@ -45,4 +47,6 @@ namespace BGC.Parameters.View
             }
         }
     }
+
+#pragma warning restore UNT0013 // Remove invalid SerializeField attribute
 }

@@ -35,9 +35,8 @@ namespace BGC.Mathematics
             copyIndexes.Shuffle();
 
             for (int i = 0; i < indexes.Length; ++i)
-            { 
-                Node<int> child;
-                TreeOfAllCombinations(indexes, outputSize - 1, out child);
+            {
+                TreeOfAllCombinations(indexes, outputSize - 1, out Node<int> child);
                 child.Value = copyIndexes[i];
                 root.Children.Add(child);
             }
@@ -91,8 +90,7 @@ namespace BGC.Mathematics
         /// </summary>
         public static IEnumerator<List<int>> AllCombinationsGenerator(int[] indexes, int outputSize)
         {
-            Node<int> root;
-            TreeOfAllCombinations(indexes, outputSize, out root);
+            TreeOfAllCombinations(indexes, outputSize, out Node<int> root);
             List<List<int>> combinations = ListOfAllCombinations(root);
 
             for (int i = 0; i < combinations.Count; ++i)

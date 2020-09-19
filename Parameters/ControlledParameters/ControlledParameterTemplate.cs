@@ -39,7 +39,7 @@ namespace BGC.Parameters
         JsonObject IPropertyGroup.Serialize()
         {
             JsonObject baseData = this.Internal_GetSerializedData();
-            baseData.Add("Path", controlledParameter.GetGroupPath());
+            baseData.Add("Path", controlledParameter.GetGroupPath(true));
             baseData.Add("Controller", Controller);
             baseData.Add("ControllerParameter", ControllerParameter);
 

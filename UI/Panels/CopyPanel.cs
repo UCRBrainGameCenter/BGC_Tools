@@ -15,13 +15,15 @@ namespace BGC.UI.Panels
         [SerializeField]
         private Camera mainCamera = null;
 
-        [NonSerialized]
+#pragma warning disable UNT0007 // Null coalescing on Unity objects
+
         private Image _image = null;
         public Image Image => _image ?? (_image = GetComponent<Image>());
 
-        [NonSerialized]
+#pragma warning restore UNT0007 // Null coalescing on Unity objects
+
+        [NonSerialized] //Added to fix Unity Serialization issue
         private RenderTexture rt;
-        [NonSerialized]
         private Texture2D tex;
 
         private const float scalefactor = 4f;
