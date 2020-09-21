@@ -432,6 +432,9 @@ namespace BGC.Parameters
         public static string GetChoiceInfoText(this Type type) =>
             type.GetCustomAttribute<PropertyChoiceInfoAttribute>()?.text;
 
+        public static bool IsTaskGroupTerminator(this Type type) =>
+            type.GetCustomAttribute<TaskGroupTerminatorAttribute>() != null;
+
         public static PropertyGroupTitleAttribute GetGroupAttribute(this IPropertyGroup propertyGroup)
         {
             IPropertyGroup parent = propertyGroup.GetParent();
@@ -536,7 +539,9 @@ namespace BGC.Parameters
         public static ChoiceRenderingModifier GetSelectionChoiceRenderingModifier(this Type type) =>
             type.GetSelectionAttribute().renderingModifier;
 
-        public static string GetGroupPath(this IPropertyGroup propertyGroup)
+        public static string GetGroupPath(
+            this IPropertyGroup propertyGroup,
+            bool taskGroupOnly = false)
         {
             List<string> pathComponents = new List<string>();
 
@@ -545,6 +550,12 @@ namespace BGC.Parameters
 
             while ((parent = child.GetParent()) != null)
             {
+                if (taskGroupOnly && child.GetType().IsTaskGroupTerminator())
+                {
+                    //End at the specified Terminating Type
+                    break;
+                }
+
                 bool found = false;
 
                 //Search properties
@@ -1040,7 +1051,8 @@ namespace BGC.Parameters
         }
 
         public static FieldDisplayAttribute SearchHierarchyForConcreteFieldAttribute(
-            this IPropertyGroup propertyGroup, string fieldName)
+            this IPropertyGroup propertyGroup,
+            string fieldName)
         {
             IPropertyGroup current = propertyGroup;
             FieldDisplayAttribute attribute = null;
@@ -1166,10 +1178,15 @@ namespace BGC.Parameters
             }
         }
 
-        public static IPropertyGroup GetRoot(this IPropertyGroup propertyGroup)
+        public static IPropertyGroup GetRoot(this IPropertyGroup propertyGroup, bool taskGroupOnly)
         {
             while (propertyGroup.GetParent() is IPropertyGroup parent)
             {
+                if (taskGroupOnly && propertyGroup.GetType().IsTaskGroupTerminator())
+                {
+                    break;
+                }
+
                 propertyGroup = parent;
             }
 
@@ -1190,7 +1207,21 @@ namespace BGC.Parameters
             }
             while (iteratingType != null);
 
-            return type.GetProperties().OrderByDescending(x => orderLookup[x.DeclaringType]);
+            return type.GetProperties().OrderBy(GetPropertyOrderValue).ThenByDescending(x => orderLookup[x.DeclaringType]);
+        }
+
+        /// <summary>
+        /// Returns the ordering value for this PropertyInfo
+        /// </summary>
+        public static int GetPropertyOrderValue(this PropertyInfo propertyInfo)
+        {
+            if (propertyInfo.GetCustomAttribute<OverrideDefaultOrderingAttribute>() is
+                OverrideDefaultOrderingAttribute attr)
+            {
+                return attr.orderPriority;
+            }
+
+            return 0;
         }
     }
 

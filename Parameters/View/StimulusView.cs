@@ -207,6 +207,9 @@ namespace BGC.Parameters.View
             Dropdown dropdown,
             Transform parentTransform)
         {
+            dropdown.onValueChanged.RemoveAllListeners();
+            dropdown.ClearOptions();
+
             if (!typeof(IPropertyGroup).IsAssignableFrom(property.PropertyType))
             {
                 Debug.LogError($"Unable to assign IPropertyGroup to {property.PropertyType}");
@@ -249,7 +252,6 @@ namespace BGC.Parameters.View
             dropdown.options = propertyGroupChoices;
             dropdown.value = currentDataIndex;
             dropdown.RefreshShownValue();
-            dropdown.onValueChanged.RemoveAllListeners();
 
             dropdown.onValueChanged.AddListener((int index) =>
             {
@@ -349,6 +351,7 @@ namespace BGC.Parameters.View
                                 newPropertyGroup.SetParent(propertyContainer);
                                 propertyGroupList.Add(newPropertyGroup);
                                 newPropertyGroup.SetItemTitle(title);
+                                newPropertyGroup.BuildPartialPropertyGroup();
 
                                 if (shallow)
                                 {

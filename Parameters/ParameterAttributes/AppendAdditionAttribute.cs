@@ -25,5 +25,4 @@ namespace BGC.Parameters
             this.additionTypes = additionTypes.Clone() as Type[];
         }
     }
-    
 }
