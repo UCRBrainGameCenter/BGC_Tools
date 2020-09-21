@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Assertions;
 
@@ -88,16 +89,27 @@ namespace BGC.Extensions
         /// Randomize a list
         /// </summary>
         /// <param name="list"></param>
-        public static void Shuffle(this IList list)
+        public static void Shuffle<T>(this IList<T> list)
         {
-            int length = list.Count;
+            int length = list.Count - 1;
             for (int i = 0; i < length; ++i)
             {
                 int randomIndex = Random.Range(i, list.Count);
-                object temp = list[i];
+                T temp = list[i];
                 list[i] = list[randomIndex];
                 list[randomIndex] = temp;
             }
+        }
+
+        /// <summary>
+        /// Randomize an enumerable and return it as an array.
+        /// </summary>
+        /// <param name="source"></param>
+        public static T[] Shuffled<T>(this IEnumerable<T> source)
+        {
+            T[] array = source.ToArray();
+            array.Shuffle();
+            return array;
         }
 
         /// <summary>
