@@ -929,7 +929,11 @@ namespace BGC.Parameters.View
                     {
                         //Check local class first
                         Type owningType = owningPropertyGroup.GetType();
-                        MethodInfo choiceListMethod = owningType.GetMethod(enumAtt.choiceListMethodName);
+                        MethodInfo choiceListMethod = null;
+                        for (Type currentType = owningType; currentType != null && choiceListMethod == null; currentType = currentType.BaseType)
+                        {
+                            choiceListMethod = currentType.GetMethod(enumAtt.choiceListMethodName);
+                        }
 
                         if (choiceListMethod == null)
                         {
@@ -981,7 +985,11 @@ namespace BGC.Parameters.View
                     {
                         //Check local class first
                         Type owningType = owningPropertyGroup.GetType();
-                        MethodInfo choiceListMethod = owningType.GetMethod(stringDropAtt.choiceListMethodName);
+                        MethodInfo choiceListMethod = null;
+                        for (Type currentType = owningType; currentType != null && choiceListMethod == null; currentType = currentType.BaseType)
+                        {
+                            choiceListMethod = currentType.GetMethod(stringDropAtt.choiceListMethodName);
+                        }
 
                         if (choiceListMethod == null)
                         {
