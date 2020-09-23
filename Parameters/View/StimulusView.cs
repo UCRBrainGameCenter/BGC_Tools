@@ -97,6 +97,7 @@ namespace BGC.Parameters.View
         protected void VisualizePropertyGroup(
             IPropertyGroup propertyContainer,
             Transform parentTransform,
+            Action respawnPropertyGroupCallback,
             SpawningBehavior spawningBehavior = SpawningBehavior.PropertyFrame)
         {
             foreach (PropertyInfo property in propertyContainer.GetType().GetSortedProperties())
@@ -119,7 +120,8 @@ namespace BGC.Parameters.View
                         SpawnPropertyWidget(
                             propertyGroup: propertyContainer,
                             property: property,
-                            baseWidget: baseWidget);
+                            baseWidget: baseWidget,
+                            respawnPropertyGroupCallback: respawnPropertyGroupCallback);
                     }
                     else
                     {
@@ -362,6 +364,7 @@ namespace BGC.Parameters.View
                                     VisualizePropertyGroup(
                                         propertyContainer: newPropertyGroup,
                                         parentTransform: propertyListItemContainer.propertyFrame.transform,
+                                        respawnPropertyGroupCallback: null,
                                         spawningBehavior: SpawningBehavior.NestedInternal);
                                 }
                             },
@@ -440,6 +443,7 @@ namespace BGC.Parameters.View
                     VisualizePropertyGroup(
                         propertyContainer: propertyGroup,
                         parentTransform: propertyListItemContainer.propertyFrame.transform,
+                        respawnPropertyGroupCallback: null,
                         spawningBehavior: SpawningBehavior.NestedInternal);
                 }
             }
@@ -628,6 +632,7 @@ namespace BGC.Parameters.View
             VisualizePropertyGroup(
                 propertyContainer: propertyGroup,
                 parentTransform: container,
+                respawnPropertyGroupCallback: () => SpawnPropertyWidgets(propertyGroup, container, protectedWidget, spawningBehavior),
                 spawningBehavior: spawningBehavior);
         }
 
@@ -685,6 +690,7 @@ namespace BGC.Parameters.View
             VisualizePropertyGroup(
                 propertyContainer: parameterTemplate,
                 parentTransform: container.propertyFrame.transform,
+                respawnPropertyGroupCallback: null,
                 spawningBehavior: SpawningBehavior.NestedInternal);
         }
 
@@ -716,7 +722,8 @@ namespace BGC.Parameters.View
                 owningPropertyGroup: propertyGroup,
                 property: valueProperty,
                 attribute: attribute,
-                baseWidget: baseWidget);
+                baseWidget: baseWidget,
+                respawnPropertyGroupCallback: null);
 
             GameObject keyWidget = widgetFactory.CreateInputFieldWidget(
                 parent: baseWidget,
@@ -786,7 +793,8 @@ namespace BGC.Parameters.View
         public void SpawnPropertyWidget(
             IPropertyGroup propertyGroup,
             PropertyInfo property,
-            GameObject baseWidget)
+            GameObject baseWidget,
+            Action respawnPropertyGroupCallback)
         {
             string propertyLabel = property.GetInputFieldName();
 
@@ -844,7 +852,8 @@ namespace BGC.Parameters.View
                     owningPropertyGroup: propertyGroup,
                     property: property,
                     attribute: attribute,
-                    baseWidget: baseWidget);
+                    baseWidget: baseWidget,
+                    respawnPropertyGroupCallback: respawnPropertyGroupCallback);
             }
         }
 
@@ -852,7 +861,8 @@ namespace BGC.Parameters.View
             IPropertyGroup owningPropertyGroup,
             PropertyInfo property,
             FieldDisplayAttribute attribute,
-            GameObject baseWidget)
+            GameObject baseWidget,
+            Action respawnPropertyGroupCallback)
         {
             switch (attribute)
             {
@@ -1029,18 +1039,12 @@ namespace BGC.Parameters.View
 
                         if (stringDropAtt.forceRefreshOnChange)
                         {
-                            //Find the propertygroupcontainer
-                            Transform parent = baseWidget.transform;
-                            PropertyGroupContainer groupContainer = null;
-                            do
+                            if (respawnPropertyGroupCallback == null)
                             {
-                                parent = parent.parent;
-                                if (parent != null)
-                                {
-                                    groupContainer = parent.GetComponent<PropertyGroupContainer>();
-                                }
+                                //respawnPropertyGroupCallback is passed as null from contexts where it isn't currently supported
+                                throw new NotSupportedException(
+                                    "StringDropdownDisplay's ForceRefreshOnChange attribute not currently supported from this context.");
                             }
-                            while (groupContainer == null && parent != null);
 
                             return widgetFactory.CreateDropdownWidget(
                                 parent: baseWidget,
@@ -1048,12 +1052,10 @@ namespace BGC.Parameters.View
                                 formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_StringEntry,
                                 onValueChanged: value =>
                                     {
+                                        //Update Value
                                         SubmitStringDropdown(owningPropertyGroup, property, choiceList, value);
-                                        SpawnPropertyWidgets(
-                                            propertyGroup: owningPropertyGroup,
-                                            container: groupContainer.propertyFrame.transform,
-                                            protectedWidget: groupContainer.titleBox,
-                                            spawningBehavior: SpawningBehavior.PropertyFrame);
+                                        //Force Refresh
+                                        respawnPropertyGroupCallback.Invoke();
                                     },
                                 optionList: displayList);
                         }
@@ -1074,7 +1076,8 @@ namespace BGC.Parameters.View
                         owningPropertyGroup: owningPropertyGroup,
                         property: property,
                         attribute: owningPropertyGroup.SearchHierarchyForConcreteFieldAttribute(attribute.fieldName),
-                        baseWidget: baseWidget);
+                        baseWidget: baseWidget,
+                        respawnPropertyGroupCallback: respawnPropertyGroupCallback);
 
                 default:
                     Debug.LogError($"Unexpected PropertyType: {property.PropertyType}");

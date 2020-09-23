@@ -638,12 +638,14 @@ namespace BGC.Parameters.View
                 dropdown.AddOptions(optionList);
             }
 
+            //Prevent unnecessary call of onValueChanged by setting the value before setting the callback
+            dropdown.value = value;
+
             if (onValueChanged != null)
             {
                 dropdown.onValueChanged.AddListener(onValueChanged);
             }
 
-            dropdown.value = value;
             dropdown.RefreshShownValue();
 
             return dropdownWidget;
