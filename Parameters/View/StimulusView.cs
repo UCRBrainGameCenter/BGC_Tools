@@ -180,9 +180,7 @@ namespace BGC.Parameters.View
                     if (propertyGroup == null)
                     {
                         //Construct a new instance from first selection
-                        propertyGroup = property.GetDefaultSelectionType().Build();
-                        property.SetValue(propertyContainer, propertyGroup);
-                        propertyGroup.SetParent(propertyContainer);
+                        propertyGroup = property.GetDefaultSelectionType().Build(propertyContainer, property);
                     }
 
                     if (propertyGroup == null)
@@ -221,9 +219,7 @@ namespace BGC.Parameters.View
             if (propertyGroup == null)
             {
                 //Construct a new instance from first selection
-                propertyGroup = property.GetDefaultSelectionType().Build();
-                property.SetValue(propertyContainer, propertyGroup);
-                propertyGroup.SetParent(propertyContainer);
+                propertyGroup = property.GetDefaultSelectionType().Build(propertyContainer, property);
             }
 
             if (propertyGroup == null)
@@ -255,11 +251,7 @@ namespace BGC.Parameters.View
 
             dropdown.onValueChanged.AddListener((int index) =>
             {
-                IPropertyGroup newPropertyGroup = propertyGroupChoiceTypes[index].Build();
-                newPropertyGroup.SetParent(propertyContainer);
-
-                property.SetValue(propertyContainer, newPropertyGroup);
-
+                IPropertyGroup newPropertyGroup = propertyGroupChoiceTypes[index].Build(propertyContainer, property);
                 SpawnPropertyWidgets(
                     propertyGroup: newPropertyGroup,
                     container: parentTransform,
@@ -347,11 +339,7 @@ namespace BGC.Parameters.View
 
                                 title = GetUniqueListItemName(title, propertyGroupList);
 
-                                IPropertyGroup newPropertyGroup = types[selectionIndex].Build();
-                                newPropertyGroup.SetParent(propertyContainer);
-                                propertyGroupList.Add(newPropertyGroup);
-                                newPropertyGroup.SetItemTitle(title);
-                                newPropertyGroup.BuildPartialPropertyGroup();
+                                IPropertyGroup newPropertyGroup = types[selectionIndex].Build(title, propertyContainer, propertyGroupList);
 
                                 if (shallow)
                                 {
@@ -455,7 +443,6 @@ namespace BGC.Parameters.View
                         spawningBehavior: SpawningBehavior.NestedInternal);
                 }
             }
-
         }
 
         protected void SpawnPropertyGroup(
@@ -560,10 +547,7 @@ namespace BGC.Parameters.View
 
                 propertyGroupContainer.options.onValueChanged.AddListener((int index) =>
                 {
-                    IPropertyGroup newPropertyGroup = propertyGroupChoiceTypes[index].Build();
-                    newPropertyGroup.SetParent(propertyContainer);
-
-                    property.SetValue(propertyContainer, newPropertyGroup);
+                    IPropertyGroup newPropertyGroup = propertyGroupChoiceTypes[index].Build(propertyContainer, property);
 
                     if (shallow)
                     {

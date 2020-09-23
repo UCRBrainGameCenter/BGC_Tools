@@ -20,24 +20,5 @@
             UnityEngine.Debug.LogError($"Parameter Template Type not supported: {template}");
             return "";
         }
-
-        public static ControlledParameterTemplate BuildTemplate(this IControlled controlledParameter)
-        {
-            switch (controlledParameter.ControlledBasis)
-            {
-                case ControlledBasis.FloatingPoint:
-                    return new ControlledDoubleParameterTemplate(controlledParameter);
-
-                case ControlledBasis.Integer:
-                    return new ControlledIntParameterTemplate(controlledParameter);
-
-                case ControlledBasis.String:
-                    return new ControlledStringParameterTemplate(controlledParameter);
-
-                default:
-                    UnityEngine.Debug.LogError($"Unexpected ControlledBasis: {controlledParameter.ControlledBasis}");
-                    return null;
-            }
-        }
     }
 }

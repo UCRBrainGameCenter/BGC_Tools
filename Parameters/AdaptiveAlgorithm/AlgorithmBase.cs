@@ -8,11 +8,33 @@ using BGC.Scripting;
 namespace BGC.Parameters.Algorithms
 {
     [PropertyGroupTitle("Algorithm")]
-    public abstract class AlgorithmBase : CommonPropertyGroup, IControlSource
+    public abstract class AlgorithmBase : CommonPropertyGroup, IControlSource, IAlgorithm
     {
         protected abstract void FinishInitialization();
         public abstract bool IsDone();
 
+        #region IAlgorithm
+
+        public virtual ControlledParameterTemplate BuildTemplate(IControlled controlledParameter)
+        {
+            switch (controlledParameter.ControlledBasis)
+            {
+                case ControlledBasis.FloatingPoint:
+                    return new ControlledDoubleParameterTemplate(controlledParameter);
+
+                case ControlledBasis.Integer:
+                    return new ControlledIntParameterTemplate(controlledParameter);
+
+                case ControlledBasis.String:
+                    return new ControlledStringParameterTemplate(controlledParameter);
+
+                default:
+                    UnityEngine.Debug.LogError($"Unexpected ControlledBasis: {controlledParameter.ControlledBasis}");
+                    return null;
+            }
+        }
+
+        #endregion IAlgorithm
         #region IControlSource
 
         protected readonly HashSet<ControlledParameterTemplate> controlledParameters = new HashSet<ControlledParameterTemplate>();

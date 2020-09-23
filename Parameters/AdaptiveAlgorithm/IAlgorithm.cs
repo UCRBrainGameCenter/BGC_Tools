@@ -4,5 +4,7 @@
     public interface IAlgorithm : IPropertyGroup
     {
         bool IsDone();
+
+        ControlledParameterTemplate BuildTemplate(IControlled controlledParameter);
     }
 }

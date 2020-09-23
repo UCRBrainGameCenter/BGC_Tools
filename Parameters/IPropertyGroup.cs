@@ -337,12 +337,7 @@ namespace BGC.Parameters
 
         public static void ConstructNewInternalPropertyGroup(
             this IPropertyGroup container,
-            PropertyInfo property)
-        {
-            IPropertyGroup propertyGroup = property.GetDefaultSelectionType().Build();
-            property.SetValue(container, propertyGroup);
-            propertyGroup.SetParent(container);
-        }
+            PropertyInfo property) => property.GetDefaultSelectionType().Build(container, property);
 
         public static void DeserializeInternalPropertyGroup(
             this IPropertyGroup container,
@@ -357,12 +352,8 @@ namespace BGC.Parameters
                 matchingType = property.GetDefaultSelectionType();
             }
 
-            IPropertyGroup propertyGroup = matchingType.Build();
-
-            property.SetValue(container, propertyGroup);
-            propertyGroup.SetParent(container);
-
-            propertyGroup.Deserialize(internalPropertyGroupData);
+            matchingType.Build(container, property)
+                .Deserialize(internalPropertyGroupData);
         }
 
         public static void DeserializeListItem(
@@ -397,7 +388,7 @@ namespace BGC.Parameters
             }
 
             propertyGroup.SetParent(container);
-
+            propertyGroup.InitializeProperties();
             propertyGroup.Deserialize(listElement);
         }
 
@@ -796,6 +787,14 @@ namespace BGC.Parameters
             }
         }
 
+        public static void InitializeProperties(this IPropertyGroup propertyGroup)
+        {
+            foreach (PropertyInfo property in propertyGroup.GetInitializeableFieldProperties())
+            {
+                propertyGroup.InitializeProperty(property);
+            }
+        }
+
         public static IEnumerable<PropertyInfo> GetOutputKeyProperties(this IPropertyGroup propertyGroup)
         {
             foreach (PropertyInfo property in propertyGroup.GetType().GetProperties())
@@ -962,6 +961,36 @@ namespace BGC.Parameters
         public static IPropertyGroup Build(this Type type) =>
             Activator.CreateInstance(type) as IPropertyGroup;
 
+        /// <summary>
+        /// Build the specified type, and assign it to the specified propertyInfo in the parentGroup.
+        /// </summary>
+        public static IPropertyGroup Build(this Type type, IPropertyGroup parentGroup, PropertyInfo propertyInfo)
+        {
+            IPropertyGroup newPropertyGroup = Activator.CreateInstance(type) as IPropertyGroup;
+            propertyInfo.SetValue(parentGroup, newPropertyGroup);
+            newPropertyGroup.SetParent(parentGroup);
+
+            newPropertyGroup.InitializeProperties();
+
+            return newPropertyGroup;
+        }
+
+        /// <summary>
+        /// Build the specified type, and Add it to the specified List in the parentGroup.
+        /// </summary>
+        public static IPropertyGroup Build(this Type type, string itemTitle, IPropertyGroup parentGroup, IList propertyList)
+        {
+            IPropertyGroup newPropertyGroup = Activator.CreateInstance(type) as IPropertyGroup;
+            propertyList.Add(newPropertyGroup);
+            newPropertyGroup.SetParent(parentGroup);
+            newPropertyGroup.SetItemTitle(itemTitle);
+
+            newPropertyGroup.InitializeProperties();
+            newPropertyGroup.BuildPartialPropertyGroup();
+
+            return newPropertyGroup;
+        }
+
         public static string GetInitializableFieldName(this PropertyInfo propertyInfo) =>
             propertyInfo.GetCustomAttribute<DisplayInputFieldAttribute>()?.fieldName ??
             propertyInfo.GetCustomAttribute<DisplayOutputFieldKeyAttribute>()?.fieldName ?? "";
@@ -1026,9 +1055,7 @@ namespace BGC.Parameters
                 if (internalPropertyGroup == null)
                 {
                     //Construct a new instance from first selection
-                    internalPropertyGroup = property.GetDefaultSelectionType().Build();
-                    property.SetValue(propertyGroup, internalPropertyGroup);
-                    internalPropertyGroup.SetParent(propertyGroup);
+                    internalPropertyGroup = property.GetDefaultSelectionType().Build(propertyGroup, property);
                 }
 
                 internalPropertyGroup.BuildPartialPropertyGroup();
