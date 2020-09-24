@@ -41,7 +41,7 @@ namespace BGC.Audio
             }
             interpDelta[interpDelta.Length - 1] = 0.0;
 
-            double[] samplesOut = new double[(int)(samples.Length * sampleRatio)];
+            double[] samplesOut = new double[(int)((samples.Length / channels) * sampleRatio) * channels];
 
             double scale = Math.Min(1.0, sampleRatio);
             double timeIncrement = 1.0 / sampleRatio;
@@ -56,8 +56,8 @@ namespace BGC.Audio
             double weight = 0.0;
 
             int nwin = interpWin.Length;
-            int origCount = samples.Length;
-            int outCount = samplesOut.Length;
+            int origCount = samples.Length / channels;
+            int outCount = samplesOut.Length / channels;
 
             for (int t = 0; t < outCount; t++)
             {
