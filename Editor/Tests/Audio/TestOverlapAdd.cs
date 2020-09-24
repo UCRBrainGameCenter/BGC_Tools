@@ -28,6 +28,7 @@ namespace BGC.Tests
             WaveEncoding.SaveFile(
                 filepath: DataManagement.PathForDataFile("Test", $"{baseFile}_Unmodified.wav"),
                 channels: song.Channels,
+                sampleRate: (int)song.SamplingRate,
                 samples: song.Samples,
                 overwrite: true);
 
@@ -39,6 +40,7 @@ namespace BGC.Tests
                 WaveEncoding.SaveFile(
                     filepath: DataManagement.PathForDataFile("Test", $"{baseFile}_Slowed_05.wav"),
                     channels: slowed_05.Channels,
+                    sampleRate: (int)slowed_05.SamplingRate,
                     samples: slowed_05.Samples,
                     overwrite: true);
             }
@@ -51,6 +53,7 @@ namespace BGC.Tests
                 WaveEncoding.SaveFile(
                     filepath: DataManagement.PathForDataFile("Test", $"{baseFile}_Slowed_25.wav"),
                     channels: slowed_25.Channels,
+                    sampleRate: (int)slowed_25.SamplingRate,
                     samples: slowed_25.Samples,
                     overwrite: true);
             }
@@ -63,6 +66,7 @@ namespace BGC.Tests
                 WaveEncoding.SaveFile(
                     filepath: DataManagement.PathForDataFile("Test", $"{baseFile}_Slowed_50.wav"),
                     channels: slowed_50.Channels,
+                    sampleRate: (int)slowed_50.SamplingRate,
                     samples: slowed_50.Samples,
                     overwrite: true);
             }
@@ -88,6 +92,7 @@ namespace BGC.Tests
             WaveEncoding.SaveFile(
                 filepath: DataManagement.PathForDataFile("Test", $"{baseFile}_Carlile.wav"),
                 channels: song.Channels,
+                sampleRate: (int)song.SamplingRate,
                 samples: song.Samples,
                 overwrite: true);
 

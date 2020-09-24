@@ -23,6 +23,7 @@ namespace BGC.Tests
             Assert.IsTrue(WaveEncoding.SaveFile(
                 filepath: singleChannelFile,
                 channels: 1,
+                sampleRate: 44100,
                 samples: singleChannelSamples,
                 overwrite: true));
 
@@ -41,6 +42,7 @@ namespace BGC.Tests
             Assert.IsTrue(WaveEncoding.SaveFile(
                 filepath: secondSingleChannel,
                 channels: 1,
+                sampleRate: 44100,
                 samples: singleChannelSamples,
                 overwrite: true));
         }
@@ -55,6 +57,7 @@ namespace BGC.Tests
             Assert.IsTrue(WaveEncoding.SaveFile(
                 filepath: dualChannelFile,
                 channels: 2,
+                sampleRate: 44100,
                 samples: dualChannelSamples,
                 overwrite: true));
 
@@ -73,6 +76,7 @@ namespace BGC.Tests
             Assert.IsTrue(WaveEncoding.SaveFile(
                 filepath: secondDualChannel,
                 channels: 2,
+                sampleRate: 44100,
                 samples: dualChannelSamples,
                 overwrite: true));
         }

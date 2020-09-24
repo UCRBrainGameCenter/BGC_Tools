@@ -156,6 +156,7 @@ namespace BGC.Audio
                 filepath: filepath,
                 data: stream,
                 channels: stream.Channels,
+                sampleRate: (int)stream.SamplingRate,
                 dataWriter: StreamWriter,
                 overwrite: overwrite);
         }
@@ -166,6 +167,7 @@ namespace BGC.Audio
         public static bool SaveFile(
             string filepath,
             int channels,
+            int sampleRate,
             float[] samples,
             bool overwrite = false)
         {
@@ -173,6 +175,7 @@ namespace BGC.Audio
                 filepath: filepath,
                 data: samples,
                 channels: channels,
+                sampleRate: sampleRate,
                 dataWriter: SimpleWriter,
                 overwrite: overwrite);
         }
@@ -183,6 +186,7 @@ namespace BGC.Audio
         public static bool SaveFile(
             string filepath,
             int channels,
+            int sampleRate,
             short[] samples,
             bool overwrite = false)
         {
@@ -190,6 +194,7 @@ namespace BGC.Audio
                 filepath: filepath,
                 data: samples,
                 channels: channels,
+                sampleRate: sampleRate,
                 dataWriter: SimpleWriter,
                 overwrite: overwrite);
         }
@@ -200,6 +205,7 @@ namespace BGC.Audio
         public static bool SaveFile(
             string filepath,
             int channels,
+            int sampleRate,
             float[] leftSamples,
             float[] rightSamples,
             bool overwrite = false)
@@ -208,6 +214,7 @@ namespace BGC.Audio
                 filepath: filepath,
                 data: (leftSamples, rightSamples),
                 channels: channels,
+                sampleRate: sampleRate,
                 dataWriter: StereoWriter,
                 overwrite: overwrite);
         }
@@ -454,10 +461,8 @@ namespace BGC.Audio
             return true;
         }
 
-        private static FileStream CreateFile(string filepath, int samples, int channels = 2)
+        private static FileStream CreateFile(string filepath, int samples, int channels, int sampleRate)
         {
-            const int hz = 44100;
-
             const int waveIDSize = 4;
             const int chunkHeaderSize = 8;
             const int fmtSize = 18;
@@ -502,9 +507,9 @@ namespace BGC.Audio
             //Number of Channels - 2 bytes
             fileStream.Write(BitConverter.GetBytes((short)channels), 0, 2);
             //Sampling Rate - 4 bytes
-            fileStream.Write(BitConverter.GetBytes(hz), 0, 4);
+            fileStream.Write(BitConverter.GetBytes(sampleRate), 0, 4);
             //Average Bytes Per Second - 4 bytes
-            fileStream.Write(BitConverter.GetBytes(hz * channels * 2), 0, 4);
+            fileStream.Write(BitConverter.GetBytes(sampleRate * channels * 2), 0, 4);
             //Block Align - 2 bytes
             fileStream.Write(BitConverter.GetBytes((short)(channels * 2)), 0, 2);
             //Bits Per Sample - 2 bytes
@@ -903,7 +908,8 @@ namespace BGC.Audio
         private delegate bool DataWriter<T>(
             string filepath,
             T data,
-            int channels);
+            int channels,
+            int sampleRate);
 
         /// <summary>
         /// Save the samples passed in as a WAVE file with the specified filepath.  Returns success.
@@ -912,6 +918,7 @@ namespace BGC.Audio
             string filepath,
             T data,
             int channels,
+            int sampleRate,
             DataWriter<T> dataWriter,
             bool overwrite = false)
         {
@@ -929,7 +936,7 @@ namespace BGC.Audio
                     }
                 }
 
-                return dataWriter(filepath, data, channels);
+                return dataWriter(filepath, data, channels, sampleRate);
             }
             catch (IOException excp)
             {
@@ -938,9 +945,9 @@ namespace BGC.Audio
             }
         }
 
-        private static bool SimpleWriter(string filepath, float[] samples, int channels)
+        private static bool SimpleWriter(string filepath, float[] samples, int channels, int sampleRate)
         {
-            using (FileStream fileStream = CreateFile(filepath, samples.Length, channels))
+            using (FileStream fileStream = CreateFile(filepath, samples.Length, channels, sampleRate))
             {
                 //converting in 2 float[] steps to Int16[], //then Int16[] to Byte[]
                 short[] intData = new short[samples.Length];
@@ -959,9 +966,9 @@ namespace BGC.Audio
             return true;
         }
 
-        private static bool StreamWriter(string filepath, IBGCStream stream, int channels)
+        private static bool StreamWriter(string filepath, IBGCStream stream, int channels, int sampleRate)
         {
-            using (FileStream fileStream = CreateFile(filepath, stream.TotalSamples, channels))
+            using (FileStream fileStream = CreateFile(filepath, stream.TotalSamples, channels, sampleRate))
             {
                 stream.Reset();
                 const int BUFFER_SIZE = 512;
@@ -992,9 +999,9 @@ namespace BGC.Audio
             return true;
         }
 
-        private static bool SimpleWriter(string filepath, short[] samples, int channels)
+        private static bool SimpleWriter(string filepath, short[] samples, int channels, int sampleRate)
         {
-            using (FileStream fileStream = CreateFile(filepath, samples.Length, channels))
+            using (FileStream fileStream = CreateFile(filepath, samples.Length, channels, sampleRate))
             {
                 //bytesData array is twice the size of dataSource array because Int16 is 2 bytes.
                 byte[] bytesData = new byte[samples.Length * 2];
@@ -1005,7 +1012,7 @@ namespace BGC.Audio
             return true;
         }
 
-        private static bool StereoWriter(string filepath, (float[] left, float[] right) samples, int channels)
+        private static bool StereoWriter(string filepath, (float[] left, float[] right) samples, int channels, int sampleRate)
         {
             if (samples.left.Length != samples.right.Length)
             {
@@ -1013,7 +1020,7 @@ namespace BGC.Audio
                 return false;
             }
 
-            using (FileStream fileStream = CreateFile(filepath, 2 * samples.left.Length, channels))
+            using (FileStream fileStream = CreateFile(filepath, 2 * samples.left.Length, channels, sampleRate))
             {
                 //converting in 2 float[] steps to Int16[], //then Int16[] to Byte[]
                 short[] intData = new short[2 * samples.left.Length];

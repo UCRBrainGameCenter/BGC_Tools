@@ -10,6 +10,7 @@ Developers:
 - Mark Philipp ([@mphilipp622](https://github.com/mphilipp622))
 - Lorenzo Alamillo ([@nadnbuds](https://github.com/nadnbuds))
 - [Jordan Whiting](https://jaerdon.com/) ([@Jaerdon](https://github.com/Jaerdon))
+- David Clamage ([@dclamage](https://github.com/dclamage))
 
 [Doxygen-built documentation available here](
 https://ucrbraingamecenter.github.io/documentation/namespaces.html).
