@@ -81,7 +81,7 @@ namespace BGC.Audio
                     weight = (interpWin[offset + i * indexStep] + eta * interpDelta[offset + i * indexStep]);
                     for (int j = 0; j < channels; j++)
                     {
-                        samplesOut[t * channels + j] += (float)(weight * samples[(n - i) * channels + j]);
+                        samplesOut[t * channels + j] += weight * samples[(n - i) * channels + j];
                     }
                 }
 
