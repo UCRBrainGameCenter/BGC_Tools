@@ -11,6 +11,7 @@ namespace BGC.UI.Panels
         Pop,
         PushClone,
         PopClone,
+        Immediate,
         MAX
     }
 
@@ -67,7 +68,8 @@ namespace BGC.UI.Panels
                 newPanel.FocusAcquired();
                 return;
             }
-            else if (!animationControlOrderMap.ContainsKey(newPanel))
+            
+            if (!animationControlOrderMap.ContainsKey(newPanel))
             {
                 Debug.LogError("Error: Panel Not included in initialization array.");
                 return;
@@ -88,7 +90,7 @@ namespace BGC.UI.Panels
 
         public void SetPanelActive(ModePanel newPanel, ShowPanelMode mode = ShowPanelMode.Hierarchy)
         {
-            bool newPanelInferior;
+            bool newPanelInferior = false;
 
             switch (mode)
             {
@@ -104,6 +106,10 @@ namespace BGC.UI.Panels
                 case ShowPanelMode.Pop:
                 case ShowPanelMode.PopClone:
                     newPanelInferior = false;
+                    break;
+
+                case ShowPanelMode.Immediate:
+                    //No setup necessary
                     break;
 
                 default:
@@ -125,6 +131,10 @@ namespace BGC.UI.Panels
                     SpecialSetPanelActive(newPanel, newPanelInferior);
                     break;
 
+                case ShowPanelMode.Immediate:
+                    ImmediatePanelSet(newPanel);
+                    break;
+
                 default:
                     Debug.LogError($"Unrecognized ShowPanelMode: {mode}");
                     break;
@@ -141,7 +151,8 @@ namespace BGC.UI.Panels
                 newPanel.FocusAcquired();
                 return;
             }
-            else if (!animationControlOrderMap.ContainsKey(newPanel))
+            
+            if (!animationControlOrderMap.ContainsKey(newPanel))
             {
                 Debug.LogError("Error: Panel Not included in initialization array.");
                 return;
