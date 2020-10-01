@@ -18,7 +18,8 @@ namespace BGC.IO
         /// <param name="path">File Path to load</param>
         /// <param name="successCallback">Executed only on successful read</param>
         /// <param name="failCallback">Notifies caller of failure</param>
-        /// <param name="fileNotFoundCallback">Notifies caller of failure to locate file</param>
+        /// <param name="fileNotFoundCallback">Notifies caller of failure to locate file.
+        /// Supplying this argument suppresses the default Debug.LogError</param>
         /// <param name="overrideExceptionHandling">Optionally replaces default exception handling</param>
         /// <returns>Whether the json file was successfully read</returns>
         public static bool ReadJsonFile(
@@ -34,8 +35,14 @@ namespace BGC.IO
             {
                 if (!File.Exists(path))
                 {
-                    Debug.LogError($"Unable to find Json file at path \"{path}\"");
-                    fileNotFoundCallback?.Invoke();
+                    if (fileNotFoundCallback == null)
+                    {
+                        Debug.LogError($"Unable to find Json file at path \"{path}\"");
+                    }
+                    else
+                    {
+                        fileNotFoundCallback.Invoke();
+                    }
                 }
                 else
                 {

@@ -20,6 +20,15 @@ namespace BGC.Audio
 
         public static bool RecalibrationNeeded = false;
 
+        private const string dataDir = "System";
+        private const string configFileName = "Calibration.json";
+
+        private static readonly CalibrationValue defaultCalibration = new CalibrationValue(91.0, 91.0);
+        private static CalibrationValue? customCalibration = null;
+        private static CalibrationValue? resultsCalibration = null;
+
+        private static bool initialized = false;
+
         private static class Keys
         {
             public const string Version = "Version";
@@ -49,15 +58,6 @@ namespace BGC.Audio
             Results,
             MAX
         }
-
-        private static readonly CalibrationValue defaultCalibration = new CalibrationValue(91.0, 91.0);
-        private static CalibrationValue? customCalibration = null;
-        private static CalibrationValue? resultsCalibration = null;
-
-        private static readonly string dataDir = "System";
-        private static readonly string configFileName = "Calibration.json";
-
-        private static bool initialized = false;
 
         public static void Initialize()
         {
@@ -132,7 +132,6 @@ namespace BGC.Audio
 
         public static (double initialLeft, double initialRight) InitiateCalibration()
         {
-            //Make a new inProgressList that's a copy of the appropriate values
             switch (GetSourceForVerificationPanel())
             {
                 case Source.Custom:
