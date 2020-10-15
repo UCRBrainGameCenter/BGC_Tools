@@ -7,10 +7,17 @@ namespace BGC.Parameters.Algorithms.FixedPresentation
 {
     [PropertyChoiceTitle("Fixed Presentation")]
     [IntFieldDisplay("Trials", displayTitle: "Trials", initial: 12, minimum: 1, maximum: 10_000)]
+    [StringFieldDisplay("Accuracy", displayTitle: "Accuracy", initial: "")]
     public class FixedPresentationAlgorithm : AlgorithmBase, IBinaryOutcomeAlgorithm
     {
         [DisplayInputField("Trials")]
         public int Trials { get; set; }
+
+        [DisplayOutputFieldKey("Accuracy")]
+        public string AccuracyKey { get; set; }
+
+        [OutputField("Accuracy")]
+        public double Accuracy { get; set; }
 
         #region IControlSource
 
@@ -55,6 +62,8 @@ namespace BGC.Parameters.Algorithms.FixedPresentation
 
         public override void PopulateScriptContext(GlobalRuntimeContext scriptContext)
         {
+            Accuracy = correctCount / (double)trial;
+
             foreach (ControlledParameterTemplate template in controlledParameters)
             {
                 template.FinalizeParameters(0.0);

@@ -86,7 +86,6 @@ namespace BGC.Parameters.Algorithms.FixedCollection
         public override void PopulateScriptContext(GlobalRuntimeContext scriptContext)
         {
             Expanded = stepValues.Count > InitialTrials;
-            this.PopulateScriptContextOutputs(scriptContext);
 
             foreach (ControlledParameterTemplate template in controlledParameters)
             {
