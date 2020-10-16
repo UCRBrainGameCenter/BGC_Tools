@@ -16,6 +16,7 @@ namespace BGC.Parameters.Algorithms.ModifiedHughsonWestlake
     [IntFieldDisplay("StepsDown", displayTitle: "Steps Down", initial: 2, minimum: 1, maximum: 10_000, postfix: "steps")]
     [IntFieldDisplay("MinimumThresholdTrials", displayTitle: "Minimum Threshold Trials", initial: 3, minimum: 1, maximum: 10_000, postfix: "trials")]
     [DoubleFieldDisplay("MinimumPassingThreshold", displayTitle: "Minimum Passing Threshold", initial: 0.5, minimum: 0, maximum: 1)]
+    [BoolDisplay("ShortCircuit", displayTitle: "Short Circuit", initial: false)]
     public class ModifiedHughsonWestlakeAlgorithm : AlgorithmBase, IBinaryOutcomeAlgorithm
     {
         [DisplayInputField("InitialJumpStepsUp")]
@@ -35,6 +36,9 @@ namespace BGC.Parameters.Algorithms.ModifiedHughsonWestlake
 
         [DisplayInputField("MinimumPassingThreshold")]
         public double MinimumPassingThreshold { get; set; }
+
+        [DisplayInputField("ShortCircuit")]
+        public bool ShortCircuit { get; set; }
 
         #region IControlSource
 
@@ -142,7 +146,7 @@ namespace BGC.Parameters.Algorithms.ModifiedHughsonWestlake
 
                         stepDictionary[currentStepValue].AddTrial(correct);
 
-                        if (stepDictionary[currentStepValue].IsPassingInevitable(MinimumThresholdTrials, MinimumPassingThreshold))
+                        if (stepDictionary[currentStepValue].IsPassing(ShortCircuit, MinimumThresholdTrials, MinimumPassingThreshold))
                         {
                             endTriggered = true;
                             thresholdStep = currentStepValue;
@@ -211,13 +215,18 @@ namespace BGC.Parameters.Algorithms.ModifiedHughsonWestlake
                 }
             }
 
-            public double GetRatio() => hits / (double)trials;
+            public bool IsPassing(bool shortCircuit, int minimumThresholdTrials, double minimumPassingThreshold) =>
+                shortCircuit ?
+                    IsPassingInevitable(minimumThresholdTrials, minimumPassingThreshold) :
+                    IsPassingCurrently(minimumThresholdTrials, minimumPassingThreshold);
 
-            public bool IsPassingInevitable(int minimumThresholdTrials, double minimumPassingThreshold)
-            {
-                double hitRate = hits / (double)Math.Max(trials, minimumThresholdTrials);
-                return hitRate >= minimumPassingThreshold;
-            }
+
+            private bool IsPassingCurrently(int minimumThresholdTrials, double minimumPassingThreshold) =>
+                trials >= minimumThresholdTrials &&
+                (hits / (double)trials) >= minimumPassingThreshold;
+
+            private bool IsPassingInevitable(int minimumThresholdTrials, double minimumPassingThreshold) =>
+                hits / (double)Math.Max(trials, minimumThresholdTrials) >= minimumPassingThreshold;
         }
 
         #endregion Handler
