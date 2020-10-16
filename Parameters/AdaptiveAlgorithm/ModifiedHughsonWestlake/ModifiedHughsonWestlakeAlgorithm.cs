@@ -174,7 +174,9 @@ namespace BGC.Parameters.Algorithms.ModifiedHughsonWestlake
             }
             else
             {
-                //Unable to step
+                //Unable to step - Quit
+                endTriggered = true;
+                thresholdStep = currentStepValue;
             }
         }
 
