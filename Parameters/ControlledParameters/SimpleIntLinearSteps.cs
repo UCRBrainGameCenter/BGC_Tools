@@ -1,5 +1,4 @@
-﻿using System;
-using BGC.Mathematics;
+﻿using BGC.Mathematics;
 
 namespace BGC.Parameters
 {

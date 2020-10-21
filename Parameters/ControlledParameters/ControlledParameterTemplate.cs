@@ -71,6 +71,7 @@ namespace BGC.Parameters
         [AppendSelection(
             typeof(SimpleDoubleLinearSteps),
             typeof(SimpleDoubleExponentialSteps),
+            typeof(SimpleDoubleListSteps),
             typeof(ScriptedDoubleSteps))]
         public ISimpleDoubleStepTemplate StepTemplate { get; set; }
 
@@ -107,6 +108,7 @@ namespace BGC.Parameters
 
         [AppendSelection(
             typeof(SimpleIntLinearSteps),
+            typeof(SimpleIntListSteps),
             typeof(ScriptedIntSteps))]
         public ISimpleIntStepTemplate StepTemplate { get; set; }
 
