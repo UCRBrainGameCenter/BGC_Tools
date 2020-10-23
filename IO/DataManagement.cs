@@ -41,6 +41,14 @@ namespace BGC.IO
         public static IEnumerable<string> GetDataFiles(string dataDirectory) =>
             Directory.GetFiles(PathForDataDirectory(dataDirectory));
 
+        /// <summary> Get a list of all data files in sub directory of os data directory </summary>
+        public static IEnumerable<string> GetDataFiles(string dataDirectory, string searchPattern) =>
+            Directory.GetFiles(PathForDataDirectory(dataDirectory), searchPattern);
+
+        /// <summary> Get a list of all data files in sub directory of os data directory </summary>
+        public static IEnumerable<string> GetDataFiles(string dataDirectory, string searchPattern, SearchOption searchOption) =>
+            Directory.GetFiles(PathForDataDirectory(dataDirectory), searchPattern, searchOption);
+
         /// <summary> Returns the full path for specified datafile in a data directory </summary>
         public static string PathForDataFile(string dataDirectory, string fileName, bool create = true) =>
             Path.Combine(PathForDataDirectory(dataDirectory, create), fileName);
