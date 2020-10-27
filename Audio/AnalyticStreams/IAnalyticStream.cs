@@ -4,7 +4,7 @@ using BGC.Mathematics;
 
 namespace BGC.Audio.AnalyticStreams
 {
-    public interface IAnalyticStream
+    public interface IAnalyticStream : IDisposable
     {
         /// <summary>
         /// The total number of Samples of this AnalyticStream

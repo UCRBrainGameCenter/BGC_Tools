@@ -38,5 +38,7 @@ namespace BGC.Audio.AnalyticStreams
                 _Initialize();
             }
         }
+
+        public abstract void Dispose();
     }
 }

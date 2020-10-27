@@ -42,5 +42,12 @@ namespace BGC.Audio.Filters
             }
         }
 
+        public virtual void Dispose()
+        {
+            foreach (IBGCStream stream in InternalStreams)
+            {
+                stream.Dispose();
+            }
+        }
     }
 }

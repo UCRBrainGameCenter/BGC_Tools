@@ -185,5 +185,9 @@ namespace BGC.Audio.AnalyticStreams
                     return 1.0;
             }
         }
+
+        public void Dispose()
+        {
+        }
     }
 }

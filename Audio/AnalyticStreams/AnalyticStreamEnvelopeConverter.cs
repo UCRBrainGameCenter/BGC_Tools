@@ -62,5 +62,10 @@ namespace BGC.Audio.AnalyticStreams
         public void Reset() => stream.Reset();
 
         public void Seek(int position) => stream.Seek(position);
+
+        public void Dispose()
+        {
+            stream?.Dispose();
+        }
     }
 }

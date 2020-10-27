@@ -31,5 +31,9 @@ namespace BGC.Audio
 
         protected bool initialized = false;
         protected virtual void _Initialize() { }
+
+        public virtual void Dispose()
+        {
+        }
     }
 }

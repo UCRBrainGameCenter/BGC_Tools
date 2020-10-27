@@ -10,6 +10,7 @@ namespace BGC.Audio
     public class BGCClipPlayer : MonoBehaviour
     {
         IBGCStream stream = null;
+        private bool disposeStream = false;
 
         private SoundState currentState = SoundState.Stopped;
 
@@ -27,15 +28,21 @@ namespace BGC.Audio
 
         public double Duration => stream?.Duration() ?? 0.0;
 
-        public void SetStream(IBGCStream stream)
+        public void SetStream(IBGCStream stream, bool disposeWhenComplete = false)
         {
+            if (disposeStream && this.stream != null && !ReferenceEquals(stream, this.stream))
+            {
+                this.stream.Dispose();
+            }
+
             this.stream = stream;
+            disposeStream = disposeWhenComplete;
             currentState = SoundState.Stopped;
         }
 
-        public void PlayStream(IBGCStream stream)
+        public void PlayStream(IBGCStream stream, bool disposeWhenComplete = false)
         {
-            SetStream(stream);
+            SetStream(stream, disposeWhenComplete);
             Play();
         }
 
@@ -69,7 +76,12 @@ namespace BGC.Audio
         public void Clear()
         {
             Stop(false);
+            if (disposeStream && stream != null)
+            {
+                stream.Dispose();
+            }
             stream = null;
+            disposeStream = false;
             playbackEndedNotifier = null;
         }
 

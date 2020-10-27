@@ -118,5 +118,11 @@ namespace BGC.Audio.AnalyticStreams
         private double _channelRMS = double.NaN;
         public double GetRMS() =>
             double.IsNaN(_channelRMS) ? (_channelRMS = stream.GetChannelRMS().First()) : _channelRMS;
+
+        public void Dispose()
+        {
+            stream?.Dispose();
+            convStream?.Dispose();
+        }
     }
 }

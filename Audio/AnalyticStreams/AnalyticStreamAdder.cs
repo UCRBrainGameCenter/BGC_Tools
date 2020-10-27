@@ -130,5 +130,13 @@ namespace BGC.Audio.AnalyticStreams
 
             return _rms;
         }
+
+        public override void Dispose()
+        {
+            foreach (var stream in streams)
+            {
+                stream.Dispose();
+            }
+        }
     }
 }

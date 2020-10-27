@@ -32,5 +32,9 @@ namespace BGC.Audio
         public abstract void Reset();
 
         public abstract void Seek(int position);
+
+        public virtual void Dispose()
+        {
+        }
     }
 }

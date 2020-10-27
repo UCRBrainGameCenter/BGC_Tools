@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace BGC.Audio
 {
-    public interface IBGCStream
+    public interface IBGCStream : IDisposable
     {
         /// <summary>
         /// The number of underlying Channels of this BGCStream

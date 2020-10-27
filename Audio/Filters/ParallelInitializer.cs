@@ -88,5 +88,10 @@ namespace BGC.Audio.Filters
 
             initializationTask?.Wait();
         }
+
+        public void Dispose()
+        {
+            stream?.Dispose();
+        }
     }
 }

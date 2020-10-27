@@ -108,5 +108,9 @@ namespace BGC.Audio.AnalyticStreams
         }
 
         public double GetRMS() => amplitude * Sqrt(0.5);
+
+        public void Dispose()
+        {
+        }
     }
 }
