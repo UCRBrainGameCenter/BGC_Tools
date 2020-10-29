@@ -392,6 +392,28 @@ namespace BGC.Parameters
             propertyGroup.Deserialize(listElement);
         }
 
+        public static IPropertyGroup CloneOrphanListItem(
+            this IPropertyGroup source,
+            PropertyInfo property)
+        {
+            JsonObject serializedData = source.Serialize();
+
+            Type matchingType = property.FindMatchingListType(serializedData["Type"].AsString);
+
+            if (matchingType == null)
+            {
+                Debug.LogError($"Requested type not recognized for list: {serializedData["Type"].AsString}");
+                return null;
+            }
+
+            IPropertyGroup propertyGroup = matchingType.Build();
+
+            propertyGroup.InitializeProperties();
+            propertyGroup.Deserialize(serializedData);
+
+            return propertyGroup;
+        }
+
         public static void Internal_Deserialize(this IPropertyGroup container, JsonObject data)
         {
             if (!data.ContainsKey("Type"))
