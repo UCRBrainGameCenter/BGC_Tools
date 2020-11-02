@@ -862,7 +862,8 @@ namespace BGC.Parameters.View
             PropertyInfo property,
             FieldDisplayAttribute attribute,
             GameObject baseWidget,
-            Action respawnPropertyGroupCallback)
+            Action respawnPropertyGroupCallback,
+            IPropertyGroup concretePropertyGroup = null)
         {
             switch (attribute)
             {
@@ -929,6 +930,17 @@ namespace BGC.Parameters.View
                             choiceListMethod = currentType.GetMethod(enumAtt.choiceListMethodName);
                         }
 
+                        if (choiceListMethod == null && concretePropertyGroup != null)
+                        {
+                            //Search using matching concrete property group
+                            owningType = concretePropertyGroup.GetType();
+
+                            for (Type currentType = owningType; currentType != null && choiceListMethod == null; currentType = currentType.BaseType)
+                            {
+                                choiceListMethod = currentType.GetMethod(enumAtt.choiceListMethodName);
+                            }
+                        }
+
                         if (choiceListMethod == null)
                         {
                             //If local class check fails, try from SetupMethods
@@ -983,6 +995,17 @@ namespace BGC.Parameters.View
                         for (Type currentType = owningType; currentType != null && choiceListMethod == null; currentType = currentType.BaseType)
                         {
                             choiceListMethod = currentType.GetMethod(stringDropAtt.choiceListMethodName);
+                        }
+
+                        if (choiceListMethod == null && concretePropertyGroup != null)
+                        {
+                            //Search using matching concrete property group
+                            owningType = concretePropertyGroup.GetType();
+
+                            for (Type currentType = owningType; currentType != null && choiceListMethod == null; currentType = currentType.BaseType)
+                            {
+                                choiceListMethod = currentType.GetMethod(stringDropAtt.choiceListMethodName);
+                            }
                         }
 
                         if (choiceListMethod == null)
@@ -1072,12 +1095,16 @@ namespace BGC.Parameters.View
 
                 case FieldMirrorDisplayAttribute _:
                 case ControlledExtractionAttribute _:
+                    (IPropertyGroup matchingConcretePropertyGroup, FieldDisplayAttribute concreteAttribute) =
+                        owningPropertyGroup.SearchHierarchyForConcreteFieldAttributeAndPropertyGroup(attribute.fieldName);
+
                     return SpawnValueInputWidget(
                         owningPropertyGroup: owningPropertyGroup,
                         property: property,
-                        attribute: owningPropertyGroup.SearchHierarchyForConcreteFieldAttribute(attribute.fieldName),
+                        attribute: concreteAttribute,
                         baseWidget: baseWidget,
-                        respawnPropertyGroupCallback: respawnPropertyGroupCallback);
+                        respawnPropertyGroupCallback: respawnPropertyGroupCallback,
+                        concretePropertyGroup: matchingConcretePropertyGroup);
 
                 default:
                     Debug.LogError($"Unexpected PropertyType: {property.PropertyType}");

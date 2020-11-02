@@ -1103,6 +1103,16 @@ namespace BGC.Parameters
             this IPropertyGroup propertyGroup,
             string fieldName)
         {
+            (IPropertyGroup _, FieldDisplayAttribute attribute) =
+                propertyGroup.SearchHierarchyForConcreteFieldAttributeAndPropertyGroup(fieldName);
+
+            return attribute;
+        }
+
+        public static (IPropertyGroup, FieldDisplayAttribute) SearchHierarchyForConcreteFieldAttributeAndPropertyGroup(
+            this IPropertyGroup propertyGroup,
+            string fieldName)
+        {
             IPropertyGroup current = propertyGroup;
             FieldDisplayAttribute attribute = null;
 
@@ -1139,7 +1149,7 @@ namespace BGC.Parameters
                 current = current.GetParent();
             }
 
-            return attribute;
+            return (current, attribute);
         }
 
         public static void InitializeRandomizers(
