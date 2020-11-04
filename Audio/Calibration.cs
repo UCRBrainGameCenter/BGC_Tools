@@ -23,7 +23,8 @@ namespace BGC.Audio
         private const string dataDir = "System";
         private const string configFileName = "Calibration.json";
 
-        private static readonly CalibrationValue defaultCalibration = new CalibrationValue(91.0, 91.0);
+        private static readonly CalibrationValue defaultCalibrationIOS = new CalibrationValue(91.0, 91.0);
+        private static readonly CalibrationValue defaultCalibrationWindows = new CalibrationValue(76.0, 76.0);
         private static CalibrationValue? customCalibration = null;
         private static CalibrationValue? resultsCalibration = null;
 
@@ -70,6 +71,17 @@ namespace BGC.Audio
                     successCallback: DeserializeCalibration,
                     failCallback: Serialize,
                     fileNotFoundCallback: Serialize);
+            }
+        }
+
+        private static CalibrationValue PlatformDefaultCalibration()
+        {
+            switch (Application.platform)
+            {
+                case RuntimePlatform.WindowsPlayer:
+                    return defaultCalibrationWindows;
+                default:
+                    return defaultCalibrationIOS;
             }
         }
 
@@ -141,7 +153,10 @@ namespace BGC.Audio
                     return (resultsCalibration.Value.levelLeft, resultsCalibration.Value.levelRight);
 
                 case Source.Default:
-                    return (defaultCalibration.levelLeft, defaultCalibration.levelRight);
+                    {
+                        var defaultCalibration = PlatformDefaultCalibration();
+                        return (defaultCalibration.levelLeft, defaultCalibration.levelRight);
+                    }
 
                 default:
                     Debug.LogError($"Unexpected Source: {GetSourceForVerificationPanel()}");
@@ -206,7 +221,7 @@ namespace BGC.Audio
             double levelR,
             Source source = Source.Custom)
         {
-            CalibrationValue calibrationValue = defaultCalibration;
+            CalibrationValue calibrationValue = PlatformDefaultCalibration();
             switch (source)
             {
                 case Source.Results:
@@ -245,7 +260,10 @@ namespace BGC.Audio
             switch (source)
             {
                 case Source.Default:
-                    minLevel = Math.Min(defaultCalibration.levelLeft, defaultCalibration.levelRight);
+                    {
+                        var defaultCalibration = PlatformDefaultCalibration();
+                        minLevel = Math.Min(defaultCalibration.levelLeft, defaultCalibration.levelRight);
+                    }
                     break;
 
                 case Source.Custom:
