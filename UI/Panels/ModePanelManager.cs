@@ -215,6 +215,42 @@ namespace BGC.UI.Panels
             lastActivePanel = newPanel;
         }
 
+        public void SimulatePanelSwipe(
+            ModePanel panel,
+            Action betweenSwipeAction = null,
+            Action<ModePanel> afterSwipeAction = null,
+            bool newPanelInferior = true)
+        {
+            if (panel != lastActivePanel)
+            {
+                Debug.LogError("Cannot simulate panel swipe on the non-active panel.");
+                return;
+            }
+
+            copyPanel.gameObject.SetActive(true);
+            copyPanel.TakeSnapshot(panel.RectTransform);
+
+            betweenSwipeAction?.Invoke();
+
+            panel.ImmediateStateSet(false);
+
+            panel.LerpHandler.Activate(
+                duration: flipTime,
+                lerpAction: new ModePanelTranslator(
+                    direction: Direction.Show,
+                    axis: panelAxis,
+                    orientation: newPanelInferior ? Orientation.Inferior : Orientation.Superior),
+                finishedCallback: afterSwipeAction);
+
+            copyPanel.LerpHandler.Activate(
+                duration: 0.8f * flipTime,
+                lerpAction: new ModePanelTranslator(
+                    direction: Direction.Hide,
+                    axis: panelAxis,
+                    orientation: newPanelInferior ? Orientation.Superior : Orientation.Inferior),
+                finishedCallback: DisableModePanel);
+        }
+
         private void DisableModePanel(ModePanel panel) => panel.gameObject.SetActive(false);
     }
 }
