@@ -43,6 +43,7 @@
 
         //Other Types
         Random,
+        DataFile,
 
         //Static Types
         System,

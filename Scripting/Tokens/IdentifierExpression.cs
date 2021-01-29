@@ -35,14 +35,16 @@ namespace BGC.Scripting
 
         public void Set(RuntimeContext context, object value)
         {
-            if (type.AssignableFromType(value.GetType()))
+            Type otherType = (value is null) ? typeof(NullLiteralToken) : value.GetType();
+
+            if (type.AssignableFromType(otherType))
             {
                 context.SetExistingValue(identifier, value);
             }
             else
             {
                 throw new ScriptRuntimeException(
-                    $"Unable to set identifier {identifier} of type {type.Name} to value {value} of type {value.GetType().Name}");
+                    $"Unable to set identifier {identifier} of type {type.Name} to value {value} of type {otherType.Name}");
             }
         }
 

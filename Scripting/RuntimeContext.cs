@@ -94,12 +94,14 @@ namespace BGC.Scripting
         {
             if (valueDictionary.ContainsKey(key))
             {
-                if (!valueDictionary[key].valueType.AssignableFromType(value.GetType()))
+                Type otherType = value is null ? typeof(NullLiteralToken) : value.GetType();
+
+                if (!valueDictionary[key].valueType.AssignableFromType(otherType))
                 {
-                    throw new ScriptRuntimeException($"Value {key} set as {value.GetType().Name} when it's {valueDictionary[key].valueType.Name}");
+                    throw new ScriptRuntimeException($"Value {key} set as {otherType.Name} when it's {valueDictionary[key].valueType.Name}");
                 }
 
-                if (valueDictionary[key].valueType.IsAssignableFrom(value.GetType()))
+                if (valueDictionary[key].valueType.IsAssignableFrom(otherType))
                 {
                     valueDictionary[key] = valueDictionary[key].UpdateValue(value);
                 }
@@ -165,12 +167,14 @@ namespace BGC.Scripting
         public override void PushReturnValue(object value) => stashedReturnValue = value;
         public override T PopReturnValue<T>()
         {
-            if (!typeof(T).AssignableFromType(stashedReturnValue.GetType()))
+            Type returnValueType = stashedReturnValue is null ? typeof(NullLiteralToken) : stashedReturnValue.GetType();
+
+            if (!typeof(T).AssignableFromType(returnValueType))
             {
-                throw new ScriptRuntimeException($"Unable to return value of type {stashedReturnValue.GetType().Name} as a {typeof(T).Name}");
+                throw new ScriptRuntimeException($"Unable to return value of type {returnValueType.Name} as a {typeof(T).Name}");
             }
 
-            if (typeof(T) == stashedReturnValue.GetType())
+            if (typeof(T) == returnValueType)
             {
                 T temp = (T)stashedReturnValue;
                 stashedReturnValue = null;
@@ -240,7 +244,7 @@ namespace BGC.Scripting
 
     public class ScriptRuntimeContext : RuntimeContext
     {
-        HashSet<string> globalDeclarations = new HashSet<string>();
+        readonly HashSet<string> globalDeclarations = new HashSet<string>();
 
         private readonly Script script;
 

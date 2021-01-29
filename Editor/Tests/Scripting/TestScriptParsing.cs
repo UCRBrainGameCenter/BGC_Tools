@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using NUnit.Framework;
 using BGC.Scripting;
+using BGC.Reports;
 
 namespace BGC.Tests
 {
@@ -456,7 +457,6 @@ namespace BGC.Tests
             GlobalRuntimeContext globalContext = new GlobalRuntimeContext();
 
             string testScript = @"
-            //This will test the ternary operator
             string testString1 = ""Oh Hai"";
             string testString2 = ""!"";
             global string testString3 = testString1 + testString2 + 3;
@@ -1691,6 +1691,237 @@ namespace BGC.Tests
             int failedTest = script.ExecuteFunction<int>("RunTests", context);
 
             Debug.Assert(failedTest == 0, $"Failed test {failedTest}");
+        }
+
+        void RunTests()
+        {
+            DataFile dataFile = new DataFile("asdf" + "_ % T");
+            dataFile.AddField("UserName");
+            dataFile.AddField("FirstField");
+            dataFile.AddField("SecondField");
+            dataFile.AddField("ThirdField");
+
+            dataFile.AddValue("FirstField", "Here is an example Value");
+            dataFile.AddValue("UserName", "The First User");
+            dataFile.AddValue("ThirdField", "" + 5);
+
+            dataFile.Save();
+
+            dataFile.NextRecord();
+
+            dataFile.AddValue("UserName", "The Second User");
+            dataFile.AddValue("FirstField", "Testerson");
+            dataFile.AddValue("SecondField", "" + 10);
+            dataFile.AddValue("ThirdField", "" + 6);
+
+            dataFile.NextRecord();
+            dataFile.Save();
+        }
+
+
+        [Test]
+        public void DataFileTestsA()
+        {
+            GlobalRuntimeContext globalContext = new GlobalRuntimeContext();
+
+            string testScript = @"
+            void RunTests()
+            {
+                DataFile dataFile = new DataFile(User.GetUserName() + ""_%T"");
+
+                dataFile.AddField(""UserName"");
+                dataFile.AddField(""FirstField"");
+                dataFile.AddField(""SecondField"");
+                dataFile.AddField(""ThirdField"");
+
+                dataFile.AddValue(""FirstField"", ""Here is an example Value"");
+                dataFile.AddValue(""UserName"", ""The First User"");
+                dataFile.AddValue(""ThirdField"", """" + 5);
+
+                dataFile.Save();
+
+                dataFile.NextRecord();
+
+                dataFile.AddValue(""UserName"", ""The Second User"");
+                dataFile.AddValue(""FirstField"", ""Testerson"");
+                dataFile.AddValue(""SecondField"", """" + 10);
+                dataFile.AddValue(""ThirdField"", """" + 6);
+
+                dataFile.NextRecord();
+                dataFile.Save();
+            }";
+
+            Script script;
+
+            try
+            {
+                script = ScriptParser.LexAndParseScript(
+                    script: testScript,
+                    new FunctionSignature(
+                        identifier: "RunTests",
+                        returnType: typeof(void)));
+            }
+            catch (ScriptParsingException parseEx)
+            {
+                throw new Exception(
+                    message: $"Parsing exception on Line {parseEx.line}, Column {parseEx.column}: {parseEx.Message}",
+                    innerException: parseEx);
+            }
+
+            ScriptRuntimeContext context = script.PrepareScript(globalContext);
+            script.ExecuteFunction("RunTests", context);
+        }
+
+        [Test]
+        public void DataFileTestsB()
+        {
+            GlobalRuntimeContext globalContext = new GlobalRuntimeContext();
+
+            string testScript = @"
+            List<bool> RunTests()
+            {
+                List<bool> tests = new List<bool>();
+
+                List<string> fieldNames = new List<string>() { ""UserName"", ""FirstField"", ""SecondField"", ""ThirdField"" };
+                DataFile dataFile = new DataFile(""Special Test File"", fieldNames, ""|"", ""\n"", false);
+
+                dataFile.AddValue(""FirstField"", ""Here is an example Value"");
+                dataFile.AddValue(""UserName"", ""The First User"");
+                dataFile.AddValue(""ThirdField"", """" + 5);
+
+                dataFile.Save();
+
+                dataFile.NextRecord();
+
+                dataFile.AddValue(""UserName"", ""The Second User"");
+                dataFile.AddValue(""FirstField"", ""Testerson"");
+                dataFile.AddValue(""SecondField"", """" + 10);
+                dataFile.AddValue(""ThirdField"", """" + 6);
+
+                dataFile.NextRecord();
+                dataFile.Save();
+
+                dataFile = null;
+                fieldNames = null;
+
+                fieldNames = new List<string>() { ""UserName"", ""FirstField"", ""ThirdField"", ""FourthField"" };
+                dataFile = new DataFile(""Special Test File"", fieldNames, ""|"", ""\n"", true);
+
+                dataFile.SetRecordNumber(0);
+
+                tests.Add(dataFile.GetValue(""UserName"") == ""The First User"");
+                tests.Add(dataFile.GetValue(1) == ""Here is an example Value"");
+                tests.Add(dataFile.GetValue(2) == """");
+                tests.Add(dataFile.GetValue(3) == ""5"");
+
+                dataFile.SetRecordNumber(1);
+                tests.Add(dataFile.GetValue(0) == ""The Second User"");
+                tests.Add(dataFile.GetValue(""FirstField"") == ""Testerson"");
+                tests.Add(dataFile.GetValue(""SecondField"") == ""10"");
+                tests.Add(dataFile.GetValue(2) == ""10"");
+                tests.Add(dataFile.GetValue(3) == ""6"");
+
+                dataFile.AddValue(1, ""Overwritten Value"");
+                dataFile.AddValue(""FourthField"", ""New Value"");
+                dataFile.NextRecord();
+
+                dataFile.AddValue(""UserName"", ""The Third User"");
+                dataFile.AddValue(""FirstField"", ""Testerson 2"");
+                dataFile.AddValue(""SecondField"", """" + 1);
+
+                dataFile.UpdateFileName(""A New Test File"");
+
+                dataFile.Save();
+
+                return tests;
+            }";
+
+            Script script;
+
+            try
+            {
+                script = ScriptParser.LexAndParseScript(
+                    script: testScript,
+                    new FunctionSignature(
+                        identifier: "RunTests",
+                        returnType: typeof(List<bool>)));
+            }
+            catch (ScriptParsingException parseEx)
+            {
+                throw new Exception(
+                    message: $"Parsing exception on Line {parseEx.line}, Column {parseEx.column}: {parseEx.Message}",
+                    innerException: parseEx);
+            }
+
+            ScriptRuntimeContext context = script.PrepareScript(globalContext);
+
+            List<bool> tests = script.ExecuteFunction<List<bool>>("RunTests", context);
+
+            for (int i = 0; i < tests.Count; i++)
+            {
+                Debug.Assert(tests[i], $"Failed test {i}");
+            }
+
+            Debug.Log($"Ran {tests.Count} List tests");
+        }
+
+        [Test]
+        public void ToStringTests()
+        {
+            GlobalRuntimeContext globalContext = new GlobalRuntimeContext();
+
+            string testScript = @"
+            double testValue = 1054.32179;
+
+            List<bool> RunTests()
+            {
+                List<bool> tests = new List<bool>();
+                tests.Add(testValue.ToString(""E"") == ""1.054322E+003"");
+                tests.Add(testValue.ToString(""E0"") == ""1E+003"");
+                tests.Add(testValue.ToString(""E1"") == ""1.1E+003"");
+
+                tests.Add(testValue.ToString(""e"") == ""1.054322e+003"");
+                tests.Add(testValue.ToString(""e0"") == ""1e+003"");
+                tests.Add(testValue.ToString(""e1"") == ""1.1e+003"");
+
+                tests.Add((1054.32179).ToString(""F"") == ""1054.32"");
+                tests.Add(testValue.ToString(""F0"") == ""1054"");
+                tests.Add(testValue.ToString(""F1"") == ""1054.3"");
+
+                tests.Add(testValue.ToString(""N"") == ""1,054.32"");
+                tests.Add(testValue.ToString(""N0"") == ""1,054"");
+                tests.Add(testValue.ToString(""N1"") == ""1,054.3"");
+
+                return tests;
+            }";
+
+
+            Script script;
+
+            try
+            {
+                script = ScriptParser.LexAndParseScript(testScript,
+                    new FunctionSignature(
+                        identifier: "RunTests",
+                        returnType: typeof(List<bool>)));
+            }
+            catch (ScriptParsingException parseEx)
+            {
+                throw new Exception(
+                    message: $"Parsing exception on Line {parseEx.line}, Column {parseEx.column}: {parseEx.Message}",
+                    innerException: parseEx);
+            }
+
+            ScriptRuntimeContext context = script.PrepareScript(globalContext);
+
+            List<bool> tests = script.ExecuteFunction<List<bool>>("RunTests", context);
+
+            for (int i = 0; i < tests.Count; i++)
+            {
+                Debug.Assert(tests[i], $"Failed test {i}");
+            }
+
+            Debug.Log($"Ran {tests.Count} ToString tests");
         }
     }
 }

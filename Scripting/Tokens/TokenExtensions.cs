@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using BGC.DataStructures.Generic;
+using BGC.Reports;
 
 namespace BGC.Scripting
 {
@@ -27,6 +28,7 @@ namespace BGC.Scripting
                 case Keyword.HashSet: return typeof(HashSet<>);
 
                 case Keyword.Random: return typeof(Random);
+                case Keyword.DataFile: return typeof(DataFile);
 
                 default:
                     throw new ArgumentException($"Unexpected Keyword: {keyword}");
@@ -57,6 +59,7 @@ namespace BGC.Scripting
                     return true;
 
                 case Keyword.Random:
+                case Keyword.DataFile:
                     return true;
 
                 default:

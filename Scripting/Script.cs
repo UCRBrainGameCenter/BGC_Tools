@@ -135,6 +135,7 @@ namespace BGC.Scripting
                         case Keyword.Dictionary:
                         case Keyword.HashSet:
                         case Keyword.Random:
+                        case Keyword.DataFile:
                             //Parse Function or Member Declaration
                             {
                                 Type valueType = scriptTokens.ReadType();

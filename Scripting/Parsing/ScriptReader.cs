@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using BGC.Reports;
 
 namespace BGC.Scripting
 {
@@ -430,6 +431,7 @@ namespace BGC.Scripting
 
                 //Other Types
                 case "Random": return new KeywordToken(line, startingColumn, Keyword.Random);
+                case "DataFile": return new KeywordToken(line, startingColumn, Keyword.DataFile);
 
                 //Static Types
                 case "System": return new KeywordToken(line, startingColumn, Keyword.System);
@@ -642,6 +644,10 @@ namespace BGC.Scripting
             new HashSet<int>();
             new HashSet<double>();
             new HashSet<string>();
+
+            new DataFile();
+            new DataFile("test");
+            new DataFile("test", new[] { " " }, ",", "\n", false);
 
             // Include an exception so we can be sure to know if this method is ever called.
             throw new InvalidOperationException("This method is used for AOT code generation only. Do not call it at runtime.");

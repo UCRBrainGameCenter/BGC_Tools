@@ -7,6 +7,7 @@ using LightJson;
 using BGC.Users;
 using BGC.DataStructures.Generic;
 using BGC.UI.Dialogs;
+using BGC.Reports;
 
 namespace BGC.Scripting
 {
@@ -217,6 +218,52 @@ namespace BGC.Scripting
                             message: $"Unable to identify {valueType.Name} member {identifier}");
                 }
             }
+            else if (valueType == typeof(DataFile))
+            {
+                switch (identifier)
+                {
+                    case "Filename":
+                        return new GettablePropertyValueOperation<DataFile, string>(
+                            value: value,
+                            operation: (DataFile dataFile) => dataFile.Filename,
+                            source: source);
+
+                    case "FieldCount":
+                        return new GettablePropertyValueOperation<DataFile, int>(
+                            value: value,
+                            operation: (DataFile dataFile) => dataFile.FieldCount,
+                            source: source);
+
+                    case "TotalRecordCount":
+                        return new GettablePropertyValueOperation<DataFile, int>(
+                            value: value,
+                            operation: (DataFile dataFile) => dataFile.TotalRecordCount,
+                            source: source);
+
+                    case "CurrentRecordNumber":
+                        return new GettablePropertyValueOperation<DataFile, int>(
+                            value: value,
+                            operation: (DataFile dataFile) => dataFile.CurrentRecordNumber,
+                            source: source);
+
+                    case "FieldDelimiter":
+                        return new GettablePropertyValueOperation<DataFile, string>(
+                            value: value,
+                            operation: (DataFile dataFile) => dataFile.FieldDelimiter,
+                            source: source);
+
+                    case "RecordDelimiter":
+                        return new GettablePropertyValueOperation<DataFile, string>(
+                            value: value,
+                            operation: (DataFile dataFile) => dataFile.RecordDelimiter,
+                            source: source);
+
+                    default:
+                        throw new ScriptParsingException(
+                            source: source,
+                            message: $"Unable to identify {valueType.Name} member {identifier}");
+                }
+            }
 
             throw new ScriptParsingException(
                 source: source,
@@ -245,8 +292,7 @@ namespace BGC.Scripting
                                     input.Substring(args[0].GetAs<int>(context)),
                                 source: source);
                         }
-
-                        if (args.Length == 2)
+                        else if (args.Length == 2)
                         {
                             args.VerifyArgs(typeof(int), typeof(int), source, identifier);
                             return new MemberArgumentValueOperation<string, string>(
@@ -270,8 +316,7 @@ namespace BGC.Scripting
                                     input.IndexOf(args[0].GetAs<string>(context)),
                                 source: source);
                         }
-
-                        if (args.Length == 2)
+                        else if (args.Length == 2)
                         {
                             args.VerifyArgs(typeof(string), typeof(int), source, identifier);
                             return new MemberArgumentValueOperation<string, int>(
@@ -280,8 +325,7 @@ namespace BGC.Scripting
                                     input.IndexOf(args[0].GetAs<string>(context), args[1].GetAs<int>(context)),
                                 source: source);
                         }
-
-                        if (args.Length == 3)
+                        else if (args.Length == 3)
                         {
                             args.VerifyArgs(typeof(string), typeof(int), typeof(int), source, identifier);
                             return new MemberArgumentValueOperation<string, int>(
@@ -294,6 +338,72 @@ namespace BGC.Scripting
                         throw new ScriptParsingException(
                             source: source,
                             message: $"Expected 1, 2, or 3 Arguments to {identifier}, found: {args.Length}");
+
+                    default:
+                        throw new ScriptParsingException(
+                            source: source,
+                            message: $"Unable to identify {valueType.Name} member {identifier}");
+                }
+            }
+            else if (valueType == typeof(double))
+            {
+                switch (identifier)
+                {
+                    case "ToString":
+                        if (args.Length == 0)
+                        {
+                            args.VerifyArgs(source, identifier);
+                            return new MemberArgumentValueOperation<double, string>(
+                                value: value,
+                                operation: (double input, RuntimeContext context) =>
+                                    input.ToString(),
+                                source: source);
+                        }
+                        else if (args.Length == 1)
+                        {
+                            args.VerifyArgs(typeof(string), source, identifier);
+                            return new MemberArgumentValueOperation<double, string>(
+                                value: value,
+                                operation: (double input, RuntimeContext context) =>
+                                    input.ToString(args[0].GetAs<string>(context)),
+                                source: source);
+                        }
+                        throw new ScriptParsingException(
+                            source: source,
+                            message: $"Expected 0 or 1 Arguments to {identifier}, found: {args.Length}");
+
+                    default:
+                        throw new ScriptParsingException(
+                            source: source,
+                            message: $"Unable to identify {valueType.Name} member {identifier}");
+                }
+            }
+            else if (valueType == typeof(int))
+            {
+                switch (identifier)
+                {
+                    case "ToString":
+                        if (args.Length == 0)
+                        {
+                            args.VerifyArgs(source, identifier);
+                            return new MemberArgumentValueOperation<int, string>(
+                                value: value,
+                                operation: (int input, RuntimeContext context) =>
+                                    input.ToString(),
+                                source: source);
+                        }
+                        else if (args.Length == 1)
+                        {
+                            args.VerifyArgs(typeof(string), source, identifier);
+                            return new MemberArgumentValueOperation<int, string>(
+                                value: value,
+                                operation: (int input, RuntimeContext context) =>
+                                    input.ToString(args[0].GetAs<string>(context)),
+                                source: source);
+                        }
+                        throw new ScriptParsingException(
+                            source: source,
+                            message: $"Expected 0 or 1 Arguments to {identifier}, found: {args.Length}");
 
                     default:
                         throw new ScriptParsingException(
@@ -774,6 +884,129 @@ namespace BGC.Scripting
                             message: $"Unable to identify {valueType.Name} member {identifier}");
                 }
             }
+            else if (typeof(DataFile) == valueType)
+            {
+                switch (identifier)
+                {
+                    case "UpdateFileName":
+                        args.VerifyArgs(typeof(string), source, identifier);
+                        return new MemberArgumentStatementOperation<DataFile>(
+                            value: value,
+                            operation: (DataFile dataFile, RuntimeContext context) =>
+                                dataFile.UpdateFileName(args[0].GetAs<string>(context)),
+                            source: source);
+
+                    case "GetFieldName":
+                        args.VerifyArgs(typeof(int), source, identifier);
+                        return new MemberArgumentValueOperation<DataFile, string>(
+                            value: value,
+                            operation: (DataFile dataFile, RuntimeContext context) =>
+                                dataFile.GetFieldName(args[0].GetAs<int>(context)),
+                            source: source);
+
+                    case "AddField":
+                        args.VerifyArgs(typeof(string), source, identifier);
+                        return new MemberArgumentValueExecutableOperation<DataFile, bool>(
+                            value: value,
+                            operation: (DataFile dataFile, RuntimeContext context) =>
+                                dataFile.AddField(args[0].GetAs<string>(context)),
+                            source: source);
+
+                    case "RemoveField":
+                        args.VerifyArgs(typeof(string), source, identifier);
+                        return new MemberArgumentValueExecutableOperation<DataFile, bool>(
+                            value: value,
+                            operation: (DataFile dataFile, RuntimeContext context) =>
+                                dataFile.RemoveField(args[0].GetAs<string>(context)),
+                            source: source);
+
+                    case "AddValue":
+                        if (args.Length == 2)
+                        {
+                            if (typeof(int).IsAssignableFrom(args[0].GetValueType()))
+                            {
+                                //AddValue(int fieldNum, string value)
+                                args.VerifyArgs(typeof(int), typeof(string), source, identifier);
+                                return new MemberArgumentValueExecutableOperation<DataFile, bool>(
+                                    value: value,
+                                    operation: (DataFile dataFile, RuntimeContext context) =>
+                                        dataFile.AddValue(args[0].GetAs<int>(context), args[1].GetAs<string>(context)),
+                                    source: source);
+                            }
+                            else
+                            {
+                                //AddValue(string fieldName, string value)
+                                args.VerifyArgs(typeof(string), typeof(string), source, identifier);
+                                return new MemberArgumentValueExecutableOperation<DataFile, bool>(
+                                    value: value,
+                                    operation: (DataFile dataFile, RuntimeContext context) =>
+                                        dataFile.AddValue(args[0].GetAs<string>(context), args[1].GetAs<string>(context)),
+                                    source: source);
+
+                            }
+                        }
+                        throw new ScriptParsingException(
+                            source: source,
+                            message: $"Expected 2 Arguments to {identifier}, found: {args.Length}");
+
+                    case "GetValue":
+                        if (args.Length == 1)
+                        {
+                            if (typeof(int).IsAssignableFrom(args[0].GetValueType()))
+                            {
+                                //GetValue(int fieldNum)
+                                args.VerifyArgs(typeof(int), source, identifier);
+                                return new MemberArgumentValueOperation<DataFile, string>(
+                                    value: value,
+                                    operation: (DataFile dataFile, RuntimeContext context) =>
+                                        dataFile.GetValue(args[0].GetAs<int>(context)),
+                                    source: source);
+                            }
+                            else
+                            {
+                                //GetValue(string fieldName)
+                                args.VerifyArgs(typeof(string), source, identifier);
+                                return new MemberArgumentValueOperation<DataFile, string>(
+                                    value: value,
+                                    operation: (DataFile dataFile, RuntimeContext context) =>
+                                        dataFile.GetValue(args[0].GetAs<string>(context)),
+                                    source: source);
+                            }
+                        }
+                        throw new ScriptParsingException(
+                            source: source,
+                            message: $"Expected 1 Argument to {identifier}, found: {args.Length}");
+
+                    case "SetRecordNumber":
+                        args.VerifyArgs(typeof(int), source, identifier);
+                        return new MemberArgumentStatementOperation<DataFile>(
+                            value: value,
+                            operation: (DataFile dataFile, RuntimeContext context) =>
+                                dataFile.SetRecordNumber(args[0].GetAs<int>(context)),
+                            source: source);
+
+                    case "NextRecord":
+                        args.VerifyArgs(source, identifier);
+                        return new MemberStatementOperation<DataFile>(
+                            value: value,
+                            operation: (DataFile dataFile) =>
+                                dataFile.NextRecord(),
+                            source: source);
+
+                    case "Save":
+                        args.VerifyArgs(source, identifier);
+                        return new MemberStatementOperation<DataFile>(
+                            value: value,
+                            operation: (DataFile dataFile) =>
+                                dataFile.Save(),
+                            source: source);
+
+                    default:
+                        throw new ScriptParsingException(
+                            source: source,
+                            message: $"Unable to identify {valueType.Name} member {identifier}");
+                }
+            }
 
             throw new ScriptParsingException(
                 source: source,
@@ -789,6 +1022,18 @@ namespace BGC.Scripting
                 case Keyword.System:
                     switch (identifier)
                     {
+                        case "Date":
+                            return new StaticValueOperation<string>(
+                                operation: () => DateTime.Now.ToString("MM-dd-yyyy"));
+
+                        case "Time":
+                            return new StaticValueOperation<string>(
+                                operation: () => DateTime.Now.ToString("HH:mm:ss"));
+
+                        case "DateTime":
+                            return new StaticValueOperation<string>(
+                                operation: () => DateTime.Now.ToString("MM-dd-yy HH:mm:ss"));
+
                         default:
                             throw new ScriptParsingException(
                                 source: keywordToken,
@@ -915,6 +1160,12 @@ namespace BGC.Scripting
                 case Keyword.System:
                     switch (identifier)
                     {
+                        case "GetDate":
+                            args.VerifyArgs(typeof(string), keywordToken, identifier);
+                            return new StaticArgumentStatementOperation(
+                                operation: (RuntimeContext context) =>
+                                    DateTime.Now.ToString(args[0].GetAs<string>(context)));
+
                         default:
                             throw new ScriptParsingException(
                                 source: keywordToken,
@@ -960,6 +1211,10 @@ namespace BGC.Scripting
                     UserMethod userMethod = TranslateUserMethod(identifier);
                     switch (userMethod)
                     {
+                        case UserMethod.GetUserName:
+                            args.VerifyArgs(keywordToken, identifier);
+                            return new GetUserNameOperation();
+
                         case UserMethod.HasData:
                             args.VerifyArgs(typeof(string), keywordToken, identifier);
                             return new HasDataOperation(
@@ -1111,6 +1366,8 @@ namespace BGC.Scripting
         {
             switch (identifier)
             {
+                case "GetUserName": return UserMethod.GetUserName;
+
                 case "HasData": return UserMethod.HasData;
                 case "ClearData": return UserMethod.ClearData;
 

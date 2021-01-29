@@ -18,6 +18,8 @@
 
         GetList,
 
+        GetUserName,
+
         AddToReport,
 
         MAX

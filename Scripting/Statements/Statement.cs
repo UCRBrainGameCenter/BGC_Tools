@@ -266,6 +266,7 @@ namespace BGC.Scripting
                 case Keyword.Dictionary:
                 case Keyword.HashSet:
                 case Keyword.Random:
+                case Keyword.DataFile:
                     {
                         Type valueType = tokens.ReadType();
 

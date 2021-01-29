@@ -54,6 +54,7 @@ namespace BGC.Scripting
                 case Keyword.HashSet: return "HashSet";
 
                 case Keyword.Random: return "Random";
+                case Keyword.DataFile: return "DataFile";
 
                 case Keyword.New: return "new";
 
