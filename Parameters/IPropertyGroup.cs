@@ -74,6 +74,37 @@ namespace BGC.Parameters
             }
         }
 
+        public static IEnumerable<IPropertyGroup> GetAllPropertyGroups(this IPropertyGroup container, Func<PropertyInfo, bool> predicate)
+        {
+            foreach (PropertyInfo property in container.GetType().GetProperties(
+                BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance))
+            {
+                //The first check prevents the evaluation of all properties
+                if (typeof(IPropertyGroup).IsAssignableFrom(property.PropertyType) &&
+                    property.GetValue(container) is IPropertyGroup propertyGroup)
+                {
+                    //Standard PropertyGroup
+                    if (predicate(property))
+                    {
+                        yield return propertyGroup;
+                    }
+                }
+                else if (typeof(IList).IsAssignableFrom(property.PropertyType) &&
+                    property.GetValue(container) is IList propertyGroupList &&
+                    property.GetCustomAttribute<PropertyGroupListAttribute>() != null)
+                {
+                    if (predicate(property))
+                    {
+                        //PropertyGroupList
+                        foreach (IPropertyGroup propertyGroupListItem in propertyGroupList)
+                        {
+                            yield return propertyGroupListItem;
+                        }
+                    }
+                }
+            }
+        }
+
         public static JsonObject Internal_GetSerializedData(this IPropertyGroup propertyGroup)
         {
             JsonObject propertyGroupData = new JsonObject();
@@ -81,7 +112,7 @@ namespace BGC.Parameters
 
             propertyGroupData.Add("Type", propertyGroup.GetSelectionSerializationName());
 
-            //Grab the key field
+            //Grab the key fields
             foreach (PropertyInfo property in propertyGroup.GetKeyProperties())
             {
                 string keyValue = property.GetValue(propertyGroup) as string;
@@ -660,6 +691,8 @@ namespace BGC.Parameters
 
             return null;
         }
+        private static bool AllowsKeySearch(PropertyInfo propertyInfo) =>
+            propertyInfo.GetCustomAttribute<KeySearchTerminatorAttribute>() == null;
 
         public static IEnumerable<KeyInfo> GetKeyInfos(this IPropertyGroup propertyGroup)
         {
@@ -681,11 +714,10 @@ namespace BGC.Parameters
                     yield return new KeyInfo(
                         valueType: matchingProperty.PropertyType,
                         key: key);
-
                 }
             }
 
-            foreach (IPropertyGroup internalGroups in propertyGroup.GetAllPropertyGroups())
+            foreach (IPropertyGroup internalGroups in propertyGroup.GetAllPropertyGroups(AllowsKeySearch))
             {
                 foreach (KeyInfo keyInfo in internalGroups.GetKeyInfos())
                 {
@@ -693,6 +725,7 @@ namespace BGC.Parameters
                 }
             }
         }
+
 
         public static IEnumerable<KeyInfo> GetOutputKeyInfos(this IPropertyGroup propertyGroup)
         {
@@ -713,11 +746,10 @@ namespace BGC.Parameters
                     yield return new KeyInfo(
                         valueType: matchingProperty.PropertyType,
                         key: key);
-
                 }
             }
 
-            foreach (IPropertyGroup internalGroups in propertyGroup.GetAllPropertyGroups())
+            foreach (IPropertyGroup internalGroups in propertyGroup.GetAllPropertyGroups(AllowsKeySearch))
             {
                 foreach (KeyInfo keyInfo in internalGroups.GetOutputKeyInfos())
                 {

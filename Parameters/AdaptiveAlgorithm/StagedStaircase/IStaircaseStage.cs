@@ -25,8 +25,13 @@
     {
         [DisplayInputField("Stage1StepsUp")]
         public int Stage1StepsUp { get; set; }
+        [DisplayInputFieldKey("Stage1StepsUp")]
+        public string Stage1StepsUpKey { get; set; }
+
         [DisplayInputField("Stage1StepsDown")]
         public int Stage1StepsDown { get; set; }
+        [DisplayInputFieldKey("Stage1StepsDown")]
+        public string Stage1StepsDownKey { get; set; }
 
         int IStaircaseStage.GetStepsUp(StaircaseStage parameter)
         {
@@ -83,15 +88,28 @@
     {
         [DisplayInputField("Stage1Reversals")]
         public int Stage1Reversals { get; set; }
+        [DisplayInputFieldKey("Stage1Reversals")]
+        public string Stage1ReversalsKey { get; set; }
+
         [DisplayInputField("Stage1StepsUp")]
         public int Stage1StepsUp { get; set; }
+        [DisplayInputFieldKey("Stage1StepsUp")]
+        public string Stage1StepsUpKey { get; set; }
+
         [DisplayInputField("Stage1StepsDown")]
         public int Stage1StepsDown { get; set; }
+        [DisplayInputFieldKey("Stage1StepsDown")]
+        public string Stage1StepsDownKey { get; set; }
 
         [DisplayInputField("Stage2StepsUp")]
         public int Stage2StepsUp { get; set; }
+        [DisplayInputFieldKey("Stage2StepsUp")]
+        public string Stage2StepsUpKey { get; set; }
+
         [DisplayInputField("Stage2StepsDown")]
         public int Stage2StepsDown { get; set; }
+        [DisplayInputFieldKey("Stage2StepsDown")]
+        public string Stage2StepsDownKey { get; set; }
 
         int IStaircaseStage.GetStepsUp(StaircaseStage parameter)
         {
@@ -151,22 +169,43 @@
     {
         [DisplayInputField("Stage1Reversals")]
         public int Stage1Reversals { get; set; }
+        [DisplayInputFieldKey("Stage1Reversals")]
+        public string Stage1ReversalsKey { get; set; }
+
         [DisplayInputField("Stage1StepsUp")]
         public int Stage1StepsUp { get; set; }
+        [DisplayInputFieldKey("Stage1StepsUp")]
+        public string Stage1StepsUpKey { get; set; }
+
         [DisplayInputField("Stage1StepsDown")]
         public int Stage1StepsDown { get; set; }
+        [DisplayInputFieldKey("Stage1StepsDown")]
+        public string Stage1StepsDownKey { get; set; }
 
         [DisplayInputField("Stage2Reversals")]
         public int Stage2Reversals { get; set; }
+        [DisplayInputFieldKey("Stage2Reversals")]
+        public string Stage2ReversalsKey { get; set; }
+
         [DisplayInputField("Stage2StepsUp")]
         public int Stage2StepsUp { get; set; }
+        [DisplayInputFieldKey("Stage2StepsUp")]
+        public string Stage2StepsUpKey { get; set; }
+
         [DisplayInputField("Stage2StepsDown")]
         public int Stage2StepsDown { get; set; }
+        [DisplayInputFieldKey("Stage2StepsDown")]
+        public string Stage2StepsDownKey { get; set; }
 
         [DisplayInputField("Stage3StepsUp")]
         public int Stage3StepsUp { get; set; }
+        [DisplayInputFieldKey("Stage3StepsUp")]
+        public string Stage3StepsUpKey { get; set; }
+
         [DisplayInputField("Stage3StepsDown")]
         public int Stage3StepsDown { get; set; }
+        [DisplayInputFieldKey("Stage3StepsDown")]
+        public string Stage3StepsDownKey { get; set; }
 
         int IStaircaseStage.GetStepsUp(StaircaseStage parameter)
         {

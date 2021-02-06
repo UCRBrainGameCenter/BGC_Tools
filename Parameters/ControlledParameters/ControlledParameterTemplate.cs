@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System;
 using LightJson;
 
 namespace BGC.Parameters

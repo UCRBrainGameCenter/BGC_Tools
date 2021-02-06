@@ -30,6 +30,9 @@ namespace BGC.Parameters
         [DisplayInputField("BaseStepSize")]
         public int BaseStepSize { get; set; }
 
+        [DisplayInputFieldKey("BaseStepSize")]
+        public string BaseStepSizeKey { get; set; }
+
         int ISimpleIntStepTemplate.GetValue(int stepNumber)
         {
             if (DecreaseParameter)

@@ -22,13 +22,23 @@ namespace BGC.Parameters.Algorithms.SimpleStaircase
 
         [DisplayInputField("CorrectToStepDown")]
         public int CorrectToStepDown { get; set; }
+        [DisplayInputFieldKey("CorrectToStepDown")]
+        public string CorrectToStepDownKey { get; set; }
+
         [DisplayInputField("WrongToStepUp")]
         public int WrongToStepUp { get; set; }
+        [DisplayInputFieldKey("WrongToStepUp")]
+        public string WrongToStepUpKey { get; set; }
 
         [DisplayInputField("StepsUp")]
         public int StepsUp { get; set; }
+        [DisplayInputFieldKey("StepsUp")]
+        public string StepsUpKey { get; set; }
+
         [DisplayInputField("StepsDown")]
         public int StepsDown { get; set; }
+        [DisplayInputFieldKey("StepsDown")]
+        public string StepsDownKey { get; set; }
 
         #region IControlSource
 

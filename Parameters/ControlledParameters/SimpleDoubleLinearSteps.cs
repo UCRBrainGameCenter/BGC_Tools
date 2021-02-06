@@ -1,6 +1,5 @@
 ﻿using System;
 using BGC.Mathematics;
-using BGC.Scripting;
 
 namespace BGC.Parameters
 {
@@ -31,6 +30,8 @@ namespace BGC.Parameters
 
         [DisplayInputField("BaseStepSize")]
         public double BaseStepSize { get; set; }
+        [DisplayInputFieldKey("BaseStepSize")]
+        public string BaseStepSizeKey { get; set; }
 
         double ISimpleDoubleStepTemplate.GetValue(int stepNumber)
         {

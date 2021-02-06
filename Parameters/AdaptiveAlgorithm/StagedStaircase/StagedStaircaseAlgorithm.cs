@@ -24,8 +24,13 @@ namespace BGC.Parameters.Algorithms.StagedStaircase
 
         [DisplayInputField("CorrectToStepDown")]
         public int CorrectToStepDown { get; set; }
+        [DisplayInputFieldKey("CorrectToStepDown")]
+        public string CorrectToStepDownKey { get; set; }
+
         [DisplayInputField("WrongToStepUp")]
         public int WrongToStepUp { get; set; }
+        [DisplayInputFieldKey("WrongToStepUp")]
+        public string WrongToStepUpKey { get; set; }
 
         [AppendSelection(
             typeof(Staircase1Stage),
