@@ -30,11 +30,9 @@
 using System;
 using System.Globalization;
 using System.Runtime.Serialization;
-using UnityEngine;
 
 namespace BGC.Mathematics
 {
-
     /// <summary>
     /// Represents a complex number with single-precision floating point components
     /// </summary>
@@ -51,7 +49,6 @@ namespace BGC.Mathematics
         /// </summary>
         [DataMember(Order = 2)]
         private readonly float _imag;
-
 
         /// <summary>
         /// Returns a new Complex32 instance with a real number equal to zero and an imaginary number equal to zero.

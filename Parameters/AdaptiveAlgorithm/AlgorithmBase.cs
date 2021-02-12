@@ -80,6 +80,4 @@ namespace BGC.Parameters.Algorithms
 
         #endregion IControlSource
     }
-
-
 }

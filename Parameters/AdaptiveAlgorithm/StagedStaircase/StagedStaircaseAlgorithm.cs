@@ -198,6 +198,11 @@ namespace BGC.Parameters.Algorithms.StagedStaircase
         {
             double averageOfReversals = reversalValues.Sum() / (double)reversalValues.Count;
 
+            if (double.IsNaN(averageOfReversals))
+            {
+                averageOfReversals = stepValue;
+            }
+
             foreach (ControlledParameterTemplate template in controlledParameters)
             {
                 template.FinalizeParameters(averageOfReversals);

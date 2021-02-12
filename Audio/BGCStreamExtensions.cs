@@ -472,6 +472,27 @@ namespace BGC.Audio
                 randomizer: randomizer);
         }
 
+        public static IBGCStream NoiseVocode(
+            this IBGCStream stream,
+            double freqLowerBound = 20.0,
+            double freqUpperBound = 16000.0,
+            int bandCount = 22,
+            int fftSize = 4096,
+            int overlapRatio = 4,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough,
+            System.Random randomizer = null)
+        {
+            return new NoiseVocoder(
+                stream: stream,
+                freqLowerBound: freqLowerBound,
+                freqUpperBound: freqUpperBound,
+                bandCount: bandCount,
+                fftSize: fftSize,
+                overlapRatio: overlapRatio,
+                rmsBehavior: rmsBehavior,
+                randomizer: randomizer);
+        }
+
         public static IBGCStream AllPass(
             this IBGCStream stream,
             in Complex64 coefficient,

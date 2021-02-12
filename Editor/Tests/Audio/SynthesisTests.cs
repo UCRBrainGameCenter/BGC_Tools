@@ -501,6 +501,40 @@ namespace BGC.Tests
             Assert.IsTrue(success);
         }
 
+        [Test]
+        public void TestNoiseVocodedSpeech()
+        {
+            Calibration.Initialize();
+
+            string speechFile = DataManagement.PathForDataFile("Test", "000000.wav");
+            if (!File.Exists(speechFile))
+            {
+                throw new Exception($"Test utilizes CRM missing sentence: {speechFile}");
+            }
+
+            WaveEncoding.LoadBGCStream(
+                filepath: speechFile,
+                stream: out IBGCStream speechStream);
+
+            bool success = WaveEncoding.SaveStream(
+                filepath: DataManagement.PathForDataFile("Test", "06BandVocoding.wav"),
+                stream: speechStream.NoiseVocode(bandCount: 6).Cache().SlowRangeFitter(),
+                overwrite: true);
+
+            success |= WaveEncoding.SaveStream(
+                filepath: DataManagement.PathForDataFile("Test", "11BandVocoding.wav"),
+                stream: speechStream.NoiseVocode(bandCount: 11).Cache().SlowRangeFitter(),
+                overwrite: true);
+
+
+            success |= WaveEncoding.SaveStream(
+                filepath: DataManagement.PathForDataFile("Test", "22BandVocoding.wav"),
+                stream: speechStream.NoiseVocode(bandCount: 22).Cache().SlowRangeFitter(),
+                overwrite: true);
+
+            Assert.IsTrue(success);
+        }
+
         private bool TryAllpassFilters(IBGCStream stream, string baseName)
         {
             List<Complex64> testCoefficients = new List<Complex64>();
@@ -1204,7 +1238,10 @@ namespace BGC.Tests
                 20f,
                 40f,
                 60f,
-                80f
+                80f,
+                160f,
+                320f,
+                640f,
             };
 
             foreach (float rate in rates)
