@@ -1230,10 +1230,13 @@ namespace BGC.Parameters
 
                     if (!scriptContext.VariableExists(keyValue))
                     {
-                        throw new Exception($"State dictionary did not contain key: {keyValue}");
+                        Debug.LogWarning($"State dictionary did not contain key: \"{keyValue}\". Using default value.");
+                        valueProperty.SetValue(propertyGroup, valueProperty.PropertyType.GetDefaultValue());
                     }
-
-                    valueProperty.SetValue(propertyGroup, scriptContext.GetRawValue(keyValue));
+                    else
+                    {
+                        valueProperty.SetValue(propertyGroup, scriptContext.GetRawValue(keyValue));
+                    }
                 }
             }
 
