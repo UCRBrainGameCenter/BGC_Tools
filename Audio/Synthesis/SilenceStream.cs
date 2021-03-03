@@ -14,7 +14,7 @@ namespace BGC.Audio.Synthesis
         public override int Channels { get; }
         public override float SamplingRate => 44100f;
 
-        public override int TotalSamples => Channels * ChannelSamples;
+        public override int TotalSamples { get; }
         public override int ChannelSamples { get; }
 
         private int position = 0;
@@ -23,6 +23,15 @@ namespace BGC.Audio.Synthesis
         {
             Channels = channels;
             ChannelSamples = channelSamples;
+
+            if (ChannelSamples == int.MaxValue)
+            {
+                TotalSamples = int.MaxValue;
+            }
+            else
+            {
+                TotalSamples = Channels * ChannelSamples;
+            }
         }
 
         public override int Read(float[] data, int offset, int count)

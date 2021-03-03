@@ -9,10 +9,9 @@ namespace BGC.Audio.Filters
     /// </summary>
     public class NormalizerFilter : SimpleBGCFilter
     {
+        public override int Channels => stream.Channels;
         public override int TotalSamples => stream.TotalSamples;
         public override int ChannelSamples => stream.ChannelSamples;
-
-        public override int Channels => 2;
 
         private bool factorsInitialized = false;
         private float leftFactor;

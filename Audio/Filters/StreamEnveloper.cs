@@ -13,7 +13,7 @@ namespace BGC.Audio.Filters
     {
         public override int Channels => stream.Channels;
 
-        public override int TotalSamples => Channels * ChannelSamples;
+        public override int TotalSamples { get; }
         public override int ChannelSamples { get; }
 
         private readonly IBGCEnvelopeStream envelopeStream;
@@ -22,7 +22,7 @@ namespace BGC.Audio.Filters
         private int position = 0;
 
         private const int BUFFER_SIZE = 512;
-        private float[] buffer = new float[BUFFER_SIZE];
+        private readonly float[] buffer = new float[BUFFER_SIZE];
 
         public StreamEnveloper(
             IBGCStream stream,
@@ -34,6 +34,15 @@ namespace BGC.Audio.Filters
             this.envelopeStream = envelopeStream;
 
             ChannelSamples = Math.Min(envelopeStream.Samples, stream.ChannelSamples);
+
+            if (ChannelSamples == int.MaxValue)
+            {
+                TotalSamples = int.MaxValue;
+            }
+            else
+            {
+                TotalSamples = Channels * ChannelSamples;
+            }
         }
 
         public override void Reset()

@@ -123,7 +123,7 @@ namespace BGC.Audio.Envelopes
 
                 if (_samplingRate != samplingRates.Min())
                 {
-                    throw new Exception("EnvelopeMultiplier requires all streams have the same samplingRate.");
+                    throw new StreamCompositionException("EnvelopeMultiplier requires all streams have the same samplingRate.");
                 }
 
                 _sampleCount = streams.Select(x => x.Samples).Max();

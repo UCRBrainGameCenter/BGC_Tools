@@ -15,7 +15,8 @@ namespace BGC.Audio.Filters
         private int _channels = 1;
         public override int Channels => _channels;
 
-        public override int TotalSamples => _channels * _channelSampleCount;
+        private int _totalSampleCount = 0;
+        public override int TotalSamples => _totalSampleCount;
 
         private int _channelSampleCount = 0;
         public override int ChannelSamples => _channelSampleCount;
@@ -109,7 +110,7 @@ namespace BGC.Audio.Filters
                 _channels = channels.Max();
                 if (_channels != channels.Min())
                 {
-                    throw new ArgumentException($"StreamAdder Channel Count Mismatch.");
+                    throw new StreamCompositionException($"StreamAdder Channel Count Mismatch.");
                 }
 
                 IEnumerable<float> samplingRates = streams.Select(x => x.SamplingRate);
@@ -117,16 +118,27 @@ namespace BGC.Audio.Filters
 
                 if (_samplingRate != samplingRates.Min())
                 {
-                    throw new Exception("StreamAdder requires all streams have the same samplingRate.");
+                    throw new StreamCompositionException("StreamAdder requires all streams have the same samplingRate.");
                 }
 
                 _channelSampleCount = streams.Select(x => x.ChannelSamples).Max();
+
+                if (_channelSampleCount == int.MaxValue)
+                {
+                    _totalSampleCount = int.MaxValue;
+                }
+                else
+                {
+                    _totalSampleCount = _channels * _channelSampleCount;
+                }
+
                 _channelRMS = null;
             }
             else
             {
                 _channels = 1;
                 _channelSampleCount = 0;
+                _totalSampleCount = 0;
                 _samplingRate = 44100f;
                 _channelRMS = null;
             }

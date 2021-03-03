@@ -54,8 +54,7 @@ namespace BGC.Audio.Filters
 
         public override int Channels => stream.Channels;
 
-        public override int TotalSamples => Channels * ChannelSamples;
-
+        public override int TotalSamples { get; }
         public override int ChannelSamples { get; }
 
         public PhaseVocoder(
@@ -87,7 +86,16 @@ namespace BGC.Audio.Filters
             fftBuffer = new Complex64[baseFFTSamples];
             ifftBuffer = new Complex64[expandedFFTSamples];
 
-            ChannelSamples = (int)(stream.ChannelSamples / effectiveSpeed);
+            if (stream.ChannelSamples == int.MaxValue)
+            {
+                ChannelSamples = int.MaxValue;
+                TotalSamples = int.MaxValue;
+            }
+            else
+            {
+                ChannelSamples = (int)(stream.ChannelSamples / effectiveSpeed);
+                TotalSamples = Channels * ChannelSamples;
+            }
 
             for (int i = 0; i < Channels; i++)
             {

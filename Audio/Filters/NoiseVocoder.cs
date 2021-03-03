@@ -11,10 +11,9 @@ namespace BGC.Audio.Filters
     /// </summary>
     public class NoiseVocoder : SimpleBGCFilter
     {
-        public override int Channels => 1;
+        public override int Channels => stream.Channels;
         public override int TotalSamples => stream.TotalSamples;
         public override int ChannelSamples => stream.ChannelSamples;
-        public override float SamplingRate => stream.SamplingRate;
 
         private readonly double noiseScalarA;
         private readonly double noiseScalarB;

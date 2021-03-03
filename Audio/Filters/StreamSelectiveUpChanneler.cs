@@ -10,8 +10,8 @@ namespace BGC.Audio.Filters
     /// </summary>
     public class StreamSelectiveUpChanneler : SimpleBGCFilter
     {
-        public override int TotalSamples => 2 * ChannelSamples;
-        public override int ChannelSamples => stream.ChannelSamples;
+        public override int TotalSamples { get; }
+        public override int ChannelSamples { get; }
 
         public override int Channels => 2;
 
@@ -29,6 +29,17 @@ namespace BGC.Audio.Filters
             }
 
             this.channels = channels;
+
+            ChannelSamples = stream.ChannelSamples;
+
+            if (ChannelSamples == int.MaxValue)
+            {
+                TotalSamples = int.MaxValue;
+            }
+            else
+            {
+                TotalSamples = Channels * ChannelSamples;
+            }
         }
 
         public override int Read(float[] data, int offset, int count)

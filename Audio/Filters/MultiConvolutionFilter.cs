@@ -164,6 +164,12 @@ namespace BGC.Audio.Filters
                     $"MultiConvolutionFilter expects a mono input stream. Input stream had {stream.Channels} channels.");
             }
 
+            if (filter.ChannelSamples == int.MaxValue)
+            {
+                throw new StreamCompositionException(
+                    $"MultiConvolutionFilter cannot use an infinite-duration filter.");
+            }
+
             filterLength = filter.ChannelSamples;
             Channels = filter.Channels;
 

@@ -23,7 +23,7 @@ namespace BGC.Audio.Filters
         {
             if (stream.TotalSamples == int.MaxValue)
             {
-                throw new Exception("Can't cache unlimited samples");
+                throw new StreamCompositionException("Can't cache unlimited samples");
             }
 
             sampleCache = new float[stream.TotalSamples];

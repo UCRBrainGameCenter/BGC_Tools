@@ -14,7 +14,8 @@ namespace BGC.Audio.Filters
 
         public override int Channels => streams.Count;
 
-        public override int TotalSamples => Channels * ChannelSamples;
+        private int _totalSampleCount = 0;
+        public override int TotalSamples => _totalSampleCount;
 
         private int _channelSampleCount = 0;
         public override int ChannelSamples => _channelSampleCount;
@@ -97,7 +98,7 @@ namespace BGC.Audio.Filters
             {
                 if (streams.Select(x => x.Channels).Max() != 1)
                 {
-                    throw new Exception("StreamMergeFilter requires all streams have one channel each.");
+                    throw new StreamCompositionException("StreamMergeFilter requires all streams have one channel each.");
                 }
 
                 IEnumerable<float> samplingRates = streams.Select(x => x.SamplingRate);
@@ -105,14 +106,23 @@ namespace BGC.Audio.Filters
 
                 if (_samplingRate != samplingRates.Min())
                 {
-                    throw new Exception("StreamMergeFilter requires all streams have the same samplingRate.");
+                    throw new StreamCompositionException("StreamMergeFilter requires all streams have the same samplingRate.");
                 }
 
                 IEnumerable<int> channelSampleCounts = streams.Select(x => x.ChannelSamples);
                 _channelSampleCount = channelSampleCounts.Max();
                 if (_channelSampleCount != channelSampleCounts.Min())
                 {
-                    throw new Exception("StreamMergeFilter requires all streams have the same number of samples.");
+                    throw new StreamCompositionException("StreamMergeFilter requires all streams have the same number of samples.");
+                }
+
+                if (_channelSampleCount == int.MaxValue)
+                {
+                    _totalSampleCount = int.MaxValue;
+                }
+                else
+                {
+                    _totalSampleCount = Channels * _channelSampleCount;
                 }
 
                 _channelRMS = null;
@@ -120,6 +130,7 @@ namespace BGC.Audio.Filters
             else
             {
                 _channelSampleCount = 0;
+                _totalSampleCount = 0;
                 _samplingRate = 44100f;
                 _channelRMS = null;
             }

@@ -104,7 +104,7 @@ namespace BGC.Audio.AnalyticStreams
 
                 if (_samplingRate != samplingRates.Min())
                 {
-                    throw new Exception("AnalyticStreamAdder requires all streams have the same samplingRate.");
+                    throw new StreamCompositionException("AnalyticStreamAdder requires all streams have the same samplingRate.");
                 }
 
                 _sampleCount = streams.Select(x => x.Samples).Max();

@@ -16,7 +16,8 @@ namespace BGC.Audio.Filters
         private int _channels = 1;
         public override int Channels => _channels;
 
-        public override int TotalSamples => Channels * ChannelSamples;
+        private int _totalSampleCount = 0;
+        public override int TotalSamples => _totalSampleCount;
 
         private int _channelSampleCount = 0;
         public override int ChannelSamples => _channelSampleCount;
@@ -136,7 +137,7 @@ namespace BGC.Audio.Filters
 
                 if (_channels != channels.Min())
                 {
-                    throw new Exception("StreamConcatenator requires all streams have the same channel count.");
+                    throw new StreamCompositionException("StreamConcatenator requires all streams have the same channel count.");
                 }
 
                 IEnumerable<float> samplingRates = streams.Select(x => x.SamplingRate);
@@ -144,16 +145,27 @@ namespace BGC.Audio.Filters
 
                 if (_samplingRate != samplingRates.Min())
                 {
-                    throw new Exception("StreamConcatenator requires all streams have the same samplingRate.");
+                    throw new StreamCompositionException("StreamConcatenator requires all streams have the same samplingRate.");
                 }
 
-                _channelSampleCount = streams.Select(x => x.ChannelSamples).Sum();
+                if (streams.Select(x => x.ChannelSamples).Any(x => x == int.MaxValue))
+                {
+                    _channelSampleCount = int.MaxValue;
+                    _totalSampleCount = int.MaxValue;
+                }
+                else
+                {
+                    _channelSampleCount = streams.Select(x => x.ChannelSamples).Sum();
+                    _totalSampleCount = Channels * _channelSampleCount;
+                }
+                
                 _channelRMS = null;
             }
             else
             {
                 _channels = 1;
                 _channelSampleCount = 0;
+                _totalSampleCount = 0;
                 _samplingRate = 44100f;
                 _channelRMS = null;
             }

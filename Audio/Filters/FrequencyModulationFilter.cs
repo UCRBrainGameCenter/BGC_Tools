@@ -19,10 +19,8 @@ namespace BGC.Audio.Filters
         private const double W_2 = 0.00125;
         private const int FILTER_LENGTH = 129;
 
-        public override int Channels => 1;
-
+        public override int Channels => stream.Channels;
         public override int TotalSamples => stream.TotalSamples;
-
         public override int ChannelSamples => stream.ChannelSamples;
 
         private readonly IBGCStream convStream;
@@ -41,6 +39,11 @@ namespace BGC.Audio.Filters
             double modDepth)
             : base(stream)
         {
+            if (stream.Channels != 1)
+            {
+                throw new StreamCompositionException(
+                    $"FrequencyModulationFilter requires a mono input stream.  Input stream has {stream.Channels} channels");
+            }
 
             double[] realConvolutionFilter = new double[FILTER_LENGTH];
             double[] imagConvolutionFilter = new double[FILTER_LENGTH];
