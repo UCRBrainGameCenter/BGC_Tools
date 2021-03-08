@@ -62,9 +62,11 @@ namespace BGC.Audio.Filters
                     case AudioChannel.Left:
                     case AudioChannel.Right:
                         int channelAdj = (int)channels;
+                        int offChannel = (channelAdj + 1) % 2;
                         for (int i = 0; i < samplesRead; i++)
                         {
                             data[offset + 2 * i + channelAdj] = buffer[i];
+                            data[offset + 2 * i + offChannel] = 0f;
                         }
                         break;
 
