@@ -6,7 +6,7 @@ namespace BGC.StateMachine
     /// <summary>
     /// Simple State with optional lambda arguments for OnStateEnter, OnStateExit, and Update.
     /// </summary>
-    public sealed class UpdatingLambdaState<TBoolEnum, TTriggerEnum> : State
+    public sealed class UpdatingLambdaState : State
     {
         private readonly Action onStateEnter;
         private readonly Action onStateExit;
