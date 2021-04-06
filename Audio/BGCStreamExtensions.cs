@@ -571,6 +571,27 @@ namespace BGC.Audio
             return new StreamRepeater(stream);
         }
 
+        public static IBGCStream CyclicalRotate(this IBGCStream stream, int sampleRotation) =>
+            new CyclicalRotatorFilter(stream, sampleRotation);
+        public static IBGCStream CyclicalRotate(this IBGCStream stream, double timeRotation) =>
+            new CyclicalRotatorFilter(stream, timeRotation);
+
+        public static IBGCStream CyclicalRotateRatio(this IBGCStream stream, double fractionalRotation)
+        {
+            if (fractionalRotation < 0 || fractionalRotation > 1)
+            {
+                throw new StreamCompositionException($"CyclicalRotatorFilter requires fractionalRotation between 0 and 1");
+            }
+
+            if (fractionalRotation == 0 || fractionalRotation == 1)
+            {
+                //Unmodified
+                return stream;
+            }
+
+            return new CyclicalRotatorFilter(stream, (int)(fractionalRotation * stream.ChannelSamples));
+        }
+
         public static IBGCStream ToWaveStream(
             this ComplexCarrierTone carrierTone)
         {
