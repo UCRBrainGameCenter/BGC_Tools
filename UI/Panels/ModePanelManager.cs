@@ -55,6 +55,11 @@ namespace BGC.UI.Panels
                 modePanel.gameObject.SetActive(visible);
             }
 
+            if (copyPanel != null)
+            {
+                copyPanel.gameObject.SetActive(true);
+            }
+
             initialPanel.FocusAcquired();
         }
 
@@ -83,7 +88,10 @@ namespace BGC.UI.Panels
             newPanel.FocusAcquired();
             newPanel.ImmediateStateSet(true);
 
-            lastActivePanel.gameObject.SetActive(false);
+            if (lastActivePanel != copyPanel)
+            {
+                lastActivePanel.gameObject.SetActive(false);
+            }
 
             lastActivePanel = newPanel;
         }
@@ -169,7 +177,7 @@ namespace BGC.UI.Panels
                     orientation: newPanelInferior ? Orientation.Inferior : Orientation.Superior));
 
             lastActivePanel.LerpHandler.Activate(
-                duration: 0.8f * flipTime,
+                duration: flipTime,
                 lerpAction: new ModePanelTranslator(
                     direction: Direction.Hide,
                     axis: panelAxis,
@@ -183,15 +191,17 @@ namespace BGC.UI.Panels
 
         protected void SpecialSetPanelActive(ModePanel newPanel, bool newPanelInferior)
         {
-            copyPanel.gameObject.SetActive(true);
-            copyPanel.TakeSnapshot(lastActivePanel.RectTransform);
+            copyPanel.TakeSnapshot();
 
             lastActivePanel.FocusLost();
             lastActivePanel.ImmediateStateSet(false);
 
             if (lastActivePanel != newPanel)
             {
-                lastActivePanel.gameObject.SetActive(false);
+                if (lastActivePanel != copyPanel)
+                {
+                    lastActivePanel.gameObject.SetActive(false);
+                }
                 newPanel.gameObject.SetActive(true);
             }
 
@@ -202,8 +212,9 @@ namespace BGC.UI.Panels
                     axis: panelAxis,
                     orientation: newPanelInferior ? Orientation.Inferior : Orientation.Superior));
 
+            copyPanel.FocusAcquired();
             copyPanel.LerpHandler.Activate(
-                duration: 0.8f * flipTime,
+                duration: flipTime,
                 lerpAction: new ModePanelTranslator(
                     direction: Direction.Hide,
                     axis: panelAxis,
@@ -227,9 +238,7 @@ namespace BGC.UI.Panels
                 return;
             }
 
-            copyPanel.gameObject.SetActive(true);
-            copyPanel.TakeSnapshot(panel.RectTransform);
-
+            copyPanel.TakeSnapshot();
             betweenSwipeAction?.Invoke();
 
             panel.ImmediateStateSet(false);
@@ -242,8 +251,9 @@ namespace BGC.UI.Panels
                     orientation: newPanelInferior ? Orientation.Inferior : Orientation.Superior),
                 finishedCallback: afterSwipeAction);
 
+            copyPanel.FocusAcquired();
             copyPanel.LerpHandler.Activate(
-                duration: 0.8f * flipTime,
+                duration: flipTime,
                 lerpAction: new ModePanelTranslator(
                     direction: Direction.Hide,
                     axis: panelAxis,
@@ -251,6 +261,16 @@ namespace BGC.UI.Panels
                 finishedCallback: DisableModePanel);
         }
 
-        private void DisableModePanel(ModePanel panel) => panel.gameObject.SetActive(false);
+        private void DisableModePanel(ModePanel panel)
+        {
+            if (panel != copyPanel)
+            {
+                panel.gameObject.SetActive(false);
+            }
+            else if (copyPanel != null)
+            {
+                copyPanel.FocusLost();
+            }
+        }
     }
 }
