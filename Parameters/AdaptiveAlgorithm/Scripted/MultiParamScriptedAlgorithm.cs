@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using LightJson;
 using BGC.Scripting;
 using BGC.UI.Dialogs;
@@ -7,13 +8,17 @@ using BGC.Parameters.Exceptions;
 
 namespace BGC.Parameters.Algorithms.Scripted
 {
-    [PropertyChoiceTitle("Scripted")]
-    [EnumDropdownDisplay("StepScheme", displayTitle: "Step Scheme", initialValue: 0, choiceListMethodName: nameof(GetStepSchemeChoiceList))]
+    [PropertyChoiceTitle("MultiParam Scripted")]
+    [EnumDropdownDisplay("StepScheme", displayTitle: "Step Scheme", initialValue: (int)StepScheme.Absolute, choiceListMethodName: nameof(GetStepSchemeChoiceList))]
+    [EnumDropdownDisplay("ParameterCount", displayTitle: "Parameter Count", initialValue: 1, choiceListMethodName: nameof(GetParamCountChoiceList))]
     [ScriptFieldDisplay("Script", displayTitle: "Script", initial: DEFAULT_SCRIPT)]
-    public class ScriptedAlgorithm : AlgorithmBase, IBinaryOutcomeAlgorithm, IBescriptedPropertyGroup
+    public class MultiParamScriptedAlgorithm : AlgorithmBase, IBinaryOutcomeAlgorithm, IBescriptedPropertyGroup
     {
         [DisplayInputField("StepScheme")]
         public StepScheme StepScheme { get; set; }
+
+        [DisplayInputField("ParameterCount")]
+        public int ParameterCount { get; set; }
 
         [DisplayInputField("Script")]
         public string Script { get; set; }
@@ -29,21 +34,32 @@ namespace BGC.Parameters.Algorithms.Scripted
             };
         }
 
+        public static List<ValueNamePair> GetParamCountChoiceList()
+        {
+            return new List<ValueNamePair>
+            {
+                new ValueNamePair(1, "1 Parameter"),
+                new ValueNamePair(2, "2 Parameters"),
+                new ValueNamePair(3, "3 Parameters"),
+                new ValueNamePair(4, "4 Parameters")
+            };
+        }
+
         #endregion Setup Methods
         #region IControlSource
 
-        public override int GetSourceCount() => 1;
+        public override int GetSourceCount() => ParameterCount;
 
         public override string GetSourcePathDisplayName(int index)
         {
-            if (index != 0)
+            if (index >= ParameterCount)
             {
                 throw new ParameterizedCompositionException(
                     $"Unexpected Source index: {index}",
                     this.GetGroupPath());
             }
 
-            return "Scripted Parameter";
+            return $"Scripted Parameter {index}";
         }
 
         #endregion IControlSource
@@ -55,17 +71,18 @@ namespace BGC.Parameters.Algorithms.Scripted
                 script: Script,
                 new FunctionSignature(
                     identifier: "Initialize",
-                    returnType: typeof(int)),
+                    returnType: typeof(List<int>),
+                    arguments: new VariableData("paramCount", typeof(int))),
                 new FunctionSignature(
                     identifier: "Step",
-                    returnType: typeof(int),
+                    returnType: typeof(List<int>),
                     arguments: new VariableData("lastTrialCorrect", typeof(bool))),
                 new FunctionSignature(
                     identifier: "End",
                     returnType: typeof(bool)),
                 new FunctionSignature(
                     identifier: "CalculateThreshold",
-                    returnType: typeof(double)));
+                    returnType: typeof(List<double>)));
 
 
             foreach (KeyInfo keyInfo in scriptObject.GetDeclarations())
@@ -126,15 +143,23 @@ namespace BGC.Parameters.Algorithms.Scripted
         const string DEFAULT_SCRIPT =
 @"int trialCount = 0;
 int correctCount = 0;
+List<int> steps;
 
 //Initialize the algorithm and returns the starting step
-int Initialize()
+List<int> Initialize(int paramCount)
 {
-    return 0;
+    steps = new List<int>();
+
+    for (int i = 0; i < paramCount; i++)
+    {
+        steps.Add(0);
+    }
+
+    return steps;
 }
 
 //Determine how to step
-int Step(bool lastTrialCorrect)
+List<int> Step(bool lastTrialCorrect)
 {
     trialCount++;
     if (lastTrialCorrect)
@@ -142,7 +167,13 @@ int Step(bool lastTrialCorrect)
         correctCount++;
     }
 
-    return 1;
+    for (int i = 0; i < steps.Count; i++)
+    {
+        //Increment all step values
+        steps[i]++;
+    }
+
+    return steps;
 }
 
 //Is the task finished?
@@ -152,9 +183,14 @@ bool End()
 }
 
 //Calculate the end threshold estimate
-double CalculateThreshold()
+List<double> CalculateThreshold()
 {
-    return Math.Clamp(2 * (correctCount - 0.5 * trialCount), 0, trialCount);
+    List<double> thresholds = new List<double>();
+    for (int i = 0; i < steps.Count; i++)
+    {
+        thresholds.Add(Math.Clamp(2 * (correctCount - 0.5 * trialCount), 0, trialCount));
+    }
+    return thresholds;
 }";
         #endregion Script Constant
         #region Handler
@@ -162,7 +198,7 @@ double CalculateThreshold()
         private Script scriptObject;
         private ScriptRuntimeContext context;
         private StepScheme stepScheme;
-        private int currentStep = 0;
+        private List<int> currentSteps = null;
 
 
         int IBescriptedPropertyGroup.InitPriority => 1;
@@ -173,17 +209,18 @@ double CalculateThreshold()
                 script: Script,
                 new FunctionSignature(
                     identifier: "Initialize",
-                    returnType: typeof(int)),
+                    returnType: typeof(List<int>),
+                    arguments: new VariableData("paramCount", typeof(int))),
                 new FunctionSignature(
                     identifier: "Step",
-                    returnType: typeof(int),
+                    returnType: typeof(List<int>),
                     arguments: new VariableData("lastTrialCorrect", typeof(bool))),
                 new FunctionSignature(
                     identifier: "End",
                     returnType: typeof(bool)),
                 new FunctionSignature(
                     identifier: "CalculateThreshold",
-                    returnType: typeof(double)));
+                    returnType: typeof(List<double>)));
 
             context = scriptObject.PrepareScript(globalContext);
         }
@@ -191,10 +228,12 @@ double CalculateThreshold()
         public void Initialize(double taskGuessRate)
         {
             stepScheme = StepScheme;
+            currentSteps = null;
 
             try
             {
-                currentStep = scriptObject.ExecuteFunction<int>("Initialize", context);
+                //Clone list so we don't risk modifying script memory
+                currentSteps = scriptObject.ExecuteFunction<List<int>>("Initialize", context, ParameterCount).ToList();
             }
             catch (ScriptRuntimeException excp)
             {
@@ -216,16 +255,30 @@ double CalculateThreshold()
 
         protected override void FinishInitialization()
         {
-            SetStepValue(0, currentStep);
+            if (currentSteps is null)
+            {
+                currentSteps = new List<int>();
+            }
+
+            //Make sure all of the requisite parameter values are there
+            while (currentSteps.Count < ParameterCount)
+            {
+                currentSteps.Add(0);
+            }
+
+            for (int i = 0; i < ParameterCount; i++)
+            {
+                SetStepValue(i, currentSteps[i]);
+            }
         }
 
         public void SubmitTrialResult(bool correct)
         {
-            int step = 0;
+            List<int> newSteps = null;
 
             try
             {
-                step = scriptObject.ExecuteFunction<int>("Step", context, correct);
+                newSteps = scriptObject.ExecuteFunction<List<int>>("Step", context, correct);
             }
             catch (ScriptRuntimeException excp)
             {
@@ -244,36 +297,48 @@ double CalculateThreshold()
                     bodyText: $"Error: \"Step\" failed with error: {excp.Message}.");
             }
 
-            int oldStep = currentStep;
-            switch (stepScheme)
+            for (int i = 0; i < ParameterCount; i++)
             {
-                case StepScheme.Relative:
-                    currentStep += step;
-                    break;
+                if (newSteps is null || newSteps.Count >= i)
+                {
+                    continue;
+                }
 
-                case StepScheme.Absolute:
-                    currentStep = step;
-                    break;
+                int newStep;
 
-                default:
-                    UnityEngine.Debug.LogError($"Unexpected StepScheme: {stepScheme}");
-                    goto case StepScheme.Relative;
-            }
+                switch (stepScheme)
+                {
+                    case StepScheme.Relative:
+                        newStep = currentSteps[i] + newSteps[i];
+                        break;
 
-            if (oldStep != currentStep)
-            {
-                //Only call SetStepValue on change
-                SetStepValue(0, currentStep);
+                    case StepScheme.Absolute:
+                        newStep = newSteps[i];
+                        break;
+
+                    default:
+                        UnityEngine.Debug.LogError($"Unexpected StepScheme: {stepScheme}");
+                        goto case StepScheme.Relative;
+                }
+
+                if (currentSteps[i] != newStep)
+                {
+                    //Only call SetStepValue on change
+                    if (SetStepValue(i, newStep) == StepStatus.Success)
+                    {
+                        currentSteps[i] = newStep;
+                    }
+                }
             }
         }
 
         public override void PopulateScriptContext(GlobalRuntimeContext scriptContext)
         {
-            double stepValue = 0.0;
+            List<double> stepValues = null;
 
             try
             {
-                stepValue = scriptObject.ExecuteFunction<double>("CalculateThreshold", context);
+                stepValues = scriptObject.ExecuteFunction<List<double>>("CalculateThreshold", context);
             }
             catch (ScriptRuntimeException excp)
             {
@@ -294,6 +359,17 @@ double CalculateThreshold()
 
             foreach (ControlledParameterTemplate template in controlledParameters)
             {
+                double stepValue;
+
+                if (stepValues is null || stepValues.Count <= template.ControllerParameter)
+                {
+                    stepValue = 0.0;
+                }
+                else
+                {
+                    stepValue = stepValues[template.ControllerParameter];
+                }
+
                 template.FinalizeParameters(stepValue);
                 template.PopulateScriptContextOutputs(scriptContext);
             }
