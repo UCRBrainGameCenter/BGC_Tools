@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace LightJson.Serialization
 {
@@ -87,6 +88,43 @@ namespace LightJson.Serialization
         }
 
         /// <summary>
+        /// Reads the next character in the stream, advancing the text position.
+        /// </summary>
+        public async Task<char> ReadAsync()
+        {
+            char[] buffer = new char[1];
+
+            int next = await reader.ReadAsync(buffer, 0, buffer.Length);
+
+            if (next == -1)
+            {
+                throw new JsonParseException(
+                    type: ErrorType.IncompleteMessage,
+                    position: position);
+            }
+
+            switch (next)
+            {
+                case '\r':
+                    // Normalize '\r\n' line encoding to '\n'.
+                    if (reader.Peek() == '\n')
+                    {
+                        await reader.ReadAsync(buffer, 0, buffer.Length);
+                    }
+                    goto case '\n';
+
+                case '\n':
+                    position.line += 1;
+                    position.column = 0;
+                    return '\n';
+
+                default:
+                    position.column += 1;
+                    return (char)next;
+            }
+        }
+
+        /// <summary>
         /// Advances the scanner to next non-whitespace character.
         /// </summary>
         public void SkipWhitespace()
@@ -94,6 +132,17 @@ namespace LightJson.Serialization
             while (char.IsWhiteSpace(Peek()))
             {
                 Read();
+            }
+        }
+
+        /// <summary>
+        /// Advances the scanner to next non-whitespace character.
+        /// </summary>
+        public async Task SkipWhitespaceAsync()
+        {
+            while (char.IsWhiteSpace(Peek()))
+            {
+                await ReadAsync();
             }
         }
 
@@ -118,6 +167,26 @@ namespace LightJson.Serialization
         }
 
         /// <summary>
+        /// Verifies that the given character matches the next character in the stream.
+        /// If the characters do not match, an exception will be thrown.
+        /// </summary>
+        /// <param name="next">The expected character.</param>
+        public async Task AssertAsync(char next)
+        {
+            if (Peek() == next)
+            {
+                await ReadAsync();
+            }
+            else
+            {
+                throw new JsonParseException(
+                    message: $"Parser expected '{next}', found '{Peek()}'",
+                    type: ErrorType.InvalidOrUnexpectedCharacter,
+                    position: position);
+            }
+        }
+
+        /// <summary>
         /// Verifies that the given string matches the next characters in the stream.
         /// If the strings do not match, an exception will be thrown.
         /// </summary>
@@ -129,6 +198,29 @@ namespace LightJson.Serialization
                 for (int i = 0; i < next.Length; i += 1)
                 {
                     Assert(next[i]);
+                }
+            }
+            catch (JsonParseException e) when (e.Type == ErrorType.InvalidOrUnexpectedCharacter)
+            {
+                throw new JsonParseException(
+                    message: $"Parser expected '{next}'",
+                    type: ErrorType.InvalidOrUnexpectedCharacter,
+                    position: position);
+            }
+        }
+
+        /// <summary>
+        /// Verifies that the given string matches the next characters in the stream.
+        /// If the strings do not match, an exception will be thrown.
+        /// </summary>
+        /// <param name="next">The expected string.</param>
+        public async Task AssertAsync(string next)
+        {
+            try
+            {
+                for (int i = 0; i < next.Length; i += 1)
+                {
+                    await AssertAsync(next[i]);
                 }
             }
             catch (JsonParseException e) when (e.Type == ErrorType.InvalidOrUnexpectedCharacter)
