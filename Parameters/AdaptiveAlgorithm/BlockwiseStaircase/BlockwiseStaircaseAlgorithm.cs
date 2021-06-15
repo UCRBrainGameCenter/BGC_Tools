@@ -14,7 +14,7 @@ namespace BGC.Parameters.Algorithms.BlockwiseStaircase
     [IntFieldDisplay("BlockSteps", displayTitle: "Block Step Count", initial: 5, minimum: 1, maximum: 10_000, postfix: "steps")]
     [IntFieldDisplay("BlockTracks", displayTitle: "Block Track Count", initial: 1, minimum: 1, maximum: 10_000, postfix: "tracks")]
     [BoolDisplay("ShuffleBlockTrials", displayTitle: "Shuffle Block Trials", initial: true)]
-    public class BlockwiseStaircaseAlgorithm : AlgorithmBase, IBinaryOutcomeAlgorithm
+    public class BlockwiseStaircaseAlgorithm : AlgorithmBase, IBinaryOutcomeAlgorithm, INumReversals
     {
         [AppendSelection(
             typeof(BlockCountTermination),
@@ -229,6 +229,8 @@ namespace BGC.Parameters.Algorithms.BlockwiseStaircase
         }
 
         public override bool IsDone() => TerminationRule.IsDone(trial, block, reversals);
+
+        public int NumReversals() => reversals;
 
         #endregion Handler
     }

@@ -12,7 +12,7 @@ namespace BGC.Parameters.Algorithms.SimpleStaircase
     [IntFieldDisplay("WrongToStepUp", displayTitle: "Incorrect Responses To Step Up", initial: 2, minimum: 1, maximum: 10_000, postfix: "misses")]
     [IntFieldDisplay("StepsUp", displayTitle: "Steps Up", initial: 2, minimum: 1, maximum: 10_000, postfix: "steps")]
     [IntFieldDisplay("StepsDown", displayTitle: "Steps Down", initial: 1, minimum: 1, maximum: 10_000, postfix: "steps")]
-    public class SimpleStaircaseAlgorithm : AlgorithmBase, IBinaryOutcomeAlgorithm
+    public class SimpleStaircaseAlgorithm : AlgorithmBase, IBinaryOutcomeAlgorithm, INumReversals
     {
         [AppendSelection(
             typeof(ReversalCountTermination),
@@ -157,6 +157,8 @@ namespace BGC.Parameters.Algorithms.SimpleStaircase
         }
 
         public override bool IsDone() => TerminationRule.IsDone(trial, reversals);
+
+        public int NumReversals() => reversals;
 
         #endregion Handler
     }
