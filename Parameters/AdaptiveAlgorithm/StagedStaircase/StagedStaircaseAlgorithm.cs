@@ -5,6 +5,7 @@ using LightJson;
 using BGC.Scripting;
 using BGC.Parameters.Exceptions;
 using BGC.Parameters.Algorithms.SimpleStaircase;
+using OggVorbisEncoder;
 
 namespace BGC.Parameters.Algorithms.StagedStaircase
 {
@@ -14,7 +15,7 @@ namespace BGC.Parameters.Algorithms.StagedStaircase
     [IntFieldDisplay("Reversals", displayTitle: "Reversals", initial: 5, minimum: 1, maximum: 10_000)]
     [IntFieldDisplay("CorrectToStepDown", displayTitle: "Correct Responses To Step Down", initial: 3, minimum: 1, maximum: 10000, postfix: "hits")]
     [IntFieldDisplay("WrongToStepUp", displayTitle: "Incorrect Responses To Step Up", initial: 2, minimum: 1, maximum: 10000, postfix: "misses")]
-    public class StagedStaircaseAlgorithm : AlgorithmBase, IBinaryOutcomeAlgorithm, INumReversals
+    public class StagedStaircaseAlgorithm : AlgorithmBase, IBinaryOutcomeAlgorithm
     {
         [AppendSelection(
             typeof(ReversalCountTermination),
@@ -212,7 +213,11 @@ namespace BGC.Parameters.Algorithms.StagedStaircase
 
         public override bool IsDone() => TerminationRule.IsDone(trial, reversals);
 
-        public int NumReversals() => reversals;
+        public override JsonObject GetTrialMetaData() => new JsonObject()
+        {
+            ["Trial"] = trial,
+            ["Reversals"] = reversals,
+        };
 
         #endregion Handler
     }

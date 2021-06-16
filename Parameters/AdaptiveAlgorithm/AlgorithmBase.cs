@@ -34,6 +34,8 @@ namespace BGC.Parameters.Algorithms
             }
         }
 
+        public virtual JsonObject GetTrialMetaData() => new JsonObject();
+
         #endregion IAlgorithm
         #region IControlSource
 
