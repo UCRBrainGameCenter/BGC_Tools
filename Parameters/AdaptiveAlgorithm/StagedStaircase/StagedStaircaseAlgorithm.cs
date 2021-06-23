@@ -5,7 +5,6 @@ using LightJson;
 using BGC.Scripting;
 using BGC.Parameters.Exceptions;
 using BGC.Parameters.Algorithms.SimpleStaircase;
-using OggVorbisEncoder;
 
 namespace BGC.Parameters.Algorithms.StagedStaircase
 {
