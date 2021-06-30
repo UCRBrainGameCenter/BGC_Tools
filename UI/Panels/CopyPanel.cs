@@ -50,6 +50,11 @@ namespace BGC.UI.Panels
 
         public void TakeSnapshot()
         {
+            if (previousFrameRT == null)
+            {
+                return;
+            }
+
             int rtWidth = previousFrameRT.width;
             int rtHeight = previousFrameRT.height;
             if (snapshotRT == null || snapshotRT.width != rtWidth || snapshotRT.height != rtHeight)
