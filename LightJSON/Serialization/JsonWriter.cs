@@ -620,12 +620,14 @@ namespace LightJson.Serialization
         /// <param name="pretty">Indicates whether the resulting string should be formatted for human-readability.</param>
         public static async Task<string> SerializeAsync(JsonValue value, bool pretty)
         {
-            using StringWriter stringWriter = new StringWriter();
-            JsonWriter jsonWriter = new JsonWriter(stringWriter, pretty);
+            using (StringWriter stringWriter = new StringWriter())
+            {
+                JsonWriter jsonWriter = new JsonWriter(stringWriter, pretty);
 
-            await jsonWriter.WriteAsync(value);
+                await jsonWriter.WriteAsync(value);
 
-            return stringWriter.ToString();
+                return stringWriter.ToString();
+            }
         }
     }
 }

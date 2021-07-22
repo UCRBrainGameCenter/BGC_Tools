@@ -716,8 +716,10 @@ namespace LightJson.Serialization
                 throw new ArgumentNullException(nameof(source));
             }
 
-            using StringReader reader = new StringReader(source);
-            return new JsonReader(reader).Parse();
+            using (StringReader reader = new StringReader(source))
+            {
+                return new JsonReader(reader).Parse();
+            }
         }
 
         /// <summary>
@@ -731,8 +733,10 @@ namespace LightJson.Serialization
                 throw new ArgumentNullException(nameof(source));
             }
 
-            using StringReader reader = new StringReader(source);
-            return await new JsonReader(reader).ParseAsync();
+            using (StringReader reader = new StringReader(source))
+            {
+                return await new JsonReader(reader).ParseAsync();
+            }
         }
 
         /// <summary>
@@ -763,8 +767,10 @@ namespace LightJson.Serialization
                 throw new ArgumentNullException(nameof(path));
             }
 
-            using StreamReader reader = new StreamReader(path);
-            return await new JsonReader(reader).ParseAsync();
+            using (StreamReader reader = new StreamReader(path))
+            {
+                return await new JsonReader(reader).ParseAsync();
+            }
         }
     }
 }

@@ -299,7 +299,7 @@ List<double> CalculateThreshold()
 
             for (int i = 0; i < ParameterCount; i++)
             {
-                if (newSteps is null || newSteps.Count >= i)
+                if (newSteps is null || i >= newSteps.Count)
                 {
                     continue;
                 }
