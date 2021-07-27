@@ -10,6 +10,16 @@ namespace BGC.Mathematics
     {
         public void Append(double v)
         {
+            if (double.IsNaN(v) || double.IsInfinity(v))
+            {
+                if (!isBadValueReported)
+                {
+                    UnityEngine.Debug.LogError($"Invalid Value submitted to StatsAccumulator.Append: {v}");
+                    isBadValueReported = true;
+                }
+                return;
+            }
+
             Count += 1;
             double delta = v - Mean;
             Mean += delta / Count;
@@ -22,12 +32,34 @@ namespace BGC.Mathematics
         public int Count { get; private set; } = 0;
         public double Variance => Count >= 2 ? Mean2 / (Count - 1) : 0.0;
         public double StdDev => Math.Sqrt(Variance);
+
+        // Error reporting
+        private bool isBadValueReported = false;
     }
 
     public class WeightedStatsAccumulator
     {
         public void Append(double v, double w)
         {
+            if (double.IsNaN(v) || double.IsInfinity(v))
+            {
+                if (!isBadValueReported)
+                {
+                    UnityEngine.Debug.LogError($"Invalid Value submitted to WeightedStatsAccumulator.Append: {v}");
+                    isBadValueReported = true;
+                }
+                return;
+            }
+            if (w < 0.0 || double.IsNaN(w) || double.IsInfinity(w))
+            {
+                if (!isBadWeightReported)
+                {
+                    UnityEngine.Debug.LogError($"Invalid Weight submitted to WeightedStatsAccumulator.Append: {w}");
+                    isBadWeightReported = true;
+                }
+                return;
+            }
+
             if (w > 0.0)
             {
                 Weight += w;
@@ -42,5 +74,9 @@ namespace BGC.Mathematics
         public double Weight { get; private set; } = 0.0;
         public double Variance => Weight > 0.0 ? Mean2 / Weight : 0.0;
         public double StdDev => Math.Sqrt(Variance);
+
+        // Error reporting
+        private bool isBadValueReported = false;
+        private bool isBadWeightReported = false;
     }
 }
