@@ -361,6 +361,22 @@ namespace BGC.Audio
             return new ConvolutionFilter(stream, filter, transformRMSBehavior);
         }
 
+        public static IBGCStream Scale(
+            this IBGCStream stream,
+            double scaleValue)
+        {
+            if (stream.Channels == 1)
+            {
+                return new NormalizerMonoFilter(stream, scaleValue, scaleValue);
+            }
+            else if (stream.Channels == 2)
+            {
+                return new NormalizerFilter(stream, scaleValue, scaleValue);
+            }
+
+            throw new StreamCompositionException("Cannot normalize stream of more than 2 channels");
+        }
+
         public static IBGCStream Normalize(
             this IBGCStream stream,
             double presentationLevel,
@@ -390,6 +406,35 @@ namespace BGC.Audio
             else if (stream.Channels == 2)
             {
                 return new NormalizerFilter(stream, presentationLevels, safetyLimit);
+            }
+
+            throw new StreamCompositionException("Cannot normalize stream of more than 2 channels");
+        }
+
+        public static IBGCStream AudiometricRegulate(
+            this IBGCStream stream,
+            double presentationLevelHL,
+            Audiometry.AudiometricCalibration.CalibrationSet calibrationSet,
+            double calibrationFrequency,
+            bool safetyLimit = true)
+        {
+            if (stream.Channels == 2)
+            {
+                return new AudiometricRegulatorFilter(
+                    stream: stream,
+                    presentationLevelHL: presentationLevelHL,
+                    calibrationSet: calibrationSet,
+                    calibrationFrequency: calibrationFrequency,
+                    safetyLimit: safetyLimit);
+            }
+            else if (stream.Channels == 1)
+            {
+                return new AudiometricMonoRegulatorFilter(
+                    stream: stream,
+                    presentationLevelHL: presentationLevelHL,
+                    calibrationSet: calibrationSet,
+                    calibrationFrequency: calibrationFrequency,
+                    safetyLimit: safetyLimit);
             }
 
             throw new StreamCompositionException("Cannot normalize stream of more than 2 channels");

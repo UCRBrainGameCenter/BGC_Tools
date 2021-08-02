@@ -54,6 +54,25 @@ namespace BGC.Web.Utility
         }
 
         /// <summary>
+        /// Send a post request
+        /// </summary>
+        /// <param name="callBack">false means there was a local parsing error</param>
+        public static void PutRequest(
+            string url,
+            IDictionary<string, string> headers,
+            string body,
+            Action<UnityWebRequest, bool> callBack = null,
+            int timeout = 0)
+        {
+            CoroutineUtility.Mono.StartCoroutine(RunPut(
+                url,
+                headers,
+                body,
+                callBack,
+                timeout));
+        }
+
+        /// <summary>
         /// Run get request
         /// </summary>
         private static IEnumerator RunGet(
@@ -90,6 +109,30 @@ namespace BGC.Web.Utility
             using (UnityWebRequest request = UnityWebRequest.Post(url, ""))
             {
                 request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
+                request.timeout = timeout;
+
+                foreach (KeyValuePair<string, string> pair in headers)
+                {
+                    request.SetRequestHeader(pair.Key, pair.Value);
+                }
+
+                yield return request.SendWebRequest();
+                callBack?.Invoke(request, true);
+            }
+        }
+
+        /// <summary>
+        /// Run put request
+        /// </summary>
+        private static IEnumerator RunPut(
+            string url,
+            IDictionary<string, string> headers,
+            string body,
+            Action<UnityWebRequest, bool> callBack,
+            int timeout = 0)
+        {
+            using (UnityWebRequest request = UnityWebRequest.Put(url, Encoding.UTF8.GetBytes(body)))
+            {
                 request.timeout = timeout;
 
                 foreach (KeyValuePair<string, string> pair in headers)

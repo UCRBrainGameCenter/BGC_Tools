@@ -82,7 +82,7 @@ namespace BGC.Audio
             WarmUpBuffers();
         }
 
-        public void PlayStream(IBGCStream stream, bool disposeWhenComplete = false)
+        public virtual void PlayStream(IBGCStream stream, bool disposeWhenComplete = false)
         {
             SetStream(stream, disposeWhenComplete);
             Play();
