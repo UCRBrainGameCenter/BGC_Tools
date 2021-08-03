@@ -11,6 +11,28 @@ namespace BGC.Web.Utility
 {
     public static class Rest
     {
+        private static int numActiveGets = 0;
+        private static int numActivePosts = 0;
+        private static int numActivePuts = 0;
+
+        /// <summary>
+        /// Get the number of GET requests which have not yet completed.
+        /// </summary>
+        /// <returns>The number of GET requests which have not yet completed</returns>
+        public static int GetNumActiveGets() => numActiveGets;
+
+        /// <summary>
+        /// Get the number of POST requests which have not yet completed.
+        /// </summary>
+        /// <returns>The number of POST requests which have not yet completed</returns>
+        public static int GetNumActivePosts() => numActivePosts;
+
+        /// <summary>
+        /// Get the number of PUT requests which have not yet completed.
+        /// </summary>
+        /// <returns>The number of PUT requests which have not yet completed</returns>
+        public static int GetNumActivePuts() => numActivePuts;
+
         /// <summary>Send a get request</summary>
         /// <param name="callBack">false means there was a local parsing error</param>
         /// <param name="queryParams">Dictionary of key names hashed to their values of any type</param>
@@ -81,18 +103,26 @@ namespace BGC.Web.Utility
             IDictionary<string, string> headers,
             int timeout = 0)
         {
-            using (UnityWebRequest request = UnityWebRequest.Get(url))
+            try
             {
-                request.timeout = timeout;
-
-                foreach (KeyValuePair<string, string> pair in headers)
+                numActiveGets++;
+                using (UnityWebRequest request = UnityWebRequest.Get(url))
                 {
-                    request.SetRequestHeader(pair.Key, pair.Value);
+                    request.timeout = timeout;
+
+                    foreach (KeyValuePair<string, string> pair in headers)
+                    {
+                        request.SetRequestHeader(pair.Key, pair.Value);
+                    }
+
+                    yield return request.SendWebRequest();
+
+                    callBack?.Invoke(request, true);
                 }
-
-                yield return request.SendWebRequest();
-
-                callBack?.Invoke(request, true);
+            }
+            finally
+            {
+                numActiveGets--;
             }
         }
 
@@ -106,18 +136,26 @@ namespace BGC.Web.Utility
             Action<UnityWebRequest, bool> callBack,
             int timeout = 0)
         {
-            using (UnityWebRequest request = UnityWebRequest.Post(url, ""))
+            try
             {
-                request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
-                request.timeout = timeout;
-
-                foreach (KeyValuePair<string, string> pair in headers)
+                numActivePosts++;
+                using (UnityWebRequest request = UnityWebRequest.Post(url, ""))
                 {
-                    request.SetRequestHeader(pair.Key, pair.Value);
-                }
+                    request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
+                    request.timeout = timeout;
 
-                yield return request.SendWebRequest();
-                callBack?.Invoke(request, true);
+                    foreach (KeyValuePair<string, string> pair in headers)
+                    {
+                        request.SetRequestHeader(pair.Key, pair.Value);
+                    }
+
+                    yield return request.SendWebRequest();
+                    callBack?.Invoke(request, true);
+                }
+            }
+            finally
+            {
+                numActivePosts--;
             }
         }
 
@@ -131,17 +169,25 @@ namespace BGC.Web.Utility
             Action<UnityWebRequest, bool> callBack,
             int timeout = 0)
         {
-            using (UnityWebRequest request = UnityWebRequest.Put(url, Encoding.UTF8.GetBytes(body)))
+            try
             {
-                request.timeout = timeout;
-
-                foreach (KeyValuePair<string, string> pair in headers)
+                numActivePuts++;
+                using (UnityWebRequest request = UnityWebRequest.Put(url, Encoding.UTF8.GetBytes(body)))
                 {
-                    request.SetRequestHeader(pair.Key, pair.Value);
-                }
+                    request.timeout = timeout;
 
-                yield return request.SendWebRequest();
-                callBack?.Invoke(request, true);
+                    foreach (KeyValuePair<string, string> pair in headers)
+                    {
+                        request.SetRequestHeader(pair.Key, pair.Value);
+                    }
+
+                    yield return request.SendWebRequest();
+                    callBack?.Invoke(request, true);
+                }
+            }
+            finally
+            {
+                numActivePuts--;
             }
         }
 
