@@ -432,6 +432,8 @@ namespace BGC.Scripting
                 //Other Types
                 case "Random": return new KeywordToken(line, startingColumn, Keyword.Random);
                 case "DataFile": return new KeywordToken(line, startingColumn, Keyword.DataFile);
+                case "IScriptedAlgorithmQuerier": return new KeywordToken(line, startingColumn, Keyword.IScriptedAlgorithmQuerier);
+                case "IMultiParamScriptedAlgorithmQuerier": return new KeywordToken(line, startingColumn, Keyword.IMultiParamScriptedAlgorithmQuerier);
 
                 //Static Types
                 case "System": return new KeywordToken(line, startingColumn, Keyword.System);

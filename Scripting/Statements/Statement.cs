@@ -267,6 +267,8 @@ namespace BGC.Scripting
                 case Keyword.HashSet:
                 case Keyword.Random:
                 case Keyword.DataFile:
+                case Keyword.IScriptedAlgorithmQuerier:
+                case Keyword.IMultiParamScriptedAlgorithmQuerier:
                     {
                         Type valueType = tokens.ReadType();
 

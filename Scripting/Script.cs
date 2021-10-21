@@ -5,8 +5,8 @@ namespace BGC.Scripting
 {
     public class Script
     {
-        List<ScriptDeclaration> scriptDeclarations = new List<ScriptDeclaration>();
-        Dictionary<string, ScriptFunction> scriptFunctions = new Dictionary<string, ScriptFunction>();
+        private readonly List<ScriptDeclaration> scriptDeclarations = new List<ScriptDeclaration>();
+        private readonly Dictionary<string, ScriptFunction> scriptFunctions = new Dictionary<string, ScriptFunction>();
 
         /// <summary>
         /// Parse Script
@@ -44,6 +44,20 @@ namespace BGC.Scripting
             {
                 scriptFunction.ParseFunctions(compilationContext);
             }
+        }
+
+        public bool HasFunction(string identifier) => scriptFunctions.ContainsKey(identifier);
+        public FunctionSignature GetFunctionSignature(string identifier) => scriptFunctions[identifier].functionSignature;
+
+        public bool HasFunction(FunctionSignature functionSignature)
+        {
+            string identifier = functionSignature.identifierToken.identifier;
+            if (!scriptFunctions.ContainsKey(identifier))
+            {
+                return false;
+            }
+
+            return functionSignature.Matches(scriptFunctions[identifier].functionSignature);
         }
 
         public void ParseNextGlobal(
@@ -136,6 +150,8 @@ namespace BGC.Scripting
                         case Keyword.HashSet:
                         case Keyword.Random:
                         case Keyword.DataFile:
+                        case Keyword.IScriptedAlgorithmQuerier:
+                        case Keyword.IMultiParamScriptedAlgorithmQuerier:
                             //Parse Function or Member Declaration
                             {
                                 Type valueType = scriptTokens.ReadType();

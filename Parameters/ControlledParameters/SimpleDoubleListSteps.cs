@@ -17,7 +17,8 @@ namespace BGC.Parameters
 
         private static readonly char[] separators = new char[] { ',', ' ', '\n', '\r' };
 
-        double ISimpleDoubleStepTemplate.GetValue(int stepNumber) => values[stepNumber];
+        double ISimpleDoubleStepTemplate.GetValue(int stepNumber) =>
+            values[GeneralMath.Clamp(stepNumber, 0, values.Length - 1)];
 
         double ISimpleDoubleStepTemplate.GetPartialValue(double stepNumber) =>
             values[(int)Math.Round(GeneralMath.Clamp(stepNumber, 0, values.Length - 1))];

@@ -228,7 +228,7 @@ void Initialize() { }
 //Determine the value to step to
 double GetValue(int stepNumber)
 {
-    return baseValue + stepSize * stepNumber;
+    return Math.Clamp(baseValue + stepSize * stepNumber, minValue, maxValue);
 }
 
 //Determine if the stepNumber would be valid
