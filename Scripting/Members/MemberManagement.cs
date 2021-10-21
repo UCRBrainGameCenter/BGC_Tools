@@ -8,6 +8,7 @@ using BGC.Users;
 using BGC.DataStructures.Generic;
 using BGC.UI.Dialogs;
 using BGC.Reports;
+using BGC.Parameters.Algorithms.Scripted;
 
 namespace BGC.Scripting
 {
@@ -999,6 +1000,67 @@ namespace BGC.Scripting
                             value: value,
                             operation: (DataFile dataFile) =>
                                 dataFile.Save(),
+                            source: source);
+
+                    default:
+                        throw new ScriptParsingException(
+                            source: source,
+                            message: $"Unable to identify {valueType.Name} member {identifier}");
+                }
+            }
+            else if (typeof(IScriptedAlgorithmQuerier).IsAssignableFrom(valueType))
+            {
+                switch (identifier)
+                {
+                    case "CouldStepTo":
+                        args.VerifyArgs(typeof(int), source, identifier);
+                        return new MemberArgumentValueOperation<IScriptedAlgorithmQuerier, bool>(
+                            value: value,
+                            operation: (IScriptedAlgorithmQuerier input, RuntimeContext context) =>
+                                input.CouldStepTo(args[0].GetAs<int>(context)),
+                            source: source);
+
+                    case "CouldStepBy":
+                        args.VerifyArgs(typeof(int), source, identifier);
+                        return new MemberArgumentValueOperation<IScriptedAlgorithmQuerier, bool>(
+                            value: value,
+                            operation: (IScriptedAlgorithmQuerier input, RuntimeContext context) =>
+                                input.CouldStepBy(args[0].GetAs<int>(context)),
+                            source: source);
+
+
+                    default:
+                        throw new ScriptParsingException(
+                            source: source,
+                            message: $"Unable to identify {valueType.Name} member {identifier}");
+                }
+            }
+            else if (typeof(IMultiParamScriptedAlgorithmQuerier).IsAssignableFrom(valueType))
+            {
+                switch (identifier)
+                {
+                    case "GetParamCount":
+                        args.VerifyArgs(source, identifier);
+                        return new MemberArgumentValueOperation<IMultiParamScriptedAlgorithmQuerier, int>(
+                            value: value,
+                            operation: (IMultiParamScriptedAlgorithmQuerier input, RuntimeContext context) =>
+                                input.GetParamCount(),
+                            source: source);
+
+                    case "CouldStepTo":
+                        args.VerifyArgs(typeof(int), typeof(int), source, identifier);
+                        return new MemberArgumentValueOperation<IMultiParamScriptedAlgorithmQuerier, bool>(
+                            value: value,
+                            operation: (IMultiParamScriptedAlgorithmQuerier input, RuntimeContext context) =>
+                                input.CouldStepTo(args[0].GetAs<int>(context), args[1].GetAs<int>(context)),
+                            source: source);
+
+                    case "CouldStepBy":
+                        args.VerifyArgs(typeof(int), typeof(int), source, identifier);
+                        return new MemberArgumentValueOperation<IMultiParamScriptedAlgorithmQuerier, bool>(
+                            value: value,
+                            operation: (IMultiParamScriptedAlgorithmQuerier input, RuntimeContext context) =>
+                                input.CouldStepBy(args[0].GetAs<int>(context), args[1].GetAs<int>(context)),
                             source: source);
 
                     default:

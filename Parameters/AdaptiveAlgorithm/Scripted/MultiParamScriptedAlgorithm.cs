@@ -65,14 +65,20 @@ namespace BGC.Parameters.Algorithms.Scripted
         #endregion IControlSource
         #region IBescriptedPropertyGroup
 
+        private readonly FunctionSignature oldInitializeSignature = new FunctionSignature(
+            identifier: "Initialize",
+            returnType: typeof(List<int>),
+            arguments: new VariableData("paramCount", typeof(int)));
+
+        private readonly FunctionSignature newInitializeSignature = new FunctionSignature(
+            identifier: "Initialize",
+            returnType: typeof(List<int>),
+            arguments: new VariableData("algorithmQuerier", typeof(IMultiParamScriptedAlgorithmQuerier)));
+
         void IBescriptedPropertyGroup.UpdateStateVarRectifier(InputRectificationContainer rectifier)
         {
             Script scriptObject = ScriptParser.LexAndParseScript(
                 script: Script,
-                new FunctionSignature(
-                    identifier: "Initialize",
-                    returnType: typeof(List<int>),
-                    arguments: new VariableData("paramCount", typeof(int))),
                 new FunctionSignature(
                     identifier: "Step",
                     returnType: typeof(List<int>),
@@ -83,6 +89,27 @@ namespace BGC.Parameters.Algorithms.Scripted
                 new FunctionSignature(
                     identifier: "CalculateThreshold",
                     returnType: typeof(List<double>)));
+
+            //Check if it has either initialize method
+            if (!(scriptObject.HasFunction(newInitializeSignature) || scriptObject.HasFunction(oldInitializeSignature)))
+            {
+                //Throw exception
+                if (scriptObject.HasFunction("Initialize"))
+                {
+                    FunctionSignature matchingFunction = scriptObject.GetFunctionSignature("Initialize");
+                    //Mismatched Signature
+                    throw new ScriptParsingException(
+                        source: matchingFunction.identifierToken,
+                        message: $"Expected Function: {newInitializeSignature}  Found Function: {matchingFunction}");
+                }
+                else
+                {
+                    //Missing Initialize
+                    throw new ScriptParsingException(
+                        source: new EOFToken(0, 0),
+                        message: $"Expected Function not found: {newInitializeSignature}");
+                }
+            }
 
 
             foreach (KeyInfo keyInfo in scriptObject.GetDeclarations())
@@ -144,10 +171,14 @@ namespace BGC.Parameters.Algorithms.Scripted
 @"int trialCount = 0;
 int correctCount = 0;
 List<int> steps;
+IMultiParamScriptedAlgorithmQuerier _algorithmQuerier;
 
 //Initialize the algorithm and returns the starting step
-List<int> Initialize(int paramCount)
+List<int> Initialize(IMultiParamScriptedAlgorithmQuerier algorithmQuerier)
 {
+    _algorithmQuerier = algorithmQuerier;
+    int paramCount = _algorithmQuerier.GetParamCount();
+
     steps = new List<int>();
 
     for (int i = 0; i < paramCount; i++)
@@ -169,8 +200,11 @@ List<int> Step(bool lastTrialCorrect)
 
     for (int i = 0; i < steps.Count; i++)
     {
-        //Increment all step values
-        steps[i]++;
+        //Increment step values
+        if (_algorithmQuerier.CouldStepTo(i, steps[i] + 1))
+        {
+            steps[i]++;
+        }
     }
 
     return steps;
@@ -200,6 +234,7 @@ List<double> CalculateThreshold()
         private StepScheme stepScheme;
         private List<int> currentSteps = null;
 
+        private bool newInitializationScheme = true;
 
         int IBescriptedPropertyGroup.InitPriority => 1;
 
@@ -207,10 +242,6 @@ List<double> CalculateThreshold()
         {
             scriptObject = ScriptParser.LexAndParseScript(
                 script: Script,
-                new FunctionSignature(
-                    identifier: "Initialize",
-                    returnType: typeof(List<int>),
-                    arguments: new VariableData("paramCount", typeof(int))),
                 new FunctionSignature(
                     identifier: "Step",
                     returnType: typeof(List<int>),
@@ -222,6 +253,35 @@ List<double> CalculateThreshold()
                     identifier: "CalculateThreshold",
                     returnType: typeof(List<double>)));
 
+            //Check which initialize method it has
+            if (scriptObject.HasFunction(newInitializeSignature))
+            {
+                newInitializationScheme = true;
+            }
+            else if (scriptObject.HasFunction(oldInitializeSignature))
+            {
+                newInitializationScheme = false;
+            }
+            else
+            {
+                //Throw exception
+                if (scriptObject.HasFunction("Initialize"))
+                {
+                    FunctionSignature matchingFunction = scriptObject.GetFunctionSignature("Initialize");
+                    //Mismatched Signature
+                    throw new ScriptParsingException(
+                        source: matchingFunction.identifierToken,
+                        message: $"Expected Function: {newInitializeSignature}  Found Function: {matchingFunction}");
+                }
+                else
+                {
+                    //Missing Initialize
+                    throw new ScriptParsingException(
+                        source: new EOFToken(0, 0),
+                        message: $"Expected Function not found: {newInitializeSignature}");
+                }
+            }
+
             context = scriptObject.PrepareScript(globalContext);
         }
 
@@ -232,8 +292,18 @@ List<double> CalculateThreshold()
 
             try
             {
-                //Clone list so we don't risk modifying script memory
-                currentSteps = scriptObject.ExecuteFunction<List<int>>("Initialize", context, ParameterCount).ToList();
+                if (newInitializationScheme)
+                {
+                    AlgorithmQuerier querier = new AlgorithmQuerier(this);
+
+                    //Clone list so we don't risk modifying script memory
+                    currentSteps = scriptObject.ExecuteFunction<List<int>>("Initialize", context, querier).ToList();
+                }
+                else
+                {
+                    //Clone list so we don't risk modifying script memory
+                    currentSteps = scriptObject.ExecuteFunction<List<int>>("Initialize", context, ParameterCount).ToList();
+                }
             }
             catch (ScriptRuntimeException excp)
             {
@@ -268,7 +338,7 @@ List<double> CalculateThreshold()
 
             for (int i = 0; i < ParameterCount; i++)
             {
-                SetStepValue(i, currentSteps[i]);
+                SetStepValue(i, currentSteps[i], true);
             }
         }
 
@@ -324,10 +394,8 @@ List<double> CalculateThreshold()
                 if (currentSteps[i] != newStep)
                 {
                     //Only call SetStepValue on change
-                    if (SetStepValue(i, newStep) == StepStatus.Success)
-                    {
-                        currentSteps[i] = newStep;
-                    }
+                    SetStepValue(i, newStep, true);
+                    currentSteps[i] = newStep;
                 }
             }
         }
@@ -399,6 +467,28 @@ List<double> CalculateThreshold()
             }
 
             return true;
+        }
+
+        private class AlgorithmQuerier : IMultiParamScriptedAlgorithmQuerier
+        {
+            private readonly MultiParamScriptedAlgorithm algorithm;
+
+            public AlgorithmQuerier(MultiParamScriptedAlgorithm algorithm)
+            {
+                this.algorithm = algorithm;
+            }
+
+            public bool CouldStepBy(int parameter, int steps) =>
+                algorithm.controlledParameters
+                    .Where(x => x.ControllerParameter == parameter)
+                    .All(x => x.CouldStepTo(algorithm.currentSteps[parameter] + steps));
+
+            public bool CouldStepTo(int parameter, int stepNumber) =>
+                algorithm.controlledParameters
+                    .Where(x => x.ControllerParameter == parameter)
+                    .All(x => x.CouldStepTo(stepNumber));
+
+            public int GetParamCount() => algorithm.ParameterCount;
         }
 
         #endregion Handler

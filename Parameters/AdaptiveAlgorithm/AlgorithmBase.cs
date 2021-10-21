@@ -56,22 +56,29 @@ namespace BGC.Parameters.Algorithms
         public virtual void CleanupLinks() => controlledParameters.Clear();
         public abstract void PopulateScriptContext(GlobalRuntimeContext scriptContext);
 
-        public StepStatus SetStepValue(int sourceParameter, int stepNumber)
+        public StepStatus SetStepValue(
+            int sourceParameter,
+            int stepNumber,
+            bool forceStep = false)
         {
-            bool valid = true;
-            foreach (ControlledParameterTemplate template in controlledParameters.Where(x => x.ControllerParameter == sourceParameter))
-            {
-                //See if any steps fail
-                valid &= template.CouldStepTo(stepNumber);
-            }
+            bool anyFailStep = controlledParameters
+                .Where(x => x.ControllerParameter == sourceParameter)
+                .Any(x => !x.CouldStepTo(stepNumber));
 
-            if (!valid)
+            if (anyFailStep && !forceStep)
             {
                 //Report failure to step
                 return StepStatus.OutOfBounds;
             }
 
             StepStatus valueStatus = StepStatus.Success;
+
+            if (anyFailStep)
+            {
+                //Report error despite being forced
+                valueStatus |= StepStatus.OutOfBounds;
+            }
+
             foreach (ControlledParameterTemplate template in controlledParameters.Where(x => x.ControllerParameter == sourceParameter))
             {
                 valueStatus |= template.StepTo(stepNumber);
@@ -82,4 +89,5 @@ namespace BGC.Parameters.Algorithms
 
         #endregion IControlSource
     }
+
 }

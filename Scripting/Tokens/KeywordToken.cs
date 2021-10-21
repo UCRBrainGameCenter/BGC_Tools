@@ -56,6 +56,9 @@ namespace BGC.Scripting
                 case Keyword.Random: return "Random";
                 case Keyword.DataFile: return "DataFile";
 
+                case Keyword.IScriptedAlgorithmQuerier: return "IScriptedAlgorithmQuerier";
+                case Keyword.IMultiParamScriptedAlgorithmQuerier: return "IMultiParamScriptedAlgorithmQuerier";
+
                 case Keyword.New: return "new";
 
                 default:

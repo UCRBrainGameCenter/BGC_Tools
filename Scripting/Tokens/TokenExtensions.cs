@@ -29,6 +29,8 @@ namespace BGC.Scripting
 
                 case Keyword.Random: return typeof(Random);
                 case Keyword.DataFile: return typeof(DataFile);
+                case Keyword.IScriptedAlgorithmQuerier: return typeof(Parameters.Algorithms.Scripted.IScriptedAlgorithmQuerier);
+                case Keyword.IMultiParamScriptedAlgorithmQuerier: return typeof(Parameters.Algorithms.Scripted.IMultiParamScriptedAlgorithmQuerier);
 
                 default:
                     throw new ArgumentException($"Unexpected Keyword: {keyword}");
@@ -60,6 +62,8 @@ namespace BGC.Scripting
 
                 case Keyword.Random:
                 case Keyword.DataFile:
+                case Keyword.IScriptedAlgorithmQuerier:
+                case Keyword.IMultiParamScriptedAlgorithmQuerier:
                     return true;
 
                 default:

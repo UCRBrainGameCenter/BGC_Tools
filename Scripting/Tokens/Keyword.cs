@@ -44,6 +44,8 @@
         //Other Types
         Random,
         DataFile,
+        IScriptedAlgorithmQuerier,
+        IMultiParamScriptedAlgorithmQuerier,
 
         //Static Types
         System,

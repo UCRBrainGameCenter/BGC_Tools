@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using LightJson;
+using System.Linq;
 using BGC.Scripting;
 using BGC.UI.Dialogs;
 using BGC.Parameters.Exceptions;
@@ -49,13 +49,19 @@ namespace BGC.Parameters.Algorithms.Scripted
         #endregion IControlSource
         #region IBescriptedPropertyGroup
 
+        private readonly FunctionSignature oldInitializeSignature = new FunctionSignature(
+            identifier: "Initialize",
+            returnType: typeof(int));
+
+        private readonly FunctionSignature newInitializeSignature = new FunctionSignature(
+            identifier: "Initialize",
+            returnType: typeof(int),
+            arguments: new VariableData("algorithmQuerier", typeof(IScriptedAlgorithmQuerier)));
+
         void IBescriptedPropertyGroup.UpdateStateVarRectifier(InputRectificationContainer rectifier)
         {
             Script scriptObject = ScriptParser.LexAndParseScript(
                 script: Script,
-                new FunctionSignature(
-                    identifier: "Initialize",
-                    returnType: typeof(int)),
                 new FunctionSignature(
                     identifier: "Step",
                     returnType: typeof(int),
@@ -66,6 +72,27 @@ namespace BGC.Parameters.Algorithms.Scripted
                 new FunctionSignature(
                     identifier: "CalculateThreshold",
                     returnType: typeof(double)));
+
+            //Check if it has either initialize method
+            if (!(scriptObject.HasFunction(newInitializeSignature) || scriptObject.HasFunction(oldInitializeSignature)))
+            {
+                //Throw exception
+                if (scriptObject.HasFunction("Initialize"))
+                {
+                    FunctionSignature matchingFunction = scriptObject.GetFunctionSignature("Initialize");
+                    //Mismatched Signature
+                    throw new ScriptParsingException(
+                        source: matchingFunction.identifierToken,
+                        message: $"Expected Function: {newInitializeSignature}  Found Function: {matchingFunction}");
+                }
+                else
+                {
+                    //Missing Initialize
+                    throw new ScriptParsingException(
+                        source: new EOFToken(0, 0),
+                        message: $"Expected Function not found: {newInitializeSignature}");
+                }
+            }
 
 
             foreach (KeyInfo keyInfo in scriptObject.GetDeclarations())
@@ -126,10 +153,13 @@ namespace BGC.Parameters.Algorithms.Scripted
         const string DEFAULT_SCRIPT =
 @"int trialCount = 0;
 int correctCount = 0;
+IScriptedAlgorithmQuerier _algorithmQuerier;
+bool endFlag = false;
 
 //Initialize the algorithm and returns the starting step
-int Initialize()
+int Initialize(IScriptedAlgorithmQuerier algorithmQuerier)
 {
+    _algorithmQuerier = algorithmQuerier;
     return 0;
 }
 
@@ -142,13 +172,19 @@ int Step(bool lastTrialCorrect)
         correctCount++;
     }
 
+    if (!_algorithmQuerier.CouldStepBy(1))
+    {
+        endFlag = true;
+        return 0;
+    }
+
     return 1;
 }
 
 //Is the task finished?
 bool End()
 {
-    return trialCount >= 10;
+    return endFlag || trialCount >= 10;
 }
 
 //Calculate the end threshold estimate
@@ -164,6 +200,7 @@ double CalculateThreshold()
         private StepScheme stepScheme;
         private int currentStep = 0;
 
+        private bool newInitializationScheme = true;
 
         int IBescriptedPropertyGroup.InitPriority => 1;
 
@@ -171,9 +208,6 @@ double CalculateThreshold()
         {
             scriptObject = ScriptParser.LexAndParseScript(
                 script: Script,
-                new FunctionSignature(
-                    identifier: "Initialize",
-                    returnType: typeof(int)),
                 new FunctionSignature(
                     identifier: "Step",
                     returnType: typeof(int),
@@ -185,6 +219,35 @@ double CalculateThreshold()
                     identifier: "CalculateThreshold",
                     returnType: typeof(double)));
 
+            //Check which initialize method it has
+            if (scriptObject.HasFunction(newInitializeSignature))
+            {
+                newInitializationScheme = true;
+            }
+            else if (scriptObject.HasFunction(oldInitializeSignature))
+            {
+                newInitializationScheme = false;
+            }
+            else
+            {
+                //Throw exception
+                if (scriptObject.HasFunction("Initialize"))
+                {
+                    FunctionSignature matchingFunction = scriptObject.GetFunctionSignature("Initialize");
+                    //Mismatched Signature
+                    throw new ScriptParsingException(
+                        source: matchingFunction.identifierToken,
+                        message: $"Expected Function: {newInitializeSignature}  Found Function: {matchingFunction}");
+                }
+                else
+                {
+                    //Missing Initialize
+                    throw new ScriptParsingException(
+                        source: new EOFToken(0, 0),
+                        message: $"Expected Function not found: {newInitializeSignature}");
+                }
+            }
+
             context = scriptObject.PrepareScript(globalContext);
         }
 
@@ -194,7 +257,16 @@ double CalculateThreshold()
 
             try
             {
-                currentStep = scriptObject.ExecuteFunction<int>("Initialize", context);
+                if (newInitializationScheme)
+                {
+                    AlgorithmQuerier querier = new AlgorithmQuerier(this);
+
+                    currentStep = scriptObject.ExecuteFunction<int>("Initialize", context, querier);
+                }
+                else
+                {
+                    currentStep = scriptObject.ExecuteFunction<int>("Initialize", context);
+                }
             }
             catch (ScriptRuntimeException excp)
             {
@@ -216,7 +288,7 @@ double CalculateThreshold()
 
         protected override void FinishInitialization()
         {
-            SetStepValue(0, currentStep);
+            SetStepValue(0, currentStep, true);
         }
 
         public void SubmitTrialResult(bool correct)
@@ -263,7 +335,7 @@ double CalculateThreshold()
             if (oldStep != currentStep)
             {
                 //Only call SetStepValue on change
-                SetStepValue(0, currentStep);
+                SetStepValue(0, currentStep, true);
             }
         }
 
@@ -323,6 +395,26 @@ double CalculateThreshold()
             }
 
             return true;
+        }
+
+        private class AlgorithmQuerier : IScriptedAlgorithmQuerier
+        {
+            private readonly ScriptedAlgorithm algorithm;
+
+            public AlgorithmQuerier(ScriptedAlgorithm algorithm)
+            {
+                this.algorithm = algorithm;
+            }
+
+            public bool CouldStepBy(int steps) =>
+                algorithm.controlledParameters
+                    .Where(x => x.ControllerParameter == 0)
+                    .All(x => x.CouldStepTo(algorithm.currentStep + steps));
+
+            public bool CouldStepTo(int stepNumber) =>
+                algorithm.controlledParameters
+                    .Where(x => x.ControllerParameter == 0)
+                    .All(x => x.CouldStepTo(stepNumber));
         }
 
         #endregion Handler

@@ -253,7 +253,7 @@ void Initialize() { }
 //Determine the value
 string GetValue(int stepNumber)
 {
-    return stimuli[stepNumber];
+    return stimuli[Math.Clamp(stepNumber, 0, stimuli.Count - 1)];
 }
 
 //Determine if the stepNumber would be valid
