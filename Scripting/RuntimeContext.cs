@@ -136,7 +136,7 @@ namespace BGC.Scripting
 
             foreach (ScriptValue scriptValue in valueDictionary.Values)
             {
-                data.Add(scriptValue.key, scriptValue.value.ToString());
+                data.Add(scriptValue.key, scriptValue.value?.ToString() ?? string.Empty);
             }
 
             return data;
