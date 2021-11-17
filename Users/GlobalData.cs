@@ -5,6 +5,8 @@ using UnityEngine;
 
 namespace BGC.Users
 {
+    public delegate void LockStateChanged(bool isLocked);
+
     /// <summary>
     /// Class to handle the global playerdata that is used when a player isn't logged in.
     /// </summary>
@@ -13,6 +15,7 @@ namespace BGC.Users
         private const string LockedKey = "IsLocked";
         private const string EverUnlockedKey = "EverUnlocked";
         public override bool IsDefault => true;
+        public event LockStateChanged OnLockStateChanged;
 
         /// <summary> Is the device currently in a Locked mode? </summary>
         public bool IsLocked
@@ -20,13 +23,18 @@ namespace BGC.Users
             get => GetBool(LockedKey, true);
             set
             {
-                SetBool(LockedKey, value);
-                if (!value)
+                if (value != IsLocked)
                 {
-                    EverUnlocked = true;
-                }
+                    SetBool(LockedKey, value);
+                    if (!value)
+                    {
+                        EverUnlocked = true;
+                    }
 
-                Serialize();
+                    Serialize();
+
+                    OnLockStateChanged?.Invoke(IsLocked);
+                }
             }
         }
 
