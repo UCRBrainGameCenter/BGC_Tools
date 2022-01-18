@@ -9,7 +9,8 @@ namespace BGC.Parameters.Algorithms.ModifiedHughsonWestlake
     [PropertyChoiceInfo("An implementation of the Modified Hughson-Westlake adaptive procedure used in audiometric testing. " +
         "To implement proper support, presentation should begin at 30dB HL. " +
         "Terminates after a given step obtains at least half positive responses from ascending trials, with a minimum of 3 data points. " +
-        "A Status code of 0 indicates success, while 1 is a failure at Ceiling and -1 is a failure at Floor.")]
+        "A Status code of 0 indicates success, -1 is a failure at Floor, 1 is a failure at Ceiling, " +
+        "2 is a failure due to lapses, 3 indicates a requested break.")]
     [IntFieldDisplay("InitialJumpStepsUp", displayTitle: "Initial Jump Steps Up", initial: 4, minimum: 1, maximum: 10_000, postfix: "steps")]
     [IntFieldDisplay("InitialStepsUp", displayTitle: "Initial Steps Up", initial: 2, minimum: 1, maximum: 10_000, postfix: "steps")]
     [IntFieldDisplay("StepsUp", displayTitle: "Steps Up", initial: 1, minimum: 1, maximum: 10_000, postfix: "steps")]
@@ -54,6 +55,11 @@ namespace BGC.Parameters.Algorithms.ModifiedHughsonWestlake
         public int MaxTrialsAtLimits { get; set; }
         [DisplayInputFieldKey("MaxTrialsAtLimits")]
         public string MaxTrialsAtLimitsKey { get; set; }
+
+        [AppendSelection(
+            typeof(DisabledEngagementMonitoring),
+            typeof(LapseMonitoring))]
+        public IEngagementMonitoring EngagementMonitoring { get; set; }
 
         [OutputField("StatusCode")]
         public int StatusCode { get; set; }
@@ -104,6 +110,7 @@ namespace BGC.Parameters.Algorithms.ModifiedHughsonWestlake
             phase = Phase.InitialBigAscension;
             currentStepValue = 0;
             thresholdStep = 0;
+            EngagementMonitoring.MarkHit(0);
 
             endTriggered = false;
 
@@ -117,6 +124,11 @@ namespace BGC.Parameters.Algorithms.ModifiedHughsonWestlake
 
         public void SubmitTrialResult(bool correct)
         {
+            if (correct)
+            {
+                EngagementMonitoring.MarkHit(currentStepValue);
+            }
+
             int stepDiff;
 
             switch (phase)
@@ -236,6 +248,13 @@ namespace BGC.Parameters.Algorithms.ModifiedHughsonWestlake
         }
 
         public override bool IsDone() => endTriggered;
+
+        public bool HadLapse() => EngagementMonitoring.IsLapseDetected(currentStepValue);
+        public void LapseAbort(bool breakRequested)
+        {
+            StatusCode = breakRequested ? 3 : 2;
+            endTriggered = true;
+        }
 
         private class ModifiedHughsonWestlakeStep
         {
