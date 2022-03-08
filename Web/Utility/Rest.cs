@@ -14,6 +14,7 @@ namespace BGC.Web.Utility
         private static int numActiveGets = 0;
         private static int numActivePosts = 0;
         private static int numActivePuts = 0;
+        private const int MaxNumActiveGets = 100;
 
         /// <summary>
         /// Get the number of GET requests which have not yet completed.
@@ -105,6 +106,12 @@ namespace BGC.Web.Utility
         {
             try
             {
+                while (numActiveGets >= MaxNumActiveGets)
+                {
+                    // wait for other requests to wrap up to avoid port exhaustion.
+                    yield return null;
+                }
+                
                 numActiveGets++;
                 using (UnityWebRequest request = UnityWebRequest.Get(url))
                 {

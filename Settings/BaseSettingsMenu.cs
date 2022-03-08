@@ -283,6 +283,17 @@ namespace BGC.Settings
             currentlyEditingValueTitle = "";
         }
 
+        protected static void SetBoolSetting(string settingName, bool newVal)
+        {
+            if (nameSettingsMap.TryGetValue(settingName, out SettingBase setting))
+            {
+                string val = newVal.ToString();
+                setting.TryValue(ref val);
+                setting.ApplyValue();
+                PlayerData.Save();
+            }
+        }
+
         private void EditValue(SettingBase editSetting)
         {
             UIState requestedState = editSetting.EditButtonPressed();
