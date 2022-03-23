@@ -20,7 +20,9 @@ namespace BGC.Audio.Audiometry
 
         private static string currentCalibrationName = null;
         private static CalibrationProfile customCalibration = null;
-        private static CalibrationProfile resultsCalibration = null;
+        private static CalibrationProfile calibrationResults = null;
+
+        private static ValidationResults validationResults = null;
 
         private static bool initialized = false;
 
@@ -55,13 +57,13 @@ namespace BGC.Audio.Audiometry
 
                 FileReader.ReadJsonFile(
                     path: DataManagement.PathForDataFile(systemDirectory, configFileName),
-                    successCallback: DeserializeCalibration,
-                    failCallback: Serialize,
-                    fileNotFoundCallback: Serialize);
+                    successCallback: DeserializeCalibrationSettings,
+                    failCallback: SerializeCalibrationSettings,
+                    fileNotFoundCallback: SerializeCalibrationSettings);
             }
         }
 
-        private static void DeserializeCalibration(JsonObject parsedValue)
+        private static void DeserializeCalibrationSettings(JsonObject parsedValue)
         {
             if (parsedValue.ContainsKey(Keys.CurrentCalibration))
             {
@@ -77,8 +79,8 @@ namespace BGC.Audio.Audiometry
                 FileReader.ReadJsonFile(
                     path: DataManagement.PathForDataFile(dataDirectory, currentCalibrationName),
                     successCallback: data => customCalibration = new CalibrationProfile(data),
-                    failCallback: FailedToLoadCalibration,
-                    fileNotFoundCallback: FailedToLoadCalibration);
+                    failCallback: FailedToLoadCalibrationSettings,
+                    fileNotFoundCallback: FailedToLoadCalibrationSettings);
             }
             else
             {
@@ -86,7 +88,7 @@ namespace BGC.Audio.Audiometry
             }
         }
 
-        private static void FailedToLoadCalibration()
+        private static void FailedToLoadCalibrationSettings()
         {
             Debug.LogError(
                 $"Unable to load calibration file: {DataManagement.PathForDataFile(dataDirectory, currentCalibrationName)}");
@@ -94,27 +96,25 @@ namespace BGC.Audio.Audiometry
             customCalibration = null;
         }
 
-        public static void Serialize()
+        public static void SerializeCalibrationSettings()
         {
             FileWriter.WriteJson(
                 path: DataManagement.PathForDataFile(systemDirectory, configFileName),
-                createJson: SerializeCalibration,
+                createJson: () =>
+                {
+                    JsonObject data = new JsonObject()
+                    {
+                        [Keys.Version] = VERSION
+                    };
+
+                    if (!string.IsNullOrEmpty(currentCalibrationName))
+                    {
+                        data.Add(Keys.CurrentCalibration, currentCalibrationName);
+                    }
+
+                    return data;
+                },
                 pretty: true);
-        }
-
-        private static JsonObject SerializeCalibration()
-        {
-            JsonObject data = new JsonObject()
-            {
-                [Keys.Version] = VERSION
-            };
-
-            if (!string.IsNullOrEmpty(currentCalibrationName))
-            {
-                data.Add(Keys.CurrentCalibration, currentCalibrationName);
-            }
-
-            return data;
         }
 
         public static void PushCalibrationValue(
@@ -124,7 +124,7 @@ namespace BGC.Audio.Audiometry
             AudioChannel channel,
             double rms)
         {
-            if (resultsCalibration is null)
+            if (calibrationResults is null)
             {
                 throw new Exception($"Calibration not initialized");
             }
@@ -132,15 +132,15 @@ namespace BGC.Audio.Audiometry
             switch (set)
             {
                 case CalibrationSet.PureTone:
-                    resultsCalibration.PureTone.SetCalibrationPoint(frequency, levelHL, channel, rms);
+                    calibrationResults.PureTone.SetCalibrationPoint(frequency, levelHL, channel, rms);
                     break;
 
                 case CalibrationSet.Narrowband:
-                    resultsCalibration.Narrowband.SetCalibrationPoint(frequency, levelHL, channel, rms);
+                    calibrationResults.Narrowband.SetCalibrationPoint(frequency, levelHL, channel, rms);
                     break;
 
                 case CalibrationSet.Broadband:
-                    resultsCalibration.Broadband.SetCalibrationValue(levelHL, channel, rms);
+                    calibrationResults.Broadband.SetCalibrationValue(levelHL, channel, rms);
                     break;
 
                 default:
@@ -151,21 +151,28 @@ namespace BGC.Audio.Audiometry
 
         public static void InitiateCalibration(TransducerProfile transducerProfile)
         {
-            resultsCalibration = new CalibrationProfile(transducerProfile);
+            calibrationResults = new CalibrationProfile(transducerProfile);
         }
 
-        public static void PushCalibrationResults()
+        public static void FinalizeCalibrationResults()
         {
-            if (resultsCalibration == null)
+            if (calibrationResults == null)
             {
-                Debug.LogError("Null results calibration");
+                Debug.LogError("Null calibration results");
                 return;
             }
 
-            customCalibration = resultsCalibration;
-            resultsCalibration = null;
+            customCalibration = calibrationResults;
+            calibrationResults = null;
 
-            Serialize();
+            currentCalibrationName = customCalibration.CalibrationDate.ToString("Calibration_yy_MM_dd_HH_mm_ss.json");
+
+            FileWriter.WriteJson(
+                path: DataManagement.PathForDataFile(dataDirectory, currentCalibrationName),
+                createJson: customCalibration.Serialize,
+                pretty: true);
+
+            SerializeCalibrationSettings();
         }
 
         public static void DropCalibrationResults(Source source)
@@ -174,11 +181,11 @@ namespace BGC.Audio.Audiometry
             {
                 case Source.Custom:
                     customCalibration = null;
-                    Serialize();
+                    SerializeCalibrationSettings();
                     break;
 
                 case Source.Results:
-                    resultsCalibration = null;
+                    calibrationResults = null;
                     break;
 
                 case Source.Default:
@@ -188,19 +195,7 @@ namespace BGC.Audio.Audiometry
             }
         }
 
-        public static Source GetSourceForVerificationPanel()
-        {
-            if (!(resultsCalibration is null))
-            {
-                return Source.Results;
-            }
-            else if (!(customCalibration is null))
-            {
-                return Source.Custom;
-            }
-
-            return Source.Default;
-        }
+        public static bool HasCalibrationProfile() => customCalibration != null;
 
         /// <summary>
         /// Returns the scale factor per RMS.
@@ -216,11 +211,11 @@ namespace BGC.Audio.Audiometry
             switch (source)
             {
                 case Source.Results:
-                    if (resultsCalibration == null)
+                    if (calibrationResults == null)
                     {
                         goto case Source.Custom;
                     }
-                    calibrationProfile = resultsCalibration;
+                    calibrationProfile = calibrationResults;
                     break;
 
                 case Source.Custom:
@@ -248,27 +243,155 @@ namespace BGC.Audio.Audiometry
         }
 
         public static double EstimateRMS(
+            Source calibrationSource,
             CalibrationSet calibrationSet,
             AudioChannel channel,
             double frequency,
             double levelHL)
         {
-            if (resultsCalibration == null)
+            switch (calibrationSource)
             {
-                throw new Exception($"Unable to EstimateRMS with uninitialized calibration");
-            }
+                case Source.Custom:
+                    if (customCalibration == null)
+                    {
+                        throw new Exception($"Unable to EstimateRMS without calibration profile");
+                    }
+                    return customCalibration.EstimateRMS(calibrationSet, channel, frequency, levelHL);
 
-            return resultsCalibration.EstimateRMS(calibrationSet, channel, frequency, levelHL);
+                case Source.Results:
+                    if (calibrationResults == null)
+                    {
+                        throw new Exception($"Unable to EstimateRMS with uninitialized calibration");
+                    }
+                    return calibrationResults.EstimateRMS(calibrationSet, channel, frequency, levelHL);
+
+                case Source.Default:
+                    throw new Exception($"Unable to EstimateRMS with uninitialized calibration");
+
+                default:
+                    throw new Exception($"Unexpected CalibrationSource for EstimateRMS: {calibrationSource}");
+            }
         }
 
-        public static double GetLevelSPL(double frequency, double levelHL)
+        public static double GetLevelSPL(
+            Source calibrationSource,
+            double frequency,
+            double levelHL)
         {
-            if (resultsCalibration == null)
+            switch (calibrationSource)
             {
-                throw new Exception($"Unable to use GetLevelSPL with uninitialized calibration");
+                case Source.Custom:
+                    if (customCalibration == null)
+                    {
+                        throw new Exception($"Unable to use GetLevelSPL without calibration profile");
+                    }
+                    return customCalibration.TransducerProfile.GetSPL(frequency, levelHL);
+
+                case Source.Results:
+                    if (calibrationResults == null)
+                    {
+                        throw new Exception($"Unable to use GetLevelSPL with uninitialized calibration");
+                    }
+                    return calibrationResults.TransducerProfile.GetSPL(frequency, levelHL);
+
+                case Source.Default:
+                case Source.MAX:
+                default:
+                    throw new Exception($"Unexpected CalibrationSource for GetLevelSPL: {calibrationSource}");
+            }
+        }
+
+        public static double GetLevelHL(
+            Source calibrationSource,
+            double frequency,
+            double levelSPL)
+        {
+            switch (calibrationSource)
+            {
+                case Source.Custom:
+                    if (customCalibration == null)
+                    {
+                        throw new Exception($"Unable to use GetLevelHL without calibration profile");
+                    }
+                    return customCalibration.TransducerProfile.GetHL(frequency, levelSPL);
+
+                case Source.Results:
+                    if (calibrationResults == null)
+                    {
+                        throw new Exception($"Unable to use GetLevelHL with uninitialized calibration");
+                    }
+                    return calibrationResults.TransducerProfile.GetHL(frequency, levelSPL);
+
+                case Source.Default:
+                case Source.MAX:
+                default:
+                    throw new Exception($"Unexpected CalibrationSource for GetLevelHL: {calibrationSource}");
+            }
+        }
+
+        #region Validation
+
+        public static void PushValidationValue(
+            double levelHL,
+            CalibrationSet set,
+            double frequency,
+            AudioChannel channel,
+            double expectedRMS,
+            double measuredLevelHL)
+        {
+            if (validationResults is null)
+            {
+                throw new Exception($"Validation not initialized");
             }
 
-            return resultsCalibration.TransducerProfile.GetSPL(frequency, levelHL);
+            switch (set)
+            {
+                case CalibrationSet.PureTone:
+                    validationResults.PureTone.SetValidationPoint(frequency, levelHL, channel, expectedRMS, measuredLevelHL);
+                    break;
+
+                case CalibrationSet.Narrowband:
+                    validationResults.Narrowband.SetValidationPoint(frequency, levelHL, channel, expectedRMS, measuredLevelHL);
+                    break;
+
+                case CalibrationSet.Broadband:
+                    validationResults.Broadband.SetValidationValue(levelHL, channel, expectedRMS, measuredLevelHL);
+                    break;
+
+                default:
+                    Debug.LogError($"Unexpected CalibrationSet: {set}");
+                    break;
+            }
         }
+
+        public static void InitiateValidation(TransducerProfile transducerProfile)
+        {
+            validationResults = new ValidationResults(transducerProfile);
+        }
+
+        public static ValidationResults FinalizeValidationResults()
+        {
+            if (validationResults == null)
+            {
+                Debug.LogError("Null validation results");
+                return null;
+            }
+
+            string currentValidationName = validationResults.ValidationDate.ToString("Validation_yy_MM_dd_HH_mm_ss.json");
+
+            FileWriter.WriteJson(
+                path: DataManagement.PathForDataFile(dataDirectory, currentValidationName),
+                createJson: validationResults.Serialize,
+                pretty: true);
+
+            return validationResults;
+        }
+
+        public static void DropValidationResults()
+        {
+            validationResults = null;
+        }
+
+        #endregion Validation
     }
 }

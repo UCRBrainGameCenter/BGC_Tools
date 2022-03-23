@@ -398,6 +398,7 @@ namespace BGC.Audio.Audiometry
                 return (leftRMS, rightRMS);
             }
         }
+
         public class CalibrationPoint
         {
             public double LevelHL { get; set; }
@@ -429,7 +430,4 @@ namespace BGC.Audio.Audiometry
             };
         }
     }
-
-
-
 }
