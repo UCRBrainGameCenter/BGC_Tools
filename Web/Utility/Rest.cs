@@ -56,6 +56,39 @@ namespace BGC.Web.Utility
                 timeout: timeout,
                 headers: headers));
         }
+        
+        /// <summary>Send a get request using a file handler</summary>
+        /// <param name="callBack">false means there was a local parsing error</param>
+        /// <param name="queryParams">Dictionary of key names hashed to their values of any type</param>
+        /// <param name="absoluteFilePath">
+        /// The absolute path to the file the data will be downloaded to. Must include filename and extension.
+        /// </param>
+        public static void GetRequest(
+            string url,
+            IDictionary<string, string> headers,
+            string absoluteFilePath,
+            Action<UnityWebRequest, bool> callBack = null,
+            int timeout = 0,
+            IDictionary<string, IConvertible> queryParams = default)
+        {
+            if (queryParams != default)
+            {
+                url += $"?{string.Join("&", queryParams.Select(WriteQueryParam))}";
+            }
+
+            var fileHandler = new DownloadHandlerFile(absoluteFilePath)
+            {
+                removeFileOnAbort = true
+            };
+
+            // convert URL to HTTP-friendly URL
+            CoroutineUtility.Mono.StartCoroutine(RunGetFile(
+                url: url,
+                callBack: callBack,
+                timeout: timeout,
+                headers: headers,
+                downloadHandler: fileHandler));
+        }
 
         /// <summary>
         /// Send a post request
@@ -124,6 +157,47 @@ namespace BGC.Web.Utility
 
                     yield return request.SendWebRequest();
 
+                    callBack?.Invoke(request, true);
+                }
+            }
+            finally
+            {
+                numActiveGets--;
+            }
+        }
+        
+        /// <summary>Run get request using a file handler.</summary>
+        private static IEnumerator RunGetFile(
+            string url,
+            Action<UnityWebRequest, bool> callBack,
+            IDictionary<string, string> headers,
+            DownloadHandlerFile downloadHandler,
+            int timeout = 0)
+        {
+            try
+            {
+                while (numActiveGets >= MaxNumActiveGets)
+                {
+                    // wait for other requests to wrap up to avoid port exhaustion.
+                    yield return null;
+                }
+                
+                numActiveGets++;
+                using (UnityWebRequest request = UnityWebRequest.Get(url))
+                {
+                    request.timeout = timeout;
+
+                    foreach (KeyValuePair<string, string> pair in headers)
+                    {
+                        request.SetRequestHeader(pair.Key, pair.Value);
+                    }
+
+                    // use file handler
+                    request.downloadHandler = downloadHandler;
+                    
+                    yield return request.SendWebRequest();
+
+                    downloadHandler.Dispose();
                     callBack?.Invoke(request, true);
                 }
             }
