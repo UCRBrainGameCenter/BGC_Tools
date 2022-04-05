@@ -34,7 +34,7 @@ namespace BGC.Web.Utility
         /// <returns>The number of PUT requests which have not yet completed</returns>
         public static int GetNumActivePuts() => numActivePuts;
 
-        /// <summary>Send a get request</summary>
+        /// <summary>Send a get request.</summary>
         /// <param name="callBack">false means there was a local parsing error</param>
         /// <param name="queryParams">Dictionary of key names hashed to their values of any type</param>
         public static void GetRequest(
@@ -57,7 +57,7 @@ namespace BGC.Web.Utility
                 headers: headers));
         }
         
-        /// <summary>Send a get request using a file handler</summary>
+        /// <summary>Send a get request using a file handler.</summary>
         /// <param name="callBack">false means there was a local parsing error</param>
         /// <param name="queryParams">Dictionary of key names hashed to their values of any type</param>
         /// <param name="absoluteFilePath">
@@ -82,7 +82,7 @@ namespace BGC.Web.Utility
             };
 
             // convert URL to HTTP-friendly URL
-            CoroutineUtility.Mono.StartCoroutine(RunGetFile(
+            CoroutineUtility.Mono.StartCoroutine(RunGet(
                 url: url,
                 callBack: callBack,
                 timeout: timeout,
@@ -167,7 +167,7 @@ namespace BGC.Web.Utility
         }
         
         /// <summary>Run get request using a file handler.</summary>
-        private static IEnumerator RunGetFile(
+        private static IEnumerator RunGet(
             string url,
             Action<UnityWebRequest, bool> callBack,
             IDictionary<string, string> headers,
