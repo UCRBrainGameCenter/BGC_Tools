@@ -19,7 +19,7 @@ namespace BGC.DataStructures.Generic
         [SerializeField]
         protected int availableCount;
 
-        System.Random randomizer = null;
+        protected System.Random randomizer = null;
 
         public DepletableBag(System.Random randomizer = null)
         {
