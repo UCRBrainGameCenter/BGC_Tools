@@ -2,10 +2,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine.Networking;
 using BGC.Utility;
 using BGC.Extensions;
+using JetBrains.Annotations;
 
 namespace BGC.Web.Utility
 {
@@ -56,7 +60,37 @@ namespace BGC.Web.Utility
                 timeout: timeout,
                 headers: headers));
         }
-        
+
+        /// <summary>Send an async get request.</summary>
+        /// <param name="callBack">false means there was a local parsing error</param>
+        /// <param name="queryParams">Dictionary of key names hashed to their values of any type</param>
+        [ItemCanBeNull]
+        public static async Task<UnityWebRequest> GetRequestAsync(
+            string url,
+            IDictionary<string, string> headers,
+            int timeout = 0,
+            IProgress<float> progressReporter = null,
+            IDictionary<string, IConvertible> queryParams = default,
+            CancellationToken abortToken = default)
+        {
+            if (queryParams != default)
+            {
+                url += $"?{string.Join("&", queryParams.Select(WriteQueryParam))}";
+            }
+
+            if (abortToken.IsCancellationRequested)
+            {
+                return null;
+            }
+
+            return await RunGetAsync(
+                url,
+                headers,
+                timeout,
+                progressReporter,
+                abortToken);
+        }
+
         /// <summary>Send a get request using a file handler.</summary>
         /// <param name="callBack">false means there was a local parsing error</param>
         /// <param name="queryParams">Dictionary of key names hashed to their values of any type</param>
@@ -90,6 +124,46 @@ namespace BGC.Web.Utility
                 downloadHandler: fileHandler));
         }
 
+        /// <summary>Send an async GET request using a file handler.</summary>
+        /// <param name="callBack">false means there was a local parsing error</param>
+        /// <param name="queryParams">Dictionary of key names hashed to their values of any type</param>
+        /// <param name="absoluteFilePath">
+        /// The absolute path to the file the data will be downloaded to. Must include filename and extension.
+        /// </param>
+        [ItemCanBeNull]
+        public static async Task<UnityWebRequest> GetRequestAsync(
+            string url,
+            IDictionary<string, string> headers,
+            string absoluteFilePath,
+            int timeout = 0,
+            IProgress<float> progressReporter = null,
+            IDictionary<string, IConvertible> queryParams = default,
+            CancellationToken abortToken = default)
+        {
+            if (queryParams != default)
+            {
+                url += $"?{string.Join("&", queryParams.Select(WriteQueryParam))}";
+            }
+
+            var fileHandler = new DownloadHandlerFile(absoluteFilePath)
+            {
+                removeFileOnAbort = true
+            };
+
+            if (abortToken.IsCancellationRequested)
+            {
+                return null;
+            }
+
+            return await RunGetAsync(
+                url,
+                headers,
+                fileHandler,
+                timeout,
+                progressReporter,
+                abortToken);
+        }
+
         /// <summary>
         /// Send a post request
         /// </summary>
@@ -107,6 +181,25 @@ namespace BGC.Web.Utility
                 body,
                 callBack,
                 timeout));
+        }
+
+        /// <summary>Send an async POST request</summary>
+        [ItemCanBeNull]
+        public static async Task<UnityWebRequest> PostRequestAsync(
+            string url,
+            IDictionary<string, string> headers,
+            string body,
+            int timeoutInSeconds = 0,
+            IProgress<float> progressReporter = null,
+            CancellationToken abortToken = default)
+        {
+            return await RunPostAsync(
+                url,
+                headers,
+                body,
+                timeoutInSeconds,
+                progressReporter,
+                abortToken);
         }
 
         /// <summary>
@@ -144,7 +237,7 @@ namespace BGC.Web.Utility
                     // wait for other requests to wrap up to avoid port exhaustion.
                     yield return null;
                 }
-                
+
                 numActiveGets++;
                 using (UnityWebRequest request = UnityWebRequest.Get(url))
                 {
@@ -165,7 +258,75 @@ namespace BGC.Web.Utility
                 numActiveGets--;
             }
         }
-        
+
+        /// <summary>Run async GET request using async/await C# pattern.</summary>
+        /// <param name="url">The URL to send the request to.</param>
+        /// <param name="headers">The headers to attach to the request.</param>
+        /// <param name="timeoutInSeconds">Optional timeout for the request. Default is 15 seconds.</param>
+        /// <param name="progressReporter">
+        /// Optional progress reporter for the request. Takes the progress of the web request as a float.
+        /// </param>
+        /// <param name="abortToken">Optional cancellation token.</param>
+        /// <returns>The finished unity web request. Can be NULL if operation cancelled or error occurs.</returns>
+        [ItemCanBeNull]
+        private static async Task<UnityWebRequest> RunGetAsync(
+            string url,
+            IDictionary<string, string> headers,
+            int timeoutInSeconds = 15,
+            IProgress<float> progressReporter = null,
+            CancellationToken abortToken = default)
+        {
+            try
+            {
+                while (numActiveGets >= MaxNumActiveGets)
+                {
+                    // wait for other requests to wrap up to avoid port exhaustion.
+
+                    if (abortToken.IsCancellationRequested)
+                    {
+                        return null;
+                    }
+
+                    await Task.Delay(5, abortToken);
+                }
+
+                if (abortToken.IsCancellationRequested)
+                {
+                    return null;
+                }
+
+                numActiveGets++;
+
+                using UnityWebRequest request = UnityWebRequest.Get(url);
+                request.timeout = timeoutInSeconds;
+
+                foreach (KeyValuePair<string, string> pair in headers)
+                {
+                    request.SetRequestHeader(pair.Key, pair.Value);
+                }
+
+                UnityWebRequestAsyncOperation operation = request.SendWebRequest();
+
+                while (!operation.isDone)
+                {
+                    if (abortToken.IsCancellationRequested)
+                    {
+                        request.Abort();
+                        return null;
+                    }
+
+                    progressReporter?.Report(operation.progress);
+                    await Task.Delay(1, abortToken);
+                }
+
+                return request;
+            }
+            finally
+            {
+                numActiveGets--;
+            }
+        }
+
         /// <summary>Run get request using a file handler.</summary>
         private static IEnumerator RunGet(
             string url,
@@ -181,7 +342,7 @@ namespace BGC.Web.Utility
                     // wait for other requests to wrap up to avoid port exhaustion.
                     yield return null;
                 }
-                
+
                 numActiveGets++;
                 using (UnityWebRequest request = UnityWebRequest.Get(url))
                 {
@@ -194,12 +355,84 @@ namespace BGC.Web.Utility
 
                     // use file handler
                     request.downloadHandler = downloadHandler;
-                    
                     yield return request.SendWebRequest();
 
                     downloadHandler.Dispose();
                     callBack?.Invoke(request, true);
                 }
+            }
+            finally
+            {
+                numActiveGets--;
+            }
+        }
+
+        /// <summary>Run async GET request using a file handler.</summary>
+        /// <param name="url">The URL to send the request to.</param>
+        /// <param name="headers">The headers to attach to the request.</param>
+        /// <param name="downloadHandler">The file download handler to use for the request.</param>
+        /// <param name="timeoutInSeconds">Optional timeout for the request. Default is 15 seconds.</param>
+        /// <param name="progressReporter">
+        /// Optional progress reporter for the request. Takes the progress of the web request as a float.
+        /// </param>
+        /// <param name="abortToken">Optional cancellation token.</param>
+        /// <returns>The finished unity web request. Can be NULL if operation cancelled or error occurs.</returns>
+        [ItemCanBeNull]
+        private static async Task<UnityWebRequest> RunGetAsync(
+            string url,
+            IDictionary<string, string> headers,
+            DownloadHandlerFile downloadHandler,
+            int timeoutInSeconds = 0,
+            IProgress<float> progressReporter = null,
+            CancellationToken abortToken = default)
+        {
+            try
+            {
+                while (numActiveGets >= MaxNumActiveGets)
+                {
+                    if (abortToken.IsCancellationRequested)
+                    {
+                        return null;
+                    }
+
+                    // wait for other requests to wrap up to avoid port exhaustion.
+                    await Task.Delay(5, abortToken);
+                }
+
+                if (abortToken.IsCancellationRequested)
+                {
+                    return null;
+                }
+
+                numActiveGets++;
+                using UnityWebRequest request = UnityWebRequest.Get(url);
+                request.timeout = timeoutInSeconds;
+
+                foreach (KeyValuePair<string, string> pair in headers)
+                {
+                    request.SetRequestHeader(pair.Key, pair.Value);
+                }
+
+                // use file handler
+                request.downloadHandler = downloadHandler;
+                UnityWebRequestAsyncOperation operation = request.SendWebRequest();
+
+                while (!operation.isDone)
+                {
+                    if (abortToken.IsCancellationRequested)
+                    {
+                        request.Abort();
+                        return null;
+                    }
+
+                    // spin lock while waiting for response. Since method is async, it doesn't block main thread.
+                    progressReporter?.Report(operation.progress);
+                    await Task.Delay(1, abortToken);
+                }
+
+                downloadHandler.Dispose();
+
+                return request;
             }
             finally
             {
@@ -239,6 +472,57 @@ namespace BGC.Web.Utility
                 numActivePosts--;
             }
         }
+        
+        /// <summary>Run async POST request</summary>
+        [ItemCanBeNull]
+        private static async Task<UnityWebRequest> RunPostAsync(
+            string url,
+            IDictionary<string, string> headers,
+            string body,
+            int timeoutInSeconds = 0,
+            IProgress<float> progressReporter = null,
+            CancellationToken abortToken = default)
+        {
+            try
+            {
+                numActivePosts++;
+                
+                using UnityWebRequest request = UnityWebRequest.Post(url, "");
+                request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
+                request.timeout = timeoutInSeconds;
+
+                foreach (KeyValuePair<string, string> pair in headers)
+                {
+                    request.SetRequestHeader(pair.Key, pair.Value);
+                }
+
+                if (abortToken.IsCancellationRequested)
+                {
+                    return null;
+                }
+                
+                UnityWebRequestAsyncOperation operation = request.SendWebRequest();
+
+                while (!operation.isDone)
+                {
+                    if (abortToken.IsCancellationRequested)
+                    {
+                        request.Abort();
+                        return null;
+                    }
+
+                    // spin lock while waiting for response. Since method is async, it doesn't block main thread.
+                    progressReporter?.Report(operation.progress);
+                    await Task.Delay(1, abortToken);
+                }
+
+                return request;
+            }
+            finally
+            {
+                numActivePosts--;
+            }
+        }
 
         /// <summary>
         /// Run put request
@@ -272,6 +556,7 @@ namespace BGC.Web.Utility
             }
         }
 
-        private static string WriteQueryParam(KeyValuePair<string, IConvertible> param) => $"{param.Key}={param.Value.Encode()}";
+        private static string WriteQueryParam(KeyValuePair<string, IConvertible> param) =>
+            $"{param.Key}={param.Value.Encode()}";
     }
 }
