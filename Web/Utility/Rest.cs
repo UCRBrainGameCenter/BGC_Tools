@@ -19,7 +19,7 @@ namespace BGC.Web.Utility
         private static int numActiveGets = 0;
         private static int numActivePosts = 0;
         private static int numActivePuts = 0;
-        private const int MaxNumActiveGets = 6;
+        private const int MaxNumActiveGets = 20;
 
         /// <summary>
         /// Get the number of GET requests which have not yet completed.
@@ -303,11 +303,11 @@ namespace BGC.Web.Utility
 
                 int numRetries = 0;
                 bool shouldRetry = true;
-                
+
                 while (shouldRetry)
                 {
                     shouldRetry = false;
-                    
+
                     while (numActiveGets >= MaxNumActiveGets)
                     {
                         // wait for other requests to wrap up to avoid port exhaustion.
@@ -368,15 +368,24 @@ namespace BGC.Web.Utility
         {
             try
             {
-                using (UnityWebRequest request = UnityWebRequest.Get(url))
+                bool shouldRetry = true;
+                int numRetries = 0;
+
+                while (shouldRetry)
                 {
+                    shouldRetry = false;
+                    
+                    using UnityWebRequest request = UnityWebRequest.Get(url);
                     request.timeout = timeout;
+
+                    // use file handler
+                    request.downloadHandler = downloadHandler;
 
                     foreach (KeyValuePair<string, string> pair in headers)
                     {
                         request.SetRequestHeader(pair.Key, pair.Value);
                     }
-                    
+
                     while (numActiveGets >= MaxNumActiveGets)
                     {
                         // wait for other requests to wrap up to avoid port exhaustion.
@@ -384,33 +393,26 @@ namespace BGC.Web.Utility
                     }
 
                     numActiveGets++;
+                    yield return request.SendWebRequest();
 
-                    // use file handler
-                    request.downloadHandler = downloadHandler;
-
-                    bool shouldRetry = true;
-                    int numRetries = 0;
-
-                    while (shouldRetry)
+                    if (!string.IsNullOrEmpty(request.error))
                     {
-                        shouldRetry = false;
-                        yield return request.SendWebRequest();
-
-                        if (!string.IsNullOrEmpty(request.error))
+                        // check for cases where it's useless to retry, such as 404
+                        if (request.responseCode != 404 && numRetries < retries)
                         {
-                            // check for cases where it's useless to retry, such as 404
-                            if (request.responseCode != 404 && numRetries < retries)
-                            {
-                                // retry
-                                shouldRetry = true;
-                                numRetries++;
-                            }
+                            // retry
+                            shouldRetry = true;
+                            numRetries++;
+                            numActiveGets--;
                         }
                     }
-
-                    downloadHandler.Dispose();
-                    callBack?.Invoke(request, true);
+                    else
+                    {
+                        downloadHandler.Dispose();
+                        callBack?.Invoke(request, true);
+                    }
                 }
+
             }
             finally
             {
@@ -467,7 +469,7 @@ namespace BGC.Web.Utility
 
                 // use file handler
                 request.downloadHandler = downloadHandler;
-                
+
                 int numRetries = 0;
                 bool shouldRetry = true;
 
@@ -488,7 +490,7 @@ namespace BGC.Web.Utility
                         progressReporter?.Report(operation.progress);
                         await Task.Delay(1, abortToken);
                     }
-                    
+
                     if (!string.IsNullOrEmpty(request.error) && retries > 0)
                     {
                         if (request.responseCode != 404)
@@ -545,7 +547,7 @@ namespace BGC.Web.Utility
                 numActivePosts--;
             }
         }
-        
+
         /// <summary>Run async POST request</summary>
         [ItemCanBeNull]
         private static async Task<WebRequestResponseWithHandler> RunPostAsync(
@@ -559,7 +561,7 @@ namespace BGC.Web.Utility
             try
             {
                 numActivePosts++;
-                
+
                 using UnityWebRequest request = UnityWebRequest.Post(url, "");
                 request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
                 request.timeout = timeoutInSeconds;
@@ -573,7 +575,7 @@ namespace BGC.Web.Utility
                 {
                     return null;
                 }
-                
+
                 UnityWebRequestAsyncOperation operation = request.SendWebRequest();
 
                 while (!operation.isDone)
