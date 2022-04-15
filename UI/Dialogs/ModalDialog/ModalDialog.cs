@@ -64,6 +64,7 @@ namespace BGC.UI.Dialogs
             DropdownInput,
             InputABC
         }
+        private Mode mode = Mode.ConfirmCancel;
 
         public delegate void ModalButtonCallback(Response response);
         ModalButtonCallback buttonCallback;
@@ -97,6 +98,35 @@ namespace BGC.UI.Dialogs
             buttonC.onClick.AddListener(() => HandleButtons(Response.C));
         }
 
+        private void Update()
+        {
+            switch (mode)
+            {
+                case Mode.ConfirmCancel:
+                case Mode.InputConfirmCancel:
+                case Mode.InputInputConfirmCancel:
+                case Mode.DropdownInput:
+                case Mode.InputToggleConfirmCancel:
+                case Mode.YesNo:
+                    if (Input.GetKeyDown(KeyCode.Space))
+                    {
+                        HandleButtons(Response.A);
+                    }
+                    if (Input.GetKeyDown(KeyCode.Escape))
+                    {
+                        HandleButtons(Response.B);
+                    }
+                    break;
+                case Mode.Accept:
+                case Mode.InputAccept:
+                    if (Input.GetKeyDown(KeyCode.Space))
+                    {
+                        HandleButtons(Response.A);
+                    }
+                    break;
+            }
+        }
+
         private void SetHeaderText(string text) =>
             headerText.text = text;
 
@@ -111,6 +141,8 @@ namespace BGC.UI.Dialogs
 
         private void SetMode(Mode mode)
         {
+            this.mode = mode;
+
             primaryInputField.text = "";
             primaryInputField.gameObject.SetActive(
                 mode == Mode.InputAccept ||
