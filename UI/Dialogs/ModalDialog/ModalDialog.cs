@@ -102,13 +102,17 @@ namespace BGC.UI.Dialogs
         {
             switch (mode)
             {
+                // Simple modal types
+                case Mode.Accept:
+                    if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                    {
+                        HandleButtons(Response.A);
+                    }
+                    break;
                 case Mode.ConfirmCancel:
-                case Mode.InputConfirmCancel:
-                case Mode.InputInputConfirmCancel:
                 case Mode.DropdownInput:
-                case Mode.InputToggleConfirmCancel:
                 case Mode.YesNo:
-                    if (Input.GetKeyDown(KeyCode.Space))
+                    if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
                     {
                         HandleButtons(Response.A);
                     }
@@ -117,11 +121,24 @@ namespace BGC.UI.Dialogs
                         HandleButtons(Response.B);
                     }
                     break;
-                case Mode.Accept:
+
+                // Input types
                 case Mode.InputAccept:
-                    if (Input.GetKeyDown(KeyCode.Space))
+                    if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
                     {
                         HandleButtons(Response.A);
+                    }
+                    break;
+                case Mode.InputConfirmCancel:
+                case Mode.InputToggleConfirmCancel:
+                case Mode.InputInputConfirmCancel:
+                    if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                    {
+                        HandleButtons(Response.A);
+                    }
+                    if (Input.GetKeyDown(KeyCode.Escape))
+                    {
+                        HandleButtons(Response.B);
                     }
                     break;
             }
