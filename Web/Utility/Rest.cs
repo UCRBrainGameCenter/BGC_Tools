@@ -11,6 +11,7 @@ using BGC.Utility;
 using BGC.Extensions;
 using JetBrains.Annotations;
 using Plugins.BGC_Tools.Web;
+using UnityEngine;
 
 namespace BGC.Web.Utility
 {
@@ -104,6 +105,7 @@ namespace BGC.Web.Utility
             string url,
             IDictionary<string, string> headers,
             string absoluteFilePath,
+            IProgress<float> downloadReporter = null,
             Action<UnityWebRequest, bool> callBack = null,
             int retries = 0,
             int timeout = 0,
@@ -123,6 +125,7 @@ namespace BGC.Web.Utility
             CoroutineUtility.Mono.StartCoroutine(RunGet(
                 url: url,
                 callBack: callBack,
+                downloadReporter: downloadReporter,
                 timeout: timeout,
                 retries: retries,
                 headers: headers,
@@ -363,6 +366,7 @@ namespace BGC.Web.Utility
             Action<UnityWebRequest, bool> callBack,
             IDictionary<string, string> headers,
             DownloadHandlerFile downloadHandler,
+            IProgress<float> downloadReporter = null,
             int retries = 0,
             int timeout = 0)
         {
@@ -389,12 +393,18 @@ namespace BGC.Web.Utility
                     while (numActiveGets >= MaxNumActiveGets)
                     {
                         // wait for other requests to wrap up to avoid port exhaustion.
-                        yield return null;
+                        yield return new WaitForSeconds(0.005f); // wait for 5 ms
                     }
 
                     numActiveGets++;
-                    yield return request.SendWebRequest();
+                    AsyncOperation op = request.SendWebRequest();
 
+                    while (!op.isDone)
+                    {
+                        yield return null;
+                        downloadReporter?.Report(op.progress);
+                    }
+                    
                     if (!string.IsNullOrEmpty(request.error))
                     {
                         // check for cases where it's useless to retry, such as 404
@@ -408,6 +418,7 @@ namespace BGC.Web.Utility
                     }
                     else
                     {
+                        downloadReporter?.Report(op.progress);
                         downloadHandler.Dispose();
                         callBack?.Invoke(request, true);
                     }
