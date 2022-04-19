@@ -64,6 +64,7 @@ namespace BGC.UI.Dialogs
             DropdownInput,
             InputABC
         }
+        private Mode mode = Mode.ConfirmCancel;
 
         public delegate void ModalButtonCallback(Response response);
         ModalButtonCallback buttonCallback;
@@ -97,6 +98,52 @@ namespace BGC.UI.Dialogs
             buttonC.onClick.AddListener(() => HandleButtons(Response.C));
         }
 
+        private void Update()
+        {
+            switch (mode)
+            {
+                // Simple modal types
+                case Mode.Accept:
+                    if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                    {
+                        HandleButtons(Response.A);
+                    }
+                    break;
+                case Mode.ConfirmCancel:
+                case Mode.DropdownInput:
+                case Mode.YesNo:
+                    if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                    {
+                        HandleButtons(Response.A);
+                    }
+                    if (Input.GetKeyDown(KeyCode.Escape))
+                    {
+                        HandleButtons(Response.B);
+                    }
+                    break;
+
+                // Input types
+                case Mode.InputAccept:
+                    if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                    {
+                        HandleButtons(Response.A);
+                    }
+                    break;
+                case Mode.InputConfirmCancel:
+                case Mode.InputToggleConfirmCancel:
+                case Mode.InputInputConfirmCancel:
+                    if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                    {
+                        HandleButtons(Response.A);
+                    }
+                    if (Input.GetKeyDown(KeyCode.Escape))
+                    {
+                        HandleButtons(Response.B);
+                    }
+                    break;
+            }
+        }
+
         private void SetHeaderText(string text) =>
             headerText.text = text;
 
@@ -111,6 +158,8 @@ namespace BGC.UI.Dialogs
 
         private void SetMode(Mode mode)
         {
+            this.mode = mode;
+
             primaryInputField.text = "";
             primaryInputField.gameObject.SetActive(
                 mode == Mode.InputAccept ||
