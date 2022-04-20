@@ -161,6 +161,7 @@ namespace BGC.Web.Utility
 
             if (abortToken.IsCancellationRequested)
             {
+                fileHandler.Dispose();
                 return null;
             }
 
@@ -350,6 +351,10 @@ namespace BGC.Web.Utility
                             throw new WebException($"Unable to download {url}. Retries exceeded.");
                         }
                     }
+                    else
+                    {
+                        progressReporter?.Report(operation.progress);
+                    }
                 }
 
                 return new WebRequestResponse(request);
@@ -515,6 +520,10 @@ namespace BGC.Web.Utility
                                 throw new WebException($"Unable to download {url}. Retries exceeded.");
                             }
                         }
+                    }
+                    else
+                    {
+                        progressReporter?.Report(operation.progress);
                     }
                 }
 
