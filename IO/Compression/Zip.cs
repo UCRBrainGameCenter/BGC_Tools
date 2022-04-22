@@ -1,6 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 
 using CompressionLevel = System.IO.Compression.CompressionLevel;
@@ -102,6 +107,149 @@ namespace BGC.IO.Compression
 
             return false;
         }
+        
+        /// <summary>Decompresses a zip archive onto disc.</summary>
+        /// <param name="inputFilePath">The absolute file path of the zip archive on local storage.</param>
+        /// <param name="outputPath">The absolute path to where the archive should be output to on local storage.</param>
+        /// <param name="progressReporter">Optional progress reporter.</param>
+        /// <param name="abortToken">Optional cancellation token.</param>
+        /// <returns>TRUE if successful. FALSE otherwise.</returns>
+        public static async Task<bool> DecompressFileAsync(
+            string inputFilePath,
+            string outputPath,
+            IProgress<float> progressReporter = null,
+            CancellationToken abortToken = default)
+        {
+            if (!File.Exists(inputFilePath))
+            {
+                Debug.LogError($"Zip Decompress Input File not found: {inputFilePath}");
+                return false;
+            }
+
+            if (!Directory.Exists(outputPath))
+            {
+                Directory.CreateDirectory(outputPath);
+            }
+
+            try
+            {
+                using ZipArchive archive = ZipFile.OpenRead(inputFilePath);
+
+                float newCurrentProgress = 0f;
+                int totalFiles = archive.Entries.Count;
+
+                List<Task> writeTasks = new List<Task>();
+
+                if (abortToken.IsCancellationRequested)
+                {
+                    return false;
+                }
+
+                foreach (ZipArchiveEntry entry in archive.Entries)
+                {
+                    string fullPath = Path.Combine(outputPath, entry.FullName);
+
+                    string dirName = Path.GetDirectoryName(entry.FullName);
+
+                    if (!string.IsNullOrEmpty(dirName))
+                    {
+                        string dirPath = Path.Combine(outputPath, dirName);
+                        Directory.CreateDirectory(dirPath);
+                    }
+
+                    if (entry.FullName.Last() == '/')
+                    {
+                        // If we're here, skip because this entry is a directory
+                        continue;
+                    }
+
+                    writeTasks.Add(Task.Run(() => WriteArchiveEntry(entry, fullPath), abortToken));
+                }
+
+                if (abortToken.IsCancellationRequested)
+                {
+                    return false;
+                }
+
+                if (progressReporter != null)
+                {
+                    // handle progress reporting
+
+                    while (writeTasks.Any())
+                    {
+                        // when any task completes, update progress
+                        Task completedTask = await Task.WhenAny(writeTasks);
+                        writeTasks.Remove(completedTask);
+
+                        newCurrentProgress += 1f / totalFiles;
+                        progressReporter.Report(newCurrentProgress);
+
+                        if (abortToken.IsCancellationRequested)
+                        {
+                            return false;
+                        }
+                    }
+                }
+                else
+                {
+                    // no progress reporting, so just wait for them all to finish.
+                    await Task.WhenAll(writeTasks);
+                }
+
+                return true;
+            }
+            catch (InvalidDataException ex)
+            {
+                // We might be dealing with an incompatible zip64 file, as per MS issue report:
+                // https://github.com/dotnet/runtime/issues/49580
+                
+                // in this case, fallback to try and use the known working method. Unfortunately, we can't report
+                // progress with this.
+
+                try
+                {
+                    Task writeTask = Task.Run(() => ZipFile.ExtractToDirectory(inputFilePath, outputPath), abortToken);
+
+                    float prog = 0f;
+                    while (!writeTask.IsCompleted)
+                    {
+                        // fake the progress
+                        await Task.Delay(1, abortToken);
+                        prog += 0.001f;
+                        progressReporter.Report(prog);
+                    }
+                    
+                    progressReporter?.Report(1f);
+                
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"Preferred Zip extraction of {inputFilePath} failed with \"{e.Message}\".  Trying fallback extraction to: {outputPath}");
+
+                    return false;
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Preferred Zip extraction of {inputFilePath} failed with \"{e.Message}\".  Trying fallback extraction to: {outputPath}");
+
+                return false;
+            }
+        }
+
+        private static async Task WriteArchiveEntry(ZipArchiveEntry entry, string filepath)
+        {
+            if (Path.HasExtension(filepath))
+            {
+                // we may have entries that represent a directory. Rule those out and only extract files.
+
+                //Copy binary data into new file
+                using Stream entryStream = entry.Open();
+                using FileStream fileStream = File.OpenWrite(filepath);
+                await entryStream.CopyToAsync(fileStream);
+            }
+        }
 
         private static bool Decompress(ZipArchive archive, string outputPath)
         {
@@ -170,6 +318,44 @@ namespace BGC.IO.Compression
                     entryStream.CopyTo(fileStream);
                 }
             }
+        }
+        
+        /// <summary> Fallback method for some older android devices </summary>
+        private static async Task DecompressFallbackAsync(ZipArchive archive, string outputPath)
+        {
+            List<Task> tasks = new List<Task>();
+            
+            foreach (ZipArchiveEntry entry in archive.Entries)
+            {
+                tasks.Add(Task.Run(() =>
+                {
+                    string filepath = Path.Combine(outputPath, entry.FullName);
+                    if (entry.FullName.EndsWith("/") || entry.FullName.EndsWith("\\"))
+                    {
+                        //Create the subdirectory if it doesn't already exist
+                        if (!Directory.Exists(filepath))
+                        {
+                            Directory.CreateDirectory(filepath);
+                        }
+
+                        //Skip directories
+                        return;
+                    }
+
+                    //Delete file if it already exists
+                    if (File.Exists(filepath))
+                    {
+                        File.Delete(filepath);
+                    }
+
+                    //Copy binary data into new file
+                    using Stream entryStream = entry.Open();
+                    using FileStream fileStream = File.OpenWrite(filepath);
+                    entryStream.CopyTo(fileStream);
+                }));
+            }
+
+            await Task.WhenAll(tasks);
         }
     }
 }

@@ -66,7 +66,6 @@ namespace BGC.Web.Utility
         /// <summary>Send an async get request.</summary>
         /// <param name="callBack">false means there was a local parsing error</param>
         /// <param name="queryParams">Dictionary of key names hashed to their values of any type</param>
-        [ItemCanBeNull]
         public static async Task<WebRequestResponse> GetRequestAsync(
             string url,
             IDictionary<string, string> headers,
@@ -337,7 +336,7 @@ namespace BGC.Web.Utility
                         }
 
                         progressReporter?.Report(operation.progress);
-                        await Task.Delay(1, abortToken);
+                        await Task.Delay(5, abortToken);
                     }
 
                     if (!string.IsNullOrEmpty(request.error) && retries > 0)
@@ -420,6 +419,10 @@ namespace BGC.Web.Utility
                             numRetries++;
                             numActiveGets--;
                         }
+                        else
+                        {
+                            callBack?.Invoke(request, false);
+                        }
                     }
                     else
                     {
@@ -428,7 +431,6 @@ namespace BGC.Web.Utility
                         callBack?.Invoke(request, true);
                     }
                 }
-
             }
             finally
             {
@@ -446,7 +448,6 @@ namespace BGC.Web.Utility
         /// </param>
         /// <param name="abortToken">Optional cancellation token.</param>
         /// <returns>The finished unity web request. Can be NULL if operation cancelled or error occurs.</returns>
-        [ItemCanBeNull]
         private static async Task<WebRequestResponse> RunGetAsync(
             string url,
             IDictionary<string, string> headers,
@@ -475,16 +476,6 @@ namespace BGC.Web.Utility
                 }
 
                 numActiveGets++;
-                using UnityWebRequest request = UnityWebRequest.Get(url);
-                request.timeout = timeoutInSeconds;
-
-                foreach (KeyValuePair<string, string> pair in headers)
-                {
-                    request.SetRequestHeader(pair.Key, pair.Value);
-                }
-
-                // use file handler
-                request.downloadHandler = downloadHandler;
 
                 int numRetries = 0;
                 bool shouldRetry = true;
@@ -492,6 +483,16 @@ namespace BGC.Web.Utility
                 while (shouldRetry)
                 {
                     shouldRetry = false;
+                    
+                    using UnityWebRequest request = UnityWebRequest.Get(url);
+                    request.timeout = timeoutInSeconds;
+                    request.downloadHandler = downloadHandler; // use file handler
+
+                    foreach (KeyValuePair<string, string> pair in headers)
+                    {
+                        request.SetRequestHeader(pair.Key, pair.Value);
+                    }
+
                     UnityWebRequestAsyncOperation operation = request.SendWebRequest();
 
                     while (!operation.isDone)
@@ -520,14 +521,21 @@ namespace BGC.Web.Utility
                                 throw new WebException($"Unable to download {url}. Retries exceeded.");
                             }
                         }
+                        else
+                        {
+                            progressReporter?.Report(operation.progress);
+                            return new WebRequestResponse(request);
+                        }
                     }
                     else
                     {
                         progressReporter?.Report(operation.progress);
+
+                        return new WebRequestResponse(request);
                     }
                 }
 
-                return new WebRequestResponse(request);
+                return null;
             }
             finally
             {
