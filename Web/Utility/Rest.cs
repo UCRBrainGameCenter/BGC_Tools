@@ -161,6 +161,7 @@ namespace BGC.Web.Utility
             if (abortToken.IsCancellationRequested)
             {
                 fileHandler.Dispose();
+                abortToken.ThrowIfCancellationRequested();
                 return null;
             }
 
@@ -461,19 +462,13 @@ namespace BGC.Web.Utility
             {
                 while (numActiveGets >= MaxNumActiveGets)
                 {
-                    if (abortToken.IsCancellationRequested)
-                    {
-                        return null;
-                    }
-
+                    abortToken.ThrowIfCancellationRequested();
+                    
                     // wait for other requests to wrap up to avoid port exhaustion.
                     await Task.Delay(5, abortToken);
                 }
 
-                if (abortToken.IsCancellationRequested)
-                {
-                    return null;
-                }
+                abortToken.ThrowIfCancellationRequested();
 
                 numActiveGets++;
 
@@ -500,6 +495,7 @@ namespace BGC.Web.Utility
                         if (abortToken.IsCancellationRequested)
                         {
                             request.Abort();
+                            abortToken.ThrowIfCancellationRequested();
                             return null;
                         }
 
@@ -512,6 +508,13 @@ namespace BGC.Web.Utility
                     {
                         if (request.responseCode != 404)
                         {
+                            if (abortToken.IsCancellationRequested)
+                            {
+                                request.Abort();
+                                abortToken.ThrowIfCancellationRequested();
+                                return null;
+                            }
+                            
                             // retry if error and retries are specified
                             shouldRetry = true;
                             numRetries++;
