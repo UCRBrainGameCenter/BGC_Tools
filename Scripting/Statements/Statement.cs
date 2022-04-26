@@ -311,6 +311,7 @@ namespace BGC.Scripting
                 case Keyword.User:
                 case Keyword.Debug:
                 case Keyword.Math:
+                case Keyword.Audiometry:
                     {
                         IExecutable identifierStatement =
                             Expression.ParseNextExecutableExpression(tokens, context);

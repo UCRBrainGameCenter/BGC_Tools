@@ -63,15 +63,12 @@ namespace BGC.Audio.Filters
             return count - samplesRemaining;
         }
 
-        private IEnumerable<double> _channelRMS = null;
-        public override IEnumerable<double> GetChannelRMS()
-        {
-            if (_channelRMS == null)
-            {
-                _channelRMS = stream.GetChannelRMS().Skip(channelIndex).Take(1);
-            }
+        private IEnumerable<double> channelRMS = null;
+        public override IEnumerable<double> GetChannelRMS() =>
+            channelRMS ?? (channelRMS = stream.GetChannelRMS().Skip(channelIndex).Take(1));
 
-            return _channelRMS;
-        }
+        private IEnumerable<PresentationConstraints> presentationConstraints = null;
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints() =>
+            presentationConstraints ?? (presentationConstraints = stream.GetPresentationConstraints().Skip(channelIndex).Take(1));
     }
 }

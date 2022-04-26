@@ -163,19 +163,19 @@ namespace BGC.Audio.Filters
             return count - samplesRemaining;
         }
 
-        private IEnumerable<double> _channelRMS = null;
+        private IEnumerable<double> channelRMS = null;
         public override IEnumerable<double> GetChannelRMS()
         {
-            if (_channelRMS == null)
+            if (channelRMS == null)
             {
                 double[] innerRMS = stream.GetChannelRMS().ToArray();
                 innerRMS[0] *= Math.Abs(leftFactor);
                 innerRMS[1] *= Math.Abs(rightFactor);
 
-                _channelRMS = innerRMS;
+                channelRMS = innerRMS;
             }
 
-            return _channelRMS;
+            return channelRMS;
         }
     }
 }

@@ -90,10 +90,10 @@ namespace BGC.Audio.Filters
             return count - samplesRemaining;
         }
 
-        private IEnumerable<double> _channelRMS = null;
+        private IEnumerable<double> channelRMS = null;
         public override IEnumerable<double> GetChannelRMS()
         {
-            if (_channelRMS == null)
+            if (channelRMS == null)
             {
                 double[] rms = Enumerable.Repeat(stream.GetChannelRMS().First(), Channels).ToArray();
 
@@ -116,10 +116,41 @@ namespace BGC.Audio.Filters
                         goto case AudioChannel.Both;
                 }
 
-                _channelRMS = rms;
+                channelRMS = rms;
             }
 
-            return _channelRMS;
+            return channelRMS;
+        }
+
+        private PresentationConstraints[] presentationConstraints = null;
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints()
+        {
+            if (presentationConstraints == null)
+            {
+                //Maintain the PresentationConstraints only for non-masked channels
+                presentationConstraints = Enumerable.Repeat(stream.GetPresentationConstraints().First(), Channels).ToArray();
+
+                switch (channels)
+                {
+                    case AudioChannel.Left:
+                        presentationConstraints[1] = null;
+                        break;
+
+                    case AudioChannel.Right:
+                        presentationConstraints[0] = null;
+                        break;
+
+                    case AudioChannel.Both:
+                        //nothing
+                        break;
+
+                    default:
+                        Debug.LogError($"Unexpected AudioChannel: {channels}");
+                        goto case AudioChannel.Both;
+                }
+            }
+
+            return presentationConstraints;
         }
     }
 }

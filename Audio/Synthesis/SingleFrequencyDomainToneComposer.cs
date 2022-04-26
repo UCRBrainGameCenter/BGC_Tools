@@ -97,10 +97,10 @@ namespace BGC.Audio.Synthesis
             Position = GeneralMath.Clamp(position, 0, ChannelSamples);
         }
 
-        private IEnumerable<double> _channelRMS = null;
+        private IEnumerable<double> channelRMS = null;
         public override IEnumerable<double> GetChannelRMS()
         {
-            if (_channelRMS == null)
+            if (channelRMS == null)
             {
                 switch (rmsBehavior)
                 {
@@ -109,12 +109,12 @@ namespace BGC.Audio.Synthesis
                         {
                             Initialize();
                         }
-                        _channelRMS = this.CalculateRMS();
+                        channelRMS = this.CalculateRMS();
                         break;
 
                     case TransformRMSBehavior.Passthrough:
                         double rms = carrierTones.Select(x => 0.5 * x.amplitude.MagnitudeSquared).Sum();
-                        _channelRMS = new double[] { Math.Sqrt(rms) };
+                        channelRMS = new double[] { Math.Sqrt(rms) };
                         break;
 
                     default:
@@ -122,7 +122,10 @@ namespace BGC.Audio.Synthesis
                 }
             }
 
-            return _channelRMS;
+            return channelRMS;
         }
+
+        private readonly IEnumerable<PresentationConstraints> presentationConstraints = new PresentationConstraints[1] { null };
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints() => presentationConstraints;
     }
 }

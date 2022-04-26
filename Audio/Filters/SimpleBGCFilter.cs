@@ -32,5 +32,8 @@ namespace BGC.Audio.Filters
                 _Initialize();
             }
         }
+
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints() =>
+            stream.GetPresentationConstraints();
     }
 }

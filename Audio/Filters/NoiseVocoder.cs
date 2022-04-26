@@ -304,19 +304,19 @@ namespace BGC.Audio.Filters
             stream.Seek(position);
         }
 
-        private IEnumerable<double> _channelRMS = null;
+        private IEnumerable<double> channelRMS = null;
         public override IEnumerable<double> GetChannelRMS()
         {
-            if (_channelRMS == null)
+            if (channelRMS == null)
             {
                 switch (rmsBehavior)
                 {
                     case TransformRMSBehavior.Recalculate:
-                        _channelRMS = this.CalculateRMS();
+                        channelRMS = this.CalculateRMS();
                         break;
 
                     case TransformRMSBehavior.Passthrough:
-                        _channelRMS = stream.GetChannelRMS();
+                        channelRMS = stream.GetChannelRMS();
                         break;
 
                     default:
@@ -324,7 +324,7 @@ namespace BGC.Audio.Filters
                 }
             }
 
-            return _channelRMS;
+            return channelRMS;
         }
 
         #region Helper Generator

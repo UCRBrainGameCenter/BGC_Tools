@@ -96,10 +96,10 @@ namespace BGC.Audio
 
         public override void Reset() => Position = 0;
 
-        private IEnumerable<double> _channelRMS = null;
+        private IEnumerable<double> channelRMS = null;
         public override IEnumerable<double> GetChannelRMS()
         {
-            if (_channelRMS == null)
+            if (channelRMS == null)
             {
                 double rms = 0.0;
 
@@ -110,10 +110,13 @@ namespace BGC.Audio
 
                 rms = Math.Sqrt(rms / ChannelSamples);
 
-                _channelRMS = new double[2] { leftFactor * rms, rightFactor * rms };
+                channelRMS = new double[2] { leftFactor * rms, rightFactor * rms };
             }
 
-            return _channelRMS;
+            return channelRMS;
         }
+
+        private readonly IEnumerable<PresentationConstraints> presentationConstraints = new PresentationConstraints[2] { null, null };
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints() => presentationConstraints;
     }
 }

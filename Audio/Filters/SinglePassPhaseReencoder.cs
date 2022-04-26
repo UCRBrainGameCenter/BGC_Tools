@@ -231,25 +231,25 @@ namespace BGC.Audio.Filters
         public override void Seek(int position) => 
             Position = GeneralMath.Clamp(position, 0, ChannelSamples);
 
-        private IEnumerable<double> _channelRMS = null;
+        private IEnumerable<double> channelRMS = null;
         public override IEnumerable<double> GetChannelRMS()
         {
-            if (_channelRMS == null)
+            if (channelRMS == null)
             {
                 if (Channels == stream.Channels)
                 {
                     //1->1 or 2->2
-                    _channelRMS = stream.GetChannelRMS();
+                    channelRMS = stream.GetChannelRMS();
                 }
                 else
                 {
                     //Only 1->2
                     double rms = stream.GetChannelRMS().First();
-                    _channelRMS = new double[] { rms, rms };
+                    channelRMS = new double[] { rms, rms };
                 }
             }
 
-            return _channelRMS;
+            return channelRMS;
         }
     }
 

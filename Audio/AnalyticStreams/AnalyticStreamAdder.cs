@@ -11,11 +11,11 @@ namespace BGC.Audio.AnalyticStreams
         private readonly List<IAnalyticStream> streams = new List<IAnalyticStream>();
         public override IEnumerable<IAnalyticStream> InternalStreams => streams;
 
-        private int _sampleCount = 0;
-        public override int Samples => _sampleCount;
+        private int sampleCount = 0;
+        public override int Samples => sampleCount;
 
-        private double _samplingRate;
-        public override double SamplingRate => _samplingRate;
+        private double samplingRate;
+        public override double SamplingRate => samplingRate;
 
         private const int BUFFER_SIZE = 512;
         private readonly Complex64[] buffer = new Complex64[BUFFER_SIZE];
@@ -100,35 +100,48 @@ namespace BGC.Audio.AnalyticStreams
             if (streams.Count > 0)
             {
                 IEnumerable<double> samplingRates = streams.Select(x => x.SamplingRate);
-                _samplingRate = samplingRates.Max();
+                samplingRate = samplingRates.Max();
 
-                if (_samplingRate != samplingRates.Min())
+                if (samplingRate != samplingRates.Min())
                 {
                     throw new StreamCompositionException("AnalyticStreamAdder requires all streams have the same samplingRate.");
                 }
 
-                _sampleCount = streams.Select(x => x.Samples).Max();
-                _rms = double.NaN;
+                sampleCount = streams.Select(x => x.Samples).Max();
+                channelRMS = double.NaN;
             }
             else
             {
-                _sampleCount = 0;
-                _samplingRate = 44100.0;
-                _rms = double.NaN;
+                sampleCount = 0;
+                samplingRate = 44100.0;
+                channelRMS = double.NaN;
             }
         }
 
-        private double _rms = double.NaN;
+        private double channelRMS = double.NaN;
         //RMS for each channel will be the sum of the constituent RMS's
         public override double GetRMS()
         {
-            if (double.IsNaN(_rms))
+            if (double.IsNaN(channelRMS))
             {
-                _rms = streams.Select(x => { double rms = x.GetRMS(); return rms * rms; }).Sum();
-                _rms = Math.Sqrt(_rms);
+                channelRMS = streams.Select(x => { double rms = x.GetRMS(); return rms * rms; }).Sum();
+                channelRMS = Math.Sqrt(channelRMS);
             }
 
-            return _rms;
+            return channelRMS;
+        }
+
+        private bool presentationConstraintsChecked = false;
+        private PresentationConstraints presentationConstraints = null;
+        public override PresentationConstraints GetPresentationConstraints()
+        {
+            if (!presentationConstraintsChecked)
+            {
+                presentationConstraintsChecked = true;
+                presentationConstraints = PresentationConstraints.ExtractSetConstraints(streams);
+            }
+
+            return presentationConstraints;
         }
 
         public override void Dispose()

@@ -103,10 +103,10 @@ namespace BGC.Audio.Filters
             return count - samplesRemaining;
         }
 
-        private IEnumerable<double> _channelRMS = null;
+        private IEnumerable<double> channelRMS = null;
         public override IEnumerable<double> GetChannelRMS()
         {
-            if (_channelRMS == null)
+            if (channelRMS == null)
             {
                 if (!initialized)
                 {
@@ -117,10 +117,26 @@ namespace BGC.Audio.Filters
                 innerRMS[0] *= Math.Abs(leftFactor);
                 innerRMS[1] *= Math.Abs(rightFactor);
 
-                _channelRMS = innerRMS;
+                channelRMS = innerRMS;
             }
 
-            return _channelRMS;
+            return channelRMS;
+        }
+
+        private IEnumerable<PresentationConstraints> presentationConstraints = null;
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints()
+        {
+            if (presentationConstraints == null)
+            {
+                PresentationConstraints constraint = new PresentationConstraints(
+                    calibrationSet: calibrationSet,
+                    frequency: calibrationFrequency,
+                    compromise: false);
+
+                presentationConstraints = new PresentationConstraints[] { constraint, constraint };
+            }
+
+            return presentationConstraints;
         }
     }
 }

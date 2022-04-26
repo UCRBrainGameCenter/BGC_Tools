@@ -138,21 +138,21 @@ namespace BGC.Audio.AnalyticStreams
             return count - remainingSamples;
         }
 
-        private double _channelRMS = double.NaN;
+        private double channelRMS = double.NaN;
         public override double GetRMS()
         {
-            if (double.IsNaN(_channelRMS))
+            if (double.IsNaN(channelRMS))
             {
                 switch (rmsBehavior)
                 {
                     case TransformRMSBehavior.Recalculate:
-                        _channelRMS = this.CalculateRMS();
+                        channelRMS = this.CalculateRMS();
                         break;
 
                     case TransformRMSBehavior.Passthrough:
-                        _channelRMS = stream.GetRMS();
+                        channelRMS = stream.GetRMS();
 
-                        if (double.IsNaN(_channelRMS) && Samples != int.MaxValue)
+                        if (double.IsNaN(channelRMS) && Samples != int.MaxValue)
                         {
                             goto case TransformRMSBehavior.Recalculate;
                         }
@@ -163,7 +163,7 @@ namespace BGC.Audio.AnalyticStreams
                 }
             }
 
-            return _channelRMS;
+            return channelRMS;
         }
     }
 }

@@ -140,6 +140,7 @@ namespace BGC.Audio.AnalyticStreams
         }
 
         public double GetRMS() => rms;
+        public PresentationConstraints GetPresentationConstraints() => null;
 
         private IEnumerable<ComplexCarrierTone> CreateSideBands(
             double freqLB,

@@ -440,6 +440,7 @@ namespace BGC.Scripting
                 case "Debug": return new KeywordToken(line, startingColumn, Keyword.Debug);
                 case "User": return new KeywordToken(line, startingColumn, Keyword.User);
                 case "Math": return new KeywordToken(line, startingColumn, Keyword.Math);
+                case "Audiometry": return new KeywordToken(line, startingColumn, Keyword.Audiometry);
 
                 case "new": return new KeywordToken(line, startingColumn, Keyword.New);
 

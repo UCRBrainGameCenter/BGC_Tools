@@ -243,21 +243,21 @@ namespace BGC.Audio.Synthesis
             }
         }
 
-        private IEnumerable<double> _channelRMS = null;
+        private IEnumerable<double> channelRMS = null;
         public override IEnumerable<double> GetChannelRMS()
         {
-            if (_channelRMS == null)
+            if (channelRMS == null)
             {
-                _channelRMS = stream.GetChannelRMS();
+                channelRMS = stream.GetChannelRMS();
 
                 //If the rms was previously unknowable
-                if (_channelRMS.Any(double.IsNaN))
+                if (channelRMS.Any(double.IsNaN))
                 {
-                    _channelRMS = this.CalculateRMS();
+                    channelRMS = this.CalculateRMS();
                 }
             }
 
-            return _channelRMS;
+            return channelRMS;
         }
 
         private double EnvelopeRate(EnvelopeState state)

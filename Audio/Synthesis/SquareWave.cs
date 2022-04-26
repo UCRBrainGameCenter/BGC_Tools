@@ -163,9 +163,12 @@ namespace BGC.Audio.Synthesis
             firstAmplitude * firstAmplitude * dutyCycle +
             secondAmplitude * secondAmplitude * (1 - dutyCycle));
 
-        private IEnumerable<double> _channelRMS = null;
+        private IEnumerable<double> channelRMS = null;
         public override IEnumerable<double> GetChannelRMS() => 
-            _channelRMS ?? (_channelRMS = new double[] { GetRMS() });
+            channelRMS ?? (channelRMS = new double[] { GetRMS() });
+
+        private readonly IEnumerable<PresentationConstraints> presentationConstraints = new PresentationConstraints[1] { null };
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints() => presentationConstraints;
 
         #region IBGCEnvelopeStream
 

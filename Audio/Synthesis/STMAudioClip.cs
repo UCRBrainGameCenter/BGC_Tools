@@ -175,7 +175,12 @@ namespace BGC.Audio.Synthesis
         public override void Seek(int position) => 
             this.position = GeneralMath.Clamp(position, 0, _channelSamples);
 
-        public override IEnumerable<double> GetChannelRMS() => this.CalculateRMS();
+        private IEnumerable<double> channelRMS = null;
+        public override IEnumerable<double> GetChannelRMS() =>
+            channelRMS ?? (channelRMS = this.CalculateRMS());
+
+        private readonly IEnumerable<PresentationConstraints> presentationConstraints = new PresentationConstraints[1] { null };
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints() => presentationConstraints;
 
         private IEnumerable<ComplexCarrierTone> CreateSideBands(
             double freqLB,

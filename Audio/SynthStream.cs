@@ -14,6 +14,8 @@ namespace BGC.Audio
 
         public abstract IEnumerable<double> GetChannelRMS();
 
+        public abstract IEnumerable<PresentationConstraints> GetPresentationConstraints();
+
         public abstract int Read(float[] data, int offset, int count);
 
         public abstract void Reset();

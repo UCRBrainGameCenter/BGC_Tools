@@ -125,14 +125,14 @@ namespace BGC.Audio.Filters
                     _totalSampleCount = Channels * _channelSampleCount;
                 }
 
-                _channelRMS = null;
+                channelRMS = null;
             }
             else
             {
                 _channelSampleCount = 0;
                 _totalSampleCount = 0;
                 _samplingRate = 44100f;
-                _channelRMS = null;
+                channelRMS = null;
             }
         }
 
@@ -153,15 +153,12 @@ namespace BGC.Audio.Filters
         }
 
 
-        private IEnumerable<double> _channelRMS = null;
-        public override IEnumerable<double> GetChannelRMS()
-        {
-            if (_channelRMS == null)
-            {
-                _channelRMS = streams.Select(x => x.GetChannelRMS().First());
-            }
+        private IEnumerable<double> channelRMS = null;
+        public override IEnumerable<double> GetChannelRMS() =>
+            channelRMS ?? (channelRMS = streams.Select(x => x.GetChannelRMS().First()));
 
-            return _channelRMS;
-        }
+        private IEnumerable<PresentationConstraints> presentationConstraints = null;
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints() =>
+            presentationConstraints ?? (presentationConstraints = streams.Select(x => x.GetPresentationConstraints().First()).ToArray());
     }
 }

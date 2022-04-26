@@ -52,6 +52,7 @@
         Debug,
         User,
         Math,
+        Audiometry,
 
         //Construction keyword
         New,

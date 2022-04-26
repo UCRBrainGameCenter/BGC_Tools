@@ -273,6 +273,8 @@ namespace BGC.Audio.Audiometry
             }
         }
 
+        public static bool IsCalibrationReady() => customCalibration != null;
+
         public static double GetLevelSPL(
             Source calibrationSource,
             double frequency,

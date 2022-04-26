@@ -115,9 +115,12 @@ namespace BGC.Audio.AnalyticStreams
             convStream.Seek(position);
         }
 
-        private double _channelRMS = double.NaN;
+        private double channelRMS = double.NaN;
         public double GetRMS() =>
-            double.IsNaN(_channelRMS) ? (_channelRMS = stream.GetChannelRMS().First()) : _channelRMS;
+            double.IsNaN(channelRMS) ? (channelRMS = stream.GetChannelRMS().First()) : channelRMS;
+
+        public PresentationConstraints GetPresentationConstraints() =>
+            stream.GetPresentationConstraints().First();
 
         public void Dispose()
         {

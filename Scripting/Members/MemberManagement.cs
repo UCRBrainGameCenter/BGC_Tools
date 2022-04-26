@@ -1139,6 +1139,15 @@ namespace BGC.Scripting
                                 message: $"Unsupported Generic Static method expression {keywordToken.keyword}.{identifier}");
                     }
 
+                case Keyword.Audiometry:
+                    switch (identifier)
+                    {
+                        default:
+                            throw new ScriptParsingException(
+                                source: keywordToken,
+                                message: $"Unsupported Generic Static method expression {keywordToken.keyword}.{identifier}");
+                    }
+
                 default:
                     throw new ScriptParsingException(
                         source: keywordToken,
@@ -1196,6 +1205,15 @@ namespace BGC.Scripting
                     }
 
                 case Keyword.Math:
+                    switch (identifier)
+                    {
+                        default:
+                            throw new ScriptParsingException(
+                                source: keywordToken,
+                                message: $"Unsupported Generic Static method expression {keywordToken.keyword}.{identifier}");
+                    }
+
+                case Keyword.Audiometry:
                     switch (identifier)
                     {
                         default:
@@ -1380,6 +1398,40 @@ namespace BGC.Scripting
                                 message: $"Unsupported Static method expression {keywordToken.keyword}.{identifier}");
                     }
 
+                case Keyword.Audiometry:
+                    switch (identifier)
+                    {
+                        case "IsCalibrationReady":
+                            args.VerifyArgs(keywordToken, identifier);
+                            return new StaticValueOperation<bool>(
+                                operation: () => Audio.Audiometry.AudiometricCalibration.IsCalibrationReady());
+
+                        case "ConvertSPLToHL":
+                            args.VerifyArgs(typeof(double), typeof(double), keywordToken, identifier);
+                            return new StaticArgumentValueOperation<double>(
+                                operation: (RuntimeContext context) =>
+                                    Audio.Audiometry.AudiometricCalibration.GetLevelHL(
+                                        calibrationSource: Audio.Audiometry.AudiometricCalibration.Source.Custom,
+                                        frequency: args[0].GetAs<double>(context),
+                                        levelSPL: args[1].GetAs<double>(context)));
+
+                        case "ConvertHLToSPL":
+                            args.VerifyArgs(typeof(double), typeof(double), keywordToken, identifier);
+                            return new StaticArgumentValueOperation<double>(
+                                operation: (RuntimeContext context) =>
+                                    Audio.Audiometry.AudiometricCalibration.GetLevelSPL(
+                                        calibrationSource: Audio.Audiometry.AudiometricCalibration.Source.Custom,
+                                        frequency: args[0].GetAs<double>(context),
+                                        levelHL: args[1].GetAs<double>(context)));
+
+                        default:
+                            throw new ScriptParsingException(
+                                source: keywordToken,
+                                message: $"Unsupported Static method expression {keywordToken.keyword}.{identifier}");
+                    }
+
+
+
                 default:
                     throw new ScriptParsingException(
                         source: keywordToken,
@@ -1452,6 +1504,5 @@ namespace BGC.Scripting
                     return UserMethod.MAX;
             }
         }
-
     }
 }

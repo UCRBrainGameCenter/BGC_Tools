@@ -19,9 +19,13 @@ namespace BGC.Audio.AnalyticStreams
 
         public float SamplingRate => (float)stream.SamplingRate;
 
-        private IEnumerable<double> _channelRMS = null;
+        private IEnumerable<double> channelRMS = null;
         public IEnumerable<double> GetChannelRMS() =>
-            _channelRMS ?? (_channelRMS = new double[] { stream.GetRMS() });
+            channelRMS ?? (channelRMS = new double[] { stream.GetRMS() });
+
+        IEnumerable<PresentationConstraints> presentationConstraints = null;
+        public IEnumerable<PresentationConstraints> GetPresentationConstraints() =>
+            presentationConstraints ?? (presentationConstraints = new PresentationConstraints[] { stream.GetPresentationConstraints() });
 
         private const int BUFFER_SIZE = 512;
         private readonly Complex64[] buffer = new Complex64[BUFFER_SIZE];

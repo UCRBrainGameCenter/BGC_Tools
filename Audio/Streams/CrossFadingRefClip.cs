@@ -153,5 +153,8 @@ namespace BGC.Audio
             Position = GeneralMath.Clamp(position, 0, Samples.Length - (2 * window.Length + 2));
 
         public override IEnumerable<double> GetChannelRMS() => throw new NotSupportedException();
+
+        private readonly IEnumerable<PresentationConstraints> presentationConstraints = new PresentationConstraints[2] { null, null };
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints() => presentationConstraints;
     }
 }

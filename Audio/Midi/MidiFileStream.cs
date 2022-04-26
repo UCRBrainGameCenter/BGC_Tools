@@ -48,10 +48,12 @@ namespace BGC.Audio.Midi
             }
         }
 
-        public override IEnumerable<double> GetChannelRMS()
-        {
-            yield return Math.Sqrt(0.5);
-        }
+        private readonly IEnumerable<double> channelRMS = new double[] { Math.Sqrt(0.5) };
+        public override IEnumerable<double> GetChannelRMS() => channelRMS;
+
+
+        private readonly IEnumerable<PresentationConstraints> presentationConstraints = new PresentationConstraints[1] { null };
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints() => presentationConstraints;
 
         protected override void _Initialize()
         {
@@ -99,7 +101,7 @@ namespace BGC.Audio.Midi
 
         public override void Seek(int position) => midiFile.tracks.ForEach(track => track.Seek(position));
 
-        public void ExecuteRunningEvent (ProgramMidiEvent programEvent)
+        public void ExecuteRunningEvent(ProgramMidiEvent programEvent)
         {
             if (programLookup.ContainsKey(programEvent.channel))
             {

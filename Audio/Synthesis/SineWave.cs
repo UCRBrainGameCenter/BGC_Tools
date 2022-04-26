@@ -150,9 +150,12 @@ namespace BGC.Audio.Synthesis
                 phase: cycles * cyclePartial);
         }
 
-        private IEnumerable<double> _channelRMS = null;
+        private IEnumerable<double> channelRMS = null;
         public override IEnumerable<double> GetChannelRMS() =>
-            _channelRMS ?? (_channelRMS = new double[] { amplitude * Sqrt(0.5) });
+            channelRMS ?? (channelRMS = new double[] { amplitude * Sqrt(0.5) });
+
+        private readonly IEnumerable<PresentationConstraints> presentationConstraints = new PresentationConstraints[1] { null };
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints() => presentationConstraints;
 
         #region IBGCEnvelopeStream
 

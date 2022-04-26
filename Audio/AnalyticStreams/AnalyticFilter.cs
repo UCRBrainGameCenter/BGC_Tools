@@ -18,6 +18,9 @@ namespace BGC.Audio.AnalyticStreams
         public abstract void Seek(int position);
 
         public abstract double GetRMS();
+
+        public abstract PresentationConstraints GetPresentationConstraints();
+
         public abstract IEnumerable<IAnalyticStream> InternalStreams { get; }
 
         protected bool initialized = false;

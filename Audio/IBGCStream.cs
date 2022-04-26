@@ -50,5 +50,8 @@ namespace BGC.Audio
         /// The RMS amplitude of each channel
         /// </summary>
         IEnumerable<double> GetChannelRMS();
+
+        IEnumerable<PresentationConstraints> GetPresentationConstraints();
     }
+
 }

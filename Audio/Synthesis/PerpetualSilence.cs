@@ -28,10 +28,11 @@ namespace BGC.Audio.Synthesis
 
         public override void Seek(int position) { }
 
-        public override IEnumerable<double> GetChannelRMS()
-        {
-            yield return 0.0;
-        }
+        private readonly IEnumerable<double> channelRMS = new double[1] { 0.0 };
+        public override IEnumerable<double> GetChannelRMS() => channelRMS;
+
+        private readonly IEnumerable<PresentationConstraints> presentationConstraints = new PresentationConstraints[1] { null };
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints() => presentationConstraints;
 
         #region IBGCEnvelopeStream
 

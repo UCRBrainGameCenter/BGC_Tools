@@ -159,7 +159,7 @@ namespace BGC.Audio.Filters
                     _totalSampleCount = Channels * _channelSampleCount;
                 }
                 
-                _channelRMS = null;
+                channelRMS = null;
             }
             else
             {
@@ -167,41 +167,16 @@ namespace BGC.Audio.Filters
                 _channelSampleCount = 0;
                 _totalSampleCount = 0;
                 _samplingRate = 44100f;
-                _channelRMS = null;
+                channelRMS = null;
             }
         }
 
-        private IEnumerable<double> _channelRMS = null;
-        public override IEnumerable<double> GetChannelRMS()
-        {
-            if (_channelRMS == null)
-            {
-                //WTF, this was soo wrong...
-                //
-                //double[] rms = new double[Channels];
+        private IEnumerable<double> channelRMS = null;
+        public override IEnumerable<double> GetChannelRMS() =>
+            channelRMS ?? (channelRMS = this.CalculateRMS());
 
-                //foreach (IBGCStream stream in streams)
-                //{
-                //    double[] streamRMS = stream.GetChannelRMS().ToArray();
-
-                //    for (int i = 0; i < Channels; i++)
-                //    {
-                //        rms[i] += (stream.ChannelSamples / (double)ChannelSamples) * streamRMS[i] * streamRMS[i];
-                //    }
-                //}
-
-                //for (int i = 0; i < Channels; i++)
-                //{
-                //    rms[i] = Math.Sqrt(rms[i]);
-                //}
-
-                //_channelRMS = rms;
-
-
-                _channelRMS = this.CalculateRMS();
-            }
-
-            return _channelRMS;
-        }
+        private IEnumerable<PresentationConstraints> presentationConstraints = null;
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints() =>
+            presentationConstraints ?? (presentationConstraints = PresentationConstraints.ExtractSetConstraintsChannelwise(streams));
     }
 }

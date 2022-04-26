@@ -192,16 +192,19 @@ namespace BGC.Audio.Synthesis
             Read(temp, 0, scanSamples);
         }
 
-        private IEnumerable<double> _channelRMS = null;
+        private IEnumerable<double> channelRMS = null;
         public override IEnumerable<double> GetChannelRMS()
         {
-            if (_channelRMS is null)
+            if (channelRMS is null)
             {
                 double rms = carrierTones.Select(x => 0.5 * x.amplitude.MagnitudeSquared).Sum();
-                _channelRMS = new double[] { Sqrt(rms) };
+                channelRMS = new double[] { Sqrt(rms) };
             }
 
-            return _channelRMS;
+            return channelRMS;
         }
+
+        private readonly IEnumerable<PresentationConstraints> presentationConstraints = new PresentationConstraints[1] { null };
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints() => presentationConstraints;
     }
 }

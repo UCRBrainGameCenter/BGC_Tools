@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using BGC.Mathematics;
 
 namespace BGC.Audio
@@ -56,10 +57,10 @@ namespace BGC.Audio
 
         public override void Reset() => RawPosition = 0;
 
-        private IEnumerable<double> _channelRMS = null;
+        private IEnumerable<double> channelRMS = null;
         public override IEnumerable<double> GetChannelRMS()
         {
-            if (_channelRMS == null)
+            if (channelRMS == null)
             {
                 double[] rms = new double[Channels];
 
@@ -73,10 +74,15 @@ namespace BGC.Audio
                     rms[i] = Math.Sqrt(rms[i] / ChannelSamples);
                 }
 
-                _channelRMS = rms;
+                channelRMS = rms;
             }
 
-            return _channelRMS;
+            return channelRMS;
         }
+
+
+        private IEnumerable<PresentationConstraints> presentationConstraints = null;
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints() =>
+            presentationConstraints ?? (presentationConstraints = Enumerable.Repeat<PresentationConstraints>(null, Channels).ToArray());
     }
 }

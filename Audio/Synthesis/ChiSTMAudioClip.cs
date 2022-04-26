@@ -255,6 +255,9 @@ namespace BGC.Audio.Synthesis
 
         public override IEnumerable<double> GetChannelRMS() => this.CalculateRMS();
 
+        private readonly IEnumerable<PresentationConstraints> presentationConstraints = new PresentationConstraints[1] { null };
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints() => presentationConstraints;
+
         private static void FFTShift(Complex64[] samples)
         {
             Complex64 temp;

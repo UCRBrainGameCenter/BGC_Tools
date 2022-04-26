@@ -41,5 +41,11 @@ namespace BGC.Audio.AnalyticStreams
         /// The RMS amplitude of the stream (real component)
         /// </summary>
         double GetRMS();
+
+
+        /// <summary>
+        /// Contains information key to audiometrically-precise filtering for presentation of stimulus
+        /// </summary>
+        PresentationConstraints GetPresentationConstraints();
     }
 }

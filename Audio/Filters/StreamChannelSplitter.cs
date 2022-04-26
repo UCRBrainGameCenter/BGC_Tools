@@ -166,9 +166,13 @@ namespace BGC.Audio.Filters
             return depletedSamples;
         }
 
-        private IEnumerable<double> _channelRMS = null;
+        private IEnumerable<double> channelRMS = null;
         public override IEnumerable<double> GetChannelRMS() =>
-            _channelRMS ?? (_channelRMS = stream.GetChannelRMS().Take(1));
+            channelRMS ?? (channelRMS = stream.GetChannelRMS().Take(1));
+
+        private IEnumerable<PresentationConstraints> presentationConstraints = null;
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints() =>
+            presentationConstraints ?? (presentationConstraints = stream.GetPresentationConstraints().Take(1));
 
         private int SplitRead(float[] data, int offset, int count)
         {
@@ -429,9 +433,13 @@ namespace BGC.Audio.Filters
                 this.parent = parent;
             }
 
-            private IEnumerable<double> _channelRMS = null;
+            private IEnumerable<double> channelRMS = null;
             public override IEnumerable<double> GetChannelRMS() =>
-                _channelRMS ?? (_channelRMS = stream.GetChannelRMS().Skip(1).Take(1));
+                channelRMS ?? (channelRMS = stream.GetChannelRMS().Skip(1).Take(1));
+
+            private IEnumerable<PresentationConstraints> presentationConstraints = null;
+            public override IEnumerable<PresentationConstraints> GetPresentationConstraints() =>
+                presentationConstraints ?? (presentationConstraints = stream.GetPresentationConstraints().Skip(1).Take(1));
 
             public override int Read(float[] data, int offset, int count) =>
                 parent.SplitRead(data, offset, count);

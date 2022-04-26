@@ -133,8 +133,11 @@ namespace BGC.Audio.Synthesis
             this.position = GeneralMath.Clamp(position, 0, _channelSamples);
 
 
-        private readonly IEnumerable<double> _rms = new double[] { Math.Sqrt(0.5) };
-        public override IEnumerable<double> GetChannelRMS() => _rms;
+        private readonly IEnumerable<double> channelRMS = new double[] { Math.Sqrt(0.5) };
+        public override IEnumerable<double> GetChannelRMS() => channelRMS;
+
+        private readonly IEnumerable<PresentationConstraints> presentationConstraints = new PresentationConstraints[1] { null };
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints() => presentationConstraints;
 
     }
 }

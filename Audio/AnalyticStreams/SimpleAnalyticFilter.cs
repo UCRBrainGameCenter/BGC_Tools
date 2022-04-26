@@ -21,6 +21,8 @@ namespace BGC.Audio.AnalyticStreams
 
         public override void Reset() => stream.Reset();
 
+        public override PresentationConstraints GetPresentationConstraints() => stream.GetPresentationConstraints();
+
         public override void Dispose()
         {
             stream?.Dispose();

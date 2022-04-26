@@ -354,6 +354,7 @@ namespace BGC.Scripting
                 case Keyword.User:
                 case Keyword.Math:
                 case Keyword.Debug:
+                case Keyword.Audiometry:
                     {
                         tokens.CautiousAdvance();
                         tokens.AssertAndSkip(Operator.MemberAccess);
@@ -1114,7 +1115,5 @@ namespace BGC.Scripting
                 FirstToken = firstToken;
             }
         }
-
-
     }
 }

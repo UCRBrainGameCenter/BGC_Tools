@@ -15,6 +15,8 @@ namespace BGC.Audio
 
         public abstract IEnumerable<double> GetChannelRMS();
 
+        public abstract IEnumerable<PresentationConstraints> GetPresentationConstraints();
+
         public void Initialize()
         {
             if (!initialized)

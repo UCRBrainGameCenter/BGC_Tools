@@ -88,9 +88,11 @@ namespace BGC.Audio.Synthesis
         public override void Seek(int position) => 
             this.position = GeneralMath.Clamp(position, 0, _channelSamples);
 
-        public override IEnumerable<double> GetChannelRMS()
-        {
-            yield return rms;
-        }
+        private IEnumerable<double> channelRMS = null;
+        public override IEnumerable<double> GetChannelRMS() =>
+            channelRMS ?? (channelRMS = new double[1] { rms });
+
+        private readonly IEnumerable<PresentationConstraints> presentationConstraints = new PresentationConstraints[1] { null };
+        public override IEnumerable<PresentationConstraints> GetPresentationConstraints() => presentationConstraints;
     }
 }

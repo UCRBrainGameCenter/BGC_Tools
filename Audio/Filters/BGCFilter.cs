@@ -23,6 +23,8 @@ namespace BGC.Audio.Filters
         public abstract IEnumerable<double> GetChannelRMS();
         public abstract IEnumerable<IBGCStream> InternalStreams { get; }
 
+        public abstract IEnumerable<PresentationConstraints> GetPresentationConstraints();
+
         protected bool initialized = false;
 
         protected virtual void _Initialize() { }

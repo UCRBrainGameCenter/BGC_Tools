@@ -68,15 +68,8 @@ namespace BGC.Audio.Filters
             return readSamples;
         }
 
-        private IEnumerable<double> _channelRMS = null;
-        public override IEnumerable<double> GetChannelRMS()
-        {
-            if (_channelRMS == null)
-            {
-                _channelRMS = new double[1] { rms };
-            }
-
-            return _channelRMS;
-        }
+        private IEnumerable<double> channelRMS = null;
+        public override IEnumerable<double> GetChannelRMS() =>
+            channelRMS ?? (channelRMS = new double[1] { rms });
     }
 }

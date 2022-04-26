@@ -45,6 +45,8 @@ namespace BGC.Audio.Filters
 
         public IEnumerable<double> GetChannelRMS() => stream.GetChannelRMS();
 
+        public IEnumerable<PresentationConstraints> GetPresentationConstraints() => stream.GetPresentationConstraints();
+
         public void Initialize()
         {
             if (initializationStarted)
