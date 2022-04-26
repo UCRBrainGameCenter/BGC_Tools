@@ -54,21 +54,24 @@ namespace BGC.Localization
         public static string GetLocalizedValue(string key)
         {
             string value = key;
+            bool gotValue = false;
 
             switch (language)
             {
                 case Language.English:
-                    localizedEN.TryGetValue(key, out value);
+                    gotValue = localizedEN.TryGetValue(key, out value);
                     break;
                 case Language.Espanol:
-                    localizedSP.TryGetValue(key, out value);
+                    gotValue = localizedSP.TryGetValue(key, out value);
                     break;
             }
+
+            if (!gotValue)
+                return null;
 
             //Debug.Log("Given string: " + value);
             //Break up the string into two parts : terminals and variables
             var terminals = GetTerminals(value);
-            var variables = GetVariables(value);
 
             /*
             foreach (var x in terminals)
@@ -87,6 +90,120 @@ namespace BGC.Localization
             {
                 if (tempCount < terminals.Count)
                     finalString += terminals[tempCount];
+
+                tempCount++;
+            }
+
+            //for new lines in text
+            finalString = finalString.Replace("\\n", "\n");
+            //for times you wanna use "\"
+            finalString = finalString.Replace("\\\"", "\"");
+            //for sneaky Carriage Return <CR>
+            finalString = finalString.Replace("\r", "");
+            return finalString;
+        }
+
+        //Needs testing, not sure if returns properly
+        public static bool TryGetLocalizedValue(string key, out string result)
+        {
+            string value = "";
+            bool gotValue = false;
+
+            switch (language)
+            {
+                case Language.English:
+                    gotValue = localizedEN.TryGetValue(key, out value);
+                    break;
+                case Language.Espanol:
+                    gotValue = localizedSP.TryGetValue(key, out value);
+                    break;
+            }
+
+            //Debug.Log("Given string: " + value);
+            //Break up the string into two parts : terminals and variables
+            var terminals = GetTerminals(value);
+
+            /*
+            foreach (var x in terminals)
+            {
+                Debug.Log("Terminal " + x);
+            }
+            foreach (var x in variables)
+            {
+                Debug.Log("Variable " + x);
+            }
+            */
+
+            int tempCount = 0;
+            string finalString = "";
+            while (tempCount < terminals.Count)
+            {
+                if (tempCount < terminals.Count)
+                    finalString += terminals[tempCount];
+
+                tempCount++;
+            }
+
+            //for new lines in text
+            finalString = finalString.Replace("\\n", "\n");
+            //for times you wanna use "\"
+            finalString = finalString.Replace("\\\"", "\"");
+            //for sneaky Carriage Return <CR>
+            finalString = finalString.Replace("\r", "");
+            result = finalString;
+            return result != null;
+        }
+
+        public static string GetLocalizedValue(string key, object script)
+        {
+            //if (!isInit) { Init(); }
+
+            string value = key;
+            bool gotValue = false;
+
+            switch (language)
+            {
+                case Language.English:
+                    gotValue = localizedEN.TryGetValue(key, out value);
+                    break;
+                case Language.Espanol:
+                    gotValue = localizedSP.TryGetValue(key, out value);
+                    break;
+            }
+
+            if (!gotValue)
+                return null;
+
+            //Debug.Log("Given string: " + value);
+            //Break up the string into two parts : terminals and variables
+            var terminals = GetTerminals(value);
+            var variables = GetVariables(value);
+
+            /*
+            foreach (var x in terminals)
+            {
+                Debug.Log("Terminal " + x);
+            }
+            foreach (var x in variables)
+            {
+                Debug.Log("Variable " + x);
+            }
+            */
+
+            List<string> variableValues = new List<string>();
+            if (variables.Count != 0)
+            {
+                variableValues = GetVariableValues(variables, script);
+            }
+
+            int tempCount = 0;
+            string finalString = "";
+            while (tempCount < terminals.Count || tempCount < variableValues.Count)
+            {
+                if (tempCount < terminals.Count)
+                    finalString += terminals[tempCount];
+                if (tempCount < variables.Count)
+                    finalString += variableValues[tempCount];
 
                 tempCount++;
             }
