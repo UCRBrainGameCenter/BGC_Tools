@@ -89,6 +89,11 @@ namespace BGC.IO.Compression
             catch (Exception e)
             {
                 Debug.LogWarning($"Preferred Zip extraction of {inputFilePath} failed with \"{e.Message}\".  Trying fallback extraction to: {outputPath}");
+
+                if (Utility.IsDiskFullException(e))
+                {
+                    throw;
+                }
             }
 
             try
@@ -103,6 +108,11 @@ namespace BGC.IO.Compression
             catch (Exception e)
             {
                 Debug.LogError($"Fallback Zip extraction of {inputFilePath} failed with \"{e.Message}\" to: {outputPath}");
+                
+                if (Utility.IsDiskFullException(e))
+                {
+                    throw;
+                }
             }
 
             return false;
