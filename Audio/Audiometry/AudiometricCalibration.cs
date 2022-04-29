@@ -165,7 +165,7 @@ namespace BGC.Audio.Audiometry
             customCalibration = calibrationResults;
             calibrationResults = null;
 
-            currentCalibrationName = customCalibration.CalibrationDate.ToString("Calibration_yy_MM_dd_HH_mm_ss.json");
+            currentCalibrationName = $"Calibration_{customCalibration.CalibrationDate: yy_MM_dd_HH_mm_ss}.json";
 
             FileWriter.WriteJson(
                 path: DataManagement.PathForDataFile(dataDirectory, currentCalibrationName),
@@ -201,10 +201,11 @@ namespace BGC.Audio.Audiometry
         /// Returns the scale factor per RMS.
         /// To use, multiple every sample by the output of this divided by the stream RMS.
         /// </summary>
-        public static (double leftRMS, double rightRMS) GetLevelRMS(
+        public static double GetLevelRMS(
             double levelHL,
             CalibrationSet calibrationSet,
             double calibrationFrequency,
+            AudioChannel channel,
             Source source = Source.Custom)
         {
             CalibrationProfile calibrationProfile;
@@ -228,26 +229,23 @@ namespace BGC.Audio.Audiometry
                     break;
 
                 case Source.Default:
-                    {
-                        //Calculate
-                        double value = (1.0 / 32.0) * Math.Pow(10.0, (levelHL - 110.0) / 20.0);
-                        return (value, value);
-                    }
+                    //Calculate
+                    return (1.0 / 32.0) * Math.Pow(10.0, (levelHL - 110.0) / 20.0);
 
                 default:
                     Debug.LogError($"Unexpected Source: {source}");
                     goto case Source.Default;
             }
 
-            return calibrationProfile.GetRMS(calibrationSet, calibrationFrequency, levelHL);
+            return calibrationProfile.GetRMS(calibrationSet, calibrationFrequency, levelHL, channel);
         }
 
         public static double EstimateRMS(
             Source calibrationSource,
             CalibrationSet calibrationSet,
-            AudioChannel channel,
             double frequency,
-            double levelHL)
+            double levelHL,
+            AudioChannel channel)
         {
             switch (calibrationSource)
             {
@@ -256,14 +254,14 @@ namespace BGC.Audio.Audiometry
                     {
                         throw new Exception($"Unable to EstimateRMS without calibration profile");
                     }
-                    return customCalibration.EstimateRMS(calibrationSet, channel, frequency, levelHL);
+                    return customCalibration.EstimateRMS(calibrationSet, frequency, levelHL, channel);
 
                 case Source.Results:
                     if (calibrationResults == null)
                     {
                         throw new Exception($"Unable to EstimateRMS with uninitialized calibration");
                     }
-                    return calibrationResults.EstimateRMS(calibrationSet, channel, frequency, levelHL);
+                    return calibrationResults.EstimateRMS(calibrationSet, frequency, levelHL, channel);
 
                 case Source.Default:
                     throw new Exception($"Unable to EstimateRMS with uninitialized calibration");
@@ -379,7 +377,7 @@ namespace BGC.Audio.Audiometry
                 return null;
             }
 
-            string currentValidationName = validationResults.ValidationDate.ToString("Validation_yy_MM_dd_HH_mm_ss.json");
+            string currentValidationName = $"Validation_{validationResults.ValidationDate: yy_MM_dd_HH_mm_ss}.json";
 
             FileWriter.WriteJson(
                 path: DataManagement.PathForDataFile(dataDirectory, currentValidationName),

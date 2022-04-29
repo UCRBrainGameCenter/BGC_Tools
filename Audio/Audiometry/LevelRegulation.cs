@@ -37,10 +37,18 @@ namespace BGC.Audio.Audiometry
                     $"Requested Level: {dbHL} dB");
             }
 
-            (factorL, factorR) = AudiometricCalibration.GetLevelRMS(
+            factorL = AudiometricCalibration.GetLevelRMS(
                 levelHL: dbHL,
                 calibrationSet: calibrationSet,
                 calibrationFrequency: calibrationFrequency,
+                channel: AudioChannel.Left,
+                source: source);
+
+            factorR = AudiometricCalibration.GetLevelRMS(
+                levelHL: dbHL,
+                calibrationSet: calibrationSet,
+                calibrationFrequency: calibrationFrequency,
+                channel: AudioChannel.Right,
                 source: source);
         }
 

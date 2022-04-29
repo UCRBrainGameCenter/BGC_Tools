@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using LightJson;
 using BGC.Mathematics;
+using BGC.Audio.Extensions;
 
 namespace BGC.Audio.Audiometry
 {
@@ -51,83 +53,91 @@ namespace BGC.Audio.Audiometry
 
         public double EstimateRMS(
             AudiometricCalibration.CalibrationSet calibrationSet,
-            AudioChannel channel,
             double frequency,
-            double levelHL)
+            double levelHL,
+            AudioChannel channel)
         {
-            (double leftRMS, double rightRMS) values;
+            double rmsEstimate = double.NaN;
+
             switch (calibrationSet)
             {
                 case AudiometricCalibration.CalibrationSet.PureTone:
-                    if (PureTone.Points.Count == 0)
+                    if (PureTone.Points.Count > 0)
                     {
-                        //Gross estimate to start with
-                        double levelSPL = TransducerProfile.GetSPL(frequency, levelHL);
-                        return (1.0 / 32.0) * Math.Pow(10.0, (levelSPL - 91.0) / 20.0);
+                        rmsEstimate = PureTone.GetRMS(frequency, levelHL, channel);
+
+                        if (double.IsNaN(rmsEstimate))
+                        {
+                            rmsEstimate = PureTone.GetRMS(frequency, levelHL, channel.Flip());
+                        }
                     }
-                    values = PureTone.GetRMS(frequency, levelHL);
-                    break;
+
+                    if (!double.IsNaN(rmsEstimate))
+                    {
+                        return rmsEstimate;
+                    }
+
+                    //Gross estimate to start with
+                    double levelSPL = TransducerProfile.GetSPL(frequency, levelHL);
+                    return (1.0 / 32.0) * Math.Pow(10.0, (levelSPL - 91.0) / 20.0);
 
                 case AudiometricCalibration.CalibrationSet.Narrowband:
-                    if (Narrowband.Points.Count == 0)
+                    if (Narrowband.Points.Count > 0)
                     {
-                        goto case AudiometricCalibration.CalibrationSet.PureTone;
+                        rmsEstimate = Narrowband.GetRMS(frequency, levelHL, channel);
+
+                        if (double.IsNaN(rmsEstimate))
+                        {
+                            rmsEstimate = Narrowband.GetRMS(frequency, levelHL, channel.Flip());
+                        }
                     }
-                    values = Narrowband.GetRMS(frequency, levelHL);
-                    break;
+
+                    if (!double.IsNaN(rmsEstimate))
+                    {
+                        return rmsEstimate;
+                    }
+                    goto case AudiometricCalibration.CalibrationSet.PureTone;
 
                 case AudiometricCalibration.CalibrationSet.Broadband:
-                    if (Broadband.Points.Count == 0)
+                    frequency = 2000.0;
+                    if (Broadband.Points.Count > 0)
                     {
-                        frequency = 2000.0;
-                        goto case AudiometricCalibration.CalibrationSet.Narrowband;
+                        rmsEstimate = Broadband.GetRMS(levelHL, channel);
+
+                        if (double.IsNaN(rmsEstimate))
+                        {
+                            rmsEstimate = Broadband.GetRMS(levelHL, channel.Flip());
+                        }
                     }
-                    values = Broadband.GetRMS(levelHL);
-                    break;
+
+                    if (!double.IsNaN(rmsEstimate))
+                    {
+                        return rmsEstimate;
+                    }
+                    goto case AudiometricCalibration.CalibrationSet.Narrowband;
 
                 default:
                     UnityEngine.Debug.LogError($"Unsupported CalibrationSet: {calibrationSet}");
                     goto case AudiometricCalibration.CalibrationSet.PureTone;
             }
-
-            switch (channel)
-            {
-                case AudioChannel.Left:
-                    if (double.IsNaN(values.leftRMS))
-                    {
-                        return values.rightRMS;
-                    }
-                    return values.leftRMS;
-
-                case AudioChannel.Right:
-                    if (double.IsNaN(values.rightRMS))
-                    {
-                        return values.leftRMS;
-                    }
-                    return values.rightRMS;
-
-                default:
-                    UnityEngine.Debug.LogError($"Unsupported AudioChannel: {channel}");
-                    goto case AudioChannel.Left;
-            }
-
         }
 
-        public (double leftRMS, double rightRMS) GetRMS(
+        public double GetRMS(
             AudiometricCalibration.CalibrationSet calibrationSet,
             double frequency,
-            double levelHL)
+            double levelHL,
+            AudioChannel channel)
         {
             switch (calibrationSet)
             {
                 case AudiometricCalibration.CalibrationSet.PureTone:
-                    return PureTone.GetRMS(frequency, levelHL);
+                    return PureTone.GetRMS(frequency, levelHL, channel);
 
                 case AudiometricCalibration.CalibrationSet.Narrowband:
-                    return Narrowband.GetRMS(frequency, levelHL);
+                    return Narrowband.GetRMS(frequency, levelHL, channel);
 
                 case AudiometricCalibration.CalibrationSet.Broadband:
-                    return Broadband.GetRMS(levelHL);
+                    return Broadband.GetRMS(levelHL, channel);
 
                 default:
                     UnityEngine.Debug.LogError($"Unsupported CalibrationSet: {calibrationSet}");
@@ -198,16 +208,16 @@ namespace BGC.Audio.Audiometry
             return points;
         }
 
-        public (double leftRMS, double rightRMS) GetRMS(double frequency, double levelHL)
+        public double GetRMS(double frequency, double levelHL, AudioChannel channel)
         {
             if (frequency <= Points[0].Frequency)
             {
-                return Points[0].Levels.GetRMS(levelHL);
+                return Points[0].Levels.GetRMS(levelHL, channel);
             }
 
             if (frequency >= Points[Points.Count - 1].Frequency)
             {
-                return Points[Points.Count - 1].Levels.GetRMS(levelHL);
+                return Points[Points.Count - 1].Levels.GetRMS(levelHL, channel);
             }
 
             //Frequency is between the upper and lower bounds of the FrequencyPoints
@@ -226,7 +236,7 @@ namespace BGC.Audio.Audiometry
             //Could be equal to the lowerbound
             if (frequency == Points[upperBound - 1].Frequency)
             {
-                return Points[upperBound - 1].Levels.GetRMS(levelHL);
+                return Points[upperBound - 1].Levels.GetRMS(levelHL, channel);
             }
             else
             {
@@ -234,13 +244,10 @@ namespace BGC.Audio.Audiometry
                 double t = Math.Log(frequency / Points[upperBound - 1].Frequency) /
                     Math.Log(Points[upperBound].Frequency / Points[upperBound - 1].Frequency);
 
-                var lowerBoundRMS = Points[upperBound - 1].Levels.GetRMS(levelHL);
-                var upperBoundRMS = Points[upperBound].Levels.GetRMS(levelHL);
+                double lowerBoundRMS = Points[upperBound - 1].Levels.GetRMS(levelHL, channel);
+                double upperBoundRMS = Points[upperBound].Levels.GetRMS(levelHL, channel);
 
-                double leftRMS = GeneralMath.Lerp(lowerBoundRMS.leftRMS, upperBoundRMS.leftRMS, t);
-                double rightRMS = GeneralMath.Lerp(lowerBoundRMS.rightRMS, upperBoundRMS.rightRMS, t);
-
-                return (leftRMS, rightRMS);
+                return GeneralMath.Lerp(lowerBoundRMS, upperBoundRMS, t);
             }
         }
 
@@ -343,59 +350,63 @@ namespace BGC.Audio.Audiometry
             return Points[Points.Count - 1];
         }
 
-        public (double leftRMS, double rightRMS) GetRMS(double levelHL)
+        public double GetRMS(double levelHL, AudioChannel channel)
         {
-            //Check below min
-            if (levelHL < Points[0].LevelHL)
+            List<CalibrationPoint> validPoints = Points.Where(x => !double.IsNaN(x.GetRMS(channel))).ToList();
+
+            if (validPoints.Count == 0)
             {
-                double additionalFactor = Math.Pow(10, (levelHL - Points[0].LevelHL) / 20.0);
-                return (additionalFactor * Points[0].LeftRMS, additionalFactor * Points[0].RightRMS);
+                return double.NaN;
             }
-            else if (levelHL == Points[0].LevelHL)
+
+            //Check below min
+            if (levelHL < validPoints[0].LevelHL)
             {
-                return (Points[0].LeftRMS, Points[0].RightRMS);
+                double additionalFactor = Math.Pow(10, (levelHL - validPoints[0].LevelHL) / 20.0);
+                return additionalFactor * validPoints[0].GetRMS(channel);
+            }
+            else if (levelHL == validPoints[0].LevelHL)
+            {
+                return validPoints[0].GetRMS(channel);
             }
 
             //Check above max
-            if (levelHL > Points[Points.Count - 1].LevelHL)
+            if (levelHL > validPoints[validPoints.Count - 1].LevelHL)
             {
-                double additionalFactor = Math.Pow(10, (levelHL - Points[Points.Count - 1].LevelHL) / 20.0);
-                return (additionalFactor * Points[Points.Count - 1].LeftRMS, additionalFactor * Points[Points.Count - 1].RightRMS);
+                double additionalFactor = Math.Pow(10, (levelHL - validPoints[validPoints.Count - 1].LevelHL) / 20.0);
+                return additionalFactor * validPoints[validPoints.Count - 1].GetRMS(channel);
             }
-            else if (levelHL == Points[Points.Count - 1].LevelHL)
+            else if (levelHL == validPoints[validPoints.Count - 1].LevelHL)
             {
-                return (Points[Points.Count - 1].LeftRMS, Points[Points.Count - 1].RightRMS);
+                return validPoints[validPoints.Count - 1].GetRMS(channel);
             }
 
             //Level is between upper and lower bounds of the levels
 
             int upperBound;
 
-            for (upperBound = 1; upperBound < Points.Count - 1; upperBound++)
+            for (upperBound = 1; upperBound < validPoints.Count - 1; upperBound++)
             {
-                if (levelHL < Points[upperBound].LevelHL)
+                if (levelHL < validPoints[upperBound].LevelHL)
                 {
                     //Found the first LevelHL larger than the target level
                     break;
                 }
             }
 
-            if (levelHL == Points[upperBound - 1].LevelHL)
+            if (levelHL == validPoints[upperBound - 1].LevelHL)
             {
                 //Equal to the lowerbound
-                return (Points[upperBound - 1].LeftRMS, Points[upperBound - 1].RightRMS);
+                return validPoints[upperBound - 1].GetRMS(channel);
             }
             else
             {
                 //Interpolate exponentially between two adjacent RMS values
 
                 //The progression parameter is determined linearly
-                double t = (levelHL - Points[upperBound - 1].LevelHL) / (Points[upperBound].LevelHL - Points[upperBound - 1].LevelHL);
+                double t = (levelHL - validPoints[upperBound - 1].LevelHL) / (validPoints[upperBound].LevelHL - validPoints[upperBound - 1].LevelHL);
 
-                double leftRMS = Math.Pow(Points[upperBound - 1].LeftRMS, 1 - t) * Math.Pow(Points[upperBound].LeftRMS, t);
-                double rightRMS = Math.Pow(Points[upperBound - 1].RightRMS, 1 - t) * Math.Pow(Points[upperBound].RightRMS, t);
-
-                return (leftRMS, rightRMS);
+                return Math.Pow(validPoints[upperBound - 1].GetRMS(channel), 1 - t) * Math.Pow(validPoints[upperBound].LeftRMS, t);
             }
         }
 
@@ -420,6 +431,19 @@ namespace BGC.Audio.Audiometry
 
                 LeftRMS = data.ContainsKey("LeftRMS") ? data["LeftRMS"].AsNumber : double.NaN;
                 RightRMS = data.ContainsKey("RightRMS") ? data["RightRMS"].AsNumber : double.NaN;
+            }
+
+            public double GetRMS(AudioChannel channel)
+            {
+                switch (channel)
+                {
+                    case AudioChannel.Left: return LeftRMS;
+                    case AudioChannel.Right: return RightRMS;
+
+                    case AudioChannel.Both:
+                    default:
+                        throw new Exception($"Unexpected AudioChannel for GetRMS: {channel}");
+                }
             }
 
             public JsonObject Serialize()
