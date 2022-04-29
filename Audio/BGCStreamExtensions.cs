@@ -440,6 +440,21 @@ namespace BGC.Audio
             throw new StreamCompositionException("Cannot normalize stream of more than 2 channels");
         }
 
+        public static IBGCStream OverridePresentationConstraints(
+            this IBGCStream stream,
+            IEnumerable<PresentationConstraints> presentationConstraints)
+        {
+            return new PresentationConstraintOverrideFilter(stream, presentationConstraints);
+        }
+
+        public static IBGCStream OverridePresentationConstraints(
+            this IBGCStream stream,
+            Audiometry.AudiometricCalibration.CalibrationSet calibrationSet,
+            double frequency = double.NaN)
+        {
+            return new PresentationConstraintOverrideFilter(stream, calibrationSet, frequency);
+        }
+
         public static IBGCStream SlowRangeFitter(
             this IBGCStream stream)
         {

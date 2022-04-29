@@ -31,11 +31,13 @@ namespace BGC.Audio
                 Samples = new float[44100 / 2]; // 250ms with 2 channels at 44100hz
             }
         }
+
         private readonly BufferedData[] buffers = new BufferedData[]
         {
             new BufferedData(),
             new BufferedData(),
         };
+
         private int bufferIndex = 0;
         private Task fillBufferTask;
 
@@ -53,7 +55,9 @@ namespace BGC.Audio
 
         public double Duration => stream?.Duration() ?? 0.0;
 
-        public void SetStream(IBGCStream stream, bool disposeWhenComplete = false)
+        public void SetStream(
+            IBGCStream stream,
+            bool disposeWhenComplete = false)
         {
             if (disposeStream && this.stream != null && !ReferenceEquals(stream, this.stream))
             {
@@ -82,7 +86,9 @@ namespace BGC.Audio
             WarmUpBuffers();
         }
 
-        public virtual void PlayStream(IBGCStream stream, bool disposeWhenComplete = false)
+        public virtual void PlayStream(
+            IBGCStream stream,
+            bool disposeWhenComplete = false)
         {
             SetStream(stream, disposeWhenComplete);
             Play();
@@ -96,6 +102,8 @@ namespace BGC.Audio
             }
 
             currentState = SoundState.Stopped;
+
+            PlaybackEnded();
 
             if (invoke)
             {
@@ -133,6 +141,8 @@ namespace BGC.Audio
             ClearBuffers();
         }
 
+        protected virtual void PlaybackEnded() { }
+
         void OnAudioFilterRead(float[] data, int dstNumChannels)
         {
             if (currentState != SoundState.Playing)
@@ -152,7 +162,10 @@ namespace BGC.Audio
         /// <param name="dstBuffer">The buffer to copy to. Channel data is interleaved.</param>
         /// <param name="dstBufferOffset">The index into the buffer to begin copying to.</param>
         /// <param name="dstNumChannels">The number of interleaved channels in the buffer. Must be set to 1 or 2.</param>
-        private void CopyBufferedAudio(float[] dstBuffer, int dstBufferOffset, int dstNumChannels)
+        private void CopyBufferedAudio(
+            float[] dstBuffer,
+            int dstBufferOffset,
+            int dstNumChannels)
         {
             Debug.Assert(dstNumChannels > 0);
 
@@ -221,11 +234,19 @@ namespace BGC.Audio
             if (endOfStream)
             {
                 currentState = SoundState.Stopped;
+                PlaybackEnded();
                 playbackEndedNotifier?.Invoke();
             }
         }
 
-        private void CopySamples(float[] srcBuffer, int srcBufferOffset, int srcNumChannels, float[] dstBuffer, int dstBufferOffset, int dstNumChannels, int samplesToCopyPerChannel)
+        private void CopySamples(
+            float[] srcBuffer,
+            int srcBufferOffset,
+            int srcNumChannels,
+            float[] dstBuffer,
+            int dstBufferOffset,
+            int dstNumChannels,
+            int samplesToCopyPerChannel)
         {
             if (srcNumChannels == dstNumChannels)
             {
@@ -254,7 +275,9 @@ namespace BGC.Audio
             }
         }
 
-        private void ClearSamples(float[] dstBuffer, int dstBufferOffset)
+        private void ClearSamples(
+            float[] dstBuffer,
+            int dstBufferOffset)
         {
             for (int i = dstBufferOffset; i < dstBuffer.Length; i++)
             {
@@ -310,7 +333,9 @@ namespace BGC.Audio
             fillBufferTask = Task.Run(() => FillBuffer(fillStream, buffers[fillBufferIndex]));
         }
 
-        private static void FillBuffer(IBGCStream stream, BufferedData buffer)
+        private static void FillBuffer(
+            IBGCStream stream,
+            BufferedData buffer)
         {
             buffer.Size = stream.Read(buffer.Samples, 0, buffer.Samples.Length);
             buffer.Offset = 0;

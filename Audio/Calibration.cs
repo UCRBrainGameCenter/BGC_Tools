@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using UnityEngine;
 using LightJson;
 using BGC.IO;
-using BGC.Mathematics;
 
 namespace BGC.Audio
 {
@@ -45,10 +43,18 @@ namespace BGC.Audio
             _250Hz = 0,
             _500Hz,
             _1000Hz,
+            _1500Hz,
             _2000Hz,
+            _3000Hz,
             _4000Hz,
+            _6000Hz,
             _8000Hz,
-            Noise,
+            _9000Hz,
+            _10_000Hz,
+            _11_200Hz,
+            _12_500Hz,
+            _14_000Hz,
+            _16_000Hz,
             MAX
         }
 
@@ -285,6 +291,19 @@ namespace BGC.Audio
             return (softLimit, hardLimit);
         }
 
+        public static string GetStimulusTypeName(this Audiometry.AudiometricCalibration.CalibrationSet calibrationSet)
+        {
+            switch (calibrationSet)
+            {
+                case Audiometry.AudiometricCalibration.CalibrationSet.PureTone: return "Pure Tone";
+                case Audiometry.AudiometricCalibration.CalibrationSet.Narrowband: return "Narrowband";
+                case Audiometry.AudiometricCalibration.CalibrationSet.Broadband: return "Broadband";
+                default:
+                    Debug.LogError($"Unexpected CalibrationSet: {calibrationSet}");
+                    return "";
+            }
+        }
+
         public static string GetToneName(this Tone tone)
         {
             switch (tone)
@@ -292,10 +311,18 @@ namespace BGC.Audio
                 case Tone._250Hz: return "250 Hz";
                 case Tone._500Hz: return "500 Hz";
                 case Tone._1000Hz: return "1000 Hz";
+                case Tone._1500Hz: return "1500 Hz";
                 case Tone._2000Hz: return "2000 Hz";
+                case Tone._3000Hz: return "3000 Hz";
                 case Tone._4000Hz: return "4000 Hz";
+                case Tone._6000Hz: return "6000 Hz";
                 case Tone._8000Hz: return "8000 Hz";
-                case Tone.Noise: return "Noise";
+                case Tone._9000Hz: return "9000 Hz";
+                case Tone._10_000Hz: return "10.0 kHz";
+                case Tone._11_200Hz: return "11.2 kHz";
+                case Tone._12_500Hz: return "12.5 kHz";
+                case Tone._14_000Hz: return "14.0 kHz";
+                case Tone._16_000Hz: return "16.0 kHz";
                 case Tone.MAX: return "";
 
                 default:
@@ -308,12 +335,24 @@ namespace BGC.Audio
         {
             switch (tone)
             {
+
                 case Tone._250Hz: return 250;
                 case Tone._500Hz: return 500;
                 case Tone._1000Hz: return 1000;
                 case Tone._2000Hz: return 2000;
                 case Tone._4000Hz: return 4000;
                 case Tone._8000Hz: return 8000;
+
+                    //Expanded set
+                case Tone._1500Hz: return 1500;
+                case Tone._3000Hz: return 3000;
+                case Tone._6000Hz: return 6000;
+                case Tone._9000Hz: return 9000;
+                case Tone._10_000Hz: return 10_000;
+                case Tone._11_200Hz: return 11_200;
+                case Tone._12_500Hz: return 12_500;
+                case Tone._14_000Hz: return 14_000;
+                case Tone._16_000Hz: return 16_000;
 
                 default:
                     Debug.LogError($"Unexpected Tone: {tone}");
