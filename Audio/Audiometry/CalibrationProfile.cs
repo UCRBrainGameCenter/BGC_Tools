@@ -418,16 +418,29 @@ namespace BGC.Audio.Audiometry
             {
                 LevelHL = data["LevelHL"];
 
-                LeftRMS = data["LeftRMS"];
-                RightRMS = data["RightRMS"];
+                LeftRMS = data.ContainsKey("LeftRMS") ? data["LeftRMS"].AsNumber : double.NaN;
+                RightRMS = data.ContainsKey("RightRMS") ? data["RightRMS"].AsNumber : double.NaN;
             }
 
-            public JsonObject Serialize() => new JsonObject()
+            public JsonObject Serialize()
             {
-                ["LevelHL"] = LevelHL,
-                ["LeftRMS"] = LeftRMS,
-                ["RightRMS"] = RightRMS
-            };
+                JsonObject data = new JsonObject()
+                {
+                    ["LevelHL"] = LevelHL
+                };
+
+                if (!double.IsNaN(LeftRMS))
+                {
+                    data.Add("LeftRMS", LeftRMS);
+                }
+                
+                if (!double.IsNaN(RightRMS))
+                {
+                    data.Add("RightRMS", RightRMS);
+                }
+
+                return data;
+            }
         }
     }
 }

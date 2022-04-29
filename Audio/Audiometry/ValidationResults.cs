@@ -238,23 +238,42 @@ namespace BGC.Audio.Audiometry
                 {
                     AttemptedLevelHL = data["AttemptedLevelHL"];
 
-                    LeftExpectedRMS = data["LeftExpectedRMS"];
-                    RightExpectedRMS = data["RightExpectedRMS"];
+                    LeftExpectedRMS = data.ContainsKey("LeftExpectedRMS") ? data["LeftExpectedRMS"].AsNumber : double.NaN;
+                    RightExpectedRMS = data.ContainsKey("RightExpectedRMS") ? data["RightExpectedRMS"].AsNumber : double.NaN;
 
-                    LeftLevelHL = data["LeftLevelHL"];
-                    RightLevelHL = data["RightLevelHL"];
+                    LeftLevelHL = data.ContainsKey("LeftLevelHL") ? data["LeftLevelHL"].AsNumber : double.NaN;
+                    RightLevelHL = data.ContainsKey("RightLevelHL") ? data["RightLevelHL"].AsNumber : double.NaN;
                 }
 
-                public JsonObject Serialize() => new JsonObject()
+                public JsonObject Serialize()
                 {
-                    ["AttemptedLevelHL"] = AttemptedLevelHL,
+                    JsonObject data = new JsonObject()
+                    {
+                        ["AttemptedLevelHL"] = AttemptedLevelHL
+                    };
 
-                    ["LeftExpectedRMS"] = LeftExpectedRMS,
-                    ["RightExpectedRMS"] = RightExpectedRMS,
+                    if (!double.IsNaN(LeftExpectedRMS))
+                    {
+                        data.Add("LeftExpectedRMS", LeftExpectedRMS);
+                    }
 
-                    ["LeftLevelHL"] = LeftLevelHL,
-                    ["RightLevelHL"] = RightLevelHL
-                };
+                    if (!double.IsNaN(RightExpectedRMS))
+                    {
+                        data.Add("RightExpectedRMS",RightExpectedRMS);
+                    }
+
+                    if (!double.IsNaN(LeftLevelHL))
+                    {
+                        data.Add("LeftLevelHL", LeftLevelHL);
+                    }
+
+                    if (!double.IsNaN(RightLevelHL))
+                    {
+                        data.Add("RightLevelHL", RightLevelHL);
+                    }
+
+                    return data;
+                }
             }
         }
     }
