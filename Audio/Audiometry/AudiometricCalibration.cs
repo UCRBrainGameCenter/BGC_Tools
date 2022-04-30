@@ -392,6 +392,8 @@ namespace BGC.Audio.Audiometry
             validationResults = null;
         }
 
+        public static CalibrationProfile GetCustomCalibration() => customCalibration;
+
         #endregion Validation
     }
 }
