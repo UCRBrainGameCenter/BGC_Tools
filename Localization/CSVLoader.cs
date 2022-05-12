@@ -1,25 +1,28 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using UnityEngine;
 using System.Text.RegularExpressions;
+using BGC.IO;
 
 namespace BGC.Localization
 {
     public class CSVLoader
     {
-        private TextAsset csvFile;
+        private string csvFile;
         private char lineSeperator = '\n';
         private char surround = '"';
         //private readonly string[] fieldSeperator = { "," };
 
         public void LoadCSV(string csvName)
         {
-            csvFile = Resources.Load<TextAsset>(csvName);
+            csvFile = File.ReadAllText($"{DataManagement.RootDirectory}/Assets/Resources/{csvName}.csv", Encoding.UTF8);
         }
 
         public void GetDictionaryValues(string attributeId, Dictionary<string, string> dict)
         {
-            string[] lines = csvFile.text.Split(lineSeperator);
+            string[] lines = csvFile.Split(lineSeperator);
 
             int attributeIndex = -1;
 
