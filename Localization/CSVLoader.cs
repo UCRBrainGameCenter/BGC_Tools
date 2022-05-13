@@ -17,7 +17,7 @@ namespace BGC.Localization
 
         public void LoadCSV(string filepath)
         {
-            csvFile = File.ReadAllText(filepath, Encoding.UTF8);
+            csvFile = Resources.Load<TextAsset>(filepath).text;
         }
 
         public void GetDictionaryValues(string attributeId, Dictionary<string, string> dict)

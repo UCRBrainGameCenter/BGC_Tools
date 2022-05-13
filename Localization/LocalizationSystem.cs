@@ -40,18 +40,12 @@ namespace BGC.Localization
         /// <summary>Constructor that initializes all files using the device's default language.</summary>
         public static void InitializeAllFiles()
         {
-            IEnumerable<string> filepaths = BGC.IO.DataManagement.GetDataFiles("Assets/Resources/Localization", "*.csv");
+            IEnumerable<string> filepaths = ResourceInfo.ListFiles("Localization", false);
 
             foreach (string filepath in filepaths)
             {
                 Init(filepath);
             }
-            
-            // grab BGC_Tools.Server file
-            string toolsFile =
-                $"{DataManagement.RootDirectory}/Assets/Plugins/BGC_Tools.Server/BGC_Tools_Localization.csv";
-            
-            Init(toolsFile);
 
             language = GetDefaultLanguage();
             Debug.Log("Finished Initializing Localization");
@@ -60,18 +54,12 @@ namespace BGC.Localization
         /// <summary>Initializes all files in the Resources/Localization folder and BGC_Tools.Server localization</summary>
         public static void InitializeAllFiles(Language targetLanguage)
         {
-            IEnumerable<string> filepaths = BGC.IO.DataManagement.GetDataFiles("Assets/Resources/Localization", "*.csv");
+            IEnumerable<string> filepaths = ResourceInfo.ListFiles("Localization", false);
 
             foreach (string filepath in filepaths)
             {
                 Init(filepath);
             }
-            
-            // grab BGC_Tools.Server file
-            string toolsFile =
-                $"{DataManagement.RootDirectory}/Assets/Plugins/BGC_Tools.Server/BGC_Tools_Localization.csv";
-            
-            Init(toolsFile);
 
             language = targetLanguage;
             Debug.Log("Finished Initializing Localization");
