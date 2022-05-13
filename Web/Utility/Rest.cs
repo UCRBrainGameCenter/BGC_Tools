@@ -10,7 +10,6 @@ using UnityEngine.Networking;
 using BGC.Utility;
 using BGC.Extensions;
 using JetBrains.Annotations;
-using Plugins.BGC_Tools.Web;
 using UnityEngine;
 
 namespace BGC.Web.Utility

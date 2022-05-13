@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine.Networking;
 
-namespace Plugins.BGC_Tools.Web
+namespace BGC.Web
 {
     /// <summary>
     /// Model for unity web request responses that can be used in async methods where disposal of web requests
