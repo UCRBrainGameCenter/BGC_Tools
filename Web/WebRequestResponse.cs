@@ -11,10 +11,12 @@ namespace Plugins.BGC_Tools.Web
     {
         public long StatusCode { get; }
         public string Error { get; }
-
-        /// <summary>Detailed error message</summary>
         public string DetailedErrorMessage { get; }
-
+        public UnityWebRequest.Result Result { get; }
+        
+        /// <summary>Returns TRUE, if the web request had an error.</summary>
+        public bool HasError => !string.IsNullOrEmpty(Error) || !string.IsNullOrEmpty(DetailedErrorMessage);
+        
         public WebRequestResponse(UnityWebRequest request)
         {
             StatusCode = request.responseCode;
@@ -23,6 +25,7 @@ namespace Plugins.BGC_Tools.Web
                 : request.error;
 
             this.DetailedErrorMessage = "";
+            this.Result = request.result;
 
             switch (request.responseCode)
             {

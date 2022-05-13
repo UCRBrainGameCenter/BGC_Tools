@@ -208,7 +208,7 @@ namespace BGC.IO.Compression
 
                 return true;
             }
-            catch (InvalidDataException ex)
+            catch (InvalidDataException)
             {
                 // We might be dealing with an incompatible zip64 file, as per MS issue report:
                 // https://github.com/dotnet/runtime/issues/49580

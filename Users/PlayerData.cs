@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using LightJson;
 using BGC.IO;
+using BGC.Localization;
 using BGC.Utility;
+using UnityEngine.SocialPlatforms;
 
 namespace BGC.Users
 {
@@ -24,6 +26,17 @@ namespace BGC.Users
         /// <summary> Profile Data of the current user.  Or default if none are logged in. </summary>
         public static ProfileData ProfileData => _currentUserData as ProfileData ?? DefaultData;
 
+        /// <summary>Returns the language the user is using.</summary>
+        public static LocalizationSystem.Language Language
+        {
+            get
+            {
+                int playerLanguage = ProfileData.GetInt("Language", (int) LocalizationSystem.Language.English);
+                return Enum.IsDefined(typeof(LocalizationSystem.Language), playerLanguage)
+                    ? (LocalizationSystem.Language) playerLanguage
+                    : LocalizationSystem.Language.English;
+            }
+        }
 
         private static bool initialized = false;
 

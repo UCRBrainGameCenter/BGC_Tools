@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using BGC.IO;
 using UnityEngine;
 
 namespace BGC.Localization
@@ -13,7 +14,8 @@ namespace BGC.Localization
         public enum Language
         {
             English,
-            Espanol
+            Espanol,
+            MAX
         }
 
         public static Language language = Language.English;
@@ -23,11 +25,11 @@ namespace BGC.Localization
 
         public static bool isInit;
 
-        public static void Init(string csvName)
+        public static void Init(string filepath)
         {
             if (!isInit) { /*GetDefaultLanguage();*/ }
             CSVLoader csvLoader = new CSVLoader();
-            csvLoader.LoadCSV(csvName);
+            csvLoader.LoadCSV(filepath);
 
             csvLoader.GetDictionaryValues("en", localizedEN);
             csvLoader.GetDictionaryValues("sp", localizedSP);
@@ -35,16 +37,41 @@ namespace BGC.Localization
             isInit = true;
         }
 
-        /// <summary>Initializes all files in the Resources/Localization folder</summary>
+        /// <summary>Constructor that initializes all files using the device's default language.</summary>
+        public static void InitializeAllFiles()
+        {
+            IEnumerable<string> filepaths = BGC.IO.DataManagement.GetDataFiles("Assets/Resources/Localization", "*.csv");
+
+            foreach (string filepath in filepaths)
+            {
+                Init(filepath);
+            }
+            
+            // grab BGC_Tools.Server file
+            string toolsFile =
+                $"{DataManagement.RootDirectory}/Assets/Plugins/BGC_Tools.Server/BGC_Tools_Localization.csv";
+            
+            Init(toolsFile);
+
+            language = GetDefaultLanguage();
+            Debug.Log("Finished Initializing Localization");
+        }
+
+        /// <summary>Initializes all files in the Resources/Localization folder and BGC_Tools.Server localization</summary>
         public static void InitializeAllFiles(Language targetLanguage)
         {
-            IEnumerable<string> filenames = BGC.IO.DataManagement.GetDataFiles("Assets/Resources/Localization", "*.csv")
-                .Select(x => System.IO.Path.GetFileNameWithoutExtension(x));
+            IEnumerable<string> filepaths = BGC.IO.DataManagement.GetDataFiles("Assets/Resources/Localization", "*.csv");
 
-            foreach (string filename in filenames)
+            foreach (string filepath in filepaths)
             {
-                Init($"Localization/{filename}");
+                Init(filepath);
             }
+            
+            // grab BGC_Tools.Server file
+            string toolsFile =
+                $"{DataManagement.RootDirectory}/Assets/Plugins/BGC_Tools.Server/BGC_Tools_Localization.csv";
+            
+            Init(toolsFile);
 
             language = targetLanguage;
             Debug.Log("Finished Initializing Localization");
@@ -311,18 +338,17 @@ namespace BGC.Localization
             //Debug.Log(field.GetValue(script));
             return value.ToString();
         }
+        
+        /// <summary>Returns a string representation of a Language enum from an integer.</summary>
+        /// <param name="languageInt">The integer value of the enum.</param>
+        public static string ConvertLanguageIntToString(int languageInt) => ((Language) languageInt).ToString();
 
-        public static void GetDefaultLanguage()
-        {
-            var systemLanguage = Application.systemLanguage;
-            if (Enum.IsDefined(typeof(Language), systemLanguage.ToString()))
+        /// <summary>Returns the default language of the device.</summary>
+        public static Language GetDefaultLanguage() => Application.systemLanguage switch
             {
-                language = (Language)Enum.Parse(typeof(Language), systemLanguage.ToString());
-            }
-            else
-            {
-                language = Language.English;
-            }
-        }
+                SystemLanguage.English => Language.English,
+                SystemLanguage.Spanish => Language.Espanol,
+                _ => Language.English // use English by default
+            };
     }
 }

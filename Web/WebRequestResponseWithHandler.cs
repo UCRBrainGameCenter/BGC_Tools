@@ -1,4 +1,5 @@
 ﻿using System;
+using UnityEngine.Assertions.Must;
 using UnityEngine.Networking;
 
 namespace Plugins.BGC_Tools.Web
@@ -12,10 +13,16 @@ namespace Plugins.BGC_Tools.Web
         public long StatusCode { get; }
         public string Error { get; }
 
-        public byte[] DownloadBytes { get; } = Array.Empty<byte>();
+        public byte[] DownloadBytes { get; }
+        public byte[] UploadBytes { get; }
 
         /// <summary>Detailed error message</summary>
         public string DetailedErrorMessage { get; }
+
+        public UnityWebRequest.Result Result { get; }
+
+        /// <summary>Returns TRUE, if the web request had an error.</summary>
+        public bool HasError => !string.IsNullOrEmpty(Error) || !string.IsNullOrEmpty(DetailedErrorMessage);
 
         public WebRequestResponseWithHandler(UnityWebRequest request)
         {
@@ -25,6 +32,8 @@ namespace Plugins.BGC_Tools.Web
                 : request.error;
 
             this.DownloadBytes = request.downloadHandler?.data ?? Array.Empty<byte>();
+            this.UploadBytes = request.uploadHandler?.data ?? Array.Empty<byte>();
+            this.Result = request.result;
             
             this.DetailedErrorMessage = "";
 
@@ -38,6 +47,19 @@ namespace Plugins.BGC_Tools.Web
                     this.DetailedErrorMessage = request.downloadHandler?.text ?? "";
                     break;
             }
+        }
+
+        public WebRequestResponseWithHandler(
+            long statusCode,
+            string error,
+            byte[] downloadBytes,
+            byte[] uploadBytes)
+        {
+            this.StatusCode = statusCode;
+            this.Error = error;
+            this.DownloadBytes = downloadBytes;
+            this.UploadBytes = uploadBytes;
+            this.Result = UnityWebRequest.Result.ConnectionError;
         }
     }
 }

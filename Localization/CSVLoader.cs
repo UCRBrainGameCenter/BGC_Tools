@@ -15,9 +15,9 @@ namespace BGC.Localization
         private char surround = '"';
         //private readonly string[] fieldSeperator = { "," };
 
-        public void LoadCSV(string csvName)
+        public void LoadCSV(string filepath)
         {
-            csvFile = File.ReadAllText($"{DataManagement.RootDirectory}/Assets/Resources/{csvName}.csv", Encoding.UTF8);
+            csvFile = File.ReadAllText(filepath, Encoding.UTF8);
         }
 
         public void GetDictionaryValues(string attributeId, Dictionary<string, string> dict)
@@ -48,7 +48,24 @@ namespace BGC.Localization
                 for (int f = 0; f < fields.Length; f++)
                 {
                     fields[f] = fields[f].TrimStart(' ', surround);
-                    fields[f] = fields[f].TrimEnd(surround);
+
+                    if (f == fields.Length - 1)
+                    {
+                        // if last element in row, we have to assume there's a return character at the end
+                        // So we need to trim differently. Check if character before the return is a quotation
+                        // if so, remove it. The quote is only there from the regex due to parsing commas in a CSV file.
+                        
+                        int stringLength = fields[f].Length;
+                        if (stringLength >= 2 && fields[f][stringLength - 2] == '"')
+                        {
+                            fields[f] = fields[f].Remove(stringLength - 2, 1);
+                        }
+                    }
+                    else
+                    {
+                        // if it's not the last element in the row, we can just trim the end without issue.
+                        fields[f] = fields[f].TrimEnd(surround);
+                    }
                     //Debug.Log(fields[f]);
                 }
 
