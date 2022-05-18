@@ -9,21 +9,28 @@ namespace BGC.Audio.Audiometry
 {
     public class CalibrationProfile
     {
-        public TransducerProfile TransducerProfile { get; set; }
+        private int CURRENT_VERSION = 2;
+        public int Version { get; }
 
-        public FrequencyCollection PureTone { get; set; }
-        public FrequencyCollection Narrowband { get; set; }
-        public LevelCollection Broadband { get; set; }
+        public DateTime CalibrationDate { get; }
 
-        public DateTime CalibrationDate { get; set; }
+        public TransducerProfile TransducerProfile { get; }
+
+        public FrequencyCollection Oscillator { get; }
+        public FrequencyCollection PureTone { get; }
+        public FrequencyCollection Narrowband { get; }
+        public LevelCollection Broadband { get; }
 
 
         public CalibrationProfile(TransducerProfile transducerProfile)
         {
-            TransducerProfile = transducerProfile;
+            Version = CURRENT_VERSION;
 
             CalibrationDate = DateTime.Now;
 
+            TransducerProfile = transducerProfile;
+
+            Oscillator = new FrequencyCollection();
             PureTone = new FrequencyCollection();
             Narrowband = new FrequencyCollection();
             Broadband = new LevelCollection();
@@ -31,9 +38,16 @@ namespace BGC.Audio.Audiometry
 
         public CalibrationProfile(JsonObject data)
         {
-            TransducerProfile = new TransducerProfile(data["Transducer"]);
+            Version = data.ContainsKey("Version") ? data["Version"].AsInteger : 1;
 
             CalibrationDate = data["CalibrationDate"].AsDateTime.Value;
+
+            TransducerProfile = new TransducerProfile(data["Transducer"]);
+
+            if (Version > 1)
+            {
+                Oscillator = new FrequencyCollection(data["Oscillator"]);
+            }
 
             PureTone = new FrequencyCollection(data["PureTone"]);
             Narrowband = new FrequencyCollection(data["Narrowband"]);
@@ -42,10 +56,13 @@ namespace BGC.Audio.Audiometry
 
         public JsonObject Serialize() => new JsonObject()
         {
-            ["Transducer"] = TransducerProfile.Serialize(),
+            ["Version"] = Version,
 
             ["CalibrationDate"] = CalibrationDate,
 
+            ["Transducer"] = TransducerProfile.Serialize(),
+
+            ["Oscillator"] = Oscillator.Serialize(),
             ["PureTone"] = PureTone.Serialize(),
             ["Narrowband"] = Narrowband.Serialize(),
             ["Broadband"] = Broadband.Serialize()
@@ -144,12 +161,44 @@ namespace BGC.Audio.Audiometry
                     goto case AudiometricCalibration.CalibrationSet.PureTone;
             }
         }
+
+        public double GetOscillatorAttenuation(
+            double frequency,
+            double levelHL,
+            AudioChannel channel) => Oscillator.GetOscillatorAttenuation(frequency, levelHL, channel);
+
+        public double EstimateOscillatorAttenuation(
+            double frequency,
+            double levelHL,
+            AudioChannel channel)
+        {
+            double oscillatorEstimate = double.NaN;
+
+            if (Oscillator.Points.Count > 0)
+            {
+                oscillatorEstimate = Oscillator.GetOscillatorAttenuation(frequency, levelHL, channel);
+
+                if (double.IsNaN(oscillatorEstimate))
+                {
+                    oscillatorEstimate = Oscillator.GetOscillatorAttenuation(frequency, levelHL, channel.Flip());
+                }
+            }
+
+            if (!double.IsNaN(oscillatorEstimate))
+            {
+                return oscillatorEstimate;
+            }
+
+            //Gross estimate to start with
+            double levelSPL = TransducerProfile.GetSPL(frequency, levelHL);
+            return 130 - levelSPL;
+        }
     }
 
 
     public class FrequencyCollection
     {
-        public List<FrequencyPoint> Points { get; set; }
+        public List<FrequencyPoint> Points { get; }
 
         public FrequencyCollection()
         {
@@ -210,6 +259,8 @@ namespace BGC.Audio.Audiometry
 
         public double GetRMS(double frequency, double levelHL, AudioChannel channel)
         {
+            //Find Frequency
+
             if (frequency <= Points[0].Frequency)
             {
                 return Points[0].Levels.GetRMS(levelHL, channel);
@@ -251,10 +302,21 @@ namespace BGC.Audio.Audiometry
             }
         }
 
+        public void SetOscillatorCalibrationPoint(
+            double frequency,
+            double levelHL,
+            AudioChannel channel,
+            double attenuation) =>
+            GetLevelCollection(frequency)
+            .SetCalibrationValue(levelHL, channel, AudiometricCalibration.ConvertOscillatorAttenuationToRMS(attenuation));
+
+        public double GetOscillatorAttenuation(double frequency, double levelHL, AudioChannel channel) =>
+            AudiometricCalibration.ConvertOscillatorRMSToAttenuation(GetRMS(frequency, levelHL, channel));
+
         public class FrequencyPoint
         {
-            public double Frequency { get; set; }
-            public LevelCollection Levels { get; set; }
+            public double Frequency { get; }
+            public LevelCollection Levels { get; }
 
             public FrequencyPoint(double frequency)
             {
@@ -278,7 +340,7 @@ namespace BGC.Audio.Audiometry
 
     public class LevelCollection
     {
-        public List<CalibrationPoint> Points { get; set; }
+        public List<CalibrationPoint> Points { get; }
 
         public LevelCollection()
         {
@@ -405,14 +467,13 @@ namespace BGC.Audio.Audiometry
 
                 //The progression parameter is determined linearly
                 double t = (levelHL - validPoints[upperBound - 1].LevelHL) / (validPoints[upperBound].LevelHL - validPoints[upperBound - 1].LevelHL);
-
-                return Math.Pow(validPoints[upperBound - 1].GetRMS(channel), 1 - t) * Math.Pow(validPoints[upperBound].LeftRMS, t);
+                return Math.Pow(validPoints[upperBound - 1].GetRMS(channel), 1 - t) * Math.Pow(validPoints[upperBound].GetRMS(channel), t);
             }
         }
 
         public class CalibrationPoint
         {
-            public double LevelHL { get; set; }
+            public double LevelHL { get; }
 
             public double LeftRMS { get; set; }
             public double RightRMS { get; set; }
@@ -457,7 +518,7 @@ namespace BGC.Audio.Audiometry
                 {
                     data.Add("LeftRMS", LeftRMS);
                 }
-                
+
                 if (!double.IsNaN(RightRMS))
                 {
                     data.Add("RightRMS", RightRMS);

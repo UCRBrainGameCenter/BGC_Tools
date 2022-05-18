@@ -7,19 +7,28 @@ namespace BGC.Audio.Audiometry
 {
     public class ValidationResults
     {
-        public TransducerProfile TransducerProfile { get; set; }
+        private int CURRENT_VERSION = 2;
+        public int Version { get; }
 
-        public ValidationFrequencyCollection PureTone { get; set; }
-        public ValidationFrequencyCollection Narrowband { get; set; }
-        public ValidationFrequencyCollection.ValidationLevelCollection Broadband { get; set; }
+        public DateTime ValidationDate { get; }
 
-        public DateTime ValidationDate { get; set; }
+        public TransducerProfile TransducerProfile { get; }
+
+        public ValidationFrequencyCollection Oscillator { get; }
+
+        public ValidationFrequencyCollection PureTone { get; }
+        public ValidationFrequencyCollection Narrowband { get; }
+        public ValidationFrequencyCollection.ValidationLevelCollection Broadband { get; }
 
         public ValidationResults(TransducerProfile transducerProfile)
         {
-            TransducerProfile = transducerProfile;
+            Version = CURRENT_VERSION;
 
             ValidationDate = DateTime.Now;
+
+            TransducerProfile = transducerProfile;
+
+            Oscillator = new ValidationFrequencyCollection();
 
             PureTone = new ValidationFrequencyCollection();
             Narrowband = new ValidationFrequencyCollection();
@@ -28,9 +37,16 @@ namespace BGC.Audio.Audiometry
 
         public ValidationResults(JsonObject data)
         {
-            TransducerProfile = new TransducerProfile(data["Transducer"]);
+            Version = data.ContainsKey("Version") ? data["Version"].AsInteger : 1;
 
             ValidationDate = data["ValidationDate"].AsDateTime.Value;
+
+            TransducerProfile = new TransducerProfile(data["Transducer"]);
+
+            if (Version > 1)
+            {
+                Oscillator = new ValidationFrequencyCollection(data["Oscillator"]);
+            }
 
             PureTone = new ValidationFrequencyCollection(data["PureTone"]);
             Narrowband = new ValidationFrequencyCollection(data["Narrowband"]);
@@ -39,10 +55,13 @@ namespace BGC.Audio.Audiometry
 
         public JsonObject Serialize() => new JsonObject()
         {
-            ["Transducer"] = TransducerProfile.Serialize(),
+            ["Version"] = Version,
 
             ["ValidationDate"] = ValidationDate,
 
+            ["Transducer"] = TransducerProfile.Serialize(),
+
+            ["Oscillator"] = Oscillator.Serialize(),
             ["PureTone"] = PureTone.Serialize(),
             ["Narrowband"] = Narrowband.Serialize(),
             ["Broadband"] = Broadband.Serialize()
@@ -51,7 +70,7 @@ namespace BGC.Audio.Audiometry
 
     public class ValidationFrequencyCollection
     {
-        public List<FrequencyValidationPoint> Points { get; set; }
+        public List<FrequencyValidationPoint> Points { get; }
 
         public ValidationFrequencyCollection()
         {
@@ -113,8 +132,8 @@ namespace BGC.Audio.Audiometry
 
         public class FrequencyValidationPoint
         {
-            public double Frequency { get; set; }
-            public ValidationLevelCollection Levels { get; set; }
+            public double Frequency { get; }
+            public ValidationLevelCollection Levels { get; }
 
             public FrequencyValidationPoint(double frequency)
             {
@@ -138,7 +157,7 @@ namespace BGC.Audio.Audiometry
 
         public class ValidationLevelCollection
         {
-            public List<ValidationPoint> Points { get; set; }
+            public List<ValidationPoint> Points { get; }
 
             public ValidationLevelCollection()
             {
@@ -215,7 +234,7 @@ namespace BGC.Audio.Audiometry
 
             public class ValidationPoint
             {
-                public double AttemptedLevelHL { get; set; }
+                public double AttemptedLevelHL { get; }
 
                 public double LeftExpectedRMS { get; set; }
                 public double RightExpectedRMS { get; set; }

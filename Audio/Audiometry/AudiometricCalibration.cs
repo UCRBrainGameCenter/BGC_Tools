@@ -147,6 +147,66 @@ namespace BGC.Audio.Audiometry
                     Debug.LogError($"Unexpected CalibrationSet: {set}");
                     break;
             }
+
+            UpdateCalibrationProgressFile();
+        }
+
+        public static void PushOscillatorCalibrationValue(
+            double levelHL,
+            double frequency,
+            AudioChannel channel,
+            double attenuation)
+        {
+            if (calibrationResults is null)
+            {
+                throw new Exception($"Calibration not initialized");
+            }
+
+            calibrationResults.Oscillator.SetCalibrationPoint((int)frequency, levelHL, channel, ConvertOscillatorAttenuationToRMS(attenuation));
+
+            UpdateCalibrationProgressFile();
+        }
+
+        private static string calibrationProgressFilePath = null;
+        private static string CalibrationProgressFilePath => calibrationProgressFilePath ??= DataManagement.PathForDataFile(dataDirectory, $"Calibration_Progress.json");
+
+        private static void UpdateCalibrationProgressFile()
+        {
+            DeleteCalibrationProgressFile();
+
+            FileWriter.WriteJson(
+                path: CalibrationProgressFilePath,
+                createJson: calibrationResults.Serialize,
+                pretty: true);
+        }
+
+        private static void DeleteCalibrationProgressFile()
+        {
+            if (System.IO.File.Exists(CalibrationProgressFilePath))
+            {
+                System.IO.File.Delete(CalibrationProgressFilePath);
+            }
+        }
+
+        private static string validationProgressFilePath = null;
+        private static string ValidationProgressFilePath => validationProgressFilePath ??= DataManagement.PathForDataFile(dataDirectory, $"Validation_Progress.json");
+
+        private static void UpdateValidationProgressFile()
+        {
+            DeleteValidationProgressFile();
+
+            FileWriter.WriteJson(
+                path: ValidationProgressFilePath,
+                createJson: validationResults.Serialize,
+                pretty: true);
+        }
+
+        private static void DeleteValidationProgressFile()
+        {
+            if (System.IO.File.Exists(ValidationProgressFilePath))
+            {
+                System.IO.File.Delete(ValidationProgressFilePath);
+            }
         }
 
         public static void InitiateCalibration(TransducerProfile transducerProfile)
@@ -173,6 +233,8 @@ namespace BGC.Audio.Audiometry
                 pretty: true);
 
             SerializeCalibrationSettings();
+
+            DeleteCalibrationProgressFile();
         }
 
         public static void DropCalibrationResults(Source source)
@@ -271,6 +333,77 @@ namespace BGC.Audio.Audiometry
             }
         }
 
+        /// <summary>
+        /// Returns the attenuation for the oscillator
+        /// </summary>
+        public static double GetOscillatorAttenuation(
+            double levelHL,
+            double calibrationFrequency,
+            AudioChannel channel,
+            Source source = Source.Custom)
+        {
+            CalibrationProfile calibrationProfile;
+            switch (source)
+            {
+                case Source.Results:
+                    if (calibrationResults == null)
+                    {
+                        goto case Source.Custom;
+                    }
+                    calibrationProfile = calibrationResults;
+                    break;
+
+                case Source.Custom:
+                    if (customCalibration == null)
+                    {
+                        Debug.LogError($"Fallback behavior with Audiometric Calibration for Source: {source}");
+                        goto case Source.Default;
+                    }
+                    calibrationProfile = customCalibration;
+                    break;
+
+                case Source.Default:
+                    //Calculate
+                    return 130 - levelHL;
+
+                default:
+                    Debug.LogError($"Unexpected Source: {source}");
+                    goto case Source.Default;
+            }
+
+            return calibrationProfile.GetOscillatorAttenuation(calibrationFrequency, levelHL, channel);
+        }
+
+        public static double EstimateOscillatorAttenuation(
+            Source calibrationSource,
+            double frequency,
+            double levelHL,
+            AudioChannel channel)
+        {
+            switch (calibrationSource)
+            {
+                case Source.Custom:
+                    if (customCalibration == null)
+                    {
+                        throw new Exception($"Unable to EstimateRMS without calibration profile");
+                    }
+                    return customCalibration.EstimateOscillatorAttenuation(frequency, levelHL, channel);
+
+                case Source.Results:
+                    if (calibrationResults == null)
+                    {
+                        throw new Exception($"Unable to EstimateRMS with uninitialized calibration");
+                    }
+                    return calibrationResults.EstimateOscillatorAttenuation(frequency, levelHL, channel);
+
+                case Source.Default:
+                    throw new Exception($"Unable to EstimateRMS with uninitialized calibration");
+
+                default:
+                    throw new Exception($"Unexpected CalibrationSource for EstimateRMS: {calibrationSource}");
+            }
+        }
+
         public static bool IsCalibrationReady() => customCalibration != null;
 
         public static double GetLevelSPL(
@@ -329,6 +462,9 @@ namespace BGC.Audio.Audiometry
             }
         }
 
+        public static double ConvertOscillatorRMSToAttenuation(double rms) => -20 * Math.Log10(Math.Sqrt(2.0) * rms);
+        public static double ConvertOscillatorAttenuationToRMS(double attenuation) => Math.Pow(10.0, -attenuation / 20.0) / Math.Sqrt(2.0);
+
         #region Validation
 
         public static void PushValidationValue(
@@ -362,6 +498,25 @@ namespace BGC.Audio.Audiometry
                     Debug.LogError($"Unexpected CalibrationSet: {set}");
                     break;
             }
+
+            UpdateValidationProgressFile();
+        }
+
+        public static void PushOscillatorValidationValue(
+            double levelHL,
+            double frequency,
+            AudioChannel channel,
+            double expectedAttenuation,
+            double measuredLevelHL)
+        {
+            if (validationResults is null)
+            {
+                throw new Exception($"Validation not initialized");
+            }
+
+            validationResults.Oscillator.SetValidationPoint(frequency, levelHL, channel, expectedAttenuation, measuredLevelHL);
+
+            UpdateValidationProgressFile();
         }
 
         public static void InitiateValidation(TransducerProfile transducerProfile)
@@ -383,6 +538,8 @@ namespace BGC.Audio.Audiometry
                 path: DataManagement.PathForDataFile(dataDirectory, currentValidationName),
                 createJson: validationResults.Serialize,
                 pretty: true);
+
+            DeleteValidationProgressFile();
 
             return validationResults;
         }

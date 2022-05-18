@@ -51,7 +51,7 @@ namespace BGC.Audio
             MAX
         }
 
-        public bool IsPlaying => currentState == SoundState.Playing;
+        public virtual bool IsPlaying => currentState == SoundState.Playing;
 
         public double Duration => stream?.Duration() ?? 0.0;
 
@@ -94,7 +94,7 @@ namespace BGC.Audio
             Play();
         }
 
-        public void Stop(bool invoke = false)
+        public virtual void Stop(bool invoke = false)
         {
             if (currentState == SoundState.Stopped)
             {
