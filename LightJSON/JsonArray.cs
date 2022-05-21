@@ -44,6 +44,23 @@ namespace LightJson
         /// Initializes a new instance and adds the given values to the collection.
         /// </summary>
         /// <param name="values">The values to be added to this collection.</param>
+        public JsonArray(IEnumerable<JsonValue> values) : this()
+        {
+            if (values == null)
+            {
+                throw new ArgumentNullException(nameof(values));
+            }
+
+            foreach (JsonValue value in values)
+            {
+                items.Add(value);
+            }
+        }
+
+        /// <summary>
+        /// Initializes a new instance and adds the given values to the collection.
+        /// </summary>
+        /// <param name="values">The values to be added to this collection.</param>
         public JsonArray(params JsonValue[] values) : this()
         {
             if (values == null)
