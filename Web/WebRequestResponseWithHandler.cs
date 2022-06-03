@@ -1,5 +1,7 @@
 ﻿using System;
-using UnityEngine.Assertions.Must;
+using System.IO;
+using LightJson;
+using LightJson.Serialization;
 using UnityEngine.Networking;
 
 namespace BGC.Web
@@ -15,6 +17,46 @@ namespace BGC.Web
 
         public byte[] DownloadBytes { get; }
         public byte[] UploadBytes { get; }
+
+        public string DownloadAsString
+        {
+            get
+            {
+                using MemoryStream ms = new MemoryStream(DownloadBytes);
+                using StreamReader sr = new StreamReader(ms);
+                return sr.ReadToEnd();
+            }
+        }
+
+        public JsonValue DownloadAsJsonValue
+        {
+            get
+            {
+                using MemoryStream ms = new MemoryStream(DownloadBytes);
+                using StreamReader sr = new StreamReader(ms);
+                return JsonReader.Parse(sr);
+            }
+        }
+
+        public string UploadAsString
+        {
+            get
+            {
+                using MemoryStream ms = new MemoryStream(UploadBytes);
+                using StreamReader sr = new StreamReader(ms);
+                return sr.ReadToEnd();
+            }
+        }
+
+        public JsonValue UploadAsJsonValue
+        {
+            get
+            {
+                using MemoryStream ms = new MemoryStream(UploadBytes);
+                using StreamReader sr = new StreamReader(ms);
+                return JsonReader.Parse(sr);
+            }
+        }
 
         /// <summary>Detailed error message</summary>
         public string DetailedErrorMessage { get; }
