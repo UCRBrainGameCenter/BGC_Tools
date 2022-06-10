@@ -23,8 +23,8 @@ namespace BGC.Parameters
         IPropertyGroup IPropertyGroup.GetParent() => _parentPropertyGroup;
         void IPropertyGroup.SetParent(IPropertyGroup parent) => _parentPropertyGroup = parent;
 
-        public JsonObject Serialize() => this.Internal_GetSerializedData();
-        public void Deserialize(JsonObject data) => this.Internal_Deserialize(data);
+        public virtual JsonObject Serialize() => this.Internal_GetSerializedData();
+        public virtual void Deserialize(JsonObject data) => this.Internal_Deserialize(data);
 
         #endregion IPropertyGroup
     }
