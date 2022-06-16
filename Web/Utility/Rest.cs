@@ -66,6 +66,36 @@ namespace BGC.Web.Utility
                 timeoutInSeconds: timeoutInSeconds,
                 headers: headers));
         }
+        
+        /// <summary>Send a get request with a body.</summary>
+        /// <param name="url">The URL to send request to.</param>
+        /// <param name="headers">Headers to send in the request, if any.</param>
+        /// <param name="callBack">false means there was a local parsing error</param>
+        /// <param name="timeoutInSeconds">
+        /// The amount of time, in seconds, to wait before timing out. If set to 0, there is no timeout.
+        /// </param>
+        /// <param name="queryParams">Dictionary of key names hashed to their values of any type</param>
+        public static void GetRequestWithBody(
+            string url,
+            string content,
+            IDictionary<string, string> headers,
+            Action<WebRequestResponseWithHandler> callBack = null,
+            int timeoutInSeconds = 0,
+            IDictionary<string, IConvertible> queryParams = default)
+        {
+            if (queryParams != default)
+            {
+                url += $"?{string.Join("&", queryParams.Select(WriteQueryParam))}";
+            }
+
+            // convert URL to HTTP-friendly URL
+            CoroutineUtility.Mono.StartCoroutine(RunGetWithBody(
+                url: url,
+                content,
+                callBack: callBack,
+                timeoutInSeconds: timeoutInSeconds,
+                headers: headers));
+        }
 
         /// <summary>Send an async get request.</summary>
         /// <param name="url">The URL to send request to.</param>
@@ -98,6 +128,46 @@ namespace BGC.Web.Utility
 
             return await RunGetAsync(
                 url,
+                headers,
+                retries,
+                timeoutInSeconds,
+                progressReporter,
+                abortToken);
+        }
+        
+        /// <summary>Send an async get request with a body.</summary>
+        /// <param name="url">The URL to send request to.</param>
+        /// <param name="headers">Headers to send in the request, if any.</param>
+        /// <param name="retries">Max number of retries. If set to 0, then retries will not be used.</param>
+        /// <param name="timeoutInSeconds">
+        /// The amount of time, in seconds, to wait before timing out. If set to 0, there is no timeout.
+        /// </param>
+        /// <param name="progressReporter">Progress reporter for the request.</param>
+        /// <param name="queryParams">Dictionary of key names hashed to their values of any type</param>
+        /// <param name="abortToken">Cancellation token to use for the request.</param>
+        public static async Task<WebRequestResponseWithHandler> GetRequestWithBodyAsync(
+            string url,
+            string content,
+            IDictionary<string, string> headers,
+            int retries = 0,
+            int timeoutInSeconds = 0,
+            IProgress<float> progressReporter = null,
+            IDictionary<string, IConvertible> queryParams = default,
+            CancellationToken abortToken = default)
+        {
+            if (queryParams != default)
+            {
+                url += $"?{string.Join("&", queryParams.Select(WriteQueryParam))}";
+            }
+
+            if (abortToken.IsCancellationRequested)
+            {
+                return null;
+            }
+
+            return await RunGetWithBodyAsync(
+                url,
+                content,
                 headers,
                 retries,
                 timeoutInSeconds,
@@ -315,6 +385,53 @@ namespace BGC.Web.Utility
             }
         }
         
+        /// <summary>
+        /// Run get request with body
+        /// </summary>
+        /// <param name="url">The URL to send request to.</param>
+        /// <param name="callBack">Code to execution when request completes. Sends back a response object.</param>
+        /// <param name="headers">Headers to send in the request, if any.</param>
+        /// <param name="timeoutInSeconds">
+        /// The amount of time, in seconds, to wait before timing out. If set to 0, there is no timeout.
+        /// </param>
+        private static IEnumerator RunGetWithBody(
+            string url,
+            string content,
+            Action<WebRequestResponseWithHandler> callBack,
+            IDictionary<string, string> headers,
+            int timeoutInSeconds = 0)
+        {
+            try
+            {
+                while (numActiveGets >= MaxNumActiveGets)
+                {
+                    // wait for other requests to wrap up to avoid port exhaustion.
+                    yield return null;
+                }
+
+                numActiveGets++;
+                using UnityWebRequest request = UnityWebRequest.Get(url);
+                request.timeout = timeoutInSeconds;
+
+                foreach (KeyValuePair<string, string> pair in headers)
+                {
+                    request.SetRequestHeader(pair.Key, pair.Value);
+                }
+
+                request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(content));
+
+                yield return request.SendWebRequest();
+
+                WebRequestResponseWithHandler resp = new WebRequestResponseWithHandler(request);
+                request.Dispose();
+                callBack?.Invoke(resp);
+            }
+            finally
+            {
+                numActiveGets--;
+            }
+        }
+        
         /// <summary>Run async GET request using async/await C# pattern.</summary>
         /// <param name="url">The URL to send the request to.</param>
         /// <param name="headers">The headers to attach to the request.</param>
@@ -402,6 +519,103 @@ namespace BGC.Web.Utility
                 }
 
                 return new WebRequestResponse(request);
+            }
+            finally
+            {
+                numActiveGets--;
+            }
+        }
+        
+        /// <summary>Run async GET request with body using async/await C# pattern.</summary>
+        /// <param name="url">The URL to send the request to.</param>
+        /// <param name="headers">The headers to attach to the request.</param>
+        /// <param name="retries">Max number of retries. If set to 0, then retries will not be used.</param>
+        /// <param name="timeoutInSeconds">Optional timeout for the request. Default is 15 seconds.</param>
+        /// <param name="progressReporter">
+        /// Optional progress reporter for the request. Takes the progress of the web request as a float.
+        /// </param>
+        /// <param name="abortToken">Optional cancellation token.</param>
+        /// <returns>The finished unity web request. Can be NULL if operation cancelled or error occurs.</returns>
+        [ItemCanBeNull]
+        private static async Task<WebRequestResponseWithHandler> RunGetWithBodyAsync(
+            string url,
+            string content,
+            IDictionary<string, string> headers,
+            int retries = 0,
+            int timeoutInSeconds = 15,
+            IProgress<float> progressReporter = null,
+            CancellationToken abortToken = default)
+        {
+            try
+            {
+                if (abortToken.IsCancellationRequested)
+                {
+                    return null;
+                }
+
+                using UnityWebRequest request = UnityWebRequest.Get(url);
+                request.timeout = timeoutInSeconds;
+
+                foreach (KeyValuePair<string, string> pair in headers)
+                {
+                    request.SetRequestHeader(pair.Key, pair.Value);
+                }
+
+                request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(content));
+
+                int numRetries = 0;
+                bool shouldRetry = true;
+
+                while (shouldRetry)
+                {
+                    shouldRetry = false;
+
+                    while (numActiveGets >= MaxNumActiveGets)
+                    {
+                        // wait for other requests to wrap up to avoid port exhaustion.
+
+                        if (abortToken.IsCancellationRequested)
+                        {
+                            return null;
+                        }
+
+                        await Task.Delay(5, abortToken);
+                    }
+
+                    numActiveGets++;
+
+                    UnityWebRequestAsyncOperation operation = request.SendWebRequest();
+
+                    while (!operation.isDone)
+                    {
+                        if (abortToken.IsCancellationRequested)
+                        {
+                            request.Abort();
+                            return null;
+                        }
+
+                        progressReporter?.Report(operation.progress);
+                        await Task.Delay(5, abortToken);
+                    }
+
+                    if (!string.IsNullOrEmpty(request.error) && retries > 0)
+                    {
+                        // retry if error and retries are specified
+                        shouldRetry = true;
+                        numRetries++;
+
+                        if (numRetries > retries)
+                        {
+                            throw new WebException($"Unable to download {url}. Retries exceeded.");
+                        }
+                    }
+                    else
+                    {
+                        progressReporter?.Report(operation.progress);
+                    }
+                }
+
+                return new WebRequestResponseWithHandler(request);
             }
             finally
             {
