@@ -38,7 +38,9 @@ namespace BGC.UI.Dialogs
         private static ModalDialog instance;
 
         private bool closeImmediately = true;
-        private string awaitingMessage = "Working...";
+        private string awaitingMessage = null;
+        
+        private const string defaultAwaitingMessage = "Working...";
 
         public enum Response
         {
@@ -268,7 +270,7 @@ namespace BGC.UI.Dialogs
             ModalButtonCallback callback = null,
             ModalButtonCallbackAsync callbackAsync = null,
             bool closeImmediately = true,
-            string awaitingMessage = "Working...")
+            string awaitingMessage = null)
         {
             Debug.Assert(
                 condition: mode != Mode.InputAccept && mode != Mode.InputConfirmCancel,
@@ -307,9 +309,7 @@ namespace BGC.UI.Dialogs
             string buttonALabel,
             string buttonBLabel,
             string buttonCLabel,
-            ModalButtonCallback callback,
-            bool closeImmediately = true,
-            string awaitingMessage = "Working...") =>
+            ModalButtonCallback callback) =>
                 ShowCustomSimpleModalHelper(
                     headerText: headerText, 
                     bodyText: bodyText, 
@@ -317,8 +317,8 @@ namespace BGC.UI.Dialogs
                     buttonBLabel: buttonBLabel, 
                     buttonCLabel: buttonCLabel,
                     callback: callback,
-                    closeImmediately: closeImmediately,
-                    awaitingMessage: awaitingMessage);
+                    closeImmediately: true,
+                    awaitingMessage: null);
         
         /// <summary>
         /// Show the modal dialog in the indicated mode, and await on the async callback when it receives a response
@@ -331,7 +331,7 @@ namespace BGC.UI.Dialogs
             string buttonCLabel,
             ModalButtonCallbackAsync callbackAsync,
             bool closeImmediately = true,
-            string awaitingMessage = "Working...") =>
+            string awaitingMessage = null) =>
                 ShowCustomSimpleModalHelper(
                     headerText: headerText, 
                     bodyText: bodyText, 
@@ -351,7 +351,7 @@ namespace BGC.UI.Dialogs
             ModalButtonCallback callback = null,
             ModalButtonCallbackAsync callbackAsync = null,
             bool closeImmediately = true,
-            string awaitingMessage = "Working...")
+            string awaitingMessage = null)
         {
             //Update Text
             instance.SetHeaderText(headerText);
@@ -383,9 +383,7 @@ namespace BGC.UI.Dialogs
             string bodyText,
             ModalInputCallback inputCallback,
             ModalButtonCallback buttonCallback = null,
-            InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
-            bool closeImmediately = true,
-            string awaitingMessage = "Working...") =>
+            InputField.ContentType inputType = InputField.ContentType.Alphanumeric) =>
                 ShowInputModalHelper(
                     mode: mode,
                     headerText: headerText,
@@ -393,8 +391,8 @@ namespace BGC.UI.Dialogs
                     inputCallback: inputCallback,
                     buttonCallback: buttonCallback,
                     inputType: inputType,
-                    closeImmediately: closeImmediately,
-                    awaitingMessage: awaitingMessage);
+                    closeImmediately: true,
+                    awaitingMessage: null);
         
         /// <summary>
         /// Show the modal dialog in the indicated mode, and await on the async callback when it receives a response
@@ -407,7 +405,7 @@ namespace BGC.UI.Dialogs
             ModalButtonCallbackAsync buttonCallbackAsync = null,
             InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
             bool closeImmediately = true,
-            string awaitingMessage = "Working...") =>
+            string awaitingMessage = null) =>
                 ShowInputModalHelper(
                     mode: mode,
                     headerText: headerText,
@@ -428,9 +426,7 @@ namespace BGC.UI.Dialogs
             ModalDoubleInputCallback inputCallback,
             ModalButtonCallback buttonCallback = null,
             InputField.ContentType primaryInputType = InputField.ContentType.Alphanumeric,
-            InputField.ContentType secondaryInputType = InputField.ContentType.Alphanumeric,
-            bool closeImmediately = true,
-            string awaitingMessage = "Working...") =>
+            InputField.ContentType secondaryInputType = InputField.ContentType.Alphanumeric) =>
                 ShowInputModalHelper(
                     headerText: headerText,
                     primaryBodyText: primaryBodyText,
@@ -439,8 +435,8 @@ namespace BGC.UI.Dialogs
                     buttonCallback: buttonCallback,
                     primaryInputType: primaryInputType,
                     secondaryInputType: secondaryInputType,
-                    closeImmediately: closeImmediately,
-                    awaitingMessage: awaitingMessage);
+                    closeImmediately: true,
+                    awaitingMessage: null);
         
         /// <summary>
         /// Show the modal dialog in the indicated mode, and await on the callback when it receives a response
@@ -454,7 +450,7 @@ namespace BGC.UI.Dialogs
             InputField.ContentType primaryInputType = InputField.ContentType.Alphanumeric,
             InputField.ContentType secondaryInputType = InputField.ContentType.Alphanumeric,
             bool closeImmediately = true,
-            string awaitingMessage = "Working...") =>
+            string awaitingMessage = null) =>
                 ShowInputModalHelper(
                     headerText: headerText,
                     primaryBodyText: primaryBodyText,
@@ -476,7 +472,7 @@ namespace BGC.UI.Dialogs
             ModalButtonCallbackAsync buttonCallbackAsync = null,
             InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
             bool closeImmediately = true,
-            string awaitingMessage = "Working...")
+            string awaitingMessage = null)
         {
             Debug.Assert(
                 condition: mode == Mode.InputAccept || mode == Mode.InputConfirmCancel,
@@ -517,7 +513,7 @@ namespace BGC.UI.Dialogs
             InputField.ContentType primaryInputType = InputField.ContentType.Alphanumeric,
             InputField.ContentType secondaryInputType = InputField.ContentType.Alphanumeric,
             bool closeImmediately = true,
-            string awaitingMessage = "Working...")
+            string awaitingMessage = null)
         {
             //Update text
             instance.SetHeaderText(headerText);
@@ -553,9 +549,7 @@ namespace BGC.UI.Dialogs
             string toggleText,
             ModalInputToggleCallback inputToggleCallback,
             InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
-            bool initialToggleState = false,
-            bool closeImmediately = true,
-            string awaitingMessage = "Working...") =>
+            bool initialToggleState = false) =>
             ShowInputToggleModalHelper(
                 headerText: headerText,
                 bodyText: bodyText,
@@ -563,8 +557,8 @@ namespace BGC.UI.Dialogs
                 inputToggleCallback: inputToggleCallback,
                 inputType: inputType,
                 initialToggleState: initialToggleState,
-                closeImmediately: closeImmediately,
-                awaitingMessage: awaitingMessage);
+                closeImmediately: true,
+                awaitingMessage: null);
         
         /// <summary>
         /// Show the modal dialog in the indicated mode, and await on the async callback when it receives a response
@@ -577,7 +571,7 @@ namespace BGC.UI.Dialogs
             InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
             bool initialToggleState = false,
             bool closeImmediately = true,
-            string awaitingMessage = "Working...") =>
+            string awaitingMessage = null) =>
             ShowInputToggleModalHelper(
                 headerText: headerText,
                 bodyText: bodyText,
@@ -597,7 +591,7 @@ namespace BGC.UI.Dialogs
             InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
             bool initialToggleState = false,
             bool closeImmediately = true,
-            string awaitingMessage = "Working...")
+            string awaitingMessage = null)
         {
             //Update text
             instance.SetHeaderText(headerText);
@@ -633,10 +627,8 @@ namespace BGC.UI.Dialogs
             IEnumerable<string> dropdownOptions,
             ModalDropdownInputCallback inputCallback,
             ModalButtonCallback buttonCallback = null,
-            InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
-            bool closeImmediately = true,
-            string awaitingMessage = "Working...") =>
-            ShowDropdownInputModal(
+            InputField.ContentType inputType = InputField.ContentType.Alphanumeric) =>
+            ShowDropdownInputModalHelper(
                 headerText: headerText,
                 primaryBodyText: primaryBodyText,
                 secondaryBodyText: secondaryBodyText,
@@ -644,8 +636,8 @@ namespace BGC.UI.Dialogs
                 inputCallback: inputCallback,
                 buttonCallback: buttonCallback,
                 inputType: inputType,
-                closeImmediately: closeImmediately,
-                awaitingMessage: awaitingMessage);
+                closeImmediately: true,
+                awaitingMessage: null);
         
         /// <summary>
         /// Show the modal dialog in the indicated mode, and await on the async callback when it receives a response
@@ -659,8 +651,8 @@ namespace BGC.UI.Dialogs
             ModalButtonCallbackAsync buttonCallbackAsync = null,
             InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
             bool closeImmediately = true,
-            string awaitingMessage = "Working...") =>
-            ShowDropdownInputModal(
+            string awaitingMessage = null) =>
+            ShowDropdownInputModalHelper(
                 headerText: headerText,
                 primaryBodyText: primaryBodyText,
                 secondaryBodyText: secondaryBodyText,
@@ -682,7 +674,7 @@ namespace BGC.UI.Dialogs
             ModalButtonCallbackAsync buttonCallbackAsync = null,
             InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
             bool closeImmediately = true,
-            string awaitingMessage = "Working...")
+            string awaitingMessage = null)
         {
             //Update text
             instance.SetHeaderText(headerText);
@@ -725,9 +717,7 @@ namespace BGC.UI.Dialogs
             string buttonCLabel,
             ModalInputCallback inputCallback,
             ModalButtonCallback buttonCallback = null,
-            InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
-            bool closeImmediately = true,
-            string awaitingMessage = "Working...") =>
+            InputField.ContentType inputType = InputField.ContentType.Alphanumeric) =>
             ShowInputModalABCHelper(
                 headerText: headerText,
                 bodyText: bodyText,
@@ -737,8 +727,8 @@ namespace BGC.UI.Dialogs
                 inputCallback: inputCallback,
                 buttonCallback: buttonCallback,
                 inputType: inputType,
-                closeImmediately: closeImmediately,
-                awaitingMessage: awaitingMessage);
+                closeImmediately: true,
+                awaitingMessage: null);
         
         /// <summary>
         /// Show the modal dialog in the indicated mode, and await on the async callback when it receives a response
@@ -753,7 +743,7 @@ namespace BGC.UI.Dialogs
             ModalButtonCallbackAsync buttonCallbackAsync = null,
             InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
             bool closeImmediately = true,
-            string awaitingMessage = "Working...") =>
+            string awaitingMessage = null) =>
             ShowInputModalABCHelper(
                 headerText: headerText,
                 bodyText: bodyText,
@@ -778,7 +768,7 @@ namespace BGC.UI.Dialogs
             ModalButtonCallbackAsync buttonCallbackAsync = null,
             InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
             bool closeImmediately = true,
-            string awaitingMessage = "Working...")
+            string awaitingMessage = null)
         {
             //Update text
             instance.SetHeaderText(headerText);
@@ -830,7 +820,7 @@ namespace BGC.UI.Dialogs
                 ShowSimpleModal(
                     mode: Mode.LockDown,
                     headerText: "",
-                    bodyText: awaitingMessage);
+                    bodyText: awaitingMessage ?? defaultAwaitingMessage);
             }
 
             tmpCallback?.Invoke(response);
