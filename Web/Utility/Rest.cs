@@ -107,7 +107,7 @@ namespace BGC.Web.Utility
         /// <param name="progressReporter">Progress reporter for the request.</param>
         /// <param name="queryParams">Dictionary of key names hashed to their values of any type</param>
         /// <param name="abortToken">Cancellation token to use for the request.</param>
-        public static async Task<WebRequestResponse> GetRequestAsync(
+        public static async Task<WebRequestResponseWithHandler> GetRequestAsync(
             string url,
             IDictionary<string, string> headers,
             int retries = 0,
@@ -233,7 +233,7 @@ namespace BGC.Web.Utility
         /// </param>
         /// <param name="abortToken">Cancellation token for the request.</param>
         [ItemCanBeNull]
-        public static async Task<WebRequestResponse> GetRequestAsync(
+        public static async Task<WebRequestResponseWithHandler> GetRequestAsync(
             string url,
             IDictionary<string, string> headers,
             string absoluteFilePath,
@@ -260,7 +260,7 @@ namespace BGC.Web.Utility
                 return null;
             }
 
-            WebRequestResponse resp = await RunGetAsync(
+            WebRequestResponseWithHandler resp = await RunGetAsync(
                 url,
                 headers,
                 fileHandler,
@@ -330,7 +330,7 @@ namespace BGC.Web.Utility
             string url,
             IDictionary<string, string> headers,
             string body,
-            Action<WebRequestResponse> callBack = null,
+            Action<WebRequestResponseWithHandler> callBack = null,
             int timeoutInSeconds = 0)
         {
             CoroutineUtility.Mono.StartCoroutine(RunPut(
@@ -443,7 +443,7 @@ namespace BGC.Web.Utility
         /// <param name="abortToken">Optional cancellation token.</param>
         /// <returns>The finished unity web request. Can be NULL if operation cancelled or error occurs.</returns>
         [ItemCanBeNull]
-        private static async Task<WebRequestResponse> RunGetAsync(
+        private static async Task<WebRequestResponseWithHandler> RunGetAsync(
             string url,
             IDictionary<string, string> headers,
             int retries = 0,
@@ -518,7 +518,7 @@ namespace BGC.Web.Utility
                     }
                 }
 
-                return new WebRequestResponse(request);
+                return new WebRequestResponseWithHandler(request);
             }
             finally
             {
@@ -733,7 +733,7 @@ namespace BGC.Web.Utility
         /// </param>
         /// <param name="abortToken">Optional cancellation token.</param>
         /// <returns>The finished unity web request. Can be NULL if operation cancelled or error occurs.</returns>
-        private static async Task<WebRequestResponse> RunGetAsync(
+        private static async Task<WebRequestResponseWithHandler> RunGetAsync(
             string url,
             IDictionary<string, string> headers,
             DownloadHandlerFile downloadHandler,
@@ -812,14 +812,14 @@ namespace BGC.Web.Utility
                         else
                         {
                             progressReporter?.Report(operation.progress);
-                            return new WebRequestResponse(request);
+                            return new WebRequestResponseWithHandler(request);
                         }
                     }
                     else
                     {
                         progressReporter?.Report(operation.progress);
 
-                        return new WebRequestResponse(request);
+                        return new WebRequestResponseWithHandler(request);
                     }
                 }
 
@@ -952,7 +952,7 @@ namespace BGC.Web.Utility
             string url,
             IDictionary<string, string> headers,
             string body,
-            Action<WebRequestResponse> callBack,
+            Action<WebRequestResponseWithHandler> callBack,
             int timeoutInSeconds = 0)
         {
             try
@@ -969,7 +969,7 @@ namespace BGC.Web.Utility
 
                 yield return request.SendWebRequest();
 
-                WebRequestResponse resp = new WebRequestResponse(request);
+                WebRequestResponseWithHandler resp = new WebRequestResponseWithHandler(request);
                 request.Dispose();
                 callBack?.Invoke(resp);
             }
