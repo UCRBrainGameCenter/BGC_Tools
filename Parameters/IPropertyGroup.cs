@@ -350,6 +350,10 @@ namespace BGC.Parameters
                 {
                     property.SetValue(container, propertyGroupData[fieldName].AsString);
                 }
+                else
+                {
+                    property.SetValue(container, string.Empty);
+                }
             }
 
             //Deserialize Keys
@@ -361,6 +365,10 @@ namespace BGC.Parameters
                     if (keyObject.ContainsKey(fieldName))
                     {
                         property.SetValue(container, keyObject[fieldName].AsString);
+                    }
+                    else
+                    {
+                        property.SetValue(container, string.Empty);
                     }
                 }
             }
