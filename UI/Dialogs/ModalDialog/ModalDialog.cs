@@ -794,6 +794,30 @@ namespace BGC.UI.Dialogs
             instance.closeImmediately = closeImmediately;
             instance.awaitingMessage = awaitingMessage;
         }
+        
+        /// <summary>
+        /// Disables and resets the current instance of a modal dialog
+        /// </summary>
+        public static void CloseCurrentModal()
+        {
+            //Update Text
+            instance.SetHeaderText("");
+            instance.SetBodyText("");
+
+            //Update buttons
+            instance.SetMode(Mode.ABC);
+            instance.SetButtonText("");
+
+            //Set dialog invisible
+            instance.gameObject.SetActive(false);
+
+            //Update Callbacks
+            instance.ResetCallbacks();
+
+            //Reset flag for closing modal and message for waiting on await
+            instance.closeImmediately = false;
+            instance.awaitingMessage = "";
+        }
 
         /// <summary>
         /// Accept the button repsonse as input, invoke and clear the callbacks, and hide the dialog
