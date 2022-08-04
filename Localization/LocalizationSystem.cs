@@ -15,13 +15,16 @@ namespace BGC.Localization
         {
             English,
             Espanol,
+            Deutsch,
             MAX
         }
 
         public static Language language = Language.English;
 
         public static Dictionary<string, string> localizedEN = new Dictionary<string, string>();
+        //RM @TODO When convenient, change all instances of "SP" representing Spanish to "ES" in accordance with ISO 639-1 Language Code
         public static Dictionary<string, string> localizedSP = new Dictionary<string, string>();
+        public static Dictionary<string, string> localizedDE = new Dictionary<string, string>();
 
         public static bool isInit;
 
@@ -33,6 +36,7 @@ namespace BGC.Localization
 
             csvLoader.GetDictionaryValues("en", localizedEN);
             csvLoader.GetDictionaryValues("sp", localizedSP);
+            csvLoader.GetDictionaryValues("de", localizedDE);
 
             isInit = true;
         }
@@ -78,6 +82,9 @@ namespace BGC.Localization
                     break;
                 case Language.Espanol:
                     gotValue = localizedSP.TryGetValue(key, out value);
+                    break;              
+                case Language.Deutsch:
+                    gotValue = localizedDE.TryGetValue(key, out value);
                     break;
             }
 
@@ -131,6 +138,9 @@ namespace BGC.Localization
                     break;
                 case Language.Espanol:
                     gotValue = localizedSP.TryGetValue(key, out value);
+                    break;     
+                case Language.Deutsch:
+                    gotValue = localizedDE.TryGetValue(key, out value);
                     break;
             }
 
@@ -183,6 +193,9 @@ namespace BGC.Localization
                     break;
                 case Language.Espanol:
                     gotValue = localizedSP.TryGetValue(key, out value);
+                    break;       
+                case Language.Deutsch:
+                    gotValue = localizedDE.TryGetValue(key, out value);
                     break;
             }
 
@@ -336,6 +349,7 @@ namespace BGC.Localization
             {
                 SystemLanguage.English => Language.English,
                 SystemLanguage.Spanish => Language.Espanol,
+                SystemLanguage.German => Language.Deutsch,
                 _ => Language.English // use English by default
             };
     }
