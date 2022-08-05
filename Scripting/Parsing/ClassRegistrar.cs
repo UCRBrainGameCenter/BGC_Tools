@@ -42,7 +42,7 @@ namespace BGC.Scripting.Parsing
 
             TryRegisterClass(typeof(Random));
             TryRegisterClass(typeof(Math));
-            TryRegisterClass(typeof(Mathematics.GeneralMath), "GeneralMath");
+            TryRegisterClass(typeof(Mathematics.GeneralMath));
 
             TryRegisterClass(typeof(IList));
             TryRegisterClass(typeof(IEnumerable));
@@ -66,6 +66,9 @@ namespace BGC.Scripting.Parsing
             TryRegisterClass(typeof(Members.UserAdapter), "User");
             TryRegisterClass(typeof(Members.AudiometryAdapter), "Audiometry");
             TryRegisterClass(typeof(Members.DebugAdapter), "Debug");
+
+            TryRegisterClass(typeof(Parameters.Algorithms.Scripted.IMultiParamScriptedAlgorithmQuerier));
+            TryRegisterClass(typeof(Parameters.Algorithms.Scripted.IScriptedAlgorithmQuerier));
         }
 
 
