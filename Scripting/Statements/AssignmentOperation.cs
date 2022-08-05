@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 
 namespace BGC.Scripting
 {
@@ -21,7 +22,7 @@ namespace BGC.Scripting
             assigneeType = assignee.GetValueType();
             valueType = value.GetValueType();
 
-            if (!assigneeType.AssignableFromType(valueType))
+            if (!assigneeType.AssignableOrConvertableFromType(valueType))
             {
                 throw new ScriptParsingException(
                     source: source,
@@ -29,13 +30,15 @@ namespace BGC.Scripting
             }
         }
 
-        public override FlowState Execute(ScopeRuntimeContext context)
+        public override FlowState Execute(
+            ScopeRuntimeContext context,
+            CancellationToken ct)
         {
-            if (assigneeType == valueType)
+            if (assigneeType.IsAssignableFrom(valueType))
             {
                 assignee.Set(context, value.GetAs<object>(context));
             }
-            else if (assigneeType.AssignableFromType(valueType))
+            else if (assigneeType.AssignableOrConvertableFromType(valueType))
             {
                 assignee.Set(context, Convert.ChangeType(value.GetAs<object>(context), assigneeType));
             }

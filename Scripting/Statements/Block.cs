@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace BGC.Scripting
 {
@@ -16,28 +17,34 @@ namespace BGC.Scripting
             CompilationContext compilationContext)
         {
             compilationContext = compilationContext.CreateChildScope();
-            while (!(tokens.Current is EOFToken))
+            while (tokens.Current is not EOFToken)
             {
-                if (tokens.TestWithoutSkipping(Separator.CloseCurlyBoi))
+                if (tokens.TestWithoutAdvancing(Separator.CloseCurlyBoi) || tokens.TestWithoutAdvancing(Keyword.Default) || tokens.TestWithoutAdvancing(Keyword.Case))
                 {
                     return;
                 }
 
                 IExecutable nextStatement = ParseNextStatement(tokens, compilationContext);
-                if (nextStatement != null)
+                if (nextStatement is not null)
                 {
                     statements.Add(nextStatement);
                 }
             }
         }
 
-        public override FlowState Execute(ScopeRuntimeContext parentContext)
+        public override FlowState Execute(
+            ScopeRuntimeContext parentContext,
+            CancellationToken ct)
         {
+            ct.ThrowIfCancellationRequested();
+
             ScopeRuntimeContext context = new ScopeRuntimeContext(parentContext);
 
             foreach (IExecutable statement in statements)
             {
-                FlowState state = statement.Execute(context);
+                FlowState state = statement.Execute(context, ct);
+
+                ct.ThrowIfCancellationRequested();
 
                 switch (state)
                 {

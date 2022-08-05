@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
+
 
 namespace BGC.Scripting
 {
@@ -12,12 +14,16 @@ namespace BGC.Scripting
             this.statements = statements;
         }
 
-        public override FlowState Execute(ScopeRuntimeContext context)
+        public override FlowState Execute(
+            ScopeRuntimeContext context,
+            CancellationToken ct)
         {
             FlowState state;
             foreach (IExecutable statement in statements)
             {
-                state = statement.Execute(context);
+                ct.ThrowIfCancellationRequested();
+
+                state = statement.Execute(context, ct);
 
                 if (state != FlowState.Nominal)
                 {

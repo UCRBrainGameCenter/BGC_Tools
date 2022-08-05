@@ -12,7 +12,7 @@ namespace BGC.Scripting
             CompilationContext context)
         {
             identifier = identifierToken.identifier;
-            type = context.GetValueType(identifier);
+            type = context.GetValueType(identifier)!;
 
             if (type == null)
             {
@@ -24,7 +24,7 @@ namespace BGC.Scripting
 
         public T GetAs<T>(RuntimeContext context)
         {
-            if (typeof(T).AssignableFromType(type))
+            if (typeof(T).AssignableOrConvertableFromType(type))
             {
                 return context.GetExistingValue<T>(identifier);
             }
@@ -37,7 +37,7 @@ namespace BGC.Scripting
         {
             Type otherType = (value is null) ? typeof(NullLiteralToken) : value.GetType();
 
-            if (type.AssignableFromType(otherType))
+            if (type.AssignableOrConvertableFromType(otherType))
             {
                 context.SetExistingValue(identifier, value);
             }
@@ -50,7 +50,7 @@ namespace BGC.Scripting
 
         public void SetAs<T>(RuntimeContext context, T value)
         {
-            if (type.AssignableFromType(typeof(T)))
+            if (type.AssignableOrConvertableFromType(typeof(T)))
             {
                 context.SetExistingValue(identifier, value);
             }

@@ -66,7 +66,7 @@ namespace BGC.Tests
                     new FunctionSignature(
                         identifier: "SetupFunction",
                         returnType: typeof(void),
-                        arguments: new VariableData("argument", typeof(int))),
+                        arguments: new ArgumentData("argument", typeof(int))),
                     new FunctionSignature(
                         identifier: "RunTests",
                         returnType: typeof(List<bool>)));
@@ -1261,7 +1261,7 @@ namespace BGC.Tests
                     new FunctionSignature(
                         identifier: "FibonacciNumber",
                         returnType: typeof(int),
-                        arguments: new VariableData("index", typeof(int))));
+                        arguments: new ArgumentData("index", typeof(int))));
             }
             catch (ScriptParsingException parseEx)
             {
@@ -1351,7 +1351,7 @@ namespace BGC.Tests
                     new FunctionSignature(
                         identifier: "FibonacciNumber",
                         returnType: typeof(int),
-                        arguments: new VariableData("index", typeof(int))));
+                        arguments: new ArgumentData("index", typeof(int))));
             }
             catch (ScriptParsingException parseEx)
             {

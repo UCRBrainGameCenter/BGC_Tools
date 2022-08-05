@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 
 namespace BGC.Scripting
 {
@@ -11,26 +12,25 @@ namespace BGC.Scripting
         public BooleanInPlaceOperation(
             IValue assignee,
             IValueGetter value,
-            Operator operatorType,
-            Token source)
+            OperatorToken operatorToken)
         {
             if (assignee.GetValueType() != typeof(bool))
             {
                 throw new ScriptParsingException(
-                    source: source,
-                    message: $"Left Argument {assignee} of Operator {source} is not a bool: type {assignee.GetValueType().Name}");
+                    source: operatorToken,
+                    message: $"Left Argument {assignee} of Operator {operatorToken} is not a bool: type {assignee.GetValueType().Name}");
             }
 
             if (value.GetValueType() != typeof(bool))
             {
                 throw new ScriptParsingException(
-                    source: source,
-                    message: $"Right Argument {value} of Operator {source} is not a bool.");
+                    source: operatorToken,
+                    message: $"Right Argument {value} of Operator {operatorToken} is not a bool.");
             }
 
             this.assignee = assignee;
             this.value = value;
-            this.operatorType = operatorType;
+            operatorType = operatorToken.operatorType;
 
             switch (operatorType)
             {
@@ -44,7 +44,9 @@ namespace BGC.Scripting
             }
         }
 
-        public override FlowState Execute(ScopeRuntimeContext context)
+        public override FlowState Execute(
+            ScopeRuntimeContext context,
+            CancellationToken ct)
         {
             switch (operatorType)
             {

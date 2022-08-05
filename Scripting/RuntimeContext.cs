@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using LightJson;
-using BGC.Reports;
 
 namespace BGC.Scripting
 {
@@ -16,16 +15,13 @@ namespace BGC.Scripting
 
 
         private GlobalRuntimeContext globalContext = null;
-        protected virtual GlobalRuntimeContext GlobalContext =>
-            globalContext ?? (globalContext = parent.GlobalContext);
+        protected virtual GlobalRuntimeContext GlobalContext => globalContext ??= parent!.GlobalContext;
 
         private ScriptRuntimeContext scriptContext = null;
-        protected virtual ScriptRuntimeContext ScriptContext =>
-            scriptContext ?? (scriptContext = parent.ScriptContext);
+        protected virtual ScriptRuntimeContext ScriptContext => scriptContext ??= parent!.ScriptContext;
 
         private FunctionRuntimeContext functionContext = null;
-        protected virtual FunctionRuntimeContext FunctionContext =>
-            functionContext ?? (functionContext = parent.FunctionContext);
+        protected virtual FunctionRuntimeContext FunctionContext => functionContext ??= parent!.FunctionContext;
 
         protected virtual RuntimeContext ScopeParent => parent;
 
@@ -55,36 +51,28 @@ namespace BGC.Scripting
 
         public bool VariableExists(string key) =>
             valueDictionary.ContainsKey(key) ||
-            (SearchParent(key) && ScopeParent.VariableExists(key));
+            (SearchParent(key) && ScopeParent!.VariableExists(key));
 
         public T GetExistingValue<T>(string key)
         {
             if (valueDictionary.ContainsKey(key))
             {
-                if (!typeof(T).AssignableFromType(valueDictionary[key].valueType))
+                if (!typeof(T).AssignableOrConvertableFromType(valueDictionary[key].valueType))
                 {
                     throw new ScriptRuntimeException($"Value {key} retrieved as {typeof(T).Name} when it's {valueDictionary[key].valueType.Name}");
                 }
 
-                if (typeof(T).IsAssignableFrom(valueDictionary[key].valueType))
+                if (!typeof(T).IsAssignableFrom(valueDictionary[key].valueType))
                 {
-                    return (T)valueDictionary[key].value;
+                    return (T)Convert.ChangeType(valueDictionary[key].value, typeof(T));
                 }
 
-                //if (!valueDictionary[key].valueType.GetInterfaces().Contains(typeof(IConvertible)))
-                //{
-                //    throw new ScriptRuntimeException(
-                //        $"Type mismatch but not convertible:  " +
-                //        $"from {valueDictionary[key].valueType.Name} to {typeof(T).Name} for value " +
-                //        $"{valueDictionary[key].value}");
-                //}
-
-                return (T)Convert.ChangeType(valueDictionary[key].value, typeof(T));
+                return (T)valueDictionary[key].value;
             }
 
             if (SearchParent(key))
             {
-                return ScopeParent.GetExistingValue<T>(key);
+                return ScopeParent!.GetExistingValue<T>(key);
             }
 
             throw new ScriptRuntimeException($"Variable {key} was requested but never declared.");
@@ -96,7 +84,7 @@ namespace BGC.Scripting
             {
                 Type otherType = value is null ? typeof(NullLiteralToken) : value.GetType();
 
-                if (!valueDictionary[key].valueType.AssignableFromType(otherType))
+                if (!valueDictionary[key].valueType.AssignableOrConvertableFromType(otherType))
                 {
                     throw new ScriptRuntimeException($"Value {key} set as {otherType.Name} when it's {valueDictionary[key].valueType.Name}");
                 }
@@ -115,7 +103,7 @@ namespace BGC.Scripting
 
             if (SearchParent(key))
             {
-                ScopeParent.SetExistingValue(key, value);
+                ScopeParent!.SetExistingValue(key, value);
                 return;
             }
 
@@ -127,6 +115,13 @@ namespace BGC.Scripting
 
         public virtual object RunFunction(string functionName, object[] arguments) =>
             ScriptContext.RunFunction(functionName, arguments);
+
+
+        public virtual void RunVoidFunction(Guid functionId, object[] arguments) =>
+            ScriptContext.RunVoidFunction(functionId, arguments);
+
+        public virtual object RunFunction(Guid functionId, object[] arguments) =>
+            ScriptContext.RunFunction(functionId, arguments);
 
         public virtual void Clear() => valueDictionary.Clear();
 
@@ -146,7 +141,6 @@ namespace BGC.Scripting
     public class GlobalRuntimeContext : RuntimeContext
     {
         private object stashedReturnValue = null;
-        public ReportElement batteryReport = null;
 
         public GlobalRuntimeContext()
             : base(null)
@@ -169,22 +163,22 @@ namespace BGC.Scripting
         {
             Type returnValueType = stashedReturnValue is null ? typeof(NullLiteralToken) : stashedReturnValue.GetType();
 
-            if (!typeof(T).AssignableFromType(returnValueType))
+            if (!typeof(T).AssignableOrConvertableFromType(returnValueType))
             {
                 throw new ScriptRuntimeException($"Unable to return value of type {returnValueType.Name} as a {typeof(T).Name}");
             }
 
-            if (typeof(T) == returnValueType)
+            if (typeof(T).IsAssignableFrom(returnValueType))
             {
-                T temp = (T)stashedReturnValue;
+                T temp = (T)stashedReturnValue!;
                 stashedReturnValue = null;
-                return temp;
+                return temp!;
             }
             else
             {
-                T temp = (T)Convert.ChangeType(stashedReturnValue, typeof(T));
+                T temp = (T)Convert.ChangeType(stashedReturnValue, typeof(T))!;
                 stashedReturnValue = null;
-                return temp;
+                return temp!;
             }
         }
 
@@ -194,12 +188,12 @@ namespace BGC.Scripting
         {
             if (valueDictionary.ContainsKey(key))
             {
-                if (!type.AssignableFromType(valueDictionary[key].valueType))
+                if (!valueDictionary[key].valueType.AssignableOrConvertableFromType(type))
                 {
                     throw new ScriptRuntimeException($"Value {key} set as {type.Name} when it was {valueDictionary[key].valueType.Name}");
                 }
 
-                if (type == valueDictionary[key].valueType)
+                if (valueDictionary[key].valueType.IsAssignableFrom(type))
                 {
                     valueDictionary[key] = valueDictionary[key].UpdateValue(value);
                 }
@@ -289,6 +283,13 @@ namespace BGC.Scripting
 
         public override object RunFunction(string functionName, object[] arguments) =>
             script.ExecuteFunction<object>(functionName, this, arguments);
+
+
+        public override void RunVoidFunction(Guid functionId, object[] arguments) =>
+            script.ExecuteFunction(functionId, this, arguments);
+
+        public override object RunFunction(Guid functionId, object[] arguments) =>
+            script.ExecuteFunction<object>(functionId, this, arguments);
     }
 
     public class FunctionRuntimeContext : RuntimeContext
@@ -306,16 +307,17 @@ namespace BGC.Scripting
             if (arguments.Length != functionSignature.arguments.Length)
             {
                 throw new ScriptRuntimeException(
-                    $"Tried to call function {functionSignature} with argument list: {string.Join(", ", arguments.Select(x => x.ToString()))}");
+                    $"Tried to call function {functionSignature} with argument list: {string.Join(", ", arguments.Select(x => x?.ToString() ?? "null"))}");
             }
 
             for (int i = 0; i < functionSignature.arguments.Length; i++)
             {
-                if (!functionSignature.arguments[i].valueType.AssignableFromType(arguments[i].GetType()))
+                if (arguments[i] is not null &&
+                    !functionSignature.arguments[i].valueType.AssignableOrConvertableFromType(arguments[i]!.GetType()))
                 {
                     throw new ScriptRuntimeException(
                         $"Incompatible argument type for argument {functionSignature.arguments[i].identifierToken.identifier}.  " +
-                        $"Expected: {functionSignature.arguments[i].valueType.Name},  Received: {arguments[i].GetType().Name}");
+                        $"Expected: {functionSignature.arguments[i].valueType.Name},  Received: {arguments[i]!.GetType().Name}");
                 }
 
                 DeclareVariable(
@@ -337,9 +339,6 @@ namespace BGC.Scripting
                     $"Scope-Context parent.  Received: {context}");
             }
         }
-
-        public void AddToReport(string header, string value) =>
-            GlobalContext.batteryReport.AddData(header, value);
     }
 
     public readonly struct ScriptValue

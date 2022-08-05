@@ -7,7 +7,7 @@ namespace BGC.Scripting
         private readonly IValueGetter condition;
         private readonly IValueGetter arg1;
         private readonly IValueGetter arg2;
-        private readonly Type valueType = null;
+        private readonly Type valueType;
 
         public TernaryOperation(
             IValueGetter condition,
@@ -29,10 +29,17 @@ namespace BGC.Scripting
             {
                 valueType = arg1Type;
             }
-            else if ((arg1Type == typeof(int) || arg1Type == typeof(double)) &&
-                     (arg2Type == typeof(int) || arg2Type == typeof(double)))
+            else if (arg1Type.IsAssignableFrom(arg2Type))
             {
-                valueType = typeof(double);
+                valueType = arg1Type;
+            }
+            else if (arg2Type.IsAssignableFrom(arg1Type))
+            {
+                valueType = arg2Type;
+            }
+            else if (arg1Type.IsExtendedPrimitive() && arg2Type.IsExtendedPrimitive())
+            {
+                valueType = operatorToken.GetBinaryPromotedType(arg1Type, arg2Type);
             }
             else
             {
@@ -50,14 +57,19 @@ namespace BGC.Scripting
         {
             Type returnType = typeof(T);
 
-            if (!returnType.AssignableFromType(valueType))
+            if (!returnType.AssignableOrConvertableFromType(valueType))
             {
                 throw new ScriptRuntimeException($"Tried to implicitly cast the results of {this} to type {returnType.Name} instead of argument type {valueType.Name}");
             }
 
             bool cond = condition.GetAs<bool>(context);
 
-            return (T)Convert.ChangeType(cond ? arg1.GetAs<object>(context) : arg2.GetAs<object>(context), typeof(T));
+            if (!returnType.IsAssignableFrom(valueType))
+            {
+                return (T)Convert.ChangeType(cond ? arg1.GetAs<object>(context) : arg2.GetAs<object>(context), returnType);
+            }
+
+            return (T)(cond ? arg1.GetAs<object>(context) : arg2.GetAs<object>(context));
         }
 
         public Type GetValueType() => valueType;

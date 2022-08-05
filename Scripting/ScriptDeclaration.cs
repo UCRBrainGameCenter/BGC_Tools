@@ -22,7 +22,7 @@ namespace BGC.Scripting
             context.DeclareVariable(identifierToken, valueType);
 
             //Check initializer type
-            if (initializer != null && !valueType.AssignableFromType(initializer.GetValueType()))
+            if (initializer is not null && !valueType.AssignableOrConvertableFromType(initializer.GetValueType()))
             {
                 throw new ScriptParsingException(
                     source: identifierToken,
@@ -31,6 +31,5 @@ namespace BGC.Scripting
         }
 
         public abstract void Execute(ScriptRuntimeContext context);
-
     }
 }

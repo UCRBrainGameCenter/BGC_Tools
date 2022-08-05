@@ -44,20 +44,20 @@ namespace BGC.Scripting
         {
             Type returnType = typeof(T);
 
-            if (!returnType.AssignableFromType(valueType))
+            if (!returnType.AssignableOrConvertableFromType(valueType))
             {
                 throw new ScriptParsingException(this, $"Tried to use a {valueType.Name} literal as {returnType.Name}");
             }
 
-            if (returnType.IsAssignableFrom(valueType))
+            if (!returnType.IsAssignableFrom(valueType))
             {
-                return (T)value;
+                return (T)Convert.ChangeType(value, returnType);
             }
 
-            return (T)Convert.ChangeType(value, returnType);
+            return (T)value;
         }
 
-        public override string ToString() => value.ToString();
+        public override string ToString() => value.ToString()!;
     }
 
     public class LiteralToken<TLiteral> : LiteralToken
@@ -80,20 +80,20 @@ namespace BGC.Scripting
         {
             Type returnType = typeof(T);
 
-            if (!returnType.AssignableFromType(valueType))
+            if (!returnType.AssignableOrConvertableFromType(valueType))
             {
                 throw new ScriptParsingException(this, $"Tried to use a {valueType.Name} literal as {returnType.Name}");
             }
 
-            if (returnType.IsAssignableFrom(valueType))
+            if (!returnType.IsAssignableFrom(valueType))
             {
-                return (T)(object)value;
+                return (T)Convert.ChangeType(value, returnType)!;
             }
 
-            return (T)Convert.ChangeType(value, returnType);
+            return (T)(object)value!;
         }
 
-        public override string ToString() => value.ToString();
+        public override string ToString() => value!.ToString()!;
     }
 
     public class NullLiteralToken : LiteralToken
@@ -108,6 +108,52 @@ namespace BGC.Scripting
         {
         }
 
-        public override T GetAs<T>() => (T)(object)null;
+        public override T GetAs<T>() => (T)(object)null!;
+    }
+
+    public class EnumValueToken : LiteralToken
+    {
+        private readonly object value;
+
+        public EnumValueToken(int line, int column, object value, Type valueType)
+            : base(line, column, valueType)
+        {
+            if (!valueType.IsEnum)
+            {
+                throw new ScriptParsingException(line, column, $"EnumValueToken must be for an Enum type: received {valueType}");
+            }
+
+            this.value = value;
+        }
+
+        public EnumValueToken(Token source, object value, Type valueType)
+            : base(source, valueType)
+        {
+            if (!valueType.IsEnum)
+            {
+                throw new ScriptParsingException(source, $"EnumValueToken must be for an Enum type: received {valueType}");
+            }
+
+            this.value = value;
+        }
+
+        public override T GetAs<T>()
+        {
+            Type returnType = typeof(T);
+
+            if (!returnType.AssignableOrConvertableFromType(valueType))
+            {
+                throw new ScriptParsingException(this, $"Tried to use a {valueType.Name} literal as {returnType.Name}");
+            }
+
+            if (!returnType.IsAssignableFrom(valueType))
+            {
+                return (T)Convert.ChangeType(value, returnType);
+            }
+
+            return (T)value;
+        }
+
+        public override string ToString() => $"{valueType.Name}.{value}";
     }
 }

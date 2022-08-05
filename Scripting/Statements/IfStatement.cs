@@ -1,4 +1,7 @@
-﻿namespace BGC.Scripting
+﻿using System;
+using System.Threading;
+
+namespace BGC.Scripting
 {
     public class IfStatement : Statement
     {
@@ -24,15 +27,17 @@
             this.falseBlock = falseBlock;
         }
 
-        public override FlowState Execute(ScopeRuntimeContext context)
+        public override FlowState Execute(
+            ScopeRuntimeContext context,
+            CancellationToken ct)
         {
             if (condition.GetAs<bool>(context))
             {
-                return trueBlock?.Execute(new ScopeRuntimeContext(context)) ?? FlowState.Nominal;
+                return trueBlock?.Execute(new ScopeRuntimeContext(context), ct) ?? FlowState.Nominal;
             }
             else
             {
-                return falseBlock?.Execute(new ScopeRuntimeContext(context)) ?? FlowState.Nominal;
+                return falseBlock?.Execute(new ScopeRuntimeContext(context), ct) ?? FlowState.Nominal;
             }
         }
     }

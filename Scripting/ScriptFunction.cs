@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Threading;
 
 namespace BGC.Scripting
 {
@@ -8,8 +8,10 @@ namespace BGC.Scripting
     {
         private readonly List<IExecutable> statements = new List<IExecutable>();
         public readonly FunctionSignature functionSignature;
+        private readonly List<Token> cachedFunctionTokens = new List<Token>();
+
         public string FunctionName => functionSignature.identifierToken.identifier;
-        private List<Token> cachedFunctionTokens = new List<Token>();
+        public Guid FunctionId => functionSignature.id;
 
         public ScriptFunction(
             IEnumerator<Token> functionTokens,
@@ -22,7 +24,7 @@ namespace BGC.Scripting
 
             //Determine Type
             //Function Body
-            if (functionTokens.TestAndConditionallySkip(Separator.Arrow))
+            if (functionTokens.TestAndConditionallyAdvance(Separator.Arrow))
             {
                 if (functionSignature.returnType != typeof(void))
                 {
@@ -35,7 +37,7 @@ namespace BGC.Scripting
                 {
                     cachedFunctionTokens.Add(functionTokens.Current);
 
-                    if (functionTokens.TestAndConditionallySkip(Separator.Semicolon, false))
+                    if (functionTokens.TestAndConditionallyAdvance(Separator.Semicolon, false))
                     {
                         break;
                     }
@@ -46,7 +48,7 @@ namespace BGC.Scripting
                 //Cap off function with EOF Token
                 cachedFunctionTokens.Add(new EOFToken(functionTokens.Current));
             }
-            else if (functionTokens.TestWithoutSkipping(Separator.OpenCurlyBoi))
+            else if (functionTokens.TestWithoutAdvancing(Separator.OpenCurlyBoi))
             {
                 //standard function
                 Stack<SeparatorToken> separators = new Stack<SeparatorToken>();
@@ -115,7 +117,7 @@ namespace BGC.Scripting
                     functionTokens.CautiousAdvance();
                 }
 
-                functionTokens.AssertAndSkip(Separator.CloseCurlyBoi, false);
+                functionTokens.AssertAndAdvance(Separator.CloseCurlyBoi, false);
 
                 //Cap off function with EOF Token
                 cachedFunctionTokens.Add(new EOFToken(functionTokens.Current));
@@ -136,10 +138,10 @@ namespace BGC.Scripting
             IEnumerator<Token> functionTokens = cachedFunctionTokens.GetEnumerator();
             functionTokens.MoveNext();
 
-            while (!(functionTokens.Current is EOFToken))
+            while (functionTokens.Current is not EOFToken)
             {
                 IExecutable nextStatement = Statement.ParseNextStatement(functionTokens, context);
-                if (nextStatement != null)
+                if (nextStatement is not null)
                 {
                     statements.Add(nextStatement);
                 }
@@ -148,7 +150,10 @@ namespace BGC.Scripting
             cachedFunctionTokens.Clear();
         }
 
-        public void Execute(ScriptRuntimeContext context, params object[] arguments)
+        public void Execute(
+            ScriptRuntimeContext context,
+            CancellationToken ct,
+            params object[] arguments)
         {
             FunctionRuntimeContext functionContext = new FunctionRuntimeContext(
                 scriptContext: context,
@@ -160,7 +165,9 @@ namespace BGC.Scripting
 
             foreach (IExecutable statement in statements)
             {
-                FlowState state = statement.Execute(scopeContext);
+                ct.ThrowIfCancellationRequested();
+
+                FlowState state = statement.Execute(scopeContext, ct);
 
                 switch (state)
                 {
@@ -177,6 +184,22 @@ namespace BGC.Scripting
 
                     default:
                         throw new Exception($"Unexpected FlowState: {state}");
+                }
+            }
+
+            for (int i = 0; i < functionSignature.arguments.Length; i++)
+            {
+                switch (functionSignature.arguments[i].argumentType)
+                {
+                    case ArgumentType.Ref:
+                    case ArgumentType.Out:
+                        //Copy Ref and Output values back to input
+                        arguments[i] = functionContext.GetExistingValue<object>(functionSignature.arguments[i].identifierToken.identifier);
+                        break;
+
+                    default:
+                        //Do nothing
+                        break;
                 }
             }
         }

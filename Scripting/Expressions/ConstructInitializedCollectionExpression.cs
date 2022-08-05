@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
+using System.Globalization;
 using System.Reflection;
 using BGC.DataStructures.Generic;
 
@@ -10,14 +10,14 @@ namespace BGC.Scripting
     public class ConstructInitializedCollectionExpression : IValueGetter
     {
         private readonly Type objectType;
-        private readonly IValueGetter[] args;
+        private readonly InvocationArgument[] args;
         private readonly IValueGetter[] items;
 
         private readonly MethodInfo addMethod;
 
         public ConstructInitializedCollectionExpression(
             Type objectType,
-            IValueGetter[] args,
+            InvocationArgument[] args,
             IValueGetter[] items,
             Token source)
         {
@@ -32,19 +32,19 @@ namespace BGC.Scripting
                 objectType.GetInterfaces().Any(
                     x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IDepletable<>)))
             {
-                addMethod = objectType.GetMethod("Add");
+                addMethod = objectType.GetMethod("Add")!;
             }
             else if (typeof(Stack<>).IsAssignableFrom(genericTypeDefinition))
             {
-                addMethod = objectType.GetMethod("Push");
+                addMethod = objectType.GetMethod("Push")!;
             }
             else if (typeof(Queue<>).IsAssignableFrom(genericTypeDefinition))
             {
-                addMethod = objectType.GetMethod("Enqueue");
+                addMethod = objectType.GetMethod("Enqueue")!;
             }
             else
             {
-                addMethod = objectType.GetMethod("Add");
+                addMethod = objectType.GetMethod("Add")!;
                 if (addMethod == null)
                 {
                     throw new ScriptParsingException(
@@ -58,7 +58,7 @@ namespace BGC.Scripting
         {
             Type returnType = typeof(T);
 
-            if (!returnType.AssignableFromType(objectType))
+            if (!returnType.AssignableOrConvertableFromType(objectType))
             {
                 throw new ScriptRuntimeException($"Tried to retrieve result of object construction of type {objectType.Name} as type {returnType.Name}");
             }
@@ -76,18 +76,22 @@ namespace BGC.Scripting
             }
             else
             {
+                object[] argumentValues = args.GetArgs(context);
+
                 newCollection = (T)Activator.CreateInstance(
                     type: objectType,
                     bindingAttr: BindingFlags.CreateInstance | BindingFlags.Public | BindingFlags.Instance | BindingFlags.OptionalParamBinding,
                     binder: null,
-                    args: args.Select(x => x.GetAs<object>(context)).ToArray(),
+                    args: argumentValues,
                     culture: CultureInfo.CurrentCulture);
+
+                args.HandlePostInvocation(argumentValues, context);
             }
 
             object[] item = new object[1];
-            foreach(IValueGetter value in items)
+            foreach (IValueGetter value in items)
             {
-                item[0] = value.GetAs<object>(context);
+                item[0] = value.GetAs<object>(context)!;
                 addMethod.Invoke(newCollection, item);
             }
 

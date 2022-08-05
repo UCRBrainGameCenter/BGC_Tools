@@ -20,5 +20,7 @@ namespace BGC.Scripting
             this.line = line;
             this.column = column;
         }
+
+        public override string Message => $"Script parsing exception on Line {line}, Column {column}: {base.Message}";
     }
 }

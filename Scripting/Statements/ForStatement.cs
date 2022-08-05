@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 
 namespace BGC.Scripting
 {
@@ -32,10 +33,15 @@ namespace BGC.Scripting
             this.loopBody = loopBody;
         }
 
-        public override FlowState Execute(ScopeRuntimeContext context)
+        public override FlowState Execute(
+            ScopeRuntimeContext context,
+            CancellationToken ct)
         {
+            ct.ThrowIfCancellationRequested();
+
             loopContext = new ScopeRuntimeContext(context);
-            FlowState state = initializationStatement?.Execute(loopContext) ?? FlowState.Nominal;
+
+            FlowState state = initializationStatement?.Execute(loopContext, ct) ?? FlowState.Nominal;
 
             switch (state)
             {
@@ -54,9 +60,11 @@ namespace BGC.Scripting
 
             while (continuing && continueExpression.GetAs<bool>(loopContext))
             {
+                ct.ThrowIfCancellationRequested();
+
                 bodyContext = new ScopeRuntimeContext(loopContext);
 
-                state = loopBody.Execute(bodyContext);
+                state = loopBody?.Execute(bodyContext, ct) ?? FlowState.Nominal;
 
                 switch (state)
                 {
@@ -79,7 +87,7 @@ namespace BGC.Scripting
                 //Don't run incrementStatement if we are breaking out
                 if (continuing)
                 {
-                    state = incrementStatement?.Execute(loopContext) ?? FlowState.Nominal;
+                    state = incrementStatement?.Execute(loopContext, ct) ?? FlowState.Nominal;
 
                     switch (state)
                     {

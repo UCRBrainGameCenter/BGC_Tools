@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Threading;
 
 namespace BGC.Scripting
 {
@@ -20,7 +20,9 @@ namespace BGC.Scripting
             this.valueType = valueType;
         }
 
-        public override FlowState Execute(ScopeRuntimeContext context)
+        public override FlowState Execute(
+            ScopeRuntimeContext context,
+            CancellationToken ct)
         {
             if (context.VariableExists(identifier))
             {

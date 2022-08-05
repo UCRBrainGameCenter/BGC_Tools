@@ -32,7 +32,7 @@ namespace BGC.Scripting
 
         public T GetAs<T>(RuntimeContext context)
         {
-            if (!typeof(T).AssignableFromType(typeof(string)))
+            if (!typeof(T).AssignableOrConvertableFromType(typeof(string)))
             {
                 throw new ScriptRuntimeException($"Concatenation operator can only return strings: type {typeof(T).Name}");
             }
@@ -49,22 +49,10 @@ namespace BGC.Scripting
 
             if (argType == typeof(string))
             {
-                return arg.GetAs<string>(context);
-            }
-            else if (argType == typeof(double))
-            {
-                return arg.GetAs<double>(context).ToString();
-            }
-            else if (argType == typeof(int))
-            {
-                return arg.GetAs<int>(context).ToString();
-            }
-            else if (argType == typeof(bool))
-            {
-                return arg.GetAs<bool>(context).ToString();
+                return arg.GetAs<string>(context)!;
             }
 
-            throw new ScriptRuntimeException($"Unsupported type for Stringification: type {argType.Name}");
+            return arg.GetAs<object>(context)!.ToString()!;
         }
 
         private static string GetStringValue(LiteralToken arg)
@@ -75,20 +63,8 @@ namespace BGC.Scripting
             {
                 return arg.GetAs<string>();
             }
-            else if (argType == typeof(double))
-            {
-                return arg.GetAs<double>().ToString();
-            }
-            else if (argType == typeof(int))
-            {
-                return arg.GetAs<int>().ToString();
-            }
-            else if (argType == typeof(bool))
-            {
-                return arg.GetAs<bool>().ToString();
-            }
 
-            throw new ScriptRuntimeException($"Unsupported type for Stringification: type {argType.Name}");
+            return arg.GetAs<object>().ToString()!;
         }
     }
 }

@@ -25,6 +25,7 @@ namespace BGC.Scripting
                 case Keyword.If: return "if";
                 case Keyword.ElseIf: return "else if";
                 case Keyword.Else: return "else";
+                case Keyword.Switch: return "switch";
 
                 case Keyword.While: return "while";
                 case Keyword.For: return "for";
@@ -32,32 +33,12 @@ namespace BGC.Scripting
                 case Keyword.Continue: return "continue";
                 case Keyword.Break: return "break";
                 case Keyword.Return: return "return";
+                case Keyword.Case: return "case";
+                case Keyword.Default: return "default";
 
                 case Keyword.Extern: return "extern";
                 case Keyword.Global: return "global";
                 case Keyword.Const: return "const";
-
-                case Keyword.Void: return "void";
-
-                case Keyword.Bool: return "bool";
-                case Keyword.Double: return "double";
-                case Keyword.Integer: return "int";
-                case Keyword.String: return "string";
-
-                case Keyword.List: return "List";
-                case Keyword.Queue: return "Queue";
-                case Keyword.Stack: return "Stack";
-                case Keyword.DepletableBag: return "DepletableBag";
-                case Keyword.DepletableList: return "DepletableList";
-                case Keyword.RingBuffer: return "RingBuffer";
-                case Keyword.Dictionary: return "Dictionary";
-                case Keyword.HashSet: return "HashSet";
-
-                case Keyword.Random: return "Random";
-                case Keyword.DataFile: return "DataFile";
-
-                case Keyword.IScriptedAlgorithmQuerier: return "IScriptedAlgorithmQuerier";
-                case Keyword.IMultiParamScriptedAlgorithmQuerier: return "IMultiParamScriptedAlgorithmQuerier";
 
                 case Keyword.New: return "new";
 

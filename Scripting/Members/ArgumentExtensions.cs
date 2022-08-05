@@ -1,155 +1,12 @@
 ﻿using System;
+using System.Reflection;
 
 namespace BGC.Scripting
 {
     public static class ArgumentExtensions
     {
-        public static void VerifyArgs(
-            this IValueGetter[] args,
-            Token source,
-            string identifier)
-        {
-            if (args.Length != 0)
-            {
-                throw new ScriptParsingException(
-                    source: source,
-                    message: $"Expected 0 Arguments for method {identifier}, found: {args.Length} arguments");
-            }
-        }
-
-        public static void VerifyArgs(
-            this IValueGetter[] args,
-            Type arg1Type,
-            Token source,
-            string identifier)
-        {
-            if (args.Length != 1)
-            {
-                throw new ScriptParsingException(
-                    source: source,
-                    message: $"Expected 1 Argument of type {arg1Type.Name} for method {identifier}, found: {args.Length} arguments");
-            }
-
-            if (!arg1Type.AssignableFromType(args[0].GetValueType()))
-            {
-                throw new ScriptParsingException(
-                    source: source,
-                    message: $"Expected 1 Argument of type {arg1Type.Name} for method {identifier}, found argument of type {args[0].GetValueType().Name}");
-            }
-        }
-
-        public static void VerifyArgs(
-            this IValueGetter[] args,
-            Type arg1Type,
-            Type arg2Type,
-            Token source,
-            string identifier)
-        {
-            if (args.Length != 2)
-            {
-                throw new ScriptParsingException(
-                    source: source,
-                    message: $"Expected 2 Arguments of types ({arg1Type.Name},{arg2Type.Name}) for method {identifier}, found: {args.Length} arguments");
-            }
-
-            if (!arg1Type.AssignableFromType(args[0].GetValueType()))
-            {
-                throw new ScriptParsingException(
-                    source: source,
-                    message: $"Expected 2 Arguments of types (**{arg1Type.Name}**,{arg2Type.Name}) for method {identifier}, found arguments of types (**{args[0].GetValueType().Name}**,{args[1].GetValueType().Name})");
-            }
-
-            if (!arg2Type.AssignableFromType(args[1].GetValueType()))
-            {
-                throw new ScriptParsingException(
-                    source: source,
-                    message: $"Expected 2 Arguments of types ({arg1Type.Name},**{arg2Type.Name}**) for method {identifier}, found arguments of types ({args[0].GetValueType().Name},**{args[1].GetValueType().Name}**)");
-            }
-        }
-
-        public static void VerifyArgs(
-            this IValueGetter[] args,
-            Type arg1Type,
-            Type arg2Type,
-            Type arg3Type,
-            Token source,
-            string identifier)
-        {
-            if (args.Length != 3)
-            {
-                throw new ScriptParsingException(
-                    source: source,
-                    message: $"Expected 3 Arguments of types ({arg1Type.Name},{arg2Type.Name},{arg3Type.Name}) for method {identifier}, found: {args.Length} arguments");
-            }
-
-            if (!arg1Type.AssignableFromType(args[0].GetValueType()))
-            {
-                throw new ScriptParsingException(
-                    source: source,
-                    message: $"Expected 3 Arguments of types (**{arg1Type.Name}**,{arg2Type.Name},{arg3Type.Name}) for method {identifier}, found arguments of types (**{args[0].GetValueType().Name}**,{args[1].GetValueType().Name},{args[2].GetValueType().Name})");
-            }
-
-            if (!arg2Type.AssignableFromType(args[1].GetValueType()))
-            {
-                throw new ScriptParsingException(
-                    source: source,
-                    message: $"Expected 3 Arguments of types ({arg1Type.Name},**{arg2Type.Name}**,{arg3Type.Name}) for method {identifier}, found arguments of types ({args[0].GetValueType().Name},**{args[1].GetValueType().Name}**,{args[2].GetValueType().Name})");
-            }
-
-            if (!arg3Type.AssignableFromType(args[2].GetValueType()))
-            {
-                throw new ScriptParsingException(
-                    source: source,
-                    message: $"Expected 3 Arguments of types ({arg1Type.Name},{arg2Type.Name},**{arg3Type.Name}**) for method {identifier}, found arguments of types ({args[0].GetValueType().Name},{args[1].GetValueType().Name},**{args[2].GetValueType().Name}**)");
-            }
-        }
-
         public static object[] GetArgs(
-            this IValueGetter[] args,
-            Type arg1Type,
-            RuntimeContext context)
-        {
-            object[] values = new object[1];
-
-            values[0] = args[0].GetAs<object>(context);
-
-            if (arg1Type != args[0].GetValueType())
-            {
-                //We've already established they're compatible, so convert
-                values[0] = Convert.ChangeType(values[0], arg1Type);
-            }
-
-            return values;
-        }
-
-        public static object[] GetArgs(
-            this IValueGetter[] args,
-            Type arg1Type,
-            Type arg2Type,
-            RuntimeContext context)
-        {
-            object[] values = new object[2];
-
-            values[0] = args[0].GetAs<object>(context);
-            values[1] = args[1].GetAs<object>(context);
-
-            if (arg1Type != args[0].GetValueType())
-            {
-                //We've already established they're compatible, so convert
-                values[0] = Convert.ChangeType(values[0], arg1Type);
-            }
-
-            if (arg2Type != args[1].GetValueType())
-            {
-                //We've already established they're compatible, so convert
-                values[1] = Convert.ChangeType(values[1], arg2Type);
-            }
-
-            return values;
-        }
-
-        public static object[] GetArgs(
-            this IValueGetter[] args,
+            this InvocationArgument[] args,
             FunctionSignature functionSignature,
             RuntimeContext context)
         {
@@ -157,14 +14,187 @@ namespace BGC.Scripting
 
             for (int i = 0; i < values.Length; i++)
             {
-                values[i] = args[i].GetAs<object>(context);
-                if (!functionSignature.arguments[i].valueType.IsAssignableFrom(args[i].GetValueType()))
+                switch (args[i].argumentType)
                 {
-                    values[i] = Convert.ChangeType(values[i], functionSignature.arguments[i].valueType);
+                    case ArgumentType.Standard:
+                    case ArgumentType.In:
+                    case ArgumentType.Ref:
+                        {
+                            IValueGetter valueGetter = (args[i].expression as IValueGetter)!;
+                            values[i] = valueGetter.GetAs<object>(context);
+
+                            if (!functionSignature.arguments[i].valueType.IsAssignableFrom(valueGetter.GetValueType()))
+                            {
+                                values[i] = Convert.ChangeType(values[i], functionSignature.arguments[i].valueType);
+                            }
+                        }
+                        break;
+
+                    case ArgumentType.Out:
+                        values[i] = (args[i].expression as IValueSetter)!.GetValueType().GetDefaultValue();
+                        break;
+
+                    default:
+                        throw new NotSupportedException($"ArgumentType not supported: {args[i].argumentType}");
+                }
+
+            }
+
+            return values;
+        }
+
+        public static object[] GetArgs(
+            this InvocationArgument[] args,
+            MethodInfo methodInfo,
+            RuntimeContext context)
+        {
+            ParameterInfo[] parameters = methodInfo.GetParameters();
+            object[] values = new object[parameters.Length];
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                switch (args[i].argumentType)
+                {
+                    case ArgumentType.Standard:
+                    case ArgumentType.In:
+                    case ArgumentType.Ref:
+                        {
+                            IValueGetter valueGetter = (args[i].expression as IValueGetter)!;
+                            values[i] = valueGetter.GetAs<object>(context);
+
+                            if (!parameters[i].ParameterType.IsAssignableFrom(valueGetter.GetValueType()))
+                            {
+                                values[i] = Convert.ChangeType(values[i], parameters[i].ParameterType);
+                            }
+                        }
+                        break;
+
+                    case ArgumentType.Out:
+                        values[i] = (args[i].expression as IValueSetter)!.GetValueType().GetDefaultValue();
+                        break;
+
+                    default:
+                        throw new NotSupportedException($"ArgumentType not supported: {args[i].argumentType}");
                 }
             }
 
             return values;
+        }
+
+        public static object[] GetArgs(
+            this InvocationArgument[] args,
+            RuntimeContext context)
+        {
+            object[] values = new object[args.Length];
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                switch (args[i].argumentType)
+                {
+                    case ArgumentType.Standard:
+                    case ArgumentType.In:
+                    case ArgumentType.Ref:
+                        {
+                            IValueGetter valueGetter = (args[i].expression as IValueGetter)!;
+                            values[i] = valueGetter.GetAs<object>(context);
+                        }
+                        break;
+
+                    case ArgumentType.Out:
+                        values[i] = (args[i].expression as IValueSetter)!.GetValueType().GetDefaultValue();
+                        break;
+
+                    default:
+                        throw new NotSupportedException($"ArgumentType not supported: {args[i].argumentType}");
+                }
+            }
+
+            return values;
+        }
+
+        public static void HandlePostInvocation(
+            this InvocationArgument[] args,
+            object[] values,
+            RuntimeContext context)
+        {
+            for (int i = 0; i < values.Length; i++)
+            {
+                switch (args[i].argumentType)
+                {
+                    case ArgumentType.Standard:
+                    case ArgumentType.In:
+                        //Do nothing
+                        break;
+
+                    case ArgumentType.Ref:
+                    case ArgumentType.Out:
+                        (args[i].expression as IValueSetter)!.Set(context, values[i]);
+                        break;
+
+                    default:
+                        throw new NotSupportedException($"ArgumentType not supported: {args[i].argumentType}");
+                }
+            }
+        }
+
+        public static ParameterModifier[] CreateParameterModifiers(this InvocationArgument[] argumentTypes)
+        {
+            if (argumentTypes.Length == 0)
+            {
+                return null;
+            }
+
+            ParameterModifier[] modifiers = new[] { new ParameterModifier(argumentTypes.Length) };
+
+            for (int i = 0; i < argumentTypes.Length; i++)
+            {
+                switch (argumentTypes[i].argumentType)
+                {
+                    case ArgumentType.Standard:
+                    case ArgumentType.In:
+                        //Do Nothing
+                        break;
+
+                    case ArgumentType.Ref:
+                    case ArgumentType.Out:
+                        modifiers[0][i] = true;
+                        break;
+
+                    default:
+                        throw new NotSupportedException($"ArgumentType not supported: {argumentTypes[i].argumentType}");
+                }
+            }
+
+            return modifiers;
+        }
+
+        public static Type[] GetEffectiveTypes(this InvocationArgument[] argumentTypes)
+        {
+            Type[] types = new Type[argumentTypes.Length];
+
+            for (int i = 0; i < argumentTypes.Length; i++)
+            {
+                switch (argumentTypes[i].argumentType)
+                {
+                    case ArgumentType.Standard:
+                    case ArgumentType.In:
+                        types[i] = (argumentTypes[i].expression as IValueGetter)!.GetValueType();
+                        break;
+
+                    case ArgumentType.Ref:
+                        types[i] = (argumentTypes[i].expression as IValueGetter)!.GetValueType().MakeByRefType();
+                        break;
+
+                    case ArgumentType.Out:
+                        types[i] = (argumentTypes[i].expression as IValueSetter)!.GetValueType().MakeByRefType();
+                        break;
+
+                    default:
+                        throw new NotSupportedException($"ArgumentType not supported: {argumentTypes[i].argumentType}");
+                }
+            }
+
+            return types;
         }
     }
 }

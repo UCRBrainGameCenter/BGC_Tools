@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Diagnostics;
+using System.Threading;
+using System.Reflection;
 
 namespace BGC.Scripting
 {
     public abstract class Statement : IExecutable
     {
-        public abstract FlowState Execute(ScopeRuntimeContext context);
+        public abstract FlowState Execute(ScopeRuntimeContext context, CancellationToken ct);
 
         public static IExecutable ParseNextStatement(
             IEnumerator<Token> tokens,
@@ -33,7 +33,7 @@ namespace BGC.Scripting
                         case Separator.OpenCurlyBoi:
                             tokens.CautiousAdvance();
                             IExecutable statement = new Block(tokens, context);
-                            tokens.AssertAndSkip(Separator.CloseCurlyBoi, checkEOF: false);
+                            tokens.AssertAndAdvance(Separator.CloseCurlyBoi, checkEOF: false);
                             return statement;
 
                         default:
@@ -47,11 +47,20 @@ namespace BGC.Scripting
                     //Valid operations:
                     //  Continue, Break
                     //  Return (With or Without return value)
-                    //  Declaration (With or Without assignment, with or without global)
+                    //  Declaration (With const) 
                     //  If ( Condition )
                     //  While ( Condition )
                     //  For ( A; B; C )
+                    //  ForEach ( var A in B )
+                    //  Switch (A) { case B: case C: default: }
                     return ParseKeywordStatement(kwToken, tokens, context);
+
+                case TypeToken typeToken:
+                    //Valid operations:
+                    //  Declaration (With or Without Assignment)
+                    //  Static Method Invocation
+                    //  Static Property assignment
+                    return ParseTypeStatement(typeToken, tokens, context);
 
                 case LiteralToken _:
                 case IdentifierToken _:
@@ -61,7 +70,7 @@ namespace BGC.Scripting
                     //  PostIncrement
                     //  PreIncrement
                     IExecutable standardExecutable = Expression.ParseNextExecutableExpression(tokens, context);
-                    tokens.AssertAndSkip(Separator.Semicolon, checkEOF: false);
+                    tokens.AssertAndAdvance(Separator.Semicolon, checkEOF: false);
                     return standardExecutable;
 
                 default:
@@ -77,23 +86,23 @@ namespace BGC.Scripting
             //Valid operations:
             //  Continue, Break
             //  Return (With or Without return value)
-            //  Declaration (With or Without assignment, with or without global)
+            //  Declaration (With const) 
             //  If ( Condition )
             //  While ( Condition )
             //  For ( A; B; C )
-
-            bool constDeclaration = false;
+            //  ForEach ( var A in B )
+            //  Switch (A) { case B: case C: default: }
 
             switch (kwToken.keyword)
             {
                 case Keyword.If:
                     {
                         tokens.CautiousAdvance();
-                        tokens.AssertAndSkip(Separator.OpenParen);
+                        tokens.AssertAndAdvance(Separator.OpenParen);
                         IValueGetter ifTest = Expression.ParseNextGetterExpression(tokens, context);
-                        tokens.AssertAndSkip(Separator.CloseParen);
+                        tokens.AssertAndAdvance(Separator.CloseParen);
 
-                        IExecutable trueStatement = ParseNextStatement(tokens, context);
+                        IExecutable trueStatement = ParseNextStatement(tokens, context)!;
                         IExecutable falseStatement = null;
 
                         if (trueStatement == null)
@@ -104,11 +113,11 @@ namespace BGC.Scripting
                         }
 
                         //Check the next token for Else or Else IF
-                        if (tokens.TestAndConditionallySkip(Keyword.Else))
+                        if (tokens.TestAndConditionallyAdvance(Keyword.Else))
                         {
                             falseStatement = ParseNextStatement(tokens, context);
                         }
-                        else if (tokens.TestWithoutSkipping(Keyword.ElseIf))
+                        else if (tokens.TestWithoutAdvancing(Keyword.ElseIf))
                         {
                             KeywordToken replacementIf = new KeywordToken(
                                 source: tokens.Current,
@@ -127,15 +136,29 @@ namespace BGC.Scripting
                             keywordToken: kwToken);
                     }
 
+                case Keyword.Switch:
+                    {
+                        tokens.CautiousAdvance();
+                        tokens.AssertAndAdvance(Separator.OpenParen);
+                        IValueGetter switchExpression = Expression.ParseNextGetterExpression(tokens, context);
+                        tokens.AssertAndAdvance(Separator.CloseParen);
+
+                        return ParseSwitch(
+                            tokens: tokens,
+                            switchExpression: switchExpression,
+                            context: context,
+                            keywordToken: kwToken);
+                    }
+
                 case Keyword.While:
                     {
                         tokens.CautiousAdvance();
                         //New context is used for loop
                         context = context.CreateChildScope(true);
 
-                        tokens.AssertAndSkip(Separator.OpenParen);
+                        tokens.AssertAndAdvance(Separator.OpenParen);
                         IValueGetter conditionTest = Expression.ParseNextGetterExpression(tokens, context);
-                        tokens.AssertAndSkip(Separator.CloseParen);
+                        tokens.AssertAndAdvance(Separator.CloseParen);
 
                         IExecutable loopBody = ParseNextStatement(tokens, context);
 
@@ -152,7 +175,7 @@ namespace BGC.Scripting
                         context = context.CreateChildScope(true);
 
                         //Open Paren
-                        tokens.AssertAndSkip(Separator.OpenParen);
+                        tokens.AssertAndAdvance(Separator.OpenParen);
 
                         //Initialization
                         IExecutable initializationStatement = ParseNextStatement(tokens, context);
@@ -163,13 +186,13 @@ namespace BGC.Scripting
                         IValueGetter continueExpression = Expression.ParseNextGetterExpression(tokens, context);
 
                         //Semicolon
-                        tokens.AssertAndSkip(Separator.Semicolon);
+                        tokens.AssertAndAdvance(Separator.Semicolon);
 
                         //Increment
                         IExecutable incrementStatement = ParseForIncrementer(tokens, context);
 
                         //Close Paren
-                        tokens.AssertAndSkip(Separator.CloseParen);
+                        tokens.AssertAndAdvance(Separator.CloseParen);
 
                         IExecutable loopBody = ParseNextStatement(tokens, context);
 
@@ -189,10 +212,10 @@ namespace BGC.Scripting
                         context = context.CreateChildScope(true);
 
                         //Open Paren
-                        tokens.AssertAndSkip(Separator.OpenParen);
+                        tokens.AssertAndAdvance(Separator.OpenParen);
 
                         //Item Declaration
-                        Type itemType = tokens.GetTokenAndAdvance<KeywordToken>().keyword.GetValueType();
+                        Type itemType = tokens.ReadTypeAndAdvance();
                         IdentifierToken identifierToken = tokens.GetTokenAndAdvance<IdentifierToken>();
 
                         IExecutable declaration = new DeclarationOperation(
@@ -204,13 +227,13 @@ namespace BGC.Scripting
                             identifierToken: identifierToken,
                             context: context);
 
-                        tokens.AssertAndSkip(Keyword.In);
+                        tokens.AssertAndAdvance(Keyword.In);
 
                         //Container
                         IValueGetter containerExpression = Expression.ParseNextGetterExpression(tokens, context);
 
                         //Close Paren
-                        tokens.AssertAndSkip(Separator.CloseParen);
+                        tokens.AssertAndAdvance(Separator.CloseParen);
 
                         IExecutable loopBody = ParseNextStatement(tokens, context);
 
@@ -226,7 +249,7 @@ namespace BGC.Scripting
                 case Keyword.Break:
                     {
                         tokens.CautiousAdvance();
-                        tokens.AssertAndSkip(Separator.Semicolon, false);
+                        tokens.AssertAndAdvance(Separator.Semicolon, false);
                         return new ControlStatement(kwToken, context);
                     }
 
@@ -235,9 +258,9 @@ namespace BGC.Scripting
                         tokens.CautiousAdvance();
                         IExecutable returnStatement = new ReturnStatement(
                             keywordToken: kwToken,
-                            returnValue: Expression.ParseNextGetterExpression(tokens, context),
+                            returnValue: Expression.ParseNextOptionalGetterExpression(tokens, context),
                             context: context);
-                        tokens.AssertAndSkip(Separator.Semicolon, false);
+                        tokens.AssertAndAdvance(Separator.Semicolon, false);
                         return returnStatement;
                     }
 
@@ -249,75 +272,18 @@ namespace BGC.Scripting
 
 
                 case Keyword.Const:
-                    constDeclaration = true;
                     tokens.CautiousAdvance();
-                    goto case Keyword.Bool;
-
-                case Keyword.Bool:
-                case Keyword.Double:
-                case Keyword.Integer:
-                case Keyword.String:
-                case Keyword.List:
-                case Keyword.Queue:
-                case Keyword.Stack:
-                case Keyword.DepletableBag:
-                case Keyword.DepletableList:
-                case Keyword.RingBuffer:
-                case Keyword.Dictionary:
-                case Keyword.HashSet:
-                case Keyword.Random:
-                case Keyword.DataFile:
-                case Keyword.IScriptedAlgorithmQuerier:
-                case Keyword.IMultiParamScriptedAlgorithmQuerier:
+                    if (tokens.Current is TypeToken typeToken)
                     {
-                        Type valueType = tokens.ReadType();
-
-                        IdentifierToken identToken = tokens.GetTokenAndAdvance<IdentifierToken>();
-
-                        if (tokens.TestAndConditionallySkip(Separator.Semicolon, false))
-                        {
-                            if (constDeclaration)
-                            {
-                                throw new ScriptParsingException(
-                                    source: kwToken,
-                                    message: $"const variable declared without a value.  What is the point?");
-                            }
-
-                            return new DeclarationOperation(
-                                identifierToken: identToken,
-                                valueType: valueType,
-                                context: context);
-                        }
-                        else if (tokens.TestAndConditionallySkip(Operator.Assignment))
-                        {
-                            IValueGetter initializerExpression = Expression.ParseNextGetterExpression(tokens, context);
-
-                            tokens.AssertAndSkip(Separator.Semicolon, false);
-
-                            return DeclarationAssignmentOperation.CreateDelcaration(
-                                identifierToken: identToken,
-                                valueType: valueType,
-                                initializer: initializerExpression,
-                                isConstant: constDeclaration,
-                                context: context);
-                        }
-
-                        throw new ScriptParsingException(
-                            source: identToken,
-                            message: $"Invalid variable declaration: {kwToken} {identToken} {tokens.Current}");
+                        return ParseTypeStatement(
+                            typeToken: typeToken,
+                            tokens: tokens,
+                            context: context,
+                            constDeclaration: true);
                     }
-
-                case Keyword.System:
-                case Keyword.User:
-                case Keyword.Debug:
-                case Keyword.Math:
-                case Keyword.Audiometry:
-                    {
-                        IExecutable identifierStatement =
-                            Expression.ParseNextExecutableExpression(tokens, context);
-                        tokens.AssertAndSkip(Separator.Semicolon, false);
-                        return identifierStatement;
-                    }
+                    throw new ScriptParsingException(
+                        source: kwToken,
+                        message: $"The Const keyword can only appear at the start of a declaration: {kwToken}");
 
                 case Keyword.ElseIf:
                 case Keyword.Else:
@@ -333,11 +299,68 @@ namespace BGC.Scripting
 
         }
 
+        private static IExecutable ParseTypeStatement(
+            TypeToken typeToken,
+            IEnumerator<Token> tokens,
+            CompilationContext context,
+            bool constDeclaration = false)
+        {
+            //Valid operations:
+            //  Declaration (With or Without assignment, with or without global)
+            //  Static Method Invocation
+            //  Static Property access/assignment
+
+            Type valueType = tokens.ReadTypeAndAdvance();
+
+            if (tokens.TestWithoutAdvancing(Operator.MemberAccess))
+            {
+                //Static Member
+                IExecutable standardExecutable = Expression.ParseNextExecutableExpression(tokens, context, new Expression.TokenUnit(typeToken));
+                tokens.AssertAndAdvance(Separator.Semicolon, checkEOF: false);
+                return standardExecutable;
+            }
+
+            IdentifierToken identToken = tokens.GetTokenAndAdvance<IdentifierToken>();
+
+            if (tokens.TestAndConditionallyAdvance(Separator.Semicolon, false))
+            {
+                if (constDeclaration)
+                {
+                    throw new ScriptParsingException(
+                        source: typeToken,
+                        message: $"const variable declared without a value.  What is the point?");
+                }
+
+                return new DeclarationOperation(
+                    identifierToken: identToken,
+                    valueType: valueType,
+                    context: context);
+            }
+            else if (tokens.TestAndConditionallyAdvance(Operator.Assignment))
+            {
+                IValueGetter initializerExpression = Expression.ParseNextGetterExpression(tokens, context);
+
+                tokens.AssertAndAdvance(Separator.Semicolon, false);
+
+                return DeclarationAssignmentOperation.CreateDelcaration(
+                    identifierToken: identToken,
+                    valueType: valueType,
+                    initializer: initializerExpression,
+                    isConstant: constDeclaration,
+                    context: context);
+            }
+
+            throw new ScriptParsingException(
+                source: identToken,
+                message: $"Invalid variable declaration: {typeToken} {identToken} {tokens.Current}");
+
+        }
+
         public static IExecutable ParseForIncrementer(
             IEnumerator<Token> tokens,
             CompilationContext context)
         {
-            if (tokens.TestWithoutSkipping(Separator.CloseParen))
+            if (tokens.TestWithoutAdvancing(Separator.CloseParen))
             {
                 return null;
             }
@@ -348,7 +371,7 @@ namespace BGC.Scripting
             {
                 returnStatements.Add(Expression.ParseNextExecutableExpression(tokens, context));
             }
-            while (tokens.TestAndConditionallySkip(Separator.Comma));
+            while (tokens.TestAndConditionallyAdvance(Separator.Comma));
 
             if (returnStatements.Count == 1)
             {
@@ -356,6 +379,95 @@ namespace BGC.Scripting
             }
 
             return new MultiStatement(returnStatements);
+        }
+
+        public static SwitchStatement ParseSwitch(
+            IEnumerator<Token> tokens,
+            IValueGetter switchExpression,
+            CompilationContext context,
+            KeywordToken keywordToken)
+        {
+            tokens.AssertAndAdvance(Separator.OpenCurlyBoi);
+            Type switchType = switchExpression.GetValueType();
+
+            Dictionary<object, Block> map = new Dictionary<object, Block>();
+            Block defaultBlock = null;
+
+            //Parse all blocks
+            while (true)
+            {
+                List<object> mappedValues = new List<object>();
+                bool defaultInPlay = false;
+
+                //Parse Labels
+                while (true)
+                {
+                    if (tokens.TestAndConditionallyAdvance(Keyword.Case))
+                    {
+                        LiteralToken switchStatementValue = tokens.GetTokenAndAdvance<LiteralToken>();
+                        tokens.AssertAndAdvance(Separator.Colon);
+
+                        if (!switchStatementValue.GetValueType().IsAssignableTo(switchType))
+                        {
+                            throw new ScriptParsingException(tokens.Current, $"Unable to assign switch case value {switchStatementValue} of type {switchStatementValue.GetValueType()} to switch value type {switchType}");
+                        }
+
+                        mappedValues.Add(switchStatementValue.GetAs<object>());
+
+                        continue;
+                    }
+                    else if (tokens.TestAndConditionallyAdvance(Keyword.Default))
+                    {
+                        tokens.AssertAndAdvance(Separator.Colon);
+
+                        if (defaultInPlay || defaultBlock is not null)
+                        {
+                            throw new ScriptParsingException(tokens.Current, $"Multiple instances of default found for switch statement.");
+                        }
+
+                        defaultInPlay = true;
+                        continue;
+                    }
+
+                    break;
+                }
+
+                if (mappedValues.Count == 0 && !defaultInPlay)
+                {
+                    throw new ScriptParsingException(tokens.Current, $"Entered Switch condition body without condition labels.");
+                }
+
+                //Parse Block
+                Block switchBlock = new Block(tokens, context);
+
+                //Assign default
+                if (defaultInPlay)
+                {
+                    defaultBlock = switchBlock;
+                }
+
+                //Assign to labels
+                foreach (object value in mappedValues)
+                {
+                    if (map.ContainsKey(value))
+                    {
+                        throw new ScriptParsingException(tokens.Current, $"Multiple instances of case {value} found in switch statement.");
+                    }
+
+                    map[value] = switchBlock;
+                }
+
+                if (tokens.TestAndConditionallyAdvance(Separator.CloseCurlyBoi, false))
+                {
+                    break;
+                }
+            }
+
+            return new SwitchStatement(
+                switchValue: switchExpression,
+                defaultBlock: defaultBlock,
+                switchBlocks: map,
+                keywordToken: keywordToken);
         }
     }
 }

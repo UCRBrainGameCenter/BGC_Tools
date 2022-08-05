@@ -17,7 +17,7 @@ namespace BGC.Scripting
             IsExtern = isExtern;
 
             //Check initializer type
-            if (initializer != null && IsExtern)
+            if (initializer is not null && IsExtern)
             {
                 throw new ScriptParsingException(
                     source: identifierToken,

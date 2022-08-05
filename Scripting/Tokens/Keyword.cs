@@ -6,56 +6,33 @@
         If = 0,
         ElseIf,
         Else,
+        Switch,
 
         //Loops
         While,
         For,
         ForEach,
-        In,
+        In,  //Also a parameter modifier
 
         //Flow Control
         Continue,
         Break,
         Return,
+        Case,
+        Default,
 
         //Declaration Modifiers
         Global,
         Extern,
         Const,
 
-        Void,
-
-        //Base Types
-        Bool,
-        Double,
-        Integer,
-        String,
-
-        //Container Types
-        List,
-        Queue,
-        Stack,
-        DepletableBag,
-        DepletableList,
-        RingBuffer,
-        Dictionary,
-        HashSet,
-
-        //Other Types
-        Random,
-        DataFile,
-        IScriptedAlgorithmQuerier,
-        IMultiParamScriptedAlgorithmQuerier,
-
-        //Static Types
-        System,
-        Debug,
-        User,
-        Math,
-        Audiometry,
-
         //Construction keyword
         New,
+
+        //Parameter Modifiers
+        Out,
+        Ref,
+        Params,
 
         MAX
     }

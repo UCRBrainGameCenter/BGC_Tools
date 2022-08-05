@@ -23,7 +23,7 @@ namespace BGC.Scripting
 
             object defaultValue;
 
-            if (initializer == null)
+            if (initializer is null)
             {
                 defaultValue = valueType.GetDefaultValue();
             }

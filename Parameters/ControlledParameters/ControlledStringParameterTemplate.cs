@@ -149,15 +149,15 @@ namespace BGC.Parameters
                    new FunctionSignature(
                        identifier: "GetValue",
                        returnType: typeof(string),
-                       arguments: new VariableData("stepNumber", typeof(int))),
+                       arguments: new ArgumentData("stepNumber", typeof(int))),
                     new FunctionSignature(
                         identifier: "CouldStepTo",
                         returnType: typeof(bool),
-                        arguments: new VariableData("stepNumber", typeof(int))),
+                        arguments: new ArgumentData("stepNumber", typeof(int))),
                    new FunctionSignature(
                        identifier: "CalculateOutput",
                        returnType: typeof(string),
-                       arguments: new VariableData("stepValue", typeof(double))));
+                       arguments: new ArgumentData("stepValue", typeof(double))));
 
             context = scriptObject.PrepareScript(globalContext);
         }
@@ -172,15 +172,15 @@ namespace BGC.Parameters
                 new FunctionSignature(
                     identifier: "GetValue",
                     returnType: typeof(string),
-                    arguments: new VariableData("stepNumber", typeof(int))),
+                    arguments: new ArgumentData("stepNumber", typeof(int))),
                 new FunctionSignature(
                     identifier: "CouldStepTo",
                     returnType: typeof(bool),
-                    arguments: new VariableData("stepNumber", typeof(int))),
+                    arguments: new ArgumentData("stepNumber", typeof(int))),
                 new FunctionSignature(
                     identifier: "CalculateOutput",
                     returnType: typeof(string),
-                    arguments: new VariableData("stepValue", typeof(double))));
+                    arguments: new ArgumentData("stepValue", typeof(double))));
 
             foreach (KeyInfo keyInfo in scriptObject.GetDeclarations())
             {

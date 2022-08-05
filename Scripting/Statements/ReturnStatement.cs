@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 
 namespace BGC.Scripting
 {
@@ -21,15 +22,19 @@ namespace BGC.Scripting
             returnType = context.GetReturnType();
         }
 
-        public override FlowState Execute(ScopeRuntimeContext context)
+        public override FlowState Execute(
+            ScopeRuntimeContext context,
+            CancellationToken ct)
         {
+            ct.ThrowIfCancellationRequested();
+
             if (returnType == typeof(void))
             {
                 context.PushReturnValue(null);
             }
             else
             {
-                if (returnType == returnValue.GetValueType())
+                if (returnType.IsAssignableFrom(returnValue!.GetValueType()))
                 {
                     context.PushReturnValue(returnValue.GetAs<object>(context));
                 }

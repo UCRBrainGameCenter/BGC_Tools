@@ -13,33 +13,32 @@ namespace BGC.Scripting
             IValueGetter arg2,
             OperatorToken operatorToken)
         {
-            if (!(arg1.GetValueType() == typeof(double) || arg1.GetValueType() == typeof(int)))
+            Type arg1Type = arg1.GetValueType();
+            Type arg2Type = arg2.GetValueType();
+
+            if (!(arg1Type.IsExtendedPrimitive() || arg1Type.IsEnum))
             {
                 throw new ScriptParsingException(
                     source: operatorToken,
-                    message: $"Left side of operator {operatorToken.operatorType} has incompatible type: {arg1.GetValueType().Name}");
+                    message: $"Left side of operator {operatorToken.operatorType} has incompatible type: {arg1Type.Name}");
             }
 
-            if (!(arg2.GetValueType() == typeof(double) || arg2.GetValueType() == typeof(int)))
+            if (!(arg2Type.IsExtendedPrimitive() || arg2Type.IsEnum))
             {
                 throw new ScriptParsingException(
                     source: operatorToken,
-                    message: $"Right side of operator {operatorToken.operatorType} has incompatible type: {arg2.GetValueType().Name}");
+                    message: $"Right side of operator {operatorToken.operatorType} has incompatible type: {arg2Type.Name}");
             }
 
+            //Checks that promotion is possible
+            operatorToken.GetBinaryPromotedType(arg1Type, arg2Type);
 
             //Constant case
             if (arg1 is LiteralToken litArg1 && arg2 is LiteralToken litArg2)
             {
-                switch (operatorToken.operatorType)
-                {
-                    case Operator.IsGreaterThan: return new LiteralToken<bool>(operatorToken, litArg1.GetAs<double>() > litArg2.GetAs<double>());
-                    case Operator.IsGreaterThanOrEqualTo: return new LiteralToken<bool>(operatorToken, litArg1.GetAs<double>() >= litArg2.GetAs<double>());
-                    case Operator.IsLessThan: return new LiteralToken<bool>(operatorToken, litArg1.GetAs<double>() < litArg2.GetAs<double>());
-                    case Operator.IsLessThanOrEqualTo: return new LiteralToken<bool>(operatorToken, litArg1.GetAs<double>() <= litArg2.GetAs<double>());
-
-                    default: throw new ArgumentException($"Unexpected Operator {operatorToken.operatorType}");
-                }
+                return new LiteralToken<bool>(
+                    operatorToken,
+                    PerformOperator(litArg1.GetAs<object>(), litArg2.GetAs<object>(), operatorToken.operatorType));
             }
 
             return new ComparisonOperation(arg1, arg2, operatorToken.operatorType);
@@ -69,22 +68,27 @@ namespace BGC.Scripting
 
         public T GetAs<T>(RuntimeContext context)
         {
-            if (!typeof(T).AssignableFromType(typeof(bool)))
+            if (!typeof(T).AssignableOrConvertableFromType(typeof(bool)))
             {
                 throw new ScriptRuntimeException($"Tried to retrieve result of applying {operatorType} as type {typeof(T).Name}");
             }
 
-            switch (operatorType)
-            {
-                case Operator.IsGreaterThan: return (T)(object)(arg1.GetAs<double>(context) > arg2.GetAs<double>(context));
-                case Operator.IsGreaterThanOrEqualTo: return (T)(object)(arg1.GetAs<double>(context) >= arg2.GetAs<double>(context));
-                case Operator.IsLessThan: return (T)(object)(arg1.GetAs<double>(context) < arg2.GetAs<double>(context));
-                case Operator.IsLessThanOrEqualTo: return (T)(object)(arg1.GetAs<double>(context) <= arg2.GetAs<double>(context));
-
-                default: throw new ArgumentException($"Unexpected Operator: {operatorType}");
-            }
+            return (T)(object)PerformOperator(arg1.GetAs<object>(context)!, arg2.GetAs<object>(context)!, operatorType);
         }
 
         public Type GetValueType() => typeof(bool);
+
+        private static bool PerformOperator(dynamic arg1, dynamic arg2, Operator operatorType)
+        {
+            switch (operatorType)
+            {
+                case Operator.IsGreaterThan: return arg1 > arg2;
+                case Operator.IsGreaterThanOrEqualTo: return arg1 >= arg2;
+                case Operator.IsLessThan: return arg1 < arg2;
+                case Operator.IsLessThanOrEqualTo: return arg1 <= arg2;
+
+                default: throw new ArgumentException($"Unexpected Operator {operatorType}");
+            }
+        }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using LightJson;
 using BGC.Scripting;
 using BGC.UI.Dialogs;
 using BGC.Parameters.Exceptions;
@@ -68,12 +67,12 @@ namespace BGC.Parameters.Algorithms.Scripted
         private readonly FunctionSignature oldInitializeSignature = new FunctionSignature(
             identifier: "Initialize",
             returnType: typeof(List<int>),
-            arguments: new VariableData("paramCount", typeof(int)));
+            arguments: new ArgumentData("paramCount", typeof(int)));
 
         private readonly FunctionSignature newInitializeSignature = new FunctionSignature(
             identifier: "Initialize",
             returnType: typeof(List<int>),
-            arguments: new VariableData("algorithmQuerier", typeof(IMultiParamScriptedAlgorithmQuerier)));
+            arguments: new ArgumentData("algorithmQuerier", typeof(IMultiParamScriptedAlgorithmQuerier)));
 
         void IBescriptedPropertyGroup.UpdateStateVarRectifier(InputRectificationContainer rectifier)
         {
@@ -82,7 +81,7 @@ namespace BGC.Parameters.Algorithms.Scripted
                 new FunctionSignature(
                     identifier: "Step",
                     returnType: typeof(List<int>),
-                    arguments: new VariableData("lastTrialCorrect", typeof(bool))),
+                    arguments: new ArgumentData("lastTrialCorrect", typeof(bool))),
                 new FunctionSignature(
                     identifier: "End",
                     returnType: typeof(bool)),
@@ -96,11 +95,11 @@ namespace BGC.Parameters.Algorithms.Scripted
                 //Throw exception
                 if (scriptObject.HasFunction("Initialize"))
                 {
-                    FunctionSignature matchingFunction = scriptObject.GetFunctionSignature("Initialize");
+                    IEnumerable<FunctionSignature> matchingFunctions = scriptObject.GetFunctionSignatures("Initialize");
                     //Mismatched Signature
                     throw new ScriptParsingException(
-                        source: matchingFunction.identifierToken,
-                        message: $"Expected Function: {newInitializeSignature}  Found Function: {matchingFunction}");
+                        source: matchingFunctions.First().identifierToken,
+                        message: $"Expected Function: {newInitializeSignature}  Found Function: {matchingFunctions.First()}");
                 }
                 else
                 {
@@ -245,7 +244,7 @@ List<double> CalculateThreshold()
                 new FunctionSignature(
                     identifier: "Step",
                     returnType: typeof(List<int>),
-                    arguments: new VariableData("lastTrialCorrect", typeof(bool))),
+                    arguments: new ArgumentData("lastTrialCorrect", typeof(bool))),
                 new FunctionSignature(
                     identifier: "End",
                     returnType: typeof(bool)),
@@ -267,11 +266,11 @@ List<double> CalculateThreshold()
                 //Throw exception
                 if (scriptObject.HasFunction("Initialize"))
                 {
-                    FunctionSignature matchingFunction = scriptObject.GetFunctionSignature("Initialize");
+                    IEnumerable<FunctionSignature> matchingFunctions = scriptObject.GetFunctionSignatures("Initialize");
                     //Mismatched Signature
                     throw new ScriptParsingException(
-                        source: matchingFunction.identifierToken,
-                        message: $"Expected Function: {newInitializeSignature}  Found Function: {matchingFunction}");
+                        source: matchingFunctions.First().identifierToken,
+                        message: $"Expected Function: {newInitializeSignature}  Found Function: {matchingFunctions.First()}");
                 }
                 else
                 {

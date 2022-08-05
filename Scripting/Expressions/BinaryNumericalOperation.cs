@@ -16,133 +16,114 @@ namespace BGC.Scripting
         {
             Type arg1Type = arg1.GetValueType();
             Type arg2Type = arg2.GetValueType();
-            Type valueType;
 
-            if (!(arg1Type == typeof(double) || arg1Type == typeof(int)))
+            if (!arg1Type.IsExtendedPrimitive())
             {
                 throw new ScriptParsingException(
                     source: operatorToken,
-                    message: $"Left side of operator {operatorToken.operatorType} not of expected type int or bool: {arg1.GetValueType().Name}");
+                    message: $"Left side of operator {operatorToken.operatorType} not of expected primitive type: {arg1.GetValueType().Name}");
             }
 
-            if (!(arg2Type == typeof(double) || arg2Type == typeof(int)))
+            if (!arg2Type.IsExtendedPrimitive())
             {
                 throw new ScriptParsingException(
                     source: operatorToken,
-                    message: $"Right side of operator {operatorToken.operatorType} not of expected type int or bool: {arg2.GetValueType().Name}");
+                    message: $"Right side of operator {operatorToken.operatorType} not of expected primitive type: {arg2.GetValueType().Name}");
             }
 
-            if (arg1Type == arg2Type)
-            {
-                valueType = arg1Type;
-            }
-            else
-            {
-                valueType = typeof(double);
-            }
+            Type promotedType = operatorToken.GetBinaryPromotedType(arg1Type, arg2Type);
 
             //Constant case
             if (arg1 is LiteralToken litArg1 && arg2 is LiteralToken litArg2)
             {
-                if (valueType == typeof(int))
-                {
-                    return new LiteralToken<int>(
-                        operatorToken,
-                        IntOperator<int>(litArg1.GetAs<int>(), litArg2.GetAs<int>(), operatorToken.operatorType, valueType));
-                }
-                else
-                {
-                    return new LiteralToken<double>(
-                        operatorToken,
-                        DoubleOperator<double>(litArg1.GetAs<double>(), litArg2.GetAs<double>(), operatorToken.operatorType, valueType));
-                }
+                return new ConstantToken(
+                    operatorToken,
+                    PerformOperator(litArg1.GetAs<object>(), litArg2.GetAs<object>(), operatorToken.operatorType),
+                    promotedType);
             }
 
-            return new BinaryNumericalOperation(arg1, arg2, valueType, operatorToken.operatorType);
+            return new BinaryNumericalOperation(arg1, arg2, promotedType, operatorToken);
         }
 
         private BinaryNumericalOperation(
             IValueGetter arg1,
             IValueGetter arg2,
             Type valueType,
-            Operator operatorType)
+            OperatorToken operatorToken)
         {
             this.arg1 = arg1;
             this.arg2 = arg2;
             this.valueType = valueType;
-            this.operatorType = operatorType;
+            operatorType = operatorToken.operatorType;
 
-            switch (this.operatorType)
+            switch (operatorType)
             {
                 case Operator.Plus:
                 case Operator.Minus:
                 case Operator.Times:
                 case Operator.Divide:
-                case Operator.Power:
                 case Operator.Modulo:
+
+                case Operator.BitwiseAnd:
+                case Operator.BitwiseOr:
+                case Operator.BitwiseXOr:
                     //Acceptable
                     break;
 
-                default: throw new ArgumentException($"Unexpected Operator {this.operatorType}");
+                case Operator.BitwiseLeftShift:
+                case Operator.BitwiseRightShift:
+                    if (!arg2.GetValueType().IsIntegralType())
+                    {
+                        throw new ScriptParsingException(operatorToken, $"Operator {operatorType} requires the second argument be an integral type. Received {arg2.GetValueType()}.");
+                    }
+                    break;
+
+
+                default: throw new ArgumentException($"Unexpected Operator {operatorType}");
             }
         }
 
         public T GetAs<T>(RuntimeContext context)
         {
-            if (valueType == typeof(int))
-            {
-                return IntOperator<T>(arg1.GetAs<int>(context), arg2.GetAs<int>(context), operatorType, valueType);
-            }
-
-            return DoubleOperator<T>(arg1.GetAs<double>(context), arg2.GetAs<double>(context), operatorType, valueType);
-        }
-
-        private static T IntOperator<T>(int arg1, int arg2, Operator operatorType, Type valueType)
-        {
             Type returnType = typeof(T);
 
-            if (!returnType.AssignableFromType(valueType))
+            if (!returnType.AssignableOrConvertableFromType(valueType))
             {
-                throw new ScriptRuntimeException($"Tried to implicitly cast the results of {operatorType} to type {returnType}");
+                throw new ScriptRuntimeException(
+                    $"Return value of {operatorType} is {valueType}, but it was accessed as {returnType.Name}");
             }
 
-            //Integer type
-            switch (operatorType)
+            object value = PerformOperator(arg1.GetAs<object>(context)!, arg2.GetAs<object>(context)!, operatorType);
+
+            if (!returnType.IsAssignableFrom(value.GetType()))
             {
-                case Operator.Plus: return (T)Convert.ChangeType(arg1 + arg2, returnType);
-                case Operator.Minus: return (T)Convert.ChangeType(arg1 - arg2, returnType);
-                case Operator.Times: return (T)Convert.ChangeType(arg1 * arg2, returnType);
-                case Operator.Divide: return (T)Convert.ChangeType(arg1 / arg2, returnType);
-                case Operator.Power: return (T)Convert.ChangeType((int)Math.Pow(arg1, arg2), returnType);
-                case Operator.Modulo: return (T)Convert.ChangeType(arg1 % arg2, returnType);
-
-                default: throw new ArgumentException($"Unexpected Operator {operatorType}");
-            }
-        }
-
-        private static T DoubleOperator<T>(double arg1, double arg2, Operator operatorType, Type valueType)
-        {
-            Type returnType = typeof(T);
-
-            if (!returnType.AssignableFromType(valueType))
-            {
-                throw new ScriptRuntimeException($"Tried to implicitly cast the results of {operatorType} to type {returnType}");
+                value = Convert.ChangeType(value, returnType);
             }
 
-            //Integer type
-            switch (operatorType)
-            {
-                case Operator.Plus: return (T)Convert.ChangeType(arg1 + arg2, returnType);
-                case Operator.Minus: return (T)Convert.ChangeType(arg1 - arg2, returnType);
-                case Operator.Times: return (T)Convert.ChangeType(arg1 * arg2, returnType);
-                case Operator.Divide: return (T)Convert.ChangeType(arg1 / arg2, returnType);
-                case Operator.Power: return (T)Convert.ChangeType(Math.Pow(arg1, arg2), returnType);
-                case Operator.Modulo: return (T)Convert.ChangeType(arg1 % arg2, returnType);
-
-                default: throw new ArgumentException($"Unexpected Operator {operatorType}");
-            }
+            return (T)value;
         }
 
         public Type GetValueType() => valueType;
+
+        private static object PerformOperator(dynamic arg1, dynamic arg2, Operator operatorType)
+        {
+            switch (operatorType)
+            {
+                case Operator.Plus: return arg1 + arg2;
+                case Operator.Minus: return arg1 - arg2;
+                case Operator.Times: return arg1 * arg2;
+                case Operator.Divide: return arg1 / arg2;
+                case Operator.Modulo: return arg1 % arg2;
+
+                case Operator.BitwiseAnd: return arg1 & arg2;
+                case Operator.BitwiseOr: return arg1 | arg2;
+                case Operator.BitwiseXOr: return arg1 ^ arg2;
+
+                case Operator.BitwiseLeftShift: return arg1 << arg2;
+                case Operator.BitwiseRightShift: return arg1 >> arg2;
+
+                default: throw new ArgumentException($"Unexpected Operator {operatorType}");
+            }
+        }
     }
 }

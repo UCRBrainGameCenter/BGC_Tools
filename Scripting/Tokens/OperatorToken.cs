@@ -28,14 +28,20 @@ namespace BGC.Scripting
                 case Operator.Minus: return "-";
                 case Operator.Times: return "*";
                 case Operator.Divide: return "/";
-                case Operator.Power: return "^";
                 case Operator.Modulo: return "%";
+
+                case Operator.BitwiseAnd: return "&";
+                case Operator.BitwiseOr: return "|";
+                case Operator.BitwiseXOr: return "^";
+
+                case Operator.BitwiseComplement: return "~";
+                case Operator.BitwiseLeftShift: return "<<";
+                case Operator.BitwiseRightShift: return ">>";
 
                 case Operator.PlusEquals: return "+=";
                 case Operator.MinusEquals: return "-=";
                 case Operator.TimesEquals: return "*=";
                 case Operator.DivideEquals: return "/=";
-                case Operator.PowerEquals: return "^=";
                 case Operator.ModuloEquals: return "%=";
 
                 case Operator.Increment: return "++";
@@ -60,8 +66,9 @@ namespace BGC.Scripting
                 case Operator.AndEquals: return "&=";
                 case Operator.OrEquals: return "|=";
 
-                case Operator.CastDouble: return "(double)";
-                case Operator.CastInteger: return "(int)";
+                case Operator.BitwiseXOrEquals: return "^=";
+                case Operator.BitwiseLeftShiftEquals: return "<<=";
+                case Operator.BitwiseRightShiftEquals: return ">>=";
 
                 case Operator.MemberAccess: return ".";
                 case Operator.Indexing: return "[]";

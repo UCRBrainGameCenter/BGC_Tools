@@ -56,7 +56,7 @@ namespace BGC.Parameters.Algorithms.Scripted
         private readonly FunctionSignature newInitializeSignature = new FunctionSignature(
             identifier: "Initialize",
             returnType: typeof(int),
-            arguments: new VariableData("algorithmQuerier", typeof(IScriptedAlgorithmQuerier)));
+            arguments: new ArgumentData("algorithmQuerier", typeof(IScriptedAlgorithmQuerier)));
 
         void IBescriptedPropertyGroup.UpdateStateVarRectifier(InputRectificationContainer rectifier)
         {
@@ -65,7 +65,7 @@ namespace BGC.Parameters.Algorithms.Scripted
                 new FunctionSignature(
                     identifier: "Step",
                     returnType: typeof(int),
-                    arguments: new VariableData("lastTrialCorrect", typeof(bool))),
+                    arguments: new ArgumentData("lastTrialCorrect", typeof(bool))),
                 new FunctionSignature(
                     identifier: "End",
                     returnType: typeof(bool)),
@@ -79,11 +79,11 @@ namespace BGC.Parameters.Algorithms.Scripted
                 //Throw exception
                 if (scriptObject.HasFunction("Initialize"))
                 {
-                    FunctionSignature matchingFunction = scriptObject.GetFunctionSignature("Initialize");
+                    IEnumerable<FunctionSignature> matchingFunctions = scriptObject.GetFunctionSignatures("Initialize");
                     //Mismatched Signature
                     throw new ScriptParsingException(
-                        source: matchingFunction.identifierToken,
-                        message: $"Expected Function: {newInitializeSignature}  Found Function: {matchingFunction}");
+                        source: matchingFunctions.First().identifierToken,
+                        message: $"Expected Function: {newInitializeSignature}  Found Function: {matchingFunctions.First()}");
                 }
                 else
                 {
@@ -211,7 +211,7 @@ double CalculateThreshold()
                 new FunctionSignature(
                     identifier: "Step",
                     returnType: typeof(int),
-                    arguments: new VariableData("lastTrialCorrect", typeof(bool))),
+                    arguments: new ArgumentData("lastTrialCorrect", typeof(bool))),
                 new FunctionSignature(
                     identifier: "End",
                     returnType: typeof(bool)),
@@ -233,11 +233,11 @@ double CalculateThreshold()
                 //Throw exception
                 if (scriptObject.HasFunction("Initialize"))
                 {
-                    FunctionSignature matchingFunction = scriptObject.GetFunctionSignature("Initialize");
+                    IEnumerable<FunctionSignature> matchingFunctions = scriptObject.GetFunctionSignatures("Initialize");
                     //Mismatched Signature
                     throw new ScriptParsingException(
-                        source: matchingFunction.identifierToken,
-                        message: $"Expected Function: {newInitializeSignature}  Found Function: {matchingFunction}");
+                        source: matchingFunctions.First().identifierToken,
+                        message: $"Expected Function: {newInitializeSignature}  Found Function: {matchingFunctions.First()}");
                 }
                 else
                 {

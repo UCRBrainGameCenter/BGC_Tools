@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 
 namespace BGC.Scripting
 {
@@ -25,16 +26,20 @@ namespace BGC.Scripting
             this.loopBody = loopBody;
         }
 
-        public override FlowState Execute(ScopeRuntimeContext context)
+        public override FlowState Execute(
+            ScopeRuntimeContext context,
+            CancellationToken ct)
         {
             FlowState state;
 
             bool continuing = true;
             while (continuing && continueExpression.GetAs<bool>(context))
             {
+                ct.ThrowIfCancellationRequested();
+
                 bodyContext = new ScopeRuntimeContext(context);
 
-                state = loopBody.Execute(bodyContext);
+                state = loopBody?.Execute(bodyContext, ct) ?? FlowState.Nominal;
 
                 switch (state)
                 {

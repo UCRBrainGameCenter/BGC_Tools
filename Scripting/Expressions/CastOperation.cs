@@ -1,82 +1,68 @@
 ﻿using System;
+using System.Reflection;
 
 namespace BGC.Scripting
 {
     public class CastOperation : IValueGetter
     {
         private readonly IValueGetter arg;
-        private readonly Operator operatorType;
         private readonly Type valueType;
 
         public static IExpression CreateCastOperation(
             IValueGetter arg,
-            OperatorToken operatorToken)
+            CastingOperationToken castingOperationToken)
         {
-            Type argType = arg.GetValueType();
-
-            if (!(argType == typeof(double) || argType == typeof(int)))
-            {
-                throw new ScriptParsingException(
-                    source: operatorToken,
-                    message: $"Argument of operator {operatorToken.operatorType} is not numerical: type {argType.Name}.");
-            }
-
-            if (arg is LiteralToken litArg)
-            {
-                switch (operatorToken.operatorType)
-                {
-                    case Operator.CastDouble: return new LiteralToken<double>(operatorToken, litArg.GetAs<double>());
-                    case Operator.CastInteger: return new LiteralToken<int>(operatorToken, (int)litArg.GetAs<double>());
-
-                    default: throw new ArgumentException($"Unexpected Operator: {operatorToken.operatorType}");
-                }
-            }
-
-            return new CastOperation(arg, operatorToken.operatorType);
+            return new CastOperation(arg, castingOperationToken.type);
         }
 
         private CastOperation(
             IValueGetter arg,
-            Operator operatorType)
+            Type valueType)
         {
             this.arg = arg;
-            this.operatorType = operatorType;
-
-            switch (this.operatorType)
-            {
-                case Operator.CastDouble:
-                    valueType = typeof(double);
-                    break;
-
-                case Operator.CastInteger:
-                    valueType = typeof(int);
-                    break;
-
-                default: throw new ArgumentException($"Unexpected Operator: {this.operatorType}");
-            }
+            this.valueType = valueType;
         }
 
         public T GetAs<T>(RuntimeContext context)
         {
             Type returnType = typeof(T);
 
-            if (!returnType.AssignableFromType(valueType))
+            if (!returnType.AssignableOrConvertableFromType(valueType))
             {
-                throw new ScriptRuntimeException($"Tried to retrieve result of applying {operatorType} as type {returnType.Name}");
+                throw new ScriptRuntimeException($"Tried to retrieve result of applying ({valueType}) as type {returnType.Name}");
             }
 
-            if (returnType == typeof(int))
+            object value = arg.GetAs<object>(context)!;
+            value = CastAs(value, valueType);
+
+            if (!returnType.IsAssignableFrom(valueType))
             {
-                return (T)(object)(int)arg.GetAs<double>(context);
+                value = Convert.ChangeType(value, returnType);
             }
 
-            switch (operatorType)
-            {
-                case Operator.CastDouble: return (T)(object)arg.GetAs<double>(context);
-                case Operator.CastInteger: return (T)(object)(int)Math.Floor(arg.GetAs<double>(context));
+            return (T)value!;
+        }
 
-                default: throw new ArgumentException($"Unexpected Operator: {operatorType}");
+
+        public static Tout Cast<Tout>(dynamic obj)
+        {
+            try
+            {
+                return (Tout)obj;
             }
+            catch (Exception)
+            {
+                return default!;
+            }
+        }
+
+        public static object CastAs(object obj, Type type)
+        {
+            MethodInfo methodInfo = typeof(CastOperation)
+                .GetMethod(nameof(Cast), BindingFlags.Static | BindingFlags.Public)!
+                .MakeGenericMethod(type);
+
+            return methodInfo.Invoke(null, new object[] { obj });
         }
 
         public Type GetValueType() => valueType;

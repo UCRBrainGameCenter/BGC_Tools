@@ -8,17 +8,20 @@
         Minus,
         Times,
         Divide,
-        Power,
         Modulo,
 
-        CastDouble,
-        CastInteger,
+        BitwiseAnd,
+        BitwiseOr,
+        BitwiseXOr,
+
+        BitwiseComplement,
+        BitwiseLeftShift,
+        BitwiseRightShift,
 
         PlusEquals,
         MinusEquals,
         TimesEquals,
         DivideEquals,
-        PowerEquals,
         ModuloEquals,
 
         Increment,
@@ -43,6 +46,10 @@
         AndEquals,
         OrEquals,
 
+        BitwiseXOrEquals,
+        BitwiseLeftShiftEquals,
+        BitwiseRightShiftEquals,
+
         MAX,
 
         MemberAccess,
@@ -50,5 +57,4 @@
 
         AmbiguousMinus
     }
-
 }

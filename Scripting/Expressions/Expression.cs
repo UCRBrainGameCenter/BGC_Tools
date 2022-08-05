@@ -1,18 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace BGC.Scripting
 {
     public static class Expression
     {
-        public static IValueGetter ParseNextGetterExpression(
+        public static IValueGetter ParseNextOptionalGetterExpression(
             IEnumerator<Token> tokens,
             CompilationContext context)
         {
             Token currentToken = tokens.Current;
             IExpression nextExpression = ParseNextExpression(tokens, context);
 
-            if (!(nextExpression is IValueGetter nextValueGetter))
+            if (nextExpression is null)
+            {
+                return null;
+            }
+
+            if (nextExpression is not IValueGetter nextValueGetter)
             {
                 throw new ScriptParsingException(
                     source: currentToken,
@@ -21,14 +27,33 @@ namespace BGC.Scripting
 
             return nextValueGetter;
         }
-        public static IExecutable ParseNextExecutableExpression(
+
+        public static IValueGetter ParseNextGetterExpression(
             IEnumerator<Token> tokens,
             CompilationContext context)
         {
             Token currentToken = tokens.Current;
             IExpression nextExpression = ParseNextExpression(tokens, context);
 
-            if (!(nextExpression is IExecutable nextExecutable))
+            if (nextExpression is not IValueGetter nextValueGetter)
+            {
+                throw new ScriptParsingException(
+                    source: currentToken,
+                    message: $"Expected a Value expression, but found: {nextExpression}");
+            }
+
+            return nextValueGetter;
+        }
+
+        internal static IExecutable ParseNextExecutableExpression(
+            IEnumerator<Token> tokens,
+            CompilationContext context,
+            params ParsingUnit[] prependedUnits)
+        {
+            Token currentToken = tokens.Current;
+            IExpression nextExpression = ParseNextExpression(tokens, context, prependedUnits);
+
+            if (nextExpression is not IExecutable nextExecutable)
             {
                 throw new ScriptParsingException(
                     source: currentToken,
@@ -39,11 +64,12 @@ namespace BGC.Scripting
         }
 
 
-        public static IExpression ParseNextExpression(
+        internal static IExpression ParseNextExpression(
             IEnumerator<Token> tokens,
-            CompilationContext context)
+            CompilationContext context,
+            params ParsingUnit[] prependedUnits)
         {
-            List<ParsingUnit> units = new List<ParsingUnit>();
+            List<ParsingUnit> units = new List<ParsingUnit>(prependedUnits);
 
             bool continueCollecting = true;
 
@@ -124,20 +150,20 @@ namespace BGC.Scripting
                 case Separator.OpenIndexer:
                     tokens.CautiousAdvance();
                     IExpression indexerExpression = ParseNextExpression(tokens, context);
-                    if (!(indexerExpression is IValueGetter indexerValue))
+                    if (indexerExpression is not IValueGetter indexerValue)
                     {
                         throw new ScriptParsingException(
                             source: sepToken,
                             message: $"Index operation requires value type: {indexerExpression}");
                     }
                     units.Add(new IndexAccessUnit(indexerValue, sepToken));
-                    tokens.AssertAndSkip(Separator.CloseIndexer);
+                    tokens.AssertAndAdvance(Separator.CloseIndexer);
                     break;
 
                 case Separator.OpenParen:
                     tokens.CautiousAdvance();
                     units.Add(new ParsedValuedUnit(ParseNextExpression(tokens, context), sepToken));
-                    tokens.AssertAndSkip(Separator.CloseParen);
+                    tokens.AssertAndAdvance(Separator.CloseParen);
                     break;
 
                 case Separator.OpenCurlyBoi:
@@ -146,7 +172,9 @@ namespace BGC.Scripting
                         message: $"CurlyBois cannot exist in an expression.  Are you missing a semicolon?: {sepToken}");
 
                 default:
-                    throw new Exception($"Unexpected Separator: {sepToken.separator}");
+                    throw new ScriptParsingException(
+                        source: sepToken,
+                        message: $"Unexpected Separator: {sepToken.separator}");
             }
         }
 
@@ -163,18 +191,28 @@ namespace BGC.Scripting
                 case Operator.MinusEquals:
                 case Operator.TimesEquals:
                 case Operator.DivideEquals:
-                case Operator.PowerEquals:
                 case Operator.ModuloEquals:
+
+                case Operator.BitwiseAnd:
+                case Operator.BitwiseOr:
+                case Operator.BitwiseXOr:
+
+                case Operator.BitwiseComplement:
+                case Operator.BitwiseLeftShift:
+                case Operator.BitwiseRightShift:
+
                 case Operator.AndEquals:
                 case Operator.OrEquals:
+                case Operator.BitwiseXOrEquals:
+                case Operator.BitwiseLeftShiftEquals:
+                case Operator.BitwiseRightShiftEquals:
+
                 case Operator.Plus:
                 case Operator.Minus:
                 case Operator.Times:
                 case Operator.Divide:
-                case Operator.Power:
                 case Operator.Modulo:
-                case Operator.CastDouble:
-                case Operator.CastInteger:
+
                 case Operator.Increment:
                 case Operator.Decrement:
                 case Operator.Not:
@@ -204,7 +242,7 @@ namespace BGC.Scripting
                          firstToken: firstToken));
 
                     //Colon
-                    tokens.AssertAndSkip(Separator.Colon);
+                    tokens.AssertAndAdvance(Separator.Colon);
 
                     //Add the second expected expression
                     firstToken = tokens.Current;
@@ -215,21 +253,30 @@ namespace BGC.Scripting
 
                 case Operator.MemberAccess:
                     tokens.CautiousAdvance();
-                    IdentifierToken nameToken = tokens.GetTokenAndAdvance<IdentifierToken>();
-                    if (tokens.TestWithoutSkipping(Separator.OpenParen))
+                    IdentifierToken identifierToken = tokens.GetIdentifierAndAdvance();
+                    if (tokens.TestWithoutAdvancing(Separator.OpenParen))
                     {
                         //Method
                         units.Add(new MemberAccessUnit(
-                            identifier: nameToken.identifier,
+                            identifier: identifierToken.identifier,
                             args: ParseArguments(tokens, context),
+                            genericMethodArguments: identifierToken.genericArguments,
                             firstToken: opToken));
                     }
                     else
                     {
+                        if (identifierToken.genericArguments is not null)
+                        {
+                            throw new ScriptParsingException(
+                                source: opToken,
+                                message: $"Unexpected GenericArguments in member context: {opToken.operatorType}");
+                        }
+
                         //Value
                         units.Add(new MemberAccessUnit(
-                            identifier: nameToken.identifier,
+                            identifier: identifierToken.identifier,
                             args: null,
+                            genericMethodArguments: null,
                             firstToken: opToken));
                     }
                     break;
@@ -237,7 +284,9 @@ namespace BGC.Scripting
 
                 case Operator.AmbiguousMinus:
                 default:
-                    throw new ArgumentException($"Unsupported Operator: {opToken.operatorType}");
+                    throw new ScriptParsingException(
+                        source: opToken,
+                        message: $"Unsupported Operator: {opToken.operatorType}");
             }
         }
 
@@ -266,8 +315,8 @@ namespace BGC.Scripting
                     units.Add(new ParsedValuedUnit(
                         value: new ConstantToken(
                             source: identToken,
-                            value: context.GetConstantValue(identToken.identifier),
-                            valueType: context.GetConstantType(identToken.identifier)),
+                            value: context.GetConstantValue(identToken.identifier)!,
+                            valueType: context.GetConstantType(identToken.identifier)!),
                         firstToken: identToken));
                     break;
 
@@ -282,12 +331,12 @@ namespace BGC.Scripting
                         value: ParseFunctionCall(tokens, identToken, context),
                         firstToken: identToken));
                     break;
-            
+
                 case CompilationContext.IdentifierType.Unidentified:
                 default:
                     throw new ScriptParsingException(
                         source: identToken,
-                        message: $"Unidentified Identifier: {identToken.identifier}");
+                        message: $"Unidentified Identifier: {identToken.identifier} on line {identToken.line}");
             }
 
         }
@@ -313,83 +362,89 @@ namespace BGC.Scripting
                 case Keyword.New:
                     {
                         tokens.CautiousAdvance();
-                        Type newObjectType = tokens.ReadType();
+                        Type newObjectType = tokens.ReadTypeAndAdvance();
 
-                        IValueGetter[] args = ParseArguments(tokens, context);
-
-                        if (tokens.TestWithoutSkipping(Separator.OpenCurlyBoi))
+                        if (tokens.TestWithoutAdvancing(Separator.OpenIndexer) || newObjectType.IsArray)
                         {
-                            Type itemType = newObjectType.GetInitializerItemType();
-                            if (itemType == null)
+                            //Array
+                            IValueGetter countValue = null;
+                            IValueGetter[] initializerValues = null;
+
+                            if (tokens.TestAndConditionallyAdvance(Separator.OpenIndexer))
                             {
-                                throw new ScriptParsingException(
-                                    source: keywordToken,
-                                    message: $"Initializer Lists only function on collections. " +
-                                        $"Did you enter the wrong type, or possibly omit a semicolon at the end of the expression?");
+                                newObjectType = newObjectType.MakeArrayType();
+                                IExpression indexerExpression = ParseNextExpression(tokens, context);
+                                countValue = indexerExpression as IValueGetter;
+
+                                if (countValue is null)
+                                {
+                                    throw new ScriptParsingException(
+                                        source: tokens.Current,
+                                        message: $"Index operation requires value type: {indexerExpression}");
+                                }
+                                tokens.AssertAndAdvance(Separator.CloseIndexer);
                             }
 
-                            //Initializer Syntax
-                            IValueGetter[] items = ParseItems(tokens, itemType, context);
+                            if (tokens.TestWithoutAdvancing(Separator.OpenCurlyBoi))
+                            {
+                                //Initializer List
+                                Type itemType = newObjectType.GetInitializerItemType();
+                                if (itemType == null)
+                                {
+                                    throw new ScriptParsingException(
+                                        source: keywordToken,
+                                        message: $"Initializer Lists only function on collections. " +
+                                            $"Did you enter the wrong type, or possibly omit a semicolon at the end of the expression?");
+                                }
+                                //Initializer Syntax
+                                initializerValues = ParseItems(tokens, itemType, context);
+                            }
 
                             units.Add(new ParsedValuedUnit(
-                                value: new ConstructInitializedCollectionExpression(
-                                    objectType: newObjectType,
-                                    args: args,
-                                    items: items,
-                                    source: keywordToken),
+                                value: new ConstructArrayExpression(
+                                    arrayType: newObjectType,
+                                    arg: countValue,
+                                    initializer: initializerValues,
+                                    token: keywordToken),
                                 firstToken: keywordToken));
                         }
                         else
                         {
-                            units.Add(new ParsedValuedUnit(
-                                value: new ConstructObjectExpression(
-                                    objectType: newObjectType,
-                                    args: args),
-                                firstToken: keywordToken));
-                        }
-                    }
-                    break;
+                            //Non-Array
 
-                case Keyword.System:
-                case Keyword.User:
-                case Keyword.Math:
-                case Keyword.Debug:
-                case Keyword.Audiometry:
-                    {
-                        tokens.CautiousAdvance();
-                        tokens.AssertAndSkip(Operator.MemberAccess);
-                        IdentifierToken identifierToken = tokens.GetTokenAndAdvance<IdentifierToken>();
-                        if (tokens.TestWithoutSkipping(Operator.IsLessThan))
-                        {
-                            //Generic Method
-                            Type[] internalTypes = tokens.ReadTypeArguments();
+                            InvocationArgument[] args = ParseArguments(tokens, context);
 
-                            units.Add(new ParsedValuedUnit(
-                                value: MemberManagement.HandleStaticGenericMethodExpression(
-                                    keywordToken: keywordToken,
-                                    args: ParseArguments(tokens, context),
-                                    identifier: identifierToken.identifier,
-                                    genericTypes: internalTypes),
-                                firstToken: keywordToken));
-                        }
-                        else if (tokens.TestWithoutSkipping(Separator.OpenParen))
-                        {
-                            //Method
-                            units.Add(new ParsedValuedUnit(
-                                value: MemberManagement.HandleStaticMethodExpression(
-                                    keywordToken: keywordToken,
-                                    args: ParseArguments(tokens, context),
-                                    identifier: identifierToken.identifier),
-                                firstToken: keywordToken));
-                        }
-                        else
-                        {
-                            //Member
-                            units.Add(new ParsedValuedUnit(
-                                value: MemberManagement.HandleStaticMemberExpression(
-                                    keywordToken: keywordToken,
-                                    identifier: identifierToken.identifier),
-                                firstToken: keywordToken));
+                            if (tokens.TestWithoutAdvancing(Separator.OpenCurlyBoi))
+                            {
+                                //Initializer List
+                                Type itemType = newObjectType.GetInitializerItemType();
+                                if (itemType == null)
+                                {
+                                    throw new ScriptParsingException(
+                                        source: keywordToken,
+                                        message: $"Initializer Lists only function on collections. " +
+                                            $"Did you enter the wrong type, or possibly omit a semicolon at the end of the expression?");
+                                }
+
+                                //Initializer Syntax
+                                IValueGetter[] items = ParseItems(tokens, itemType, context);
+
+                                units.Add(new ParsedValuedUnit(
+                                    value: new ConstructInitializedCollectionExpression(
+                                        objectType: newObjectType,
+                                        args: args,
+                                        items: items,
+                                        source: keywordToken),
+                                    firstToken: keywordToken));
+                            }
+                            else
+                            {
+                                units.Add(new ParsedValuedUnit(
+                                    value: new ConstructObjectExpression(
+                                        objectType: newObjectType,
+                                        args: args),
+                                    firstToken: keywordToken));
+                            }
                         }
                     }
                     break;
@@ -401,31 +456,71 @@ namespace BGC.Scripting
             }
         }
 
-        public static IValueGetter[] ParseArguments(
+        public static InvocationArgument[] ParseArguments(
             IEnumerator<Token> tokens,
             CompilationContext context)
         {
-            List<IValueGetter> arguments = new List<IValueGetter>();
-            tokens.AssertAndSkip(Separator.OpenParen);
+            List<InvocationArgument> arguments = new List<InvocationArgument>();
+            tokens.AssertAndAdvance(Separator.OpenParen);
 
-            if (!tokens.TestWithoutSkipping(Separator.CloseParen))
+            if (!tokens.TestWithoutAdvancing(Separator.CloseParen))
             {
                 do
                 {
                     Token temp = tokens.Current;
-                    IExpression nextExpression = ParseNextExpression(tokens, context);
-                    if (!(nextExpression is IValueGetter nextValue))
+                    ArgumentType argumentType = tokens.GetArgumentType();
+                    if (argumentType == ArgumentType.Params)
                     {
                         throw new ScriptParsingException(
                             source: temp,
-                            message: $"Function Arguments must be values: {nextExpression}");
+                            message: $"Keyword params is just used for method declaration: {temp}");
                     }
-                    arguments.Add(nextValue);
+
+                    temp = tokens.Current;
+
+                    IExpression nextExpression = ParseNextExpression(tokens, context);
+
+                    //validate
+                    switch (argumentType)
+                    {
+                        case ArgumentType.Standard:
+                        case ArgumentType.In:
+                            if (nextExpression is not IValueGetter)
+                            {
+                                throw new ScriptParsingException(
+                                    source: temp,
+                                    message: $"{argumentType} Function Arguments must be gettable values: {nextExpression}");
+                            }
+                            break;
+
+                        case ArgumentType.Ref:
+                            if (nextExpression is not IValueGetter || nextExpression is not IValueSetter)
+                            {
+                                throw new ScriptParsingException(
+                                    source: temp,
+                                    message: $"{argumentType} Function Arguments must be settable and gettable: {nextExpression}");
+                            }
+                            break;
+
+                        case ArgumentType.Out:
+                            if (nextExpression is not IValueSetter)
+                            {
+                                throw new ScriptParsingException(
+                                    source: temp,
+                                    message: $"{argumentType} Function Arguments must be settable values: {nextExpression}");
+                            }
+                            break;
+
+                        default:
+                            throw new Exception($"Not supported ArgumentType: {argumentType}");
+                    }
+
+                    arguments.Add(new InvocationArgument(nextExpression!, argumentType));
                 }
-                while (tokens.TestAndConditionallySkip(Separator.Comma));
+                while (tokens.TestAndConditionallyAdvance(Separator.Comma));
             }
 
-            tokens.AssertAndSkip(Separator.CloseParen);
+            tokens.AssertAndAdvance(Separator.CloseParen);
 
             return arguments.ToArray();
         }
@@ -436,16 +531,16 @@ namespace BGC.Scripting
             CompilationContext context)
         {
             List<IValueGetter> items = new List<IValueGetter>();
-            tokens.AssertAndSkip(Separator.OpenCurlyBoi);
+            tokens.AssertAndAdvance(Separator.OpenCurlyBoi);
 
-            if (!tokens.TestWithoutSkipping(Separator.CloseCurlyBoi))
+            if (!tokens.TestWithoutAdvancing(Separator.CloseCurlyBoi))
             {
                 do
                 {
                     Token temp = tokens.Current;
                     IValueGetter nextValue = ParseNextGetterExpression(tokens, context);
 
-                    if (!itemType.AssignableFromType(nextValue.GetValueType()))
+                    if (!itemType.AssignableOrConvertableFromType(nextValue.GetValueType()))
                     {
                         throw new ScriptParsingException(
                             source: temp,
@@ -454,10 +549,10 @@ namespace BGC.Scripting
 
                     items.Add(nextValue);
                 }
-                while (tokens.TestAndConditionallySkip(Separator.Comma));
+                while (tokens.TestAndConditionallyAdvance(Separator.Comma));
             }
 
-            tokens.AssertAndSkip(Separator.CloseCurlyBoi);
+            tokens.AssertAndAdvance(Separator.CloseCurlyBoi);
 
             return items.ToArray();
         }
@@ -467,47 +562,30 @@ namespace BGC.Scripting
             IdentifierToken identToken,
             CompilationContext context)
         {
-            IValueGetter[] arguments = ParseArguments(tokens, context);
+            InvocationArgument[] arguments = ParseArguments(tokens, context);
 
             string functionName = identToken.identifier;
-            FunctionSignature functionSignature = context.GetFunctionSignature(functionName);
 
-            if (arguments.Length != functionSignature.arguments.Length)
+            FunctionSignature? functionSignature = context.GetMatchingFunctionSignature(identToken, arguments);
+
+            if (functionSignature is null)
             {
                 throw new ScriptParsingException(
                     source: identToken,
-                    message: $"Incorrect number of arguments for function {functionName}.  " +
-                        $"Expected: {functionSignature.arguments.Length}, Received: {arguments.Length}");
+                    message: $"Failure to identify function of name {functionName} and expected argument types [{string.Join(", ", arguments.Select(x => x.ToString()))}]");
             }
 
-            for (int i = 0; i < arguments.Length; i++)
-            {
-                if (!functionSignature.arguments[i].valueType.AssignableFromType(arguments[i].GetValueType()))
-                {
-                    throw new ScriptParsingException(
-                        source: identToken,
-                        message: $"Incompatible type for argument {i+1} of function {functionName}.  " +
-                            $"Expected: {functionSignature.arguments[i].valueType.Name}, " +
-                            $"Received: {arguments[i].GetValueType().Name}");
-                }
-            }
-
-            if (functionSignature.returnType == typeof(void))
+            if (functionSignature.Value.returnType == typeof(void))
             {
                 return new FunctionExecutableOperation(
-                    operation: (RuntimeContext rtContext) =>
-                        rtContext.RunVoidFunction(
-                            functionName: functionName,
-                            arguments: arguments.GetArgs(functionSignature, rtContext)));
+                    functionSignature: functionSignature.Value,
+                    arguments: arguments);
             }
             else
             {
                 return new FunctionValueOperation(
-                    outputType: functionSignature.returnType,
-                    operation: (RuntimeContext rtContext) =>
-                        rtContext.RunFunction(
-                            functionName: functionName,
-                            arguments: arguments.GetArgs(functionSignature, rtContext)));
+                    functionSignature: functionSignature.Value,
+                    arguments: arguments);
             }
         }
 
@@ -517,16 +595,19 @@ namespace BGC.Scripting
             ReduceMemberAccessAndIndexing(units);
             ReducePostFixes(units);
             ReducePreOperator(Operator.Negate, units);
+            ReducePreOperator(Operator.BitwiseComplement, units);
             ReducePreFixes(units);
-            ReducePreOperator(Operator.CastDouble, units);
-            ReducePreOperator(Operator.CastInteger, units);
+            ReduceCastingOperators(units);
 
-            ReduceBinaryOperator(Operator.Power, units);
             ReduceBinaryOperator(Operator.Times, units);
             ReduceBinaryOperator(Operator.Divide, units);
             ReduceBinaryOperator(Operator.Modulo, units);
+
             ReduceBinaryOperator(Operator.Plus, units);
             ReduceBinaryOperator(Operator.Minus, units);
+
+            ReduceBinaryOperator(Operator.BitwiseLeftShift, units);
+            ReduceBinaryOperator(Operator.BitwiseRightShift, units);
 
             ReducePreOperator(Operator.Not, units);
 
@@ -537,6 +618,10 @@ namespace BGC.Scripting
 
             ReduceBinaryOperator(Operator.IsEqualTo, units);
             ReduceBinaryOperator(Operator.IsNotEqualTo, units);
+
+            ReduceBinaryOperator(Operator.BitwiseAnd, units);
+            ReduceBinaryOperator(Operator.BitwiseOr, units);
+            ReduceBinaryOperator(Operator.BitwiseXOr, units);
 
             ReduceBinaryOperator(Operator.And, units);
             ReduceBinaryOperator(Operator.Or, units);
@@ -563,14 +648,31 @@ namespace BGC.Scripting
                     units.RemoveAt(i);
                     i--;
 
-                    //Swap the ParsingUnit for the calculated value
-                    units[i] = new ParsedValuedUnit(
-                        value: MemberManagement.HandleMemberExpression(
-                            value: units[i].AsValueGetter,
-                            args: memberAccessUnit.args,
-                            identifier: memberAccessUnit.identifier,
-                            source: memberAccessUnit.FirstToken),
-                        firstToken: units[i].FirstToken);
+                    if (units[i].AsValueGetter is null && units[i].AsType is not null)
+                    {
+                        units[i] = new ParsedValuedUnit(
+                            value: MemberManagement.HandleStaticExpression(
+                                type: units[i].AsType!,
+                                genericMethodArguments: memberAccessUnit.genericMethodArguments,
+                                args: memberAccessUnit.args,
+                                identifier: memberAccessUnit.identifier,
+                                source: memberAccessUnit.FirstToken),
+                            firstToken: units[i].FirstToken);
+                    }
+                    else
+                    {
+                        //Swap the ParsingUnit for the calculated value
+                        units[i] = new ParsedValuedUnit(
+                            value: MemberManagement.HandleMemberExpression(
+                                value: units[i].AsValueGetter!,
+                                genericMethodArguments: memberAccessUnit.genericMethodArguments,
+                                args: memberAccessUnit.args,
+                                identifier: memberAccessUnit.identifier,
+                                source: memberAccessUnit.FirstToken),
+                            firstToken: units[i].FirstToken);
+                    }
+
+
                 }
                 else if (units[i] is IndexAccessUnit indexAccessUnit)
                 {
@@ -588,7 +690,7 @@ namespace BGC.Scripting
                     //Swap the ParsingUnit for the calculated value
                     units[i] = new ParsedValuedUnit(
                         value: new IndexerOperation(
-                            valueArg: units[i].AsValueGetter,
+                            containerArg: units[i].AsValueGetter!,
                             indexArg: indexAccessUnit.arg,
                             source: units[i].FirstToken),
                         firstToken: units[i].FirstToken);
@@ -610,7 +712,7 @@ namespace BGC.Scripting
                     }
 
                     //Cache operatortoken and remove operator
-                    OperatorToken operatorToken = units[i].FirstToken as OperatorToken;
+                    OperatorToken operatorToken = (units[i].FirstToken as OperatorToken)!;
                     units.RemoveAt(i);
 
                     //Move to Variable position
@@ -619,7 +721,7 @@ namespace BGC.Scripting
                     //Swap the ParsingUnit for the calculated value
                     units[i] = new ParsedValuedUnit(
                         value: new UnaryValueOperation(
-                            arg: units[i].AsValue,
+                            arg: units[i].AsValue!,
                             operatorToken: operatorToken,
                             prefix: false),
                         firstToken: units[i].FirstToken);
@@ -641,10 +743,10 @@ namespace BGC.Scripting
                     }
 
                     //Cache Value and remove
-                    IValue value = units[i + 1].AsValue;
+                    IValue value = units[i + 1].AsValue!;
                     units.RemoveAt(i + 1);
 
-                    OperatorToken operatorToken = units[i].FirstToken as OperatorToken;
+                    OperatorToken operatorToken = (units[i].FirstToken as OperatorToken)!;
 
                     //Swap the ParsingUnit for the calculated value
                     units[i] = new ParsedValuedUnit(
@@ -657,7 +759,9 @@ namespace BGC.Scripting
             }
         }
 
-        private static void ReducePreOperator(Operator op, List<ParsingUnit> units)
+        private static void ReducePreOperator(
+            Operator op,
+            List<ParsingUnit> units)
         {
             for (int i = 0; i < units.Count; i++)
             {
@@ -678,26 +782,18 @@ namespace BGC.Scripting
                     }
 
                     //Cache Value and remove
-                    IValueGetter value = units[i + 1].AsValueGetter;
+                    IValueGetter value = units[i + 1].AsValueGetter!;
                     units.RemoveAt(i + 1);
 
-                    OperatorToken operatorToken = units[i].FirstToken as OperatorToken;
+                    OperatorToken operatorToken = (units[i].FirstToken as OperatorToken)!;
 
                     //Swap the ParsingUnit for the calculated value
                     switch (op)
                     {
-                        case Operator.CastInteger:
-                        case Operator.CastDouble:
-                            units[i] = new ParsedValuedUnit(
-                                value: CastOperation.CreateCastOperation(
-                                    arg: value,
-                                    operatorToken: operatorToken),
-                                firstToken: units[i].FirstToken);
-                            break;
-
                         case Operator.Negate:
+                        case Operator.BitwiseComplement:
                             units[i] = new ParsedValuedUnit(
-                                value: NegationOperation.CreateNegationOperation(
+                                value: UnaryOperation.CreateUnaryOperation(
                                     arg: value,
                                     source: operatorToken),
                                 firstToken: units[i].FirstToken);
@@ -714,7 +810,40 @@ namespace BGC.Scripting
                         default:
                             throw new ArgumentException($"Unexpected Operator: {op}");
                     }
+                }
+            }
+        }
 
+        private static void ReduceCastingOperators(
+            List<ParsingUnit> units)
+        {
+            for (int i = 0; i < units.Count; i++)
+            {
+                if (units[i] is TokenUnit tokenUnit && tokenUnit.token is CastingOperationToken castingToken)
+                {
+                    if (i == units.Count - 1)
+                    {
+                        throw new ScriptParsingException(
+                            source: units[i].FirstToken,
+                            message: $"Unable to parse CastingOperation {castingToken}: No following value");
+                    }
+
+                    if (units[i + 1].AsValueGetter == null)
+                    {
+                        throw new ScriptParsingException(
+                            source: units[i + 1].FirstToken,
+                            message: $"Unable to parse CastingOperation {castingToken}: Following value is not value not retrievable: {units[i + 1].FirstToken}");
+                    }
+
+                    //Cache Value and remove
+                    IValueGetter value = units[i + 1].AsValueGetter!;
+                    units.RemoveAt(i + 1);
+
+                    units[i] = new ParsedValuedUnit(
+                        value: CastOperation.CreateCastOperation(
+                            arg: value,
+                            castingOperationToken: castingToken),
+                        firstToken: units[i].FirstToken);
                 }
             }
         }
@@ -755,10 +884,10 @@ namespace BGC.Scripting
                             message: $"Unexpected token after {units[i].OperatorType} operator: {units[i + 1].FirstToken}");
                     }
 
-                    OperatorToken operatorToken = units[i].FirstToken as OperatorToken;
+                    OperatorToken operatorToken = (units[i].FirstToken as OperatorToken)!;
 
                     //Cache Value and remove Right value and operator
-                    IValueGetter arg2Value = units[i + 1].AsValueGetter;
+                    IValueGetter arg2Value = units[i + 1].AsValueGetter!;
                     units.RemoveAt(i + 1);
                     units.RemoveAt(i);
 
@@ -766,72 +895,89 @@ namespace BGC.Scripting
                     i--;
 
                     //Swap the ParsingUnit for the calculated value
+                    Type arg1Type = units[i].AsValueGetter!.GetValueType();
+                    Type arg2Type = arg2Value.GetValueType();
 
-                    switch (op)
+                    if ((arg1Type.IsExtendedPrimitive() || arg1Type.IsEnum) &&
+                        arg2Type.IsExtendedPrimitive() || arg2Type.IsEnum)
                     {
-                        case Operator.Plus:
-                            if (units[i].AsValueGetter.GetValueType() == typeof(string) ||
-                                arg2Value.GetValueType() == typeof(string))
-                            {
-                                //Handle String Concatenation
+                        switch (op)
+                        {
+                            case Operator.Plus:
+                            case Operator.Minus:
+                            case Operator.Times:
+                            case Operator.Divide:
+                            case Operator.Modulo:
+                            case Operator.BitwiseAnd:
+                            case Operator.BitwiseOr:
+                            case Operator.BitwiseXOr:
+                            case Operator.BitwiseLeftShift:
+                            case Operator.BitwiseRightShift:
+                                if ((arg1Type == typeof(string) ||
+                                    arg2Type == typeof(string)) &&
+                                    op == Operator.Plus)
+                                {
+                                    //Handle String Concatenation
+                                    units[i] = new ParsedValuedUnit(
+                                        value: ConcatenateOperator.CreateConcatenateOperator(
+                                            arg1: units[i].AsValueGetter!,
+                                            arg2: arg2Value),
+                                        firstToken: units[i].FirstToken);
+                                    break;
+                                }
+                                //Handle Numerical Operators
                                 units[i] = new ParsedValuedUnit(
-                                    value: ConcatenateOperator.CreateConcatenateOperator(
-                                        arg1: units[i].AsValueGetter,
-                                        arg2: arg2Value),
+                                    value: BinaryNumericalOperation.CreateBinaryNumericalOperation(
+                                        arg1: units[i].AsValueGetter!,
+                                        arg2: arg2Value,
+                                        operatorToken: operatorToken),
                                     firstToken: units[i].FirstToken);
                                 break;
-                            }
-                            //Handle like addition
-                            goto case Operator.Minus;
 
-                        case Operator.Minus:
-                        case Operator.Times:
-                        case Operator.Divide:
-                        case Operator.Power:
-                        case Operator.Modulo:
-                            //Handle Numerical Operators
-                            units[i] = new ParsedValuedUnit(
-                                value: BinaryNumericalOperation.CreateBinaryNumericalOperation(
-                                    arg1: units[i].AsValueGetter,
-                                    arg2: arg2Value,
-                                    operatorToken: operatorToken),
-                                firstToken: units[i].FirstToken);
-                            break;
+                            case Operator.IsEqualTo:
+                            case Operator.IsNotEqualTo:
+                                units[i] = new ParsedValuedUnit(
+                                    value: EqualityCompairsonOperation.CreateEqualityComparisonOperator(
+                                        arg1: units[i].AsValueGetter!,
+                                        arg2: arg2Value,
+                                        operatorToken: operatorToken),
+                                    firstToken: units[i].FirstToken);
+                                break;
 
-                        case Operator.IsEqualTo:
-                        case Operator.IsNotEqualTo:
-                            units[i] = new ParsedValuedUnit(
-                                value: EqualityCompairsonOperation.CreateEqualityComparisonOperator(
-                                    arg1: units[i].AsValueGetter,
-                                    arg2: arg2Value,
-                                    operatorToken: operatorToken),
-                                firstToken: units[i].FirstToken);
-                            break;
+                            case Operator.IsGreaterThan:
+                            case Operator.IsGreaterThanOrEqualTo:
+                            case Operator.IsLessThan:
+                            case Operator.IsLessThanOrEqualTo:
+                                units[i] = new ParsedValuedUnit(
+                                    value: ComparisonOperation.CreateComparisonOperation(
+                                        arg1: units[i].AsValueGetter!,
+                                        arg2: arg2Value,
+                                        operatorToken: operatorToken),
+                                    firstToken: units[i].FirstToken);
+                                break;
 
-                        case Operator.IsGreaterThan:
-                        case Operator.IsGreaterThanOrEqualTo:
-                        case Operator.IsLessThan:
-                        case Operator.IsLessThanOrEqualTo:
-                            units[i] = new ParsedValuedUnit(
-                                value: ComparisonOperation.CreateComparisonOperation(
-                                    arg1: units[i].AsValueGetter,
-                                    arg2: arg2Value,
-                                    operatorToken: operatorToken),
-                                firstToken: units[i].FirstToken);
-                            break;
+                            case Operator.And:
+                            case Operator.Or:
+                                units[i] = new ParsedValuedUnit(
+                                    value: BinaryBoolOperation.CreateBinaryBoolOperator(
+                                        arg1: units[i].AsValueGetter!,
+                                        arg2: arg2Value,
+                                        operatorToken: operatorToken),
+                                    firstToken: units[i].FirstToken);
+                                break;
 
-                        case Operator.And:
-                        case Operator.Or:
-                            units[i] = new ParsedValuedUnit(
-                                value: BinaryBoolOperation.CreateBinaryBoolOperator(
-                                    arg1: units[i].AsValueGetter,
-                                    arg2: arg2Value,
-                                    operatorToken: operatorToken),
-                                firstToken: units[i].FirstToken);
-                            break;
-
-                        default:
-                            throw new ArgumentException($"Unexpected Operator: {op}");
+                            default:
+                                throw new ArgumentException($"Unexpected Operator: {op}");
+                        }
+                    }
+                    else
+                    {
+                        units[i] = new ParsedValuedUnit(
+                            value: OverloadedOperation.CreateOverloadedOperator(
+                                arg1: units[i].AsValueGetter!,
+                                arg2: arg2Value,
+                                operatorToken: operatorToken),
+                            firstToken: units[i].FirstToken);
                     }
                 }
             }
@@ -878,11 +1024,11 @@ namespace BGC.Scripting
                             message: $"Unexpected token for second arguemnt of {units[i].OperatorType} operator: {units[i + 2].FirstToken}");
                     }
 
-                    OperatorToken operatorToken = units[i].FirstToken as OperatorToken;
+                    OperatorToken operatorToken = (units[i].FirstToken as OperatorToken)!;
 
                     //Cache Value and remove Right value and operator
-                    IValueGetter arg1Value = units[i + 1].AsValueGetter;
-                    IValueGetter arg2Value = units[i + 2].AsValueGetter;
+                    IValueGetter arg1Value = units[i + 1].AsValueGetter!;
+                    IValueGetter arg2Value = units[i + 2].AsValueGetter!;
                     units.RemoveAt(i + 2);
                     units.RemoveAt(i + 1);
                     units.RemoveAt(i);
@@ -893,7 +1039,7 @@ namespace BGC.Scripting
                     //Swap the ParsingUnit for the calculated value
                     units[i] = new ParsedValuedUnit(
                         value: new TernaryOperation(
-                            condition: units[i].AsValueGetter,
+                            condition: units[i].AsValueGetter!,
                             arg1: arg1Value,
                             arg2: arg2Value,
                             operatorToken: operatorToken),
@@ -911,7 +1057,9 @@ namespace BGC.Scripting
                     units[i].OperatorType == Operator.MinusEquals ||
                     units[i].OperatorType == Operator.TimesEquals ||
                     units[i].OperatorType == Operator.DivideEquals ||
-                    units[i].OperatorType == Operator.PowerEquals ||
+                    units[i].OperatorType == Operator.BitwiseXOrEquals ||
+                    units[i].OperatorType == Operator.BitwiseLeftShiftEquals ||
+                    units[i].OperatorType == Operator.BitwiseRightShiftEquals ||
                     units[i].OperatorType == Operator.ModuloEquals ||
                     units[i].OperatorType == Operator.AndEquals ||
                     units[i].OperatorType == Operator.OrEquals)
@@ -944,10 +1092,10 @@ namespace BGC.Scripting
                             message: $"Expression after {units[i].OperatorType} operator must have a value: {units[i + 1].FirstToken}");
                     }
 
-                    OperatorToken operatorToken = units[i].FirstToken as OperatorToken;
+                    OperatorToken operatorToken = (units[i].FirstToken as OperatorToken)!;
 
                     //Cache Value and remove Right value and operator
-                    IValueGetter value = units[i + 1].AsValueGetter;
+                    IValueGetter value = units[i + 1].AsValueGetter!;
                     units.RemoveAt(i + 1);
                     units.RemoveAt(i);
 
@@ -961,45 +1109,63 @@ namespace BGC.Scripting
                         case Operator.Assignment:
                             units[i] = new ParsedValuedUnit(
                                 value: new AssignmentOperation(
-                                    assignee: units[i].AsValue,
+                                    assignee: units[i].AsValue!,
                                     value: value,
                                     source: operatorToken),
                                 firstToken: units[i].FirstToken);
                             break;
 
                         case Operator.PlusEquals:
-                            units[i] = new ParsedValuedUnit(
-                                value: new PlusEqualsOperation(
-                                    assignee: units[i].AsValue,
-                                    value: value,
-                                    source: operatorToken),
-                                firstToken: units[i].FirstToken);
-                            break;
-
                         case Operator.MinusEquals:
                         case Operator.TimesEquals:
                         case Operator.DivideEquals:
-                        case Operator.PowerEquals:
                         case Operator.ModuloEquals:
+                        case Operator.BitwiseXOrEquals:
+                        case Operator.BitwiseLeftShiftEquals:
+                        case Operator.BitwiseRightShiftEquals:
+                            if (operatorToken.operatorType == Operator.PlusEquals &&
+                                units[i].AsValue!.GetValueType() == typeof(string))
+                            {
+                                //string concatenation
+                                units[i] = new ParsedValuedUnit(
+                                    value: new PlusEqualsOperation(
+                                        assignee: units[i].AsValue!,
+                                        value: value,
+                                        source: operatorToken),
+                                    firstToken: units[i].FirstToken);
+                                break;
+                            }
                             //Handle Numerical Operators
                             units[i] = new ParsedValuedUnit(
                                 value: new NumericalInPlaceOperation(
-                                    assignee: units[i].AsValue,
+                                    assignee: units[i].AsValue!,
                                     value: value,
-                                    operatorType: operatorToken.operatorType,
-                                    source: operatorToken),
+                                    operatorToken: operatorToken),
                                 firstToken: units[i].FirstToken);
                             break;
 
                         case Operator.AndEquals:
                         case Operator.OrEquals:
-                            units[i] = new ParsedValuedUnit(
-                                value: new BooleanInPlaceOperation(
-                                    assignee: units[i].AsValue,
-                                    value: value,
-                                    operatorType: operatorToken.operatorType,
-                                    source: operatorToken),
-                                firstToken: units[i].FirstToken);
+                            if (units[i].AsValue!.GetValueType() == typeof(bool))
+                            {
+                                //Boolean operation
+                                units[i] = new ParsedValuedUnit(
+                                    value: new BooleanInPlaceOperation(
+                                        assignee: units[i].AsValue!,
+                                        value: value,
+                                        operatorToken: operatorToken),
+                                    firstToken: units[i].FirstToken);
+                            }
+                            else
+                            {
+                                //Integral operation
+                                units[i] = new ParsedValuedUnit(
+                                    value: new NumericalInPlaceOperation(
+                                        assignee: units[i].AsValue!,
+                                        value: value,
+                                        operatorToken: operatorToken),
+                                    firstToken: units[i].FirstToken);
+                            }
                             break;
 
                         default:
@@ -1009,7 +1175,7 @@ namespace BGC.Scripting
             }
         }
 
-        private abstract class ParsingUnit
+        internal abstract class ParsingUnit
         {
             public virtual Operator OperatorType => Operator.MAX;
             public virtual IExpression AsExpression => null;
@@ -1017,15 +1183,17 @@ namespace BGC.Scripting
             public virtual IValueGetter AsValueGetter => null;
             public virtual IValue AsValue => null;
             public virtual IExecutable AsExecutable => null;
+            public virtual Type AsType => null;
 
             public abstract Token FirstToken { get; }
 
         }
 
-        private class TokenUnit : ParsingUnit
+        internal class TokenUnit : ParsingUnit
         {
             public readonly Token token;
             public override Operator OperatorType { get; }
+            public override Type AsType { get; } = null;
             public override Token FirstToken => token;
 
             public TokenUnit(Token token)
@@ -1036,6 +1204,10 @@ namespace BGC.Scripting
                 {
                     OperatorType = opToken.operatorType;
                 }
+                else if (token is TypeToken typeToken)
+                {
+                    AsType = typeToken.BuildType();
+                }
                 else
                 {
                     OperatorType = Operator.MAX;
@@ -1043,7 +1215,7 @@ namespace BGC.Scripting
             }
         }
 
-        private class IdentifierUnit : ParsingUnit
+        internal class IdentifierUnit : ParsingUnit
         {
             public override IValue AsValue { get; }
             public override IValueSetter AsValueSetter => AsValue;
@@ -1087,15 +1259,18 @@ namespace BGC.Scripting
             public override Operator OperatorType => Operator.MemberAccess;
 
             public readonly string identifier;
-            public readonly IValueGetter[] args;
+            public readonly InvocationArgument[] args;
+            public readonly Type[] genericMethodArguments;
 
             public MemberAccessUnit(
                 string identifier,
-                IValueGetter[] args,
+                InvocationArgument[] args,
+                Type[] genericMethodArguments,
                 Token firstToken)
             {
                 this.identifier = identifier;
                 this.args = args;
+                this.genericMethodArguments = genericMethodArguments;
                 FirstToken = firstToken;
             }
         }

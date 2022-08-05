@@ -225,7 +225,7 @@ namespace BGC.Audio.Audiometry
             customCalibration = calibrationResults;
             calibrationResults = null;
 
-            currentCalibrationName = $"Calibration_{customCalibration.CalibrationDate: yy_MM_dd_HH_mm_ss}.json";
+            currentCalibrationName = $"Calibration_{customCalibration.CalibrationDate:yy_MM_dd_HH_mm_ss}.json";
 
             FileWriter.WriteJson(
                 path: DataManagement.PathForDataFile(dataDirectory, currentCalibrationName),
@@ -532,7 +532,7 @@ namespace BGC.Audio.Audiometry
                 return null;
             }
 
-            string currentValidationName = $"Validation_{validationResults.ValidationDate: yy_MM_dd_HH_mm_ss}.json";
+            string currentValidationName = $"Validation_{validationResults.ValidationDate:yy_MM_dd_HH_mm_ss}.json";
 
             FileWriter.WriteJson(
                 path: DataManagement.PathForDataFile(dataDirectory, currentValidationName),

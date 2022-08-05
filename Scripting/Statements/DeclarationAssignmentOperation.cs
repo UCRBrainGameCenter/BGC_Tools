@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Threading;
 
 namespace BGC.Scripting
 {
@@ -17,11 +17,31 @@ namespace BGC.Scripting
             CompilationContext context)
         {
             //Check initializer type
-            if (!valueType.AssignableFromType(initializer.GetValueType()))
+            if (!valueType.AssignableOrConvertableFromType(initializer.GetValueType()))
             {
-                throw new ScriptParsingException(
-                    source: identifierToken,
-                    message: $"Incompatible type in declaration.  Expected type {valueType.Name}, Received {initializer.GetValueType().Name}");
+                //Allow some 
+                if (valueType.IsSmallIntegralType() && initializer is LiteralToken litToken)
+                {
+                    if (litToken.IsLiteralInRange(valueType))
+                    {
+                        initializer = new ConstantToken(
+                            source: litToken,
+                            value: Convert.ChangeType(litToken.GetAs<object>(), valueType),
+                            valueType: valueType);
+                    }
+                    else
+                    {
+                        throw new ScriptParsingException(
+                            source: identifierToken,
+                            message: $"Value {litToken.GetAs<object>()} is out of range for {identifierToken.identifier} of type {valueType.Name}");
+                    }
+                }
+                else
+                {
+                    throw new ScriptParsingException(
+                        source: identifierToken,
+                        message: $"Incompatible type in declaration.  Expected type {valueType.Name}, Received {initializer.GetValueType().Name}");
+                }
             }
 
             if (isConstant)
@@ -69,7 +89,9 @@ namespace BGC.Scripting
             this.initializer = initializer;
         }
 
-        public override FlowState Execute(ScopeRuntimeContext context)
+        public override FlowState Execute(
+            ScopeRuntimeContext context,
+            CancellationToken ct)
         {
             if (context.VariableExists(identifier))
             {

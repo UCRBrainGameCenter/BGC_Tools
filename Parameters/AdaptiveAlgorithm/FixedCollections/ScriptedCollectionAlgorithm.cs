@@ -42,7 +42,7 @@ namespace BGC.Parameters.Algorithms.FixedCollection
                 new FunctionSignature(
                     identifier: "SubmitResult",
                     returnType: typeof(void),
-                    arguments: new VariableData("stepValue", typeof(int))),
+                    arguments: new ArgumentData("stepValue", typeof(int))),
                 new FunctionSignature(
                     identifier: "End",
                     returnType: typeof(bool)),
@@ -177,7 +177,7 @@ namespace BGC.Parameters.Algorithms.FixedCollection
                 new FunctionSignature(
                     identifier: "SubmitResult",
                     returnType: typeof(void),
-                    arguments: new VariableData("stepValue", typeof(int))),
+                    arguments: new ArgumentData("stepValue", typeof(int))),
                 new FunctionSignature(
                     identifier: "End",
                     returnType: typeof(bool)),

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 
 namespace BGC.Scripting
 {
@@ -12,36 +13,21 @@ namespace BGC.Scripting
         public NumericalInPlaceOperation(
             IValue assignee,
             IValueGetter value,
-            Operator operatorType,
-            Token source)
+            OperatorToken operatorToken)
         {
             assigneeType = assignee.GetValueType();
             Type valueType = value.GetValueType();
 
-            if (!(assigneeType == typeof(int) || assigneeType == typeof(double)))
+            if (!assigneeType.AssignableOrConvertableFromType(valueType))
             {
                 throw new ScriptParsingException(
-                    source: source,
-                    message: $"Assignee {assignee} for Operator {source} is not a numerical value: type {assigneeType.Name}");
-            }
-
-            if (!(valueType == typeof(int) || valueType == typeof(double)))
-            {
-                throw new ScriptParsingException(
-                    source: source,
-                    message: $"Value {value} for Operator {source} is not a numerical value: type {valueType.Name}");
-            }
-
-            if (assigneeType == typeof(int) && valueType == typeof(double))
-            {
-                throw new ScriptParsingException(
-                    source: source,
-                    message: $"Unable to implicity cast Value {value} to type int for assignment to assignee {assignee}.");
+                    source: operatorToken,
+                    message: $"Assignee {assignee} for Operator {operatorToken.operatorType} is not a numerical value: type {assigneeType.Name}");
             }
 
             this.assignee = assignee;
             this.value = value;
-            this.operatorType = operatorType;
+            operatorType = operatorToken.operatorType;
 
             switch (operatorType)
             {
@@ -49,84 +35,79 @@ namespace BGC.Scripting
                 case Operator.MinusEquals:
                 case Operator.TimesEquals:
                 case Operator.DivideEquals:
-                case Operator.PowerEquals:
                 case Operator.ModuloEquals:
                     //Acceptable
                     break;
+
+                case Operator.BitwiseLeftShiftEquals:
+                case Operator.BitwiseRightShiftEquals:
+                case Operator.BitwiseXOrEquals:
+                case Operator.AndEquals:
+                case Operator.OrEquals:
+                    if (!value.GetValueType().IsIntegralType())
+                    {
+                        throw new ScriptParsingException(operatorToken, $"Operator {operatorType} requires the argument be an integral type. Received {value.GetValueType()}.");
+                    }
+                    break;
+
 
                 default: throw new ArgumentException($"Unexpected Operator: {operatorType}");
             }
         }
 
-        public override FlowState Execute(ScopeRuntimeContext context)
+        public override FlowState Execute(
+            ScopeRuntimeContext context,
+            CancellationToken ct)
         {
-            if (assigneeType == typeof(int))
+            dynamic assigneeValue = assignee.GetAs<object>(context)!;
+            dynamic modVaue = value.GetAs<object>(context)!;
+
+            switch (operatorType)
             {
-                switch (operatorType)
-                {
-                    case Operator.PlusEquals:
-                        assignee.SetAs(context, assignee.GetAs<int>(context) + value.GetAs<int>(context));
-                        break;
+                case Operator.PlusEquals:
+                    assigneeValue += modVaue;
+                    break;
 
-                    case Operator.MinusEquals:
-                        assignee.SetAs(context, assignee.GetAs<int>(context) - value.GetAs<int>(context));
-                        break;
+                case Operator.MinusEquals:
+                    assigneeValue -= modVaue;
+                    break;
 
-                    case Operator.TimesEquals:
-                        assignee.SetAs(context, assignee.GetAs<int>(context) * value.GetAs<int>(context));
-                        break;
+                case Operator.TimesEquals:
+                    assigneeValue *= modVaue;
+                    break;
 
-                    case Operator.DivideEquals:
-                        assignee.SetAs(context, assignee.GetAs<int>(context) / value.GetAs<int>(context));
-                        break;
+                case Operator.DivideEquals:
+                    assigneeValue /= modVaue;
+                    break;
 
-                    case Operator.PowerEquals:
-                        assignee.SetAs(context, (int)Math.Pow(assignee.GetAs<int>(context), value.GetAs<int>(context)));
-                        break;
+                case Operator.ModuloEquals:
+                    assigneeValue %= modVaue;
+                    break;
 
-                    case Operator.ModuloEquals:
-                        assignee.SetAs(context, assignee.GetAs<int>(context) % value.GetAs<int>(context));
-                        break;
+                case Operator.BitwiseLeftShiftEquals:
+                    assigneeValue <<= modVaue;
+                    break;
 
-                    default: throw new ArgumentException($"Unexpected Operator: {operatorType}");
-                }
+                case Operator.BitwiseRightShiftEquals:
+                    assigneeValue >>= modVaue;
+                    break;
+
+                case Operator.BitwiseXOrEquals:
+                    assigneeValue ^= modVaue;
+                    break;
+
+                case Operator.AndEquals:
+                    assigneeValue &= modVaue;
+                    break;
+
+                case Operator.OrEquals:
+                    assigneeValue |= modVaue;
+                    break;
+
+                default: throw new ArgumentException($"Unexpected Operator {operatorType}");
             }
-            else if (assigneeType == typeof(double))
-            {
-                switch (operatorType)
-                {
-                    case Operator.PlusEquals:
-                        assignee.SetAs(context, assignee.GetAs<double>(context) + value.GetAs<double>(context));
-                        break;
 
-                    case Operator.MinusEquals:
-                        assignee.SetAs(context, assignee.GetAs<double>(context) - value.GetAs<double>(context));
-                        break;
-
-                    case Operator.TimesEquals:
-                        assignee.SetAs(context, assignee.GetAs<double>(context) * value.GetAs<double>(context));
-                        break;
-
-                    case Operator.DivideEquals:
-                        assignee.SetAs(context, assignee.GetAs<double>(context) / value.GetAs<double>(context));
-                        break;
-
-                    case Operator.PowerEquals:
-                        assignee.SetAs(context, Math.Pow(assignee.GetAs<double>(context), value.GetAs<double>(context)));
-                        break;
-
-                    case Operator.ModuloEquals:
-                        assignee.SetAs(context, assignee.GetAs<double>(context) % value.GetAs<double>(context));
-                        break;
-
-                    default: throw new ArgumentException($"Unexpected Operator: {operatorType}");
-                }
-            }
-            else
-            {
-                throw new ScriptRuntimeException(
-                    $"Incompatible types for operator {operatorType}: {assignee} of type {assigneeType.Name} and {value} of type {value.GetValueType().Name}");
-            }
+            assignee.Set(context, assigneeValue);
 
             return FlowState.Nominal;
         }
