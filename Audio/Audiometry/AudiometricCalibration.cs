@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using LightJson;
 using BGC.IO;
+using System.IO;
 
 namespace BGC.Audio.Audiometry
 {
@@ -21,6 +22,8 @@ namespace BGC.Audio.Audiometry
         private static string currentCalibrationName = null;
         private static CalibrationProfile customCalibration = null;
         private static CalibrationProfile calibrationResults = null;
+        private static readonly Dictionary<string, CalibrationProfile> calibrationProfilesByName = new Dictionary<string, CalibrationProfile>();
+        private static readonly List<CalibrationProfile> calibrationProfilesByDate = new List<CalibrationProfile>();
 
         private static ValidationResults validationResults = null;
 
@@ -55,12 +58,50 @@ namespace BGC.Audio.Audiometry
             {
                 initialized = true;
 
+                LoadAllCalibrationFiles();
+
                 FileReader.ReadJsonFile(
                     path: DataManagement.PathForDataFile(systemDirectory, configFileName),
                     successCallback: DeserializeCalibrationSettings,
                     failCallback: SerializeCalibrationSettings,
                     fileNotFoundCallback: SerializeCalibrationSettings);
+
+                // If no calibration setting was found, use the latest one
+                if (calibrationProfilesByDate.Count > 0 && customCalibration == null)
+                {
+                    customCalibration = calibrationProfilesByDate[^1];
+                }
             }
+        }
+
+        // Load all calibration data in the data directory
+        private static void LoadAllCalibrationFiles()
+        {
+            foreach (string fileName in Directory.EnumerateFiles(
+                    DataManagement.PathForDataDirectory(dataDirectory),
+                    "*.json",
+                    new EnumerationOptions()
+                    {
+                        AttributesToSkip = FileAttributes.Directory,
+                        MatchCasing = MatchCasing.CaseInsensitive,
+                        RecurseSubdirectories = false,
+                        IgnoreInaccessible = true,
+                    }))
+            {
+                FileReader.ReadJsonFile(
+                    path: fileName,
+                    successCallback: data =>
+                    {
+                        if (data.ContainsKey("CalibrationDate"))
+                        {
+                            CalibrationProfile calibrationProfile = new CalibrationProfile(data);
+                            calibrationProfilesByName.Add(Path.GetFileName(fileName), calibrationProfile);
+                            calibrationProfilesByDate.Add(calibrationProfile);
+                        }
+                    });
+            }
+
+            calibrationProfilesByDate.Sort((profile1, profile2) => DateTime.Compare(profile1.CalibrationDate, profile2.CalibrationDate));
         }
 
         private static void DeserializeCalibrationSettings(JsonObject parsedValue)
@@ -76,11 +117,14 @@ namespace BGC.Audio.Audiometry
 
             if (!string.IsNullOrEmpty(currentCalibrationName))
             {
-                FileReader.ReadJsonFile(
-                    path: DataManagement.PathForDataFile(dataDirectory, currentCalibrationName),
-                    successCallback: data => customCalibration = new CalibrationProfile(data),
-                    failCallback: FailedToLoadCalibrationSettings,
-                    fileNotFoundCallback: FailedToLoadCalibrationSettings);
+                if (calibrationProfilesByName.ContainsKey(currentCalibrationName))
+                {
+                    customCalibration = calibrationProfilesByName[currentCalibrationName];
+                }
+                else
+                {
+                    FailedToLoadCalibrationSettings();
+                }
             }
             else
             {
@@ -259,6 +303,12 @@ namespace BGC.Audio.Audiometry
 
         public static bool HasCalibrationProfile() => customCalibration != null;
 
+        public static int NumHistoricCalibrationProfiles() => calibrationProfilesByDate.Count;
+
+        private static CalibrationProfile GetHistoricCalibrationProfile(int index) => index >= 0 && index < calibrationProfilesByDate.Count ? calibrationProfilesByDate[index] : customCalibration;
+
+        public static DateTime GetHistoricCalibrationDate(int index) => GetHistoricCalibrationProfile(index).CalibrationDate;
+
         /// <summary>
         /// Returns the scale factor per RMS.
         /// To use, multiple every sample by the output of this divided by the stream RMS.
@@ -268,7 +318,8 @@ namespace BGC.Audio.Audiometry
             CalibrationSet calibrationSet,
             double calibrationFrequency,
             AudioChannel channel,
-            Source source = Source.Custom)
+            Source source = Source.Custom,
+            int historicCalibrationIndex = -1)
         {
             CalibrationProfile calibrationProfile;
             switch (source)
@@ -282,12 +333,12 @@ namespace BGC.Audio.Audiometry
                     break;
 
                 case Source.Custom:
-                    if (customCalibration == null)
+                    calibrationProfile = GetHistoricCalibrationProfile(historicCalibrationIndex);
+                    if (calibrationProfile == null)
                     {
                         Debug.LogError($"Fallback behavior with Audiometric Calibration for Source: {source}");
                         goto case Source.Default;
                     }
-                    calibrationProfile = customCalibration;
                     break;
 
                 case Source.Default:
@@ -307,16 +358,18 @@ namespace BGC.Audio.Audiometry
             CalibrationSet calibrationSet,
             double frequency,
             double levelHL,
-            AudioChannel channel)
+            AudioChannel channel,
+            int historicCalibrationIndex = -1)
         {
             switch (calibrationSource)
             {
                 case Source.Custom:
-                    if (customCalibration == null)
+                    CalibrationProfile calibrationProfile = GetHistoricCalibrationProfile(historicCalibrationIndex);
+                    if (calibrationProfile == null)
                     {
                         throw new Exception($"Unable to EstimateRMS without calibration profile");
                     }
-                    return customCalibration.EstimateRMS(calibrationSet, frequency, levelHL, channel);
+                    return calibrationProfile.EstimateRMS(calibrationSet, frequency, levelHL, channel);
 
                 case Source.Results:
                     if (calibrationResults == null)
@@ -340,7 +393,8 @@ namespace BGC.Audio.Audiometry
             double levelHL,
             double calibrationFrequency,
             AudioChannel channel,
-            Source source = Source.Custom)
+            Source source = Source.Custom,
+            int historicCalibrationIndex = -1)
         {
             CalibrationProfile calibrationProfile;
             switch (source)
@@ -354,7 +408,8 @@ namespace BGC.Audio.Audiometry
                     break;
 
                 case Source.Custom:
-                    if (customCalibration == null)
+                    calibrationProfile = GetHistoricCalibrationProfile(historicCalibrationIndex);
+                    if (calibrationProfile == null)
                     {
                         Debug.LogError($"Fallback behavior with Audiometric Calibration for Source: {source}");
                         goto case Source.Default;
@@ -378,16 +433,18 @@ namespace BGC.Audio.Audiometry
             Source calibrationSource,
             double frequency,
             double levelHL,
-            AudioChannel channel)
+            AudioChannel channel,
+            int historicCalibrationIndex = -1)
         {
             switch (calibrationSource)
             {
                 case Source.Custom:
-                    if (customCalibration == null)
+                    CalibrationProfile calibrationProfile = GetHistoricCalibrationProfile(historicCalibrationIndex);
+                    if (calibrationProfile == null)
                     {
                         throw new Exception($"Unable to EstimateRMS without calibration profile");
                     }
-                    return customCalibration.EstimateOscillatorAttenuation(frequency, levelHL, channel);
+                    return calibrationProfile.EstimateOscillatorAttenuation(frequency, levelHL, channel);
 
                 case Source.Results:
                     if (calibrationResults == null)
@@ -409,16 +466,18 @@ namespace BGC.Audio.Audiometry
         public static double GetLevelSPL(
             Source calibrationSource,
             double frequency,
-            double levelHL)
+            double levelHL,
+            int historicCalibrationIndex = -1)
         {
             switch (calibrationSource)
             {
                 case Source.Custom:
-                    if (customCalibration == null)
+                    CalibrationProfile calibrationProfile = GetHistoricCalibrationProfile(historicCalibrationIndex);
+                    if (calibrationProfile == null)
                     {
                         throw new Exception($"Unable to use GetLevelSPL without calibration profile");
                     }
-                    return customCalibration.TransducerProfile.GetSPL(frequency, levelHL);
+                    return calibrationProfile.TransducerProfile.GetSPL(frequency, levelHL);
 
                 case Source.Results:
                     if (calibrationResults == null)
@@ -437,16 +496,18 @@ namespace BGC.Audio.Audiometry
         public static double GetLevelHL(
             Source calibrationSource,
             double frequency,
-            double levelSPL)
+            double levelSPL,
+            int historicCalibrationIndex = -1)
         {
             switch (calibrationSource)
             {
                 case Source.Custom:
-                    if (customCalibration == null)
+                    CalibrationProfile calibrationProfile = GetHistoricCalibrationProfile(historicCalibrationIndex);
+                    if (calibrationProfile == null)
                     {
                         throw new Exception($"Unable to use GetLevelHL without calibration profile");
                     }
-                    return customCalibration.TransducerProfile.GetHL(frequency, levelSPL);
+                    return calibrationProfile.TransducerProfile.GetHL(frequency, levelSPL);
 
                 case Source.Results:
                     if (calibrationResults == null)
