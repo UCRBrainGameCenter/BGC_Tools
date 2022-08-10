@@ -44,10 +44,6 @@
                 v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.uv = v.uv;
-
-#if !UNITY_UV_STARTS_AT_TOP
-                o.uv.y = 1.0 - o.uv.y;
-#endif
                 return o;
             }
 
