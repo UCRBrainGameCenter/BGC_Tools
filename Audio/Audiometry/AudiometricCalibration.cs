@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using UnityEngine;
-using LightJson;
-using BGC.IO;
 using System.IO;
+using System.Linq;
+using BGC.IO;
+using BGC.Users;
+using LightJson;
+using UnityEngine;
 
 namespace BGC.Audio.Audiometry
 {
@@ -19,6 +21,8 @@ namespace BGC.Audio.Audiometry
 
         private const string dataDirectory = "Calibration";
 
+        private const string ErrorThresholdKey = "AudiometricCalibrationErrorThreshold";
+
         private static string currentCalibrationName = null;
         private static CalibrationProfile customCalibration = null;
         private static CalibrationProfile calibrationResults = null;
@@ -28,6 +32,8 @@ namespace BGC.Audio.Audiometry
         private static ValidationResults validationResults = null;
 
         private static bool initialized = false;
+
+        private static double calibrationErrorThreshold = 1.0;
 
         private static class Keys
         {
@@ -71,7 +77,24 @@ namespace BGC.Audio.Audiometry
                 {
                     customCalibration = calibrationProfilesByDate[^1];
                 }
+
+                calibrationErrorThreshold = PlayerData.GlobalData.GetDouble(ErrorThresholdKey, 1.0);
             }
+        }
+
+        public static double RMSToDB(double rms) => 20.0 * Math.Log10(rms);
+
+        public static double GetCalibrationErrorThreshold() => calibrationErrorThreshold;
+
+        public static void SetCalibrationErrorThreshold(double threshold)
+        {
+            if (threshold <= 0)
+            {
+                threshold = 0;
+            }
+            calibrationErrorThreshold = threshold;
+            PlayerData.GlobalData.SetDouble(ErrorThresholdKey, calibrationErrorThreshold);
+            PlayerData.Save();
         }
 
         // Load all calibration data in the data directory
@@ -98,10 +121,24 @@ namespace BGC.Audio.Audiometry
                             calibrationProfilesByName.Add(Path.GetFileName(fileName), calibrationProfile);
                             calibrationProfilesByDate.Add(calibrationProfile);
                         }
+                        else if (data.ContainsKey("ValidationDate"))
+                        {
+                            ValidationResults curValidationResults = new ValidationResults(data);
+                            if (validationResults == null || validationResults.ValidationDate < curValidationResults.ValidationDate)
+                            {
+                                validationResults = curValidationResults;
+                            }
+                        }
                     });
             }
 
-            calibrationProfilesByDate.Sort((profile1, profile2) => DateTime.Compare(profile1.CalibrationDate, profile2.CalibrationDate));
+            SortCalibrationProfilesByDate();
+
+            // Don't use validation from previous calibrations
+            if (calibrationProfilesByDate.Count == 0 || validationResults.ValidationDate < calibrationProfilesByDate[0].CalibrationDate)
+            {
+                validationResults = null;
+            }
         }
 
         private static void DeserializeCalibrationSettings(JsonObject parsedValue)
@@ -279,6 +316,16 @@ namespace BGC.Audio.Audiometry
             SerializeCalibrationSettings();
 
             DeleteCalibrationProgressFile();
+
+            calibrationProfilesByName.Add(currentCalibrationName, customCalibration);
+            calibrationProfilesByDate.Add(customCalibration);
+            validationResults = null;
+            SortCalibrationProfilesByDate();
+        }
+
+        private static void SortCalibrationProfilesByDate()
+        {
+            calibrationProfilesByDate.Sort((profile1, profile2) => DateTime.Compare(profile2.CalibrationDate, profile1.CalibrationDate));
         }
 
         public static void DropCalibrationResults(Source source)
@@ -305,9 +352,23 @@ namespace BGC.Audio.Audiometry
 
         public static int NumHistoricCalibrationProfiles() => calibrationProfilesByDate.Count;
 
-        private static CalibrationProfile GetHistoricCalibrationProfile(int index) => index >= 0 && index < calibrationProfilesByDate.Count ? calibrationProfilesByDate[index] : customCalibration;
+        public static CalibrationProfile GetHistoricCalibrationProfile(int index) => index >= 0 && index < calibrationProfilesByDate.Count ? calibrationProfilesByDate[index] : customCalibration;
 
         public static DateTime GetHistoricCalibrationDate(int index) => GetHistoricCalibrationProfile(index).CalibrationDate;
+
+        public static ValidationResults GetValidationResults() => validationResults;
+
+        public static void SetCustomCalibration(int index)
+        {
+            if (index >= 0 && index < calibrationProfilesByDate.Count)
+            {
+                customCalibration = GetHistoricCalibrationProfile(index);
+                currentCalibrationName = calibrationProfilesByName.FirstOrDefault(x => x.Value == customCalibration).Key;
+                SerializeCalibrationSettings();
+            }
+        }
+
+        public static bool IsSelectedHistoricCalibrationProfile(int index) => index >= 0 && index < calibrationProfilesByDate.Count && calibrationProfilesByDate[index] == customCalibration;
 
         /// <summary>
         /// Returns the scale factor per RMS.
