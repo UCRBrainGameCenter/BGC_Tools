@@ -31,6 +31,8 @@ namespace BGC.Audio.Audiometry
 
         private static ValidationResults validationResults = null;
 
+        private static double micCalibrationOffset = double.NaN;
+
         private static bool initialized = false;
 
         private static double calibrationErrorThreshold = 1.0;
@@ -40,6 +42,7 @@ namespace BGC.Audio.Audiometry
             public const string Version = "Version";
 
             public const string CurrentCalibration = "Current";
+            public const string MicCalibrationOffset = "MicCalibrationOffset";
         }
 
         public enum Source
@@ -152,6 +155,15 @@ namespace BGC.Audio.Audiometry
                 currentCalibrationName = null;
             }
 
+            if (parsedValue.ContainsKey(Keys.MicCalibrationOffset))
+            {
+                micCalibrationOffset = parsedValue[Keys.MicCalibrationOffset].AsNumber;
+            }
+            else
+            {
+                micCalibrationOffset = double.NaN;
+            }
+
             if (!string.IsNullOrEmpty(currentCalibrationName))
             {
                 if (calibrationProfilesByName.ContainsKey(currentCalibrationName))
@@ -177,6 +189,27 @@ namespace BGC.Audio.Audiometry
             customCalibration = null;
         }
 
+#pragma warning disable IDE0060 // Remove unused parameter
+        public static void SubmitMicCalibrationOffset(double measuredPower, double presentationLevel, double frequency = double.NaN)
+#pragma warning restore IDE0060 // Remove unused parameter
+        {
+            micCalibrationOffset = presentationLevel - measuredPower;
+
+            SerializeCalibrationSettings();
+        }
+
+#pragma warning disable IDE0060 // Remove unused parameter
+        public static double GetCorrectedMicLevel(double power, double frequency = double.NaN)
+#pragma warning restore IDE0060 // Remove unused parameter
+        {
+            if (double.IsNaN(micCalibrationOffset))
+            {
+                return power;
+            }
+
+            return power + micCalibrationOffset;
+        }
+
         public static void SerializeCalibrationSettings()
         {
             FileWriter.WriteJson(
@@ -191,6 +224,11 @@ namespace BGC.Audio.Audiometry
                     if (!string.IsNullOrEmpty(currentCalibrationName))
                     {
                         data.Add(Keys.CurrentCalibration, currentCalibrationName);
+                    }
+
+                    if (!double.IsNaN(micCalibrationOffset))
+                    {
+                        data.Add(Keys.MicCalibrationOffset, micCalibrationOffset);
                     }
 
                     return data;

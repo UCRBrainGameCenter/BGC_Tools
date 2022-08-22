@@ -8,14 +8,52 @@ namespace BGC.Audio.Visualization
 {
     public static class PowerSpectralDensity
     {
-        public static (double[] psd, double offset) Decompose(
+        public static (double[] psd, double offset) DecomposeAndShift(
             IBGCStream stream,
             int windowOrder = 12,
             int targetChannel = 0)
         {
-            //WindowSize is 2 ^ windowOrder
-            int windowSize = 1 << windowOrder;
+            double[] spectralValues = Decompose(stream, windowOrder, targetChannel);
 
+            double maxValue = double.MinValue;
+            double minValue = double.MaxValue;
+
+            for (int i = 0; i < spectralValues.Length; i++)
+            {
+                if (!double.IsNaN(spectralValues[i]) && !double.IsNegativeInfinity(spectralValues[i]))
+                {
+                    if (spectralValues[i] > maxValue)
+                    {
+                        maxValue = spectralValues[i];
+                    }
+
+                    if (spectralValues[i] < minValue)
+                    {
+                        minValue = spectralValues[i];
+                    }
+                }
+            }
+
+            for (int i = 0; i < spectralValues.Length; i++)
+            {
+                if (double.IsNaN(spectralValues[i]) || double.IsNegativeInfinity(spectralValues[i]))
+                {
+                    spectralValues[i] = minValue - maxValue;
+                }
+                else
+                {
+                    spectralValues[i] -= maxValue;
+                }
+            }
+
+            return (spectralValues, maxValue);
+        }
+
+        public static double[] Decompose(
+            IBGCStream stream,
+            int windowOrder = 12,
+            int targetChannel = 0)
+        {
             if (stream.Channels <= targetChannel)
             {
                 throw new ArgumentException(
@@ -23,7 +61,17 @@ namespace BGC.Audio.Visualization
                     nameof(targetChannel));
             }
 
-            float[] samples = stream.IsolateChannel(targetChannel).HardClip().Cache().Samples;
+            return Decompose(
+                samples: stream.IsolateChannel(targetChannel).HardClip().Cache().Samples,
+                windowOrder: windowOrder);
+        }
+
+        public static double[] Decompose(
+            float[] samples,
+            int windowOrder = 12)
+        {
+            //WindowSize is 2 ^ windowOrder
+            int windowSize = 1 << windowOrder;
 
             int sampleOffset = windowSize / 2;
 
@@ -77,40 +125,12 @@ namespace BGC.Audio.Visualization
                 }
             }
 
-            double maxValue = double.MinValue;
-            double minValue = double.MaxValue;
-
             for (int i = 0; i < spectralValues.Length; i++)
             {
                 spectralValues[i] = 10.0 * Math.Log10(spectralValues[i]);
-
-                if (!double.IsNaN(spectralValues[i]) && !double.IsNegativeInfinity(spectralValues[i]))
-                {
-                    if (spectralValues[i] > maxValue)
-                    {
-                        maxValue = spectralValues[i];
-                    }
-
-                    if (spectralValues[i] < minValue)
-                    {
-                        minValue = spectralValues[i];
-                    }
-                }
             }
 
-            for (int i = 0; i < spectralValues.Length; i++)
-            {
-                if (double.IsNaN(spectralValues[i]) || double.IsNegativeInfinity(spectralValues[i]))
-                {
-                    spectralValues[i] = minValue - maxValue;
-                }
-                else
-                {
-                    spectralValues[i] -= maxValue;
-                }
-            }
-
-            return (spectralValues, maxValue);
+            return spectralValues;
         }
     }
 }
