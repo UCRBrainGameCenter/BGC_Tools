@@ -78,7 +78,7 @@ namespace BGC.Audio.Audiometry
                 // If no calibration setting was found, use the latest one
                 if (calibrationProfilesByDate.Count > 0 && customCalibration == null)
                 {
-                    customCalibration = calibrationProfilesByDate[^1];
+                    customCalibration = calibrationProfilesByDate[0];
                 }
 
                 calibrationErrorThreshold = PlayerData.GlobalData.GetDouble(ErrorThresholdKey, 1.0);
