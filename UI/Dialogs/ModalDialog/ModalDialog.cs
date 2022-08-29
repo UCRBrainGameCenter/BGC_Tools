@@ -857,8 +857,14 @@ namespace BGC.UI.Dialogs
             await (tmpDoubleInputCallbackAsync?.Invoke(response, primaryInputField.text, secondaryInputField.text) ?? Task.CompletedTask);
             tmpDropdownInputCallback?.Invoke(response, optionDropdown.value, secondaryInputField.text);
             await (tmpDropdownInputCallbackAsync?.Invoke(response, optionDropdown.value, secondaryInputField.text) ?? Task.CompletedTask);
-            
-            gameObject.SetActive(false);
+
+            if (!closeImmediately)
+            {
+                // 8/29/2022 - wrapping this in the if statement prevents legacy code from having issues with
+                // modal dialogs not showing up if they are called from within a previous modal dialog
+                // callback
+                gameObject.SetActive(false);
+            }
         }
     }
 }
