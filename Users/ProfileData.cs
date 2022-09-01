@@ -47,7 +47,7 @@ namespace BGC.Users
             else
             {
                 //Check existing data for type match
-                if (userData[key].IsInteger == false)
+                if (!userData[key].IsInteger && !userData[key].IsNull)
                 {
                     Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type} to Int");
                 }
@@ -69,7 +69,7 @@ namespace BGC.Users
             else
             {
                 //Check existing data for type match
-                if (userData[key].IsBoolean == false)
+                if (!userData[key].IsBoolean && !userData[key].IsNull)
                 {
                     if (userData[key].IsInteger)
                     {
@@ -97,7 +97,7 @@ namespace BGC.Users
             else
             {
                 //Check existing data for type match
-                if (userData[key].IsString == false)
+                if (!userData[key].IsString && !userData[key].IsNull)
                 {
                     Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type} to String");
                 }
@@ -118,7 +118,7 @@ namespace BGC.Users
             else
             {
                 //Check existing data for type match
-                if (userData[key].IsNumber == false)
+                if (!userData[key].IsNumber && !userData[key].IsNull)
                 {
                     Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type} to Number");
                 }
@@ -139,7 +139,7 @@ namespace BGC.Users
             else
             {
                 //Check existing data for type match
-                if (userData[key].IsNumber == false)
+                if (!userData[key].IsNumber && !userData[key].IsNull)
                 {
                     Debug.LogError($"PlayerData \"{key}\" Datatype changed from {userData[key].Type} to Number");
                 }
