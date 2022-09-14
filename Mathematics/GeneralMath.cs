@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace BGC.Mathematics
 {
@@ -675,5 +676,25 @@ namespace BGC.Mathematics
         }
 
         #endregion Approximately
+
+        public static double Accuracy(double hits, double trials) => hits == 0 ? 0 : hits / trials;
+
+        public static double SafeAverage(this IEnumerable<double> source, double defaultValue = 0.0)
+        {
+            if (source == null)
+            {
+                return defaultValue;
+            }
+
+            double sum = 0.0;
+            long count = 0;
+            foreach (double item in source)
+            {
+                sum += item;
+                count++;
+            }
+
+            return count > 0 ? sum / count : defaultValue;
+        }
     }
 }
