@@ -156,6 +156,7 @@ namespace BGC.Study
 
             //Dictionary
             public const string EnvironmentValues = "Env";
+            public const string PasswordId = "Password";
         }
 
         //Explicitly created sessions are added to the Session dictionary
@@ -243,6 +244,32 @@ namespace BGC.Study
             }
 
             return newSession;
+        }
+
+        public Session SetPassword(string password)
+        {
+            if (!string.IsNullOrWhiteSpace(password))
+            {
+                envVals[Keys.PasswordId] = password;
+            }
+            else
+            {
+                envVals.Remove(Keys.PasswordId);
+            }
+            return this;
+        }
+
+        public string GetPassword()
+        {
+            if (envVals.ContainsKey(Keys.PasswordId) && envVals[Keys.PasswordId].IsString)
+            {
+                string password = envVals[Keys.PasswordId].AsString;
+                if (!string.IsNullOrWhiteSpace(password))
+                {
+                    return password;
+                }
+            }
+            return null;
         }
 
         public static void HardClear()
