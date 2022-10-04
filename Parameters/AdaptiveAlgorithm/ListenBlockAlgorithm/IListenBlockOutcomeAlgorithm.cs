@@ -4,7 +4,7 @@
     {
         void Initialize();
 
-        public void SubmitBlockResults(
+        public int SubmitBlockResults(
             int trialsPerBlock,
             int trialCorrectCount,
             out double performance);

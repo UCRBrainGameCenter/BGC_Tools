@@ -48,10 +48,10 @@ namespace BGC.Parameters.Algorithms
         public void Initialize()
         {
             trial = 0;
-
+        
             correctCount = 0;
             incorrectCount = 0;
-
+        
             stepValue = 0;
             lastStep = 0;
         }
@@ -61,7 +61,7 @@ namespace BGC.Parameters.Algorithms
             SetStepValue(0, 0);
         }
 
-        public void SubmitBlockResults(
+        public int SubmitBlockResults(
             int trialsPerBlock,
             int trialCorrectCount,
             out double performance)
@@ -71,10 +71,12 @@ namespace BGC.Parameters.Algorithms
             int newTrialCount = Math.Min(trialCorrectCount + 1, MaxTrialsPerBlock);
             
             double accuracy = trialCorrectCount / (double)trialsPerBlock;
-
+        
             // StepStatus stepStatus = SetStepValue(0, stepValue + stepDiff);
-
+        
             performance = accuracy;
+        
+            return newTrialCount;
         }
 
         public override void PopulateScriptContext(GlobalRuntimeContext scriptContext)
@@ -101,5 +103,39 @@ namespace BGC.Parameters.Algorithms
         };
 
         #endregion Handler
+
+        // public void Initialize(double taskGuessRate)
+        // {
+        //     trial = 0;
+        //
+        //     correctCount = 0;
+        //     incorrectCount = 0;
+        //
+        //     stepValue = 0;
+        //     lastStep = 0;
+        // }
+        //
+        // public void SubmitTrialResult(bool correct)
+        // { 
+        //     ++trial;
+        //     if (correct)
+        //     {
+        //         correctCount++;
+        //     }
+        //     else
+        //     {
+        //         incorrectCount++;
+        //     }
+        //
+        //     if (trial % MaxTrialsPerBlock == 0)
+        //     {
+        //         // generate new block
+        //         int newTrialCount = Math.Min(correctCount + 1, MaxTrialsPerBlock);
+        //         
+        //         this.trial = 0;
+        //         this.correctCount = 0;
+        //         this.incorrectCount = 0;
+        //     }
+        // }
     }
 }
