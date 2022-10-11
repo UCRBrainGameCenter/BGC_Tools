@@ -20,9 +20,22 @@ namespace BGC.Scripting
 
             if (!argType.IsExtendedPrimitive() || argType == typeof(string))
             {
-                throw new ScriptParsingException(
-                    source: operatorToken,
-                    message: $"Cannot perform numerical operation {operatorType} on nonNumerical value {arg} of type {argType.Name}");
+                string operatorName = operatorToken.operatorType switch
+                {
+                    Operator.Increment => "op_Increment",
+                    Operator.Decrement => "op_Decrement",
+                    _ => null,
+                };
+                if (operatorName == null)
+                {
+                    throw new ArgumentException($"Unexpected Operator: {operatorToken.operatorType}");
+                }
+
+                var (canInvoke, error) = argType.CanInvokeStaticMethod(operatorName, argType);
+                if (!canInvoke)
+                {
+                    throw new ScriptParsingException(operatorToken, error);
+                }
             }
 
             this.arg = arg;
@@ -76,19 +89,63 @@ namespace BGC.Scripting
 
         private void Modify(RuntimeContext context)
         {
-            dynamic value = arg.GetAs<object>(context)!;
+            object value = arg.GetAs<object>(context)!;
 
-            switch (operatorType)
+            if (operatorType == Operator.Increment)
             {
-                case Operator.Increment:
-                    value++;
-                    break;
-
-                case Operator.Decrement:
-                    value--;
-                    break;
-
-                default: throw new ArgumentException($"Unexpected Operator {operatorType}");
+                switch (value)
+                {
+                    case bool: throw new ArgumentException($"Operator {operatorType} cannot be applied to bool");
+                    case byte prim: value = prim + 1; break;
+                    case sbyte prim: value = prim + 1; break;
+                    case short prim: value = prim + 1; break;
+                    case ushort prim: value = prim + 1; break;
+                    case int prim: value = prim + 1; break;
+                    case uint prim: value = prim + 1; break;
+                    case long prim: value = prim + 1; break;
+                    case ulong prim: value = prim + 1; break;
+                    case nint prim: value = prim + 1; break;
+                    case nuint prim: value = prim + 1; break;
+                    case char prim: value = prim + 1; break;
+                    case decimal prim: value = prim + 1; break;
+                    case float prim: value = prim + 1; break;
+                    case double prim: value = prim + 1; break;
+                    default:
+                    {
+                        value.GetType().InvokeStaticMethod("op_Increment", value);
+                        break;
+                    }
+                }
+            }
+            else if (operatorType == Operator.Decrement)
+            {
+                switch (value)
+                {
+                    case bool: throw new ArgumentException($"Operator {operatorType} cannot be applied to bool");
+                    case byte prim: value = prim - 1; break;
+                    case sbyte prim: value = prim - 1; break;
+                    case short prim: value = prim - 1; break;
+                    case ushort prim: value = prim - 1; break;
+                    case int prim: value = prim - 1; break;
+                    case uint prim: value = prim - 1; break;
+                    case long prim: value = prim - 1; break;
+                    case ulong prim: value = prim - 1; break;
+                    case nint prim: value = prim - 1; break;
+                    case nuint prim: value = prim - 1; break;
+                    case char prim: value = prim - 1; break;
+                    case decimal prim: value = prim - 1; break;
+                    case float prim: value = prim - 1; break;
+                    case double prim: value = prim - 1; break;
+                    default:
+                    {
+                        value.GetType().InvokeStaticMethod("op_Decrement", value);
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                throw new ArgumentException($"Unexpected Operator {operatorType}");
             }
 
             arg.Set(context, value);

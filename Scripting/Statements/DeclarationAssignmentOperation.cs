@@ -17,30 +17,40 @@ namespace BGC.Scripting
             CompilationContext context)
         {
             //Check initializer type
-            if (!valueType.AssignableOrConvertableFromType(initializer.GetValueType()))
+            if (valueType != initializer.GetValueType())
             {
-                //Allow some 
-                if (valueType.IsSmallIntegralType() && initializer is LiteralToken litToken)
+                if (!valueType.AssignableOrConvertableFromType(initializer.GetValueType()))
                 {
-                    if (litToken.IsLiteralInRange(valueType))
+                    //Allow some 
+                    if (valueType.IsSmallIntegralType() && initializer is LiteralToken litToken)
                     {
-                        initializer = new ConstantToken(
-                            source: litToken,
-                            value: Convert.ChangeType(litToken.GetAs<object>(), valueType),
-                            valueType: valueType);
+                        if (litToken.IsLiteralInRange(valueType))
+                        {
+                            initializer = new ConstantToken(
+                                source: litToken,
+                                value: Convert.ChangeType(litToken.GetAs<object>(), valueType),
+                                valueType: valueType);
+                        }
+                        else
+                        {
+                            throw new ScriptParsingException(
+                                source: identifierToken,
+                                message: $"Value {litToken.GetAs<object>()} is out of range for {identifierToken.identifier} of type {valueType.Name}");
+                        }
                     }
                     else
                     {
                         throw new ScriptParsingException(
                             source: identifierToken,
-                            message: $"Value {litToken.GetAs<object>()} is out of range for {identifierToken.identifier} of type {valueType.Name}");
+                            message: $"Incompatible type in declaration.  Expected type {valueType.Name}, Received {initializer.GetValueType().Name}");
                     }
                 }
-                else
+                else if (initializer is LiteralToken litToken)
                 {
-                    throw new ScriptParsingException(
-                        source: identifierToken,
-                        message: $"Incompatible type in declaration.  Expected type {valueType.Name}, Received {initializer.GetValueType().Name}");
+                    initializer = new ConstantToken(
+                        source: litToken,
+                        value: Convert.ChangeType(litToken.GetAs<object>(), valueType),
+                        valueType: valueType);
                 }
             }
 
@@ -100,6 +110,21 @@ namespace BGC.Scripting
             }
 
             object defaultValue = initializer.GetAs<object>(context);
+            if (defaultValue != null)
+            {
+                Type defaultValueType = defaultValue.GetType();
+                if (defaultValueType != valueType)
+                {
+                    if (valueType.AssignableOrConvertableFromType(defaultValueType))
+                    {
+                        defaultValue = Convert.ChangeType(defaultValue, valueType);
+                    }
+                    else
+                    {
+                        throw new ScriptRuntimeException($"Cannot assign {defaultValueType} into {valueType}");
+                    }
+                }
+            }
 
             context.DeclareVariable(identifier, valueType, defaultValue);
 

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Reflection;
 
 namespace BGC.Scripting
 {
@@ -43,26 +42,295 @@ namespace BGC.Scripting
             return (T)value!;
         }
 
-
-        public static Tout Cast<Tout>(dynamic obj)
-        {
-            try
-            {
-                return (Tout)obj;
-            }
-            catch (Exception)
-            {
-                return default!;
-            }
-        }
-
         public static object CastAs(object obj, Type type)
         {
-            MethodInfo methodInfo = typeof(CastOperation)
-                .GetMethod(nameof(Cast), BindingFlags.Static | BindingFlags.Public)!
-                .MakeGenericMethod(type);
+            Type objType = obj.GetType();
+            if (objType.IsPrimitive && type.IsPrimitive)
+            {
+                return CastPrimitive(obj, type);
+            }
 
-            return methodInfo.Invoke(null, new object[] { obj });
+            return Convert.ChangeType(obj, type);
+        }
+        
+        public static object CastPrimitive(object obj, Type type)
+        {
+            switch (obj)
+            {
+                case bool prim:
+                    switch (type.FullName)
+                    {
+                        case "System.Boolean": return (bool)prim;
+                    }
+                    break;
+                case byte prim:
+                    switch (type.FullName)
+                    {
+                        case "System.Byte": return (byte)prim;
+                        case "System.SByte": return (sbyte)prim;
+                        case "System.Int16": return (short)prim;
+                        case "System.UInt16": return (ushort)prim;
+                        case "System.Int32": return (int)prim;
+                        case "System.UInt32": return (uint)prim;
+                        case "System.Int64": return (long)prim;
+                        case "System.UInt64": return (ulong)prim;
+                        case "System.IntPtr": return (nint)prim;
+                        case "System.UIntPtr": return (nuint)prim;
+                        case "System.Char": return (char)prim;
+                        case "System.Decimal": return (decimal)prim;
+                        case "System.Single": return (float)prim;
+                        case "System.Double": return (double)prim;
+                    }
+                    break;
+                case sbyte prim:
+                    switch (type.FullName)
+                    {
+                        case "System.Byte": return (byte)prim;
+                        case "System.SByte": return (sbyte)prim;
+                        case "System.Int16": return (short)prim;
+                        case "System.UInt16": return (ushort)prim;
+                        case "System.Int32": return (int)prim;
+                        case "System.UInt32": return (uint)prim;
+                        case "System.Int64": return (long)prim;
+                        case "System.UInt64": return (ulong)prim;
+                        case "System.IntPtr": return (nint)prim;
+                        case "System.UIntPtr": return (nuint)prim;
+                        case "System.Char": return (char)prim;
+                        case "System.Decimal": return (decimal)prim;
+                        case "System.Single": return (float)prim;
+                        case "System.Double": return (double)prim;
+                    }
+                    break;
+                case short prim:
+                    switch (type.FullName)
+                    {
+                        case "System.Byte": return (byte)prim;
+                        case "System.SByte": return (sbyte)prim;
+                        case "System.Int16": return (short)prim;
+                        case "System.UInt16": return (ushort)prim;
+                        case "System.Int32": return (int)prim;
+                        case "System.UInt32": return (uint)prim;
+                        case "System.Int64": return (long)prim;
+                        case "System.UInt64": return (ulong)prim;
+                        case "System.IntPtr": return (nint)prim;
+                        case "System.UIntPtr": return (nuint)prim;
+                        case "System.Char": return (char)prim;
+                        case "System.Decimal": return (decimal)prim;
+                        case "System.Single": return (float)prim;
+                        case "System.Double": return (double)prim;
+                    }
+                    break;
+                case ushort prim:
+                    switch (type.FullName)
+                    {
+                        case "System.Byte": return (byte)prim;
+                        case "System.SByte": return (sbyte)prim;
+                        case "System.Int16": return (short)prim;
+                        case "System.UInt16": return (ushort)prim;
+                        case "System.Int32": return (int)prim;
+                        case "System.UInt32": return (uint)prim;
+                        case "System.Int64": return (long)prim;
+                        case "System.UInt64": return (ulong)prim;
+                        case "System.IntPtr": return (nint)prim;
+                        case "System.UIntPtr": return (nuint)prim;
+                        case "System.Char": return (char)prim;
+                        case "System.Decimal": return (decimal)prim;
+                        case "System.Single": return (float)prim;
+                        case "System.Double": return (double)prim;
+                    }
+                    break;
+                case int prim:
+                    switch (type.FullName)
+                    {
+                        case "System.Byte": return (byte)prim;
+                        case "System.SByte": return (sbyte)prim;
+                        case "System.Int16": return (short)prim;
+                        case "System.UInt16": return (ushort)prim;
+                        case "System.Int32": return (int)prim;
+                        case "System.UInt32": return (uint)prim;
+                        case "System.Int64": return (long)prim;
+                        case "System.UInt64": return (ulong)prim;
+                        case "System.IntPtr": return (nint)prim;
+                        case "System.UIntPtr": return (nuint)prim;
+                        case "System.Char": return (char)prim;
+                        case "System.Decimal": return (decimal)prim;
+                        case "System.Single": return (float)prim;
+                        case "System.Double": return (double)prim;
+                    }
+                    break;
+                case uint prim:
+                    switch (type.FullName)
+                    {
+                        case "System.Byte": return (byte)prim;
+                        case "System.SByte": return (sbyte)prim;
+                        case "System.Int16": return (short)prim;
+                        case "System.UInt16": return (ushort)prim;
+                        case "System.Int32": return (int)prim;
+                        case "System.UInt32": return (uint)prim;
+                        case "System.Int64": return (long)prim;
+                        case "System.UInt64": return (ulong)prim;
+                        case "System.IntPtr": return (nint)prim;
+                        case "System.UIntPtr": return (nuint)prim;
+                        case "System.Char": return (char)prim;
+                        case "System.Decimal": return (decimal)prim;
+                        case "System.Single": return (float)prim;
+                        case "System.Double": return (double)prim;
+                    }
+                    break;
+                case long prim:
+                    switch (type.FullName)
+                    {
+                        case "System.Byte": return (byte)prim;
+                        case "System.SByte": return (sbyte)prim;
+                        case "System.Int16": return (short)prim;
+                        case "System.UInt16": return (ushort)prim;
+                        case "System.Int32": return (int)prim;
+                        case "System.UInt32": return (uint)prim;
+                        case "System.Int64": return (long)prim;
+                        case "System.UInt64": return (ulong)prim;
+                        case "System.IntPtr": return (nint)prim;
+                        case "System.UIntPtr": return (nuint)prim;
+                        case "System.Char": return (char)prim;
+                        case "System.Decimal": return (decimal)prim;
+                        case "System.Single": return (float)prim;
+                        case "System.Double": return (double)prim;
+                    }
+                    break;
+                case ulong prim:
+                    switch (type.FullName)
+                    {
+                        case "System.Byte": return (byte)prim;
+                        case "System.SByte": return (sbyte)prim;
+                        case "System.Int16": return (short)prim;
+                        case "System.UInt16": return (ushort)prim;
+                        case "System.Int32": return (int)prim;
+                        case "System.UInt32": return (uint)prim;
+                        case "System.Int64": return (long)prim;
+                        case "System.UInt64": return (ulong)prim;
+                        case "System.IntPtr": return (nint)prim;
+                        case "System.UIntPtr": return (nuint)prim;
+                        case "System.Char": return (char)prim;
+                        case "System.Decimal": return (decimal)prim;
+                        case "System.Single": return (float)prim;
+                        case "System.Double": return (double)prim;
+                    }
+                    break;
+                case nint prim:
+                    switch (type.FullName)
+                    {
+                        case "System.Byte": return (byte)prim;
+                        case "System.SByte": return (sbyte)prim;
+                        case "System.Int16": return (short)prim;
+                        case "System.UInt16": return (ushort)prim;
+                        case "System.Int32": return (int)prim;
+                        case "System.UInt32": return (uint)prim;
+                        case "System.Int64": return (long)prim;
+                        case "System.UInt64": return (ulong)prim;
+                        case "System.IntPtr": return (nint)prim;
+                        case "System.UIntPtr": return (nuint)prim;
+                        case "System.Char": return (char)prim;
+                        case "System.Decimal": return (decimal)prim;
+                        case "System.Single": return (float)prim;
+                        case "System.Double": return (double)prim;
+                    }
+                    break;
+                case nuint prim:
+                    switch (type.FullName)
+                    {
+                        case "System.Byte": return (byte)prim;
+                        case "System.SByte": return (sbyte)prim;
+                        case "System.Int16": return (short)prim;
+                        case "System.UInt16": return (ushort)prim;
+                        case "System.Int32": return (int)prim;
+                        case "System.UInt32": return (uint)prim;
+                        case "System.Int64": return (long)prim;
+                        case "System.UInt64": return (ulong)prim;
+                        case "System.IntPtr": return (nint)prim;
+                        case "System.UIntPtr": return (nuint)prim;
+                        case "System.Char": return (char)prim;
+                        case "System.Decimal": return (decimal)prim;
+                        case "System.Single": return (float)prim;
+                        case "System.Double": return (double)prim;
+                    }
+                    break;
+                case char prim:
+                    switch (type.FullName)
+                    {
+                        case "System.Byte": return (byte)prim;
+                        case "System.SByte": return (sbyte)prim;
+                        case "System.Int16": return (short)prim;
+                        case "System.UInt16": return (ushort)prim;
+                        case "System.Int32": return (int)prim;
+                        case "System.UInt32": return (uint)prim;
+                        case "System.Int64": return (long)prim;
+                        case "System.UInt64": return (ulong)prim;
+                        case "System.IntPtr": return (nint)prim;
+                        case "System.UIntPtr": return (nuint)prim;
+                        case "System.Char": return (char)prim;
+                        case "System.Decimal": return (decimal)prim;
+                        case "System.Single": return (float)prim;
+                        case "System.Double": return (double)prim;
+                    }
+                    break;
+                case decimal prim:
+                    switch (type.FullName)
+                    {
+                        case "System.Byte": return (byte)prim;
+                        case "System.SByte": return (sbyte)prim;
+                        case "System.Int16": return (short)prim;
+                        case "System.UInt16": return (ushort)prim;
+                        case "System.Int32": return (int)prim;
+                        case "System.UInt32": return (uint)prim;
+                        case "System.Int64": return (long)prim;
+                        case "System.UInt64": return (ulong)prim;
+                        case "System.IntPtr": return (nint)prim;
+                        case "System.UIntPtr": return (nuint)prim;
+                        case "System.Char": return (char)prim;
+                        case "System.Decimal": return (decimal)prim;
+                        case "System.Single": return (float)prim;
+                        case "System.Double": return (double)prim;
+                    }
+                    break;
+                case float prim:
+                    switch (type.FullName)
+                    {
+                        case "System.Byte": return (byte)prim;
+                        case "System.SByte": return (sbyte)prim;
+                        case "System.Int16": return (short)prim;
+                        case "System.UInt16": return (ushort)prim;
+                        case "System.Int32": return (int)prim;
+                        case "System.UInt32": return (uint)prim;
+                        case "System.Int64": return (long)prim;
+                        case "System.UInt64": return (ulong)prim;
+                        case "System.IntPtr": return (nint)prim;
+                        case "System.UIntPtr": return (nuint)prim;
+                        case "System.Char": return (char)prim;
+                        case "System.Decimal": return (decimal)prim;
+                        case "System.Single": return (float)prim;
+                        case "System.Double": return (double)prim;
+                    }
+                    break;
+                case double prim:
+                    switch (type.FullName)
+                    {
+                        case "System.Byte": return (byte)prim;
+                        case "System.SByte": return (sbyte)prim;
+                        case "System.Int16": return (short)prim;
+                        case "System.UInt16": return (ushort)prim;
+                        case "System.Int32": return (int)prim;
+                        case "System.UInt32": return (uint)prim;
+                        case "System.Int64": return (long)prim;
+                        case "System.UInt64": return (ulong)prim;
+                        case "System.IntPtr": return (nint)prim;
+                        case "System.UIntPtr": return (nuint)prim;
+                        case "System.Char": return (char)prim;
+                        case "System.Decimal": return (decimal)prim;
+                        case "System.Single": return (float)prim;
+                        case "System.Double": return (double)prim;
+                    }
+                    break;
+            }
+            throw new ArgumentException($"Cannot cast from {obj.GetType().FullName} to {type.FullName}");
         }
 
         public Type GetValueType() => valueType;

@@ -5,6 +5,8 @@ using UnityEngine;
 using NUnit.Framework;
 using BGC.Scripting;
 using BGC.Reports;
+using BGC.Scripting.Parsing;
+using UnityEngine.UIElements;
 
 namespace BGC.Tests
 {
@@ -193,6 +195,9 @@ namespace BGC.Tests
         {
             GlobalRuntimeContext globalContext = new GlobalRuntimeContext();
 
+            double testValue = 1.0;
+            testValue = (ulong)testValue ^ 2;
+
             string testScript = @"
             //This is a test of some features of Double
             global double testValue = NaN;
@@ -201,7 +206,7 @@ namespace BGC.Tests
 
             void SetupFunction()
             {
-                if (Math.IsNaN(testValue))
+                if (double.IsNaN(testValue))
                 {
                     testValue = 3.0*4.0 + 2.0 * 6;
                     testValue ^= 2;
@@ -839,7 +844,7 @@ namespace BGC.Tests
                 tests.Add(Math.Round(10.0) == 10);
                 tests.Add(Math.Round(9.9999) == 10);
 
-                tests.Add(Math.Ln(Math.E) == 1);
+                tests.Add(Math.Log(Math.E) == 1);
 
                 return tests;
             }";
@@ -1922,6 +1927,1043 @@ namespace BGC.Tests
             }
 
             Debug.Log($"Ran {tests.Count} ToString tests");
+        }
+
+        class IHaveOverloadedOperators : IEquatable<IHaveOverloadedOperators>
+        {
+            public int val = 0;
+
+            public IHaveOverloadedOperators(int val)
+            {
+                this.val = val;
+            }
+
+            public static IHaveOverloadedOperators operator +(IHaveOverloadedOperators a, int b)
+            {
+                return new IHaveOverloadedOperators(a.val + b);
+            }
+
+            public static IHaveOverloadedOperators operator +(IHaveOverloadedOperators a, IHaveOverloadedOperators b)
+            {
+                return new IHaveOverloadedOperators(a.val + b.val);
+            }
+
+            public static IHaveOverloadedOperators operator -(IHaveOverloadedOperators a, int b)
+            {
+                return new IHaveOverloadedOperators(a.val - b);
+            }
+
+            public static IHaveOverloadedOperators operator -(IHaveOverloadedOperators a, IHaveOverloadedOperators b)
+            {
+                return new IHaveOverloadedOperators(a.val - b.val);
+            }
+
+            public static IHaveOverloadedOperators operator *(IHaveOverloadedOperators a, int b)
+            {
+                return new IHaveOverloadedOperators(a.val * b);
+            }
+
+            public static IHaveOverloadedOperators operator *(IHaveOverloadedOperators a, IHaveOverloadedOperators b)
+            {
+                return new IHaveOverloadedOperators(a.val * b.val);
+            }
+
+            public static IHaveOverloadedOperators operator /(IHaveOverloadedOperators a, int b)
+            {
+                return new IHaveOverloadedOperators(a.val / b);
+            }
+
+            public static IHaveOverloadedOperators operator /(IHaveOverloadedOperators a, IHaveOverloadedOperators b)
+            {
+                return new IHaveOverloadedOperators(a.val / b.val);
+            }
+
+            public static IHaveOverloadedOperators operator %(IHaveOverloadedOperators a, int b)
+            {
+                return new IHaveOverloadedOperators(a.val % b);
+            }
+
+            public static IHaveOverloadedOperators operator %(IHaveOverloadedOperators a, IHaveOverloadedOperators b)
+            {
+                return new IHaveOverloadedOperators(a.val % b.val);
+            }
+
+            public static IHaveOverloadedOperators operator <<(IHaveOverloadedOperators a, int b)
+            {
+                return new IHaveOverloadedOperators(a.val << b);
+            }
+
+            public static IHaveOverloadedOperators operator >>(IHaveOverloadedOperators a, int b)
+            {
+                return new IHaveOverloadedOperators(a.val >> b);
+            }
+
+            public static IHaveOverloadedOperators operator ^(IHaveOverloadedOperators a, int b)
+            {
+                return new IHaveOverloadedOperators(a.val ^ b);
+            }
+
+            public static IHaveOverloadedOperators operator ^(IHaveOverloadedOperators a, IHaveOverloadedOperators b)
+            {
+                return new IHaveOverloadedOperators(a.val ^ b.val);
+            }
+
+            public static IHaveOverloadedOperators operator &(IHaveOverloadedOperators a, int b)
+            {
+                return new IHaveOverloadedOperators(a.val & b);
+            }
+
+            public static IHaveOverloadedOperators operator &(IHaveOverloadedOperators a, IHaveOverloadedOperators b)
+            {
+                return new IHaveOverloadedOperators(a.val & b.val);
+            }
+
+            public static IHaveOverloadedOperators operator |(IHaveOverloadedOperators a, int b)
+            {
+                return new IHaveOverloadedOperators(a.val | b);
+            }
+
+            public static IHaveOverloadedOperators operator |(IHaveOverloadedOperators a, IHaveOverloadedOperators b)
+            {
+                return new IHaveOverloadedOperators(a.val | b.val);
+            }
+
+            public static IHaveOverloadedOperators operator -(IHaveOverloadedOperators a)
+            {
+                return new IHaveOverloadedOperators(-a.val);
+            }
+
+            public static IHaveOverloadedOperators operator ~(IHaveOverloadedOperators a)
+            {
+                return new IHaveOverloadedOperators(~a.val);
+            }
+
+            public static bool operator ==(IHaveOverloadedOperators obj1, IHaveOverloadedOperators obj2)
+            {
+                if (ReferenceEquals(obj1, obj2))
+                    return true;
+                if (ReferenceEquals(obj1, null))
+                    return false;
+                if (ReferenceEquals(obj2, null))
+                    return false;
+                return obj1.Equals(obj2);
+            }
+            public static bool operator !=(IHaveOverloadedOperators obj1, IHaveOverloadedOperators obj2) => !(obj1 == obj2);
+
+            public static bool operator ==(IHaveOverloadedOperators obj1, int val2) => obj1.val == val2;
+            public static bool operator !=(IHaveOverloadedOperators obj1, int val2) => obj1.val != val2;
+
+
+            public bool Equals(IHaveOverloadedOperators other)
+            {
+                if (ReferenceEquals(other, null))
+                {
+                    return false;
+                }
+                if (ReferenceEquals(this, other))
+                {
+                    return true;
+                }
+
+                return val == other.val;
+            }
+            public override bool Equals(object obj) => Equals(obj as IHaveOverloadedOperators);
+
+            public override int GetHashCode() => val.GetHashCode();
+
+            public static bool operator <(IHaveOverloadedOperators obj1, IHaveOverloadedOperators obj2) => obj1.val < obj2.val;
+            public static bool operator <=(IHaveOverloadedOperators obj1, IHaveOverloadedOperators obj2) => obj1.val <= obj2.val;
+            public static bool operator >(IHaveOverloadedOperators obj1, IHaveOverloadedOperators obj2) => obj1.val > obj2.val;
+            public static bool operator >=(IHaveOverloadedOperators obj1, IHaveOverloadedOperators obj2) => obj1.val >= obj2.val;
+
+            public static bool operator <(IHaveOverloadedOperators obj1, int val2) => obj1.val < val2;
+            public static bool operator <=(IHaveOverloadedOperators obj1, int val2) => obj1.val <= val2;
+            public static bool operator >(IHaveOverloadedOperators obj1, int val2) => obj1.val > val2;
+            public static bool operator >=(IHaveOverloadedOperators obj1, int val2) => obj1.val >= val2;
+
+            public static IHaveOverloadedOperators operator++(IHaveOverloadedOperators obj)
+            {
+                obj.val++;
+                return obj;
+            }
+
+            public static IHaveOverloadedOperators operator --(IHaveOverloadedOperators obj)
+            {
+                obj.val--;
+                return obj;
+            }
+        }
+
+        [Test]
+        public void TestAssignOperators()
+        {
+            ClassRegistrar.TryRegisterClass(typeof(IHaveOverloadedOperators));
+
+            GlobalRuntimeContext globalContext = new GlobalRuntimeContext();
+            string testScript = @"
+            List<bool> RunTests()
+            {
+	            List<bool> tests = new List<bool>();
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(0);
+	                int testInt = 0;
+	                tests.Add(testValue.val == 0);
+	                tests.Add(testInt == 0);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt += 1;
+	                testValue += 1;
+	                tests.Add(testValue.val == 1);
+	                tests.Add(testInt == 1);
+	                tests.Add(testValue.val == testInt);
+	
+	                testValue += 2;
+	                testInt += 2;
+	                tests.Add(testValue.val == 3);
+	                tests.Add(testInt == 3);
+	                tests.Add(testValue.val == testInt);
+
+	                int testInt5 = 5;
+	                IHaveOverloadedOperators testValue5 = new IHaveOverloadedOperators(testInt5);
+	                testValue += testValue5;
+	                testInt += testInt5;
+	                tests.Add(testValue.val == 8);
+	                tests.Add(testInt == 8);
+	                tests.Add(testValue.val == testInt);
+                }
+
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(0);
+	                int testInt = 0;
+	                tests.Add(testValue.val == 0);
+	                tests.Add(testInt == 0);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt -= 1;
+	                testValue -= 1;
+	                tests.Add(testValue.val == -1);
+	                tests.Add(testInt == -1);
+	                tests.Add(testValue.val == testInt);
+	
+	                testValue -= 2;
+	                testInt -= 2;
+	                tests.Add(testValue.val == -3);
+	                tests.Add(testInt == -3);
+	                tests.Add(testValue.val == testInt);
+
+	                int testInt5 = 5;
+	                IHaveOverloadedOperators testValue5 = new IHaveOverloadedOperators(testInt5);
+	                testValue -= testValue5;
+	                testInt -= testInt5;
+	                tests.Add(testValue.val == -8);
+	                tests.Add(testInt == -8);
+	                tests.Add(testValue.val == testInt);
+                }
+
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(1);
+	                int testInt = 1;
+	                tests.Add(testValue.val == 1);
+	                tests.Add(testInt == 1);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt *= 2;
+	                testValue *= 2;
+	                tests.Add(testValue.val == 2);
+	                tests.Add(testInt == 2);
+	                tests.Add(testValue.val == testInt);
+	
+	                testValue *= 3;
+	                testInt *= 3;
+	                tests.Add(testValue.val == 6);
+	                tests.Add(testInt == 6);
+	                tests.Add(testValue.val == testInt);
+
+	                int testInt5 = 5;
+	                IHaveOverloadedOperators testValue5 = new IHaveOverloadedOperators(testInt5);
+	                testValue *= testValue5;
+	                testInt *= testInt5;
+	                tests.Add(testValue.val == 30);
+	                tests.Add(testInt == 30);
+	                tests.Add(testValue.val == testInt);
+                }
+
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(30);
+	                int testInt = 30;
+	                tests.Add(testValue.val == 30);
+	                tests.Add(testInt == 30);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt /= 2;
+	                testValue /= 2;
+	                tests.Add(testValue.val == 15);
+	                tests.Add(testInt == 15);
+	                tests.Add(testValue.val == testInt);
+	
+	                testValue /= 3;
+	                testInt /= 3;
+	                tests.Add(testValue.val == 5);
+	                tests.Add(testInt == 5);
+	                tests.Add(testValue.val == testInt);
+
+	                int testInt5 = 5;
+	                IHaveOverloadedOperators testValue5 = new IHaveOverloadedOperators(testInt5);
+	                testValue /= testValue5;
+	                testInt /= testInt5;
+	                tests.Add(testValue.val == 1);
+	                tests.Add(testInt == 1);
+	                tests.Add(testValue.val == testInt);
+                }
+
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(30);
+	                int testInt = 30;
+	                tests.Add(testValue.val == 30);
+	                tests.Add(testInt == 30);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt %= 16;
+	                testValue %= 16;
+	                tests.Add(testValue.val == 14);
+	                tests.Add(testInt == 14);
+	                tests.Add(testValue.val == testInt);
+	
+	                int testInt5 = 5;
+	                IHaveOverloadedOperators testValue5 = new IHaveOverloadedOperators(testInt5);
+	                testValue %= testValue5;
+	                testInt %= testInt5;
+	                tests.Add(testValue.val == 4);
+	                tests.Add(testInt == 4);
+	                tests.Add(testValue.val == testInt);
+                }
+
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(1);
+	                int testInt = 1;
+	                tests.Add(testValue.val == 1);
+	                tests.Add(testInt == 1);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt <<= 1;
+	                testValue <<= 1;
+	                tests.Add(testValue.val == 2);
+	                tests.Add(testInt == 2);
+	                tests.Add(testValue.val == testInt);
+	
+	                testValue <<= 2;
+	                testInt <<= 2;
+	                tests.Add(testValue.val == 8);
+	                tests.Add(testInt == 8);
+	                tests.Add(testValue.val == testInt);
+                }
+
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(8);
+	                int testInt = 8;
+	                tests.Add(testValue.val == 8);
+	                tests.Add(testInt == 8);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt >>= 1;
+	                testValue >>= 1;
+	                tests.Add(testValue.val == 4);
+	                tests.Add(testInt == 4);
+	                tests.Add(testValue.val == testInt);
+	
+	                testValue >>= 2;
+	                testInt >>= 2;
+	                tests.Add(testValue.val == 1);
+	                tests.Add(testInt == 1);
+	                tests.Add(testValue.val == testInt);
+                }
+
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(65535);
+	                int testInt = 65535;
+	                tests.Add(testValue.val == 65535);
+	                tests.Add(testInt == 65535);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt ^= 32768;
+	                testValue ^= 32768;
+	                tests.Add(testValue.val == 32767);
+	                tests.Add(testInt == 32767);
+	                tests.Add(testValue.val == testInt);
+	
+	                int testInt5 = 5;
+	                IHaveOverloadedOperators testValue5 = new IHaveOverloadedOperators(testInt5);
+	                testValue ^= testValue5;
+	                testInt ^= testInt5;
+	                tests.Add(testValue.val == 32762);
+	                tests.Add(testInt == 32762);
+	                tests.Add(testValue.val == testInt);
+                }
+
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(65535);
+	                int testInt = 65535;
+	                tests.Add(testValue.val == 65535);
+	                tests.Add(testInt == 65535);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt &= 32772;
+	                testValue &= 32772;
+	                tests.Add(testValue.val == 32772);
+	                tests.Add(testInt == 32772);
+	                tests.Add(testValue.val == testInt);
+	
+	                int testInt5 = 5;
+	                IHaveOverloadedOperators testValue5 = new IHaveOverloadedOperators(testInt5);
+	                testValue &= testValue5;
+	                testInt &= testInt5;
+	                tests.Add(testValue.val == 4);
+	                tests.Add(testInt == 4);
+	                tests.Add(testValue.val == testInt);
+                }
+
+
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(1);
+	                int testInt = 1;
+	                tests.Add(testValue.val == 1);
+	                tests.Add(testInt == 1);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt |= 32768;
+	                testValue |= 32768;
+	                tests.Add(testValue.val == 32769);
+	                tests.Add(testInt == 32769);
+	                tests.Add(testValue.val == testInt);
+	
+	                int testInt5 = 5;
+	                IHaveOverloadedOperators testValue5 = new IHaveOverloadedOperators(testInt5);
+	                testValue |= testValue5;
+	                testInt |= testInt5;
+	                tests.Add(testValue.val == 32773);
+	                tests.Add(testInt == 32773);
+	                tests.Add(testValue.val == testInt);
+                }
+
+                {
+                    double testDouble = 0;
+                    tests.Add(testDouble == 0);
+                    testDouble += 1.5;
+	                tests.Add(testDouble == 1.5);
+
+                    testDouble = 2;
+                    testDouble += 1.5;
+	                tests.Add(testDouble == 3.5);
+
+                    int testInt = 1;
+                    double testDouble2 = testInt;
+                    testDouble2 += 1.5;
+	                tests.Add(testDouble2 == 2.5);
+                }
+
+	            return tests;
+            }";
+
+            Script script;
+
+            try
+            {
+                script = ScriptParser.LexAndParseScript(testScript,
+                    new FunctionSignature(
+                        identifier: "RunTests",
+                        returnType: typeof(List<bool>)));
+            }
+            catch (ScriptParsingException parseEx)
+            {
+                throw new Exception(
+                    message: $"Parsing exception on Line {parseEx.line}, Column {parseEx.column}: {parseEx.Message}",
+                    innerException: parseEx);
+            }
+
+            ScriptRuntimeContext context = script.PrepareScript(globalContext);
+
+            List<bool> tests = script.ExecuteFunction<List<bool>>("RunTests", context);
+
+            for (int i = 0; i < tests.Count; i++)
+            {
+                Debug.Assert(tests[i], $"Failed test {i}");
+            }
+
+            Debug.Log($"Ran {tests.Count} TestAssignOperators tests");
+        }
+
+        [Test]
+        public void TestBinaryNumericalOperators()
+        {
+            ClassRegistrar.TryRegisterClass(typeof(IHaveOverloadedOperators));
+
+            GlobalRuntimeContext globalContext = new GlobalRuntimeContext();
+            string testScript = @"
+            List<bool> RunTests()
+            {
+	            List<bool> tests = new List<bool>();
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(0);
+	                int testInt = 0;
+	                tests.Add(testValue.val == 0);
+	                tests.Add(testInt == 0);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt = testInt + 1;
+	                testValue = testValue + 1;
+	                tests.Add(testValue.val == 1);
+	                tests.Add(testInt == 1);
+	                tests.Add(testValue.val == testInt);
+	
+	                testValue = testValue + 2;
+	                testInt = testInt + 2;
+	                tests.Add(testValue.val == 3);
+	                tests.Add(testInt == 3);
+	                tests.Add(testValue.val == testInt);
+
+	                int testInt5 = 5;
+	                IHaveOverloadedOperators testValue5 = new IHaveOverloadedOperators(testInt5);
+	                testValue = testValue + testValue5;
+	                testInt = testInt + testInt5;
+	                tests.Add(testValue.val == 8);
+	                tests.Add(testInt == 8);
+	                tests.Add(testValue.val == testInt);
+                }
+
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(0);
+	                int testInt = 0;
+	                tests.Add(testValue.val == 0);
+	                tests.Add(testInt == 0);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt = testInt - 1;
+	                testValue = testValue - 1;
+	                tests.Add(testValue.val == -1);
+	                tests.Add(testInt == -1);
+	                tests.Add(testValue.val == testInt);
+	
+	                testValue = testValue - 2;
+	                testInt = testInt - 2;
+	                tests.Add(testValue.val == -3);
+	                tests.Add(testInt == -3);
+	                tests.Add(testValue.val == testInt);
+
+	                int testInt5 = 5;
+	                IHaveOverloadedOperators testValue5 = new IHaveOverloadedOperators(testInt5);
+	                testValue = testValue - testValue5;
+	                testInt = testInt - testInt5;
+	                tests.Add(testValue.val == -8);
+	                tests.Add(testInt == -8);
+	                tests.Add(testValue.val == testInt);
+                }
+
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(1);
+	                int testInt = 1;
+	                tests.Add(testValue.val == 1);
+	                tests.Add(testInt == 1);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt = testInt * 2;
+	                testValue = testValue * 2;
+	                tests.Add(testValue.val == 2);
+	                tests.Add(testInt == 2);
+	                tests.Add(testValue.val == testInt);
+	
+	                testValue = testValue * 3;
+	                testInt = testInt * 3;
+	                tests.Add(testValue.val == 6);
+	                tests.Add(testInt == 6);
+	                tests.Add(testValue.val == testInt);
+
+	                int testInt5 = 5;
+	                IHaveOverloadedOperators testValue5 = new IHaveOverloadedOperators(testInt5);
+	                testValue = testValue * testValue5;
+	                testInt = testInt * testInt5;
+	                tests.Add(testValue.val == 30);
+	                tests.Add(testInt == 30);
+	                tests.Add(testValue.val == testInt);
+                }
+
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(30);
+	                int testInt = 30;
+	                tests.Add(testValue.val == 30);
+	                tests.Add(testInt == 30);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt = testInt / 2;
+	                testValue = testValue / 2;
+	                tests.Add(testValue.val == 15);
+	                tests.Add(testInt == 15);
+	                tests.Add(testValue.val == testInt);
+	
+	                testValue = testValue / 3;
+	                testInt = testInt / 3;
+	                tests.Add(testValue.val == 5);
+	                tests.Add(testInt == 5);
+	                tests.Add(testValue.val == testInt);
+
+	                int testInt5 = 5;
+	                IHaveOverloadedOperators testValue5 = new IHaveOverloadedOperators(testInt5);
+	                testValue = testValue / testValue5;
+	                testInt = testInt / testInt5;
+	                tests.Add(testValue.val == 1);
+	                tests.Add(testInt == 1);
+	                tests.Add(testValue.val == testInt);
+                }
+
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(30);
+	                int testInt = 30;
+	                tests.Add(testValue.val == 30);
+	                tests.Add(testInt == 30);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt = testInt % 16;
+	                testValue = testValue % 16;
+	                tests.Add(testValue.val == 14);
+	                tests.Add(testInt == 14);
+	                tests.Add(testValue.val == testInt);
+	
+	                int testInt5 = 5;
+	                IHaveOverloadedOperators testValue5 = new IHaveOverloadedOperators(testInt5);
+	                testValue = testValue % testValue5;
+	                testInt = testInt % testInt5;
+	                tests.Add(testValue.val == 4);
+	                tests.Add(testInt == 4);
+	                tests.Add(testValue.val == testInt);
+                }
+
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(1);
+	                int testInt = 1;
+	                tests.Add(testValue.val == 1);
+	                tests.Add(testInt == 1);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt = testInt << 1;
+	                testValue = testValue << 1;
+	                tests.Add(testValue.val == 2);
+	                tests.Add(testInt == 2);
+	                tests.Add(testValue.val == testInt);
+	
+	                testValue = testValue << 2;
+	                testInt = testInt << 2;
+	                tests.Add(testValue.val == 8);
+	                tests.Add(testInt == 8);
+	                tests.Add(testValue.val == testInt);
+                }
+
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(8);
+	                int testInt = 8;
+	                tests.Add(testValue.val == 8);
+	                tests.Add(testInt == 8);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt = testInt >> 1;
+	                testValue = testValue >> 1;
+	                tests.Add(testValue.val == 4);
+	                tests.Add(testInt == 4);
+	                tests.Add(testValue.val == testInt);
+	
+	                testValue = testValue >> 2;
+	                testInt = testInt >> 2;
+	                tests.Add(testValue.val == 1);
+	                tests.Add(testInt == 1);
+	                tests.Add(testValue.val == testInt);
+                }
+
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(65535);
+	                int testInt = 65535;
+	                tests.Add(testValue.val == 65535);
+	                tests.Add(testInt == 65535);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt = testInt ^ 32768;
+	                testValue = testValue ^ 32768;
+	                tests.Add(testValue.val == 32767);
+	                tests.Add(testInt == 32767);
+	                tests.Add(testValue.val == testInt);
+	
+	                int testInt5 = 5;
+	                IHaveOverloadedOperators testValue5 = new IHaveOverloadedOperators(testInt5);
+	                testValue = testValue ^ testValue5;
+	                testInt = testInt ^ testInt5;
+	                tests.Add(testValue.val == 32762);
+	                tests.Add(testInt == 32762);
+	                tests.Add(testValue.val == testInt);
+                }
+
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(65535);
+	                int testInt = 65535;
+	                tests.Add(testValue.val == 65535);
+	                tests.Add(testInt == 65535);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt = testInt & 32772;
+	                testValue = testValue & 32772;
+	                tests.Add(testValue.val == 32772);
+	                tests.Add(testInt == 32772);
+	                tests.Add(testValue.val == testInt);
+	
+	                int testInt5 = 5;
+	                IHaveOverloadedOperators testValue5 = new IHaveOverloadedOperators(testInt5);
+	                testValue = testValue & testValue5;
+	                testInt = testInt & testInt5;
+	                tests.Add(testValue.val == 4);
+	                tests.Add(testInt == 4);
+	                tests.Add(testValue.val == testInt);
+                }
+
+
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(1);
+	                int testInt = 1;
+	                tests.Add(testValue.val == 1);
+	                tests.Add(testInt == 1);
+	                tests.Add(testValue.val == testInt);
+
+	                testInt = testInt | 32768;
+	                testValue = testValue | 32768;
+	                tests.Add(testValue.val == 32769);
+	                tests.Add(testInt == 32769);
+	                tests.Add(testValue.val == testInt);
+	
+	                int testInt5 = 5;
+	                IHaveOverloadedOperators testValue5 = new IHaveOverloadedOperators(testInt5);
+	                testValue = testValue | testValue5;
+	                testInt = testInt | testInt5;
+	                tests.Add(testValue.val == 32773);
+	                tests.Add(testInt == 32773);
+	                tests.Add(testValue.val == testInt);
+                }
+
+                {
+                    double testDouble = 0;
+                    tests.Add(testDouble == 0);
+                    testDouble = testDouble + 1.5;
+	                tests.Add(testDouble == 1.5);
+
+                    testDouble = 2;
+                    testDouble = testDouble + 1.5;
+	                tests.Add(testDouble == 3.5);
+
+                    int testInt = 1;
+                    double testDouble2 = testInt;
+                    testDouble2 = testDouble2 + 1.5;
+	                tests.Add(testDouble2 == 2.5);
+                }
+
+	            return tests;
+            }";
+
+            Script script;
+
+            try
+            {
+                script = ScriptParser.LexAndParseScript(testScript,
+                    new FunctionSignature(
+                        identifier: "RunTests",
+                        returnType: typeof(List<bool>)));
+            }
+            catch (ScriptParsingException parseEx)
+            {
+                throw new Exception(
+                    message: $"Parsing exception on Line {parseEx.line}, Column {parseEx.column}: {parseEx.Message}",
+                    innerException: parseEx);
+            }
+
+            ScriptRuntimeContext context = script.PrepareScript(globalContext);
+
+            List<bool> tests = script.ExecuteFunction<List<bool>>("RunTests", context);
+
+            for (int i = 0; i < tests.Count; i++)
+            {
+                Debug.Assert(tests[i], $"Failed test {i}");
+            }
+
+            Debug.Log($"Ran {tests.Count} TestBinaryNumericalOperators tests");
+        }
+
+        [Test]
+        public void TestComparisonOperators()
+        {
+            ClassRegistrar.TryRegisterClass(typeof(IHaveOverloadedOperators));
+
+            GlobalRuntimeContext globalContext = new GlobalRuntimeContext();
+            string testScript = @"
+            List<bool> RunTests()
+            {
+	            List<bool> tests = new List<bool>();
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(10);
+	                int testInt = 10;
+	                tests.Add(testValue.val == 10);
+	                tests.Add(testValue == 10);
+	                tests.Add(testInt == 10);
+	                tests.Add(10 == testValue.val);
+	                tests.Add(10 == testInt);
+	                tests.Add(testValue == testInt);
+	                tests.Add(testValue.val == testInt);
+	                tests.Add(testInt == testValue.val);
+
+	                tests.Add(testValue.val != 11);
+	                tests.Add(testValue != 11);
+	                tests.Add(testInt != 11);
+	                tests.Add(11 != testValue.val);
+	                tests.Add(11 != testInt);
+	                tests.Add(testValue != testInt + 1);
+	                tests.Add(testValue + 1 != testInt);
+	                tests.Add(testValue.val != testInt + 1);
+	                tests.Add(testInt + 1 != testValue.val);
+
+	                tests.Add(testValue.val < 11);
+	                tests.Add(testValue < 11);
+	                tests.Add(testInt < 11);
+	                tests.Add(testValue < testInt + 1);
+	                tests.Add(testValue.val < testInt + 1);
+
+	                tests.Add(testValue.val <= 10);
+	                tests.Add(testValue <= 10);
+	                tests.Add(testInt <= 10);
+	                tests.Add(testValue <= testInt);
+	                tests.Add(testValue.val <= testInt);
+
+	                tests.Add(testValue.val <= 11);
+	                tests.Add(testValue <= 11);
+	                tests.Add(testInt <= 11);
+	                tests.Add(testValue <= testInt + 1);
+	                tests.Add(testValue.val <= testInt + 1);
+
+	                tests.Add(testValue.val > 9);
+	                tests.Add(testValue > 9);
+	                tests.Add(testInt > 9);
+	                tests.Add(testValue > testInt - 1);
+	                tests.Add(testValue.val > testInt - 1);
+
+	                tests.Add(testValue.val >= 10);
+	                tests.Add(testValue >= 10);
+	                tests.Add(testInt >= 10);
+	                tests.Add(testValue >= testInt);
+	                tests.Add(testValue.val >= testInt);
+
+	                tests.Add(testValue.val >= 9);
+	                tests.Add(testValue >= 9);
+	                tests.Add(testInt >= 9);
+	                tests.Add(testValue >= testInt - 1);
+	                tests.Add(testValue.val >= testInt - 1);
+
+                    {
+                        int nine = 9;
+                        int ten = 10;
+                        int eleven = 11;
+                        double d = 10.0;
+
+                        tests.Add(d == 10.0);
+                        tests.Add(d != 9.0);
+                        tests.Add(d == 10);
+                        tests.Add(d != 9);
+                        tests.Add(d == ten);
+                        tests.Add(d != nine);
+                        tests.Add(d != eleven);
+
+                        tests.Add(d > 9);
+                        tests.Add(d >= 9);
+                        tests.Add(d > 9.0);
+                        tests.Add(d >= 9.0);
+                        tests.Add(d > 9.0f);
+                        tests.Add(d >= 9.0f);
+                        tests.Add(d > nine);
+                        tests.Add(d >= nine);
+
+                        tests.Add(d < 11);
+                        tests.Add(d <= 11);
+                        tests.Add(d < 11.0);
+                        tests.Add(d <= 11.0);
+                        tests.Add(d < 11.0f);
+                        tests.Add(d <= 11.0f);
+                        tests.Add(d < eleven);
+                        tests.Add(d <= eleven);
+
+                        tests.Add(d == 10.0);
+                        tests.Add(d != 9.0);
+                        tests.Add(d == 10);
+                        tests.Add(d != 9);
+                        tests.Add(d == ten);
+                        tests.Add(d != nine);
+                        tests.Add(d != eleven);
+
+                        tests.Add(d > 9);
+                        tests.Add(d >= 9);
+                        tests.Add(d > 9.0);
+                        tests.Add(d >= 9.0);
+                        tests.Add(d > 9.0f);
+                        tests.Add(d >= 9.0f);
+                        tests.Add(d > nine);
+                        tests.Add(d >= nine);
+
+                        tests.Add(ten < 11.0);
+                        tests.Add(ten <= 11.0);
+                        tests.Add(ten > 9.9);
+                        tests.Add(ten >= 9.9);
+                    }
+                }
+
+	            return tests;
+            }";
+
+            Script script;
+
+            try
+            {
+                script = ScriptParser.LexAndParseScript(testScript,
+                    new FunctionSignature(
+                        identifier: "RunTests",
+                        returnType: typeof(List<bool>)));
+            }
+            catch (ScriptParsingException parseEx)
+            {
+                throw new Exception(
+                    message: $"Parsing exception on Line {parseEx.line}, Column {parseEx.column}: {parseEx.Message}",
+                    innerException: parseEx);
+            }
+
+            ScriptRuntimeContext context = script.PrepareScript(globalContext);
+
+            List<bool> tests = script.ExecuteFunction<List<bool>>("RunTests", context);
+
+            for (int i = 0; i < tests.Count; i++)
+            {
+                Debug.Assert(tests[i], $"Failed test {i}");
+            }
+
+            Debug.Log($"Ran {tests.Count} TestComparisonOperators tests");
+        }
+
+        [Test]
+        public void TestUnaryOperators()
+        {
+            ClassRegistrar.TryRegisterClass(typeof(IHaveOverloadedOperators));
+
+            GlobalRuntimeContext globalContext = new GlobalRuntimeContext();
+            string testScript = @"
+            List<bool> RunTests()
+            {
+	            List<bool> tests = new List<bool>();
+                {
+	                IHaveOverloadedOperators testValue = new IHaveOverloadedOperators(10);
+	                int testInt = 10;
+	                tests.Add(testInt == 10);
+	                tests.Add(testValue.val == 10);
+	                tests.Add(testValue == 10);
+
+                    IHaveOverloadedOperators testValueNeg = -testValue;
+	                int testIntNeg = -testInt;
+	                tests.Add(testIntNeg == -10);
+	                tests.Add(testValueNeg.val == -10);
+	                tests.Add(testValueNeg == -10);
+
+                    IHaveOverloadedOperators testValueBNeg = ~testValue;
+	                int testIntBNeg = ~testInt;
+	                tests.Add(testIntBNeg == -11);
+	                tests.Add(testValueBNeg.val == -11);
+	                tests.Add(testValueBNeg == -11);
+
+                    testInt--;
+                    testValue--;
+	                tests.Add(testInt == 9);
+	                tests.Add(testValue.val == 9);
+	                tests.Add(testValue == 9);
+
+                    testInt++;
+                    testValue++;
+	                tests.Add(testInt == 10);
+	                tests.Add(testValue.val == 10);
+	                tests.Add(testValue == 10);
+                }
+
+	            return tests;
+            }";
+
+            Script script;
+
+            try
+            {
+                script = ScriptParser.LexAndParseScript(testScript,
+                    new FunctionSignature(
+                        identifier: "RunTests",
+                        returnType: typeof(List<bool>)));
+            }
+            catch (ScriptParsingException parseEx)
+            {
+                throw new Exception(
+                    message: $"Parsing exception on Line {parseEx.line}, Column {parseEx.column}: {parseEx.Message}",
+                    innerException: parseEx);
+            }
+
+            ScriptRuntimeContext context = script.PrepareScript(globalContext);
+
+            List<bool> tests = script.ExecuteFunction<List<bool>>("RunTests", context);
+
+            for (int i = 0; i < tests.Count; i++)
+            {
+                Debug.Assert(tests[i], $"Failed test {i}");
+            }
+
+            Debug.Log($"Ran {tests.Count} TestUnaryOperators tests");
+        }
+
+        [Test]
+        public void TestCasting()
+        {
+            GlobalRuntimeContext globalContext = new GlobalRuntimeContext();
+            string testScript = @"
+            List<bool> RunTests()
+            {
+	            List<bool> tests = new List<bool>();
+                {
+	                double testDouble = 10.6;
+	                tests.Add((int)testDouble == 10);
+	                tests.Add((float)testDouble == 10.6f);
+	                tests.Add((short)testDouble == 10);
+                    tests.Add((byte)testDouble == 10);
+                    tests.Add((ulong)testDouble == 10ul);
+                }
+
+	            return tests;
+            }";
+
+            Script script;
+
+            try
+            {
+                script = ScriptParser.LexAndParseScript(testScript,
+                    new FunctionSignature(
+                        identifier: "RunTests",
+                        returnType: typeof(List<bool>)));
+            }
+            catch (ScriptParsingException parseEx)
+            {
+                throw new Exception(
+                    message: $"Parsing exception on Line {parseEx.line}, Column {parseEx.column}: {parseEx.Message}",
+                    innerException: parseEx);
+            }
+
+            ScriptRuntimeContext context = script.PrepareScript(globalContext);
+
+            List<bool> tests = script.ExecuteFunction<List<bool>>("RunTests", context);
+
+            for (int i = 0; i < tests.Count; i++)
+            {
+                Debug.Assert(tests[i], $"Failed test {i}");
+            }
+
+            Debug.Log($"Ran {tests.Count} TestUnaryOperators tests");
         }
     }
 }
