@@ -6,6 +6,8 @@ namespace BGC.Study
     {
         //Attributes
         public const string Version = "Version";
+        public const string LastModifiedVersion = "LastModifiedVersion";
+        public const string LastCompatibleAppBuildNumber = "LastCompatibleAppBuildNumber";
 
         //Arrays
         public const string Protocols = "Protocols";

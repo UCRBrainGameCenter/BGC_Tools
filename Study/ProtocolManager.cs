@@ -5,6 +5,7 @@ using UnityEngine;
 using LightJson;
 using BGC.IO;
 using BGC.Users;
+using UnityEditor;
 
 namespace BGC.Study
 {
@@ -24,6 +25,8 @@ namespace BGC.Study
         public const int protocolDataVersion = 2;
 
         private static string loadedProtocolSet = "";
+        //This is the number used to compare protocol sets for updating purposes
+        private static int loadedProtocolSetVersion = 0;
 
         public static class DataKeys
         {
@@ -337,9 +340,18 @@ namespace BGC.Study
             return ProtocolStatus.SessionReady;
         }
 
-        public static void SaveAs(string protocolName)
+        [Obsolete("Transition to including version number in protocol sets")]
+        public static void SaveAs(string protocolSetName)
         {
-            loadedProtocolSet = protocolName;
+            loadedProtocolSet = protocolSetName;
+            RemoveRedundancies();
+            SerializeAll();
+        }
+
+        public static void SaveAs(string protocolSetName, int version)
+        {
+            loadedProtocolSet = protocolSetName;
+            loadedProtocolSetVersion = version;
             RemoveRedundancies();
             SerializeAll();
         }
@@ -441,6 +453,8 @@ namespace BGC.Study
                 createJson: () => new JsonObject()
                 {
                     { ProtocolKeys.Version, protocolDataVersion },
+                    { ProtocolKeys.LastModifiedVersion, loadedProtocolSetVersion },
+                    { ProtocolKeys.LastCompatibleAppBuildNumber, PlayerSettings.iOS.buildNumber.ToString() },
                     { ProtocolKeys.Protocols, SerializeProtocols() },
                     { ProtocolKeys.Sessions, SerializeSessions() },
                     { ProtocolKeys.SessionElements, SerializeSessionElements() }
