@@ -80,6 +80,12 @@ namespace BGC.Scripting
             Operator.AndEquals => "op_BitwiseAndAssignment",
             Operator.OrEquals => "op_BitwiseOrAssignment",
 
+            Operator.BitwiseLeftShift => "op_LeftShift",
+            Operator.BitwiseRightShift => "op_RightShift",
+            Operator.BitwiseXOr => "op_ExclusiveOr",
+            Operator.BitwiseAnd => "op_BitwiseAnd",
+            Operator.BitwiseOr => "op_BitwiseOr",
+
             _ => ""
         };
     }

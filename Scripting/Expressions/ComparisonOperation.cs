@@ -78,17 +78,1097 @@ namespace BGC.Scripting
 
         public Type GetValueType() => typeof(bool);
 
-        private static bool PerformOperator(dynamic arg1, dynamic arg2, Operator operatorType)
+        private static bool PerformOperator(object arg1, object arg2, Operator operatorType)
         {
             switch (operatorType)
             {
-                case Operator.IsGreaterThan: return arg1 > arg2;
-                case Operator.IsGreaterThanOrEqualTo: return arg1 >= arg2;
-                case Operator.IsLessThan: return arg1 < arg2;
-                case Operator.IsLessThanOrEqualTo: return arg1 <= arg2;
+                case Operator.IsGreaterThan: return PerformIsGreaterThan(arg1, arg2);
+                case Operator.IsGreaterThanOrEqualTo: return PerformIsGreaterThanOrEqualTo(arg1, arg2);
+                case Operator.IsLessThan: return PerformIsLessThan(arg1, arg2);
+                case Operator.IsLessThanOrEqualTo: return PerformIsLessThanOrEqualTo(arg1, arg2);
 
                 default: throw new ArgumentException($"Unexpected Operator {operatorType}");
             }
+        }
+
+        public static bool PerformIsGreaterThan(object arg1, object arg2)
+        {
+            Type arg1Type = arg1.GetType();
+            Type arg2Type = arg2.GetType();
+
+            if (arg1Type.IsPrimitive && arg2Type.IsPrimitive)
+            {
+                switch (arg1)
+                {
+                    case byte prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 > prim2;
+                            case sbyte prim2: return prim1 > prim2;
+                            case short prim2: return prim1 > prim2;
+                            case ushort prim2: return prim1 > prim2;
+                            case int prim2: return prim1 > prim2;
+                            case uint prim2: return prim1 > prim2;
+                            case long prim2: return prim1 > prim2;
+                            case ulong prim2: return prim1 > prim2;
+                            case nint prim2: return prim1 > prim2;
+                            case nuint prim2: return prim1 > prim2;
+                            case char prim2: return prim1 > prim2;
+                            case decimal prim2: return prim1 > prim2;
+                            case float prim2: return prim1 > prim2;
+                            case double prim2: return prim1 > prim2;
+                        }
+                        break;
+                    case sbyte prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 > prim2;
+                            case sbyte prim2: return prim1 > prim2;
+                            case short prim2: return prim1 > prim2;
+                            case ushort prim2: return prim1 > prim2;
+                            case int prim2: return prim1 > prim2;
+                            case uint prim2: return prim1 > prim2;
+                            case long prim2: return prim1 > prim2;
+                            case nint prim2: return prim1 > prim2;
+                            case char prim2: return prim1 > prim2;
+                            case decimal prim2: return prim1 > prim2;
+                            case float prim2: return prim1 > prim2;
+                            case double prim2: return prim1 > prim2;
+                        }
+                        break;
+                    case short prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 > prim2;
+                            case sbyte prim2: return prim1 > prim2;
+                            case short prim2: return prim1 > prim2;
+                            case ushort prim2: return prim1 > prim2;
+                            case int prim2: return prim1 > prim2;
+                            case uint prim2: return prim1 > prim2;
+                            case long prim2: return prim1 > prim2;
+                            case nint prim2: return prim1 > prim2;
+                            case char prim2: return prim1 > prim2;
+                            case decimal prim2: return prim1 > prim2;
+                            case float prim2: return prim1 > prim2;
+                            case double prim2: return prim1 > prim2;
+                        }
+                        break;
+                    case ushort prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 > prim2;
+                            case sbyte prim2: return prim1 > prim2;
+                            case short prim2: return prim1 > prim2;
+                            case ushort prim2: return prim1 > prim2;
+                            case int prim2: return prim1 > prim2;
+                            case uint prim2: return prim1 > prim2;
+                            case long prim2: return prim1 > prim2;
+                            case ulong prim2: return prim1 > prim2;
+                            case nint prim2: return prim1 > prim2;
+                            case nuint prim2: return prim1 > prim2;
+                            case char prim2: return prim1 > prim2;
+                            case decimal prim2: return prim1 > prim2;
+                            case float prim2: return prim1 > prim2;
+                            case double prim2: return prim1 > prim2;
+                        }
+                        break;
+                    case int prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 > prim2;
+                            case sbyte prim2: return prim1 > prim2;
+                            case short prim2: return prim1 > prim2;
+                            case ushort prim2: return prim1 > prim2;
+                            case int prim2: return prim1 > prim2;
+                            case uint prim2: return prim1 > prim2;
+                            case long prim2: return prim1 > prim2;
+                            case nint prim2: return prim1 > prim2;
+                            case char prim2: return prim1 > prim2;
+                            case decimal prim2: return prim1 > prim2;
+                            case float prim2: return prim1 > prim2;
+                            case double prim2: return prim1 > prim2;
+                        }
+                        break;
+                    case uint prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 > prim2;
+                            case sbyte prim2: return prim1 > prim2;
+                            case short prim2: return prim1 > prim2;
+                            case ushort prim2: return prim1 > prim2;
+                            case int prim2: return prim1 > prim2;
+                            case uint prim2: return prim1 > prim2;
+                            case long prim2: return prim1 > prim2;
+                            case ulong prim2: return prim1 > prim2;
+                            case nint prim2: return prim1 > prim2;
+                            case nuint prim2: return prim1 > prim2;
+                            case char prim2: return prim1 > prim2;
+                            case decimal prim2: return prim1 > prim2;
+                            case float prim2: return prim1 > prim2;
+                            case double prim2: return prim1 > prim2;
+                        }
+                        break;
+                    case long prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 > prim2;
+                            case sbyte prim2: return prim1 > prim2;
+                            case short prim2: return prim1 > prim2;
+                            case ushort prim2: return prim1 > prim2;
+                            case int prim2: return prim1 > prim2;
+                            case uint prim2: return prim1 > prim2;
+                            case long prim2: return prim1 > prim2;
+                            case nint prim2: return prim1 > prim2;
+                            case char prim2: return prim1 > prim2;
+                            case decimal prim2: return prim1 > prim2;
+                            case float prim2: return prim1 > prim2;
+                            case double prim2: return prim1 > prim2;
+                        }
+                        break;
+                    case ulong prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 > prim2;
+                            case ushort prim2: return prim1 > prim2;
+                            case uint prim2: return prim1 > prim2;
+                            case ulong prim2: return prim1 > prim2;
+                            case nuint prim2: return prim1 > prim2;
+                            case char prim2: return prim1 > prim2;
+                            case decimal prim2: return prim1 > prim2;
+                            case float prim2: return prim1 > prim2;
+                            case double prim2: return prim1 > prim2;
+                        }
+                        break;
+                    case nint prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 > prim2;
+                            case sbyte prim2: return prim1 > prim2;
+                            case short prim2: return prim1 > prim2;
+                            case ushort prim2: return prim1 > prim2;
+                            case int prim2: return prim1 > prim2;
+                            case uint prim2: return prim1 > prim2;
+                            case long prim2: return prim1 > prim2;
+                            case nint prim2: return prim1 > prim2;
+                            case char prim2: return prim1 > prim2;
+                            case decimal prim2: return prim1 > prim2;
+                            case float prim2: return prim1 > prim2;
+                            case double prim2: return prim1 > prim2;
+                        }
+                        break;
+                    case nuint prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 > prim2;
+                            case ushort prim2: return prim1 > prim2;
+                            case uint prim2: return prim1 > prim2;
+                            case ulong prim2: return prim1 > prim2;
+                            case nuint prim2: return prim1 > prim2;
+                            case char prim2: return prim1 > prim2;
+                            case decimal prim2: return prim1 > prim2;
+                            case float prim2: return prim1 > prim2;
+                            case double prim2: return prim1 > prim2;
+                        }
+                        break;
+                    case char prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 > prim2;
+                            case sbyte prim2: return prim1 > prim2;
+                            case short prim2: return prim1 > prim2;
+                            case ushort prim2: return prim1 > prim2;
+                            case int prim2: return prim1 > prim2;
+                            case uint prim2: return prim1 > prim2;
+                            case long prim2: return prim1 > prim2;
+                            case ulong prim2: return prim1 > prim2;
+                            case nint prim2: return prim1 > prim2;
+                            case nuint prim2: return prim1 > prim2;
+                            case char prim2: return prim1 > prim2;
+                            case decimal prim2: return prim1 > prim2;
+                            case float prim2: return prim1 > prim2;
+                            case double prim2: return prim1 > prim2;
+                        }
+                        break;
+                    case decimal prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 > prim2;
+                            case sbyte prim2: return prim1 > prim2;
+                            case short prim2: return prim1 > prim2;
+                            case ushort prim2: return prim1 > prim2;
+                            case int prim2: return prim1 > prim2;
+                            case uint prim2: return prim1 > prim2;
+                            case long prim2: return prim1 > prim2;
+                            case ulong prim2: return prim1 > prim2;
+                            case nint prim2: return prim1 > prim2;
+                            case nuint prim2: return prim1 > prim2;
+                            case char prim2: return prim1 > prim2;
+                            case decimal prim2: return prim1 > prim2;
+                        }
+                        break;
+                    case float prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 > prim2;
+                            case sbyte prim2: return prim1 > prim2;
+                            case short prim2: return prim1 > prim2;
+                            case ushort prim2: return prim1 > prim2;
+                            case int prim2: return prim1 > prim2;
+                            case uint prim2: return prim1 > prim2;
+                            case long prim2: return prim1 > prim2;
+                            case ulong prim2: return prim1 > prim2;
+                            case nint prim2: return prim1 > prim2;
+                            case nuint prim2: return prim1 > prim2;
+                            case char prim2: return prim1 > prim2;
+                            case float prim2: return prim1 > prim2;
+                            case double prim2: return prim1 > prim2;
+                        }
+                        break;
+                    case double prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 > prim2;
+                            case sbyte prim2: return prim1 > prim2;
+                            case short prim2: return prim1 > prim2;
+                            case ushort prim2: return prim1 > prim2;
+                            case int prim2: return prim1 > prim2;
+                            case uint prim2: return prim1 > prim2;
+                            case long prim2: return prim1 > prim2;
+                            case ulong prim2: return prim1 > prim2;
+                            case nint prim2: return prim1 > prim2;
+                            case nuint prim2: return prim1 > prim2;
+                            case char prim2: return prim1 > prim2;
+                            case float prim2: return prim1 > prim2;
+                            case double prim2: return prim1 > prim2;
+                        }
+                        break;
+                }
+
+                throw new ArgumentException($"Cannot apply operator > to types {arg1Type.Name} and {arg2Type.Name}");
+            }
+            else if (arg1Type.IsEnum && arg2Type.IsEnum)
+            {
+                if (arg1Type == arg2Type)
+                {
+                    int arg1Int = Convert.ToInt32(arg1);
+                    int arg2Int = Convert.ToInt32(arg2);
+                    return arg1Int > arg2Int;
+                }
+
+                throw new ArgumentException($"Cannot apply operator > to types {arg1Type.Name} and {arg2Type.Name}");
+            }
+
+            return (bool)arg1Type.InvokeStaticMethod("op_GreaterThan", arg1, arg2);
+        }
+        
+        public static bool PerformIsGreaterThanOrEqualTo(object arg1, object arg2)
+        {
+            Type arg1Type = arg1.GetType();
+            Type arg2Type = arg2.GetType();
+
+            if (arg1Type.IsPrimitive && arg2Type.IsPrimitive)
+            {
+                switch (arg1)
+                {
+                    case byte prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 >= prim2;
+                            case sbyte prim2: return prim1 >= prim2;
+                            case short prim2: return prim1 >= prim2;
+                            case ushort prim2: return prim1 >= prim2;
+                            case int prim2: return prim1 >= prim2;
+                            case uint prim2: return prim1 >= prim2;
+                            case long prim2: return prim1 >= prim2;
+                            case ulong prim2: return prim1 >= prim2;
+                            case nint prim2: return prim1 >= prim2;
+                            case nuint prim2: return prim1 >= prim2;
+                            case char prim2: return prim1 >= prim2;
+                            case decimal prim2: return prim1 >= prim2;
+                            case float prim2: return prim1 >= prim2;
+                            case double prim2: return prim1 >= prim2;
+                        }
+                        break;
+                    case sbyte prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 >= prim2;
+                            case sbyte prim2: return prim1 >= prim2;
+                            case short prim2: return prim1 >= prim2;
+                            case ushort prim2: return prim1 >= prim2;
+                            case int prim2: return prim1 >= prim2;
+                            case uint prim2: return prim1 >= prim2;
+                            case long prim2: return prim1 >= prim2;
+                            case nint prim2: return prim1 >= prim2;
+                            case char prim2: return prim1 >= prim2;
+                            case decimal prim2: return prim1 >= prim2;
+                            case float prim2: return prim1 >= prim2;
+                            case double prim2: return prim1 >= prim2;
+                        }
+                        break;
+                    case short prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 >= prim2;
+                            case sbyte prim2: return prim1 >= prim2;
+                            case short prim2: return prim1 >= prim2;
+                            case ushort prim2: return prim1 >= prim2;
+                            case int prim2: return prim1 >= prim2;
+                            case uint prim2: return prim1 >= prim2;
+                            case long prim2: return prim1 >= prim2;
+                            case nint prim2: return prim1 >= prim2;
+                            case char prim2: return prim1 >= prim2;
+                            case decimal prim2: return prim1 >= prim2;
+                            case float prim2: return prim1 >= prim2;
+                            case double prim2: return prim1 >= prim2;
+                        }
+                        break;
+                    case ushort prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 >= prim2;
+                            case sbyte prim2: return prim1 >= prim2;
+                            case short prim2: return prim1 >= prim2;
+                            case ushort prim2: return prim1 >= prim2;
+                            case int prim2: return prim1 >= prim2;
+                            case uint prim2: return prim1 >= prim2;
+                            case long prim2: return prim1 >= prim2;
+                            case ulong prim2: return prim1 >= prim2;
+                            case nint prim2: return prim1 >= prim2;
+                            case nuint prim2: return prim1 >= prim2;
+                            case char prim2: return prim1 >= prim2;
+                            case decimal prim2: return prim1 >= prim2;
+                            case float prim2: return prim1 >= prim2;
+                            case double prim2: return prim1 >= prim2;
+                        }
+                        break;
+                    case int prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 >= prim2;
+                            case sbyte prim2: return prim1 >= prim2;
+                            case short prim2: return prim1 >= prim2;
+                            case ushort prim2: return prim1 >= prim2;
+                            case int prim2: return prim1 >= prim2;
+                            case uint prim2: return prim1 >= prim2;
+                            case long prim2: return prim1 >= prim2;
+                            case nint prim2: return prim1 >= prim2;
+                            case char prim2: return prim1 >= prim2;
+                            case decimal prim2: return prim1 >= prim2;
+                            case float prim2: return prim1 >= prim2;
+                            case double prim2: return prim1 >= prim2;
+                        }
+                        break;
+                    case uint prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 >= prim2;
+                            case sbyte prim2: return prim1 >= prim2;
+                            case short prim2: return prim1 >= prim2;
+                            case ushort prim2: return prim1 >= prim2;
+                            case int prim2: return prim1 >= prim2;
+                            case uint prim2: return prim1 >= prim2;
+                            case long prim2: return prim1 >= prim2;
+                            case ulong prim2: return prim1 >= prim2;
+                            case nint prim2: return prim1 >= prim2;
+                            case nuint prim2: return prim1 >= prim2;
+                            case char prim2: return prim1 >= prim2;
+                            case decimal prim2: return prim1 >= prim2;
+                            case float prim2: return prim1 >= prim2;
+                            case double prim2: return prim1 >= prim2;
+                        }
+                        break;
+                    case long prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 >= prim2;
+                            case sbyte prim2: return prim1 >= prim2;
+                            case short prim2: return prim1 >= prim2;
+                            case ushort prim2: return prim1 >= prim2;
+                            case int prim2: return prim1 >= prim2;
+                            case uint prim2: return prim1 >= prim2;
+                            case long prim2: return prim1 >= prim2;
+                            case nint prim2: return prim1 >= prim2;
+                            case char prim2: return prim1 >= prim2;
+                            case decimal prim2: return prim1 >= prim2;
+                            case float prim2: return prim1 >= prim2;
+                            case double prim2: return prim1 >= prim2;
+                        }
+                        break;
+                    case ulong prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 >= prim2;
+                            case ushort prim2: return prim1 >= prim2;
+                            case uint prim2: return prim1 >= prim2;
+                            case ulong prim2: return prim1 >= prim2;
+                            case nuint prim2: return prim1 >= prim2;
+                            case char prim2: return prim1 >= prim2;
+                            case decimal prim2: return prim1 >= prim2;
+                            case float prim2: return prim1 >= prim2;
+                            case double prim2: return prim1 >= prim2;
+                        }
+                        break;
+                    case nint prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 >= prim2;
+                            case sbyte prim2: return prim1 >= prim2;
+                            case short prim2: return prim1 >= prim2;
+                            case ushort prim2: return prim1 >= prim2;
+                            case int prim2: return prim1 >= prim2;
+                            case uint prim2: return prim1 >= prim2;
+                            case long prim2: return prim1 >= prim2;
+                            case nint prim2: return prim1 >= prim2;
+                            case char prim2: return prim1 >= prim2;
+                            case decimal prim2: return prim1 >= prim2;
+                            case float prim2: return prim1 >= prim2;
+                            case double prim2: return prim1 >= prim2;
+                        }
+                        break;
+                    case nuint prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 >= prim2;
+                            case ushort prim2: return prim1 >= prim2;
+                            case uint prim2: return prim1 >= prim2;
+                            case ulong prim2: return prim1 >= prim2;
+                            case nuint prim2: return prim1 >= prim2;
+                            case char prim2: return prim1 >= prim2;
+                            case decimal prim2: return prim1 >= prim2;
+                            case float prim2: return prim1 >= prim2;
+                            case double prim2: return prim1 >= prim2;
+                        }
+                        break;
+                    case char prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 >= prim2;
+                            case sbyte prim2: return prim1 >= prim2;
+                            case short prim2: return prim1 >= prim2;
+                            case ushort prim2: return prim1 >= prim2;
+                            case int prim2: return prim1 >= prim2;
+                            case uint prim2: return prim1 >= prim2;
+                            case long prim2: return prim1 >= prim2;
+                            case ulong prim2: return prim1 >= prim2;
+                            case nint prim2: return prim1 >= prim2;
+                            case nuint prim2: return prim1 >= prim2;
+                            case char prim2: return prim1 >= prim2;
+                            case decimal prim2: return prim1 >= prim2;
+                            case float prim2: return prim1 >= prim2;
+                            case double prim2: return prim1 >= prim2;
+                        }
+                        break;
+                    case decimal prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 >= prim2;
+                            case sbyte prim2: return prim1 >= prim2;
+                            case short prim2: return prim1 >= prim2;
+                            case ushort prim2: return prim1 >= prim2;
+                            case int prim2: return prim1 >= prim2;
+                            case uint prim2: return prim1 >= prim2;
+                            case long prim2: return prim1 >= prim2;
+                            case ulong prim2: return prim1 >= prim2;
+                            case nint prim2: return prim1 >= prim2;
+                            case nuint prim2: return prim1 >= prim2;
+                            case char prim2: return prim1 >= prim2;
+                            case decimal prim2: return prim1 >= prim2;
+                        }
+                        break;
+                    case float prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 >= prim2;
+                            case sbyte prim2: return prim1 >= prim2;
+                            case short prim2: return prim1 >= prim2;
+                            case ushort prim2: return prim1 >= prim2;
+                            case int prim2: return prim1 >= prim2;
+                            case uint prim2: return prim1 >= prim2;
+                            case long prim2: return prim1 >= prim2;
+                            case ulong prim2: return prim1 >= prim2;
+                            case nint prim2: return prim1 >= prim2;
+                            case nuint prim2: return prim1 >= prim2;
+                            case char prim2: return prim1 >= prim2;
+                            case float prim2: return prim1 >= prim2;
+                            case double prim2: return prim1 >= prim2;
+                        }
+                        break;
+                    case double prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 >= prim2;
+                            case sbyte prim2: return prim1 >= prim2;
+                            case short prim2: return prim1 >= prim2;
+                            case ushort prim2: return prim1 >= prim2;
+                            case int prim2: return prim1 >= prim2;
+                            case uint prim2: return prim1 >= prim2;
+                            case long prim2: return prim1 >= prim2;
+                            case ulong prim2: return prim1 >= prim2;
+                            case nint prim2: return prim1 >= prim2;
+                            case nuint prim2: return prim1 >= prim2;
+                            case char prim2: return prim1 >= prim2;
+                            case float prim2: return prim1 >= prim2;
+                            case double prim2: return prim1 >= prim2;
+                        }
+                        break;
+                }
+
+                throw new ArgumentException($"Cannot apply operator >= to types {arg1Type.Name} and {arg2Type.Name}");
+            }
+            else if (arg1Type.IsEnum && arg2Type.IsEnum)
+            {
+                if (arg1Type == arg2Type)
+                {
+                    int arg1Int = Convert.ToInt32(arg1);
+                    int arg2Int = Convert.ToInt32(arg2);
+                    return arg1Int >= arg2Int;
+                }
+
+                throw new ArgumentException($"Cannot apply operator >= to types {arg1Type.Name} and {arg2Type.Name}");
+            }
+
+            return (bool)arg1Type.InvokeStaticMethod("op_GreaterThanOrEqual", arg1, arg2);
+        }
+        
+        public static bool PerformIsLessThan(object arg1, object arg2)
+        {
+            Type arg1Type = arg1.GetType();
+            Type arg2Type = arg2.GetType();
+
+            if (arg1Type.IsPrimitive && arg2Type.IsPrimitive)
+            {
+                switch (arg1)
+                {
+                    case byte prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 < prim2;
+                            case sbyte prim2: return prim1 < prim2;
+                            case short prim2: return prim1 < prim2;
+                            case ushort prim2: return prim1 < prim2;
+                            case int prim2: return prim1 < prim2;
+                            case uint prim2: return prim1 < prim2;
+                            case long prim2: return prim1 < prim2;
+                            case ulong prim2: return prim1 < prim2;
+                            case nint prim2: return prim1 < prim2;
+                            case nuint prim2: return prim1 < prim2;
+                            case char prim2: return prim1 < prim2;
+                            case decimal prim2: return prim1 < prim2;
+                            case float prim2: return prim1 < prim2;
+                            case double prim2: return prim1 < prim2;
+                        }
+                        break;
+                    case sbyte prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 < prim2;
+                            case sbyte prim2: return prim1 < prim2;
+                            case short prim2: return prim1 < prim2;
+                            case ushort prim2: return prim1 < prim2;
+                            case int prim2: return prim1 < prim2;
+                            case uint prim2: return prim1 < prim2;
+                            case long prim2: return prim1 < prim2;
+                            case nint prim2: return prim1 < prim2;
+                            case char prim2: return prim1 < prim2;
+                            case decimal prim2: return prim1 < prim2;
+                            case float prim2: return prim1 < prim2;
+                            case double prim2: return prim1 < prim2;
+                        }
+                        break;
+                    case short prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 < prim2;
+                            case sbyte prim2: return prim1 < prim2;
+                            case short prim2: return prim1 < prim2;
+                            case ushort prim2: return prim1 < prim2;
+                            case int prim2: return prim1 < prim2;
+                            case uint prim2: return prim1 < prim2;
+                            case long prim2: return prim1 < prim2;
+                            case nint prim2: return prim1 < prim2;
+                            case char prim2: return prim1 < prim2;
+                            case decimal prim2: return prim1 < prim2;
+                            case float prim2: return prim1 < prim2;
+                            case double prim2: return prim1 < prim2;
+                        }
+                        break;
+                    case ushort prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 < prim2;
+                            case sbyte prim2: return prim1 < prim2;
+                            case short prim2: return prim1 < prim2;
+                            case ushort prim2: return prim1 < prim2;
+                            case int prim2: return prim1 < prim2;
+                            case uint prim2: return prim1 < prim2;
+                            case long prim2: return prim1 < prim2;
+                            case ulong prim2: return prim1 < prim2;
+                            case nint prim2: return prim1 < prim2;
+                            case nuint prim2: return prim1 < prim2;
+                            case char prim2: return prim1 < prim2;
+                            case decimal prim2: return prim1 < prim2;
+                            case float prim2: return prim1 < prim2;
+                            case double prim2: return prim1 < prim2;
+                        }
+                        break;
+                    case int prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 < prim2;
+                            case sbyte prim2: return prim1 < prim2;
+                            case short prim2: return prim1 < prim2;
+                            case ushort prim2: return prim1 < prim2;
+                            case int prim2: return prim1 < prim2;
+                            case uint prim2: return prim1 < prim2;
+                            case long prim2: return prim1 < prim2;
+                            case nint prim2: return prim1 < prim2;
+                            case char prim2: return prim1 < prim2;
+                            case decimal prim2: return prim1 < prim2;
+                            case float prim2: return prim1 < prim2;
+                            case double prim2: return prim1 < prim2;
+                        }
+                        break;
+                    case uint prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 < prim2;
+                            case sbyte prim2: return prim1 < prim2;
+                            case short prim2: return prim1 < prim2;
+                            case ushort prim2: return prim1 < prim2;
+                            case int prim2: return prim1 < prim2;
+                            case uint prim2: return prim1 < prim2;
+                            case long prim2: return prim1 < prim2;
+                            case ulong prim2: return prim1 < prim2;
+                            case nint prim2: return prim1 < prim2;
+                            case nuint prim2: return prim1 < prim2;
+                            case char prim2: return prim1 < prim2;
+                            case decimal prim2: return prim1 < prim2;
+                            case float prim2: return prim1 < prim2;
+                            case double prim2: return prim1 < prim2;
+                        }
+                        break;
+                    case long prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 < prim2;
+                            case sbyte prim2: return prim1 < prim2;
+                            case short prim2: return prim1 < prim2;
+                            case ushort prim2: return prim1 < prim2;
+                            case int prim2: return prim1 < prim2;
+                            case uint prim2: return prim1 < prim2;
+                            case long prim2: return prim1 < prim2;
+                            case nint prim2: return prim1 < prim2;
+                            case char prim2: return prim1 < prim2;
+                            case decimal prim2: return prim1 < prim2;
+                            case float prim2: return prim1 < prim2;
+                            case double prim2: return prim1 < prim2;
+                        }
+                        break;
+                    case ulong prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 < prim2;
+                            case ushort prim2: return prim1 < prim2;
+                            case uint prim2: return prim1 < prim2;
+                            case ulong prim2: return prim1 < prim2;
+                            case nuint prim2: return prim1 < prim2;
+                            case char prim2: return prim1 < prim2;
+                            case decimal prim2: return prim1 < prim2;
+                            case float prim2: return prim1 < prim2;
+                            case double prim2: return prim1 < prim2;
+                        }
+                        break;
+                    case nint prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 < prim2;
+                            case sbyte prim2: return prim1 < prim2;
+                            case short prim2: return prim1 < prim2;
+                            case ushort prim2: return prim1 < prim2;
+                            case int prim2: return prim1 < prim2;
+                            case uint prim2: return prim1 < prim2;
+                            case long prim2: return prim1 < prim2;
+                            case nint prim2: return prim1 < prim2;
+                            case char prim2: return prim1 < prim2;
+                            case decimal prim2: return prim1 < prim2;
+                            case float prim2: return prim1 < prim2;
+                            case double prim2: return prim1 < prim2;
+                        }
+                        break;
+                    case nuint prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 < prim2;
+                            case ushort prim2: return prim1 < prim2;
+                            case uint prim2: return prim1 < prim2;
+                            case ulong prim2: return prim1 < prim2;
+                            case nuint prim2: return prim1 < prim2;
+                            case char prim2: return prim1 < prim2;
+                            case decimal prim2: return prim1 < prim2;
+                            case float prim2: return prim1 < prim2;
+                            case double prim2: return prim1 < prim2;
+                        }
+                        break;
+                    case char prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 < prim2;
+                            case sbyte prim2: return prim1 < prim2;
+                            case short prim2: return prim1 < prim2;
+                            case ushort prim2: return prim1 < prim2;
+                            case int prim2: return prim1 < prim2;
+                            case uint prim2: return prim1 < prim2;
+                            case long prim2: return prim1 < prim2;
+                            case ulong prim2: return prim1 < prim2;
+                            case nint prim2: return prim1 < prim2;
+                            case nuint prim2: return prim1 < prim2;
+                            case char prim2: return prim1 < prim2;
+                            case decimal prim2: return prim1 < prim2;
+                            case float prim2: return prim1 < prim2;
+                            case double prim2: return prim1 < prim2;
+                        }
+                        break;
+                    case decimal prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 < prim2;
+                            case sbyte prim2: return prim1 < prim2;
+                            case short prim2: return prim1 < prim2;
+                            case ushort prim2: return prim1 < prim2;
+                            case int prim2: return prim1 < prim2;
+                            case uint prim2: return prim1 < prim2;
+                            case long prim2: return prim1 < prim2;
+                            case ulong prim2: return prim1 < prim2;
+                            case nint prim2: return prim1 < prim2;
+                            case nuint prim2: return prim1 < prim2;
+                            case char prim2: return prim1 < prim2;
+                            case decimal prim2: return prim1 < prim2;
+                        }
+                        break;
+                    case float prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 < prim2;
+                            case sbyte prim2: return prim1 < prim2;
+                            case short prim2: return prim1 < prim2;
+                            case ushort prim2: return prim1 < prim2;
+                            case int prim2: return prim1 < prim2;
+                            case uint prim2: return prim1 < prim2;
+                            case long prim2: return prim1 < prim2;
+                            case ulong prim2: return prim1 < prim2;
+                            case nint prim2: return prim1 < prim2;
+                            case nuint prim2: return prim1 < prim2;
+                            case char prim2: return prim1 < prim2;
+                            case float prim2: return prim1 < prim2;
+                            case double prim2: return prim1 < prim2;
+                        }
+                        break;
+                    case double prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 < prim2;
+                            case sbyte prim2: return prim1 < prim2;
+                            case short prim2: return prim1 < prim2;
+                            case ushort prim2: return prim1 < prim2;
+                            case int prim2: return prim1 < prim2;
+                            case uint prim2: return prim1 < prim2;
+                            case long prim2: return prim1 < prim2;
+                            case ulong prim2: return prim1 < prim2;
+                            case nint prim2: return prim1 < prim2;
+                            case nuint prim2: return prim1 < prim2;
+                            case char prim2: return prim1 < prim2;
+                            case float prim2: return prim1 < prim2;
+                            case double prim2: return prim1 < prim2;
+                        }
+                        break;
+                }
+
+                throw new ArgumentException($"Cannot apply operator < to types {arg1Type.Name} and {arg2Type.Name}");
+            }
+            else if (arg1Type.IsEnum && arg2Type.IsEnum)
+            {
+                if (arg1Type == arg2Type)
+                {
+                    int arg1Int = Convert.ToInt32(arg1);
+                    int arg2Int = Convert.ToInt32(arg2);
+                    return arg1Int < arg2Int;
+                }
+
+                throw new ArgumentException($"Cannot apply operator < to types {arg1Type.Name} and {arg2Type.Name}");
+            }
+
+            return (bool)arg1Type.InvokeStaticMethod("op_LessThan", arg1, arg2);
+        }
+
+        public static bool PerformIsLessThanOrEqualTo(object arg1, object arg2)
+        {
+            Type arg1Type = arg1.GetType();
+            Type arg2Type = arg2.GetType();
+
+            if (arg1Type.IsPrimitive && arg2Type.IsPrimitive)
+            {
+                switch (arg1)
+                {
+                    case byte prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 <= prim2;
+                            case sbyte prim2: return prim1 <= prim2;
+                            case short prim2: return prim1 <= prim2;
+                            case ushort prim2: return prim1 <= prim2;
+                            case int prim2: return prim1 <= prim2;
+                            case uint prim2: return prim1 <= prim2;
+                            case long prim2: return prim1 <= prim2;
+                            case ulong prim2: return prim1 <= prim2;
+                            case nint prim2: return prim1 <= prim2;
+                            case nuint prim2: return prim1 <= prim2;
+                            case char prim2: return prim1 <= prim2;
+                            case decimal prim2: return prim1 <= prim2;
+                            case float prim2: return prim1 <= prim2;
+                            case double prim2: return prim1 <= prim2;
+                        }
+                        break;
+                    case sbyte prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 <= prim2;
+                            case sbyte prim2: return prim1 <= prim2;
+                            case short prim2: return prim1 <= prim2;
+                            case ushort prim2: return prim1 <= prim2;
+                            case int prim2: return prim1 <= prim2;
+                            case uint prim2: return prim1 <= prim2;
+                            case long prim2: return prim1 <= prim2;
+                            case nint prim2: return prim1 <= prim2;
+                            case char prim2: return prim1 <= prim2;
+                            case decimal prim2: return prim1 <= prim2;
+                            case float prim2: return prim1 <= prim2;
+                            case double prim2: return prim1 <= prim2;
+                        }
+                        break;
+                    case short prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 <= prim2;
+                            case sbyte prim2: return prim1 <= prim2;
+                            case short prim2: return prim1 <= prim2;
+                            case ushort prim2: return prim1 <= prim2;
+                            case int prim2: return prim1 <= prim2;
+                            case uint prim2: return prim1 <= prim2;
+                            case long prim2: return prim1 <= prim2;
+                            case nint prim2: return prim1 <= prim2;
+                            case char prim2: return prim1 <= prim2;
+                            case decimal prim2: return prim1 <= prim2;
+                            case float prim2: return prim1 <= prim2;
+                            case double prim2: return prim1 <= prim2;
+                        }
+                        break;
+                    case ushort prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 <= prim2;
+                            case sbyte prim2: return prim1 <= prim2;
+                            case short prim2: return prim1 <= prim2;
+                            case ushort prim2: return prim1 <= prim2;
+                            case int prim2: return prim1 <= prim2;
+                            case uint prim2: return prim1 <= prim2;
+                            case long prim2: return prim1 <= prim2;
+                            case ulong prim2: return prim1 <= prim2;
+                            case nint prim2: return prim1 <= prim2;
+                            case nuint prim2: return prim1 <= prim2;
+                            case char prim2: return prim1 <= prim2;
+                            case decimal prim2: return prim1 <= prim2;
+                            case float prim2: return prim1 <= prim2;
+                            case double prim2: return prim1 <= prim2;
+                        }
+                        break;
+                    case int prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 <= prim2;
+                            case sbyte prim2: return prim1 <= prim2;
+                            case short prim2: return prim1 <= prim2;
+                            case ushort prim2: return prim1 <= prim2;
+                            case int prim2: return prim1 <= prim2;
+                            case uint prim2: return prim1 <= prim2;
+                            case long prim2: return prim1 <= prim2;
+                            case nint prim2: return prim1 <= prim2;
+                            case char prim2: return prim1 <= prim2;
+                            case decimal prim2: return prim1 <= prim2;
+                            case float prim2: return prim1 <= prim2;
+                            case double prim2: return prim1 <= prim2;
+                        }
+                        break;
+                    case uint prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 <= prim2;
+                            case sbyte prim2: return prim1 <= prim2;
+                            case short prim2: return prim1 <= prim2;
+                            case ushort prim2: return prim1 <= prim2;
+                            case int prim2: return prim1 <= prim2;
+                            case uint prim2: return prim1 <= prim2;
+                            case long prim2: return prim1 <= prim2;
+                            case ulong prim2: return prim1 <= prim2;
+                            case nint prim2: return prim1 <= prim2;
+                            case nuint prim2: return prim1 <= prim2;
+                            case char prim2: return prim1 <= prim2;
+                            case decimal prim2: return prim1 <= prim2;
+                            case float prim2: return prim1 <= prim2;
+                            case double prim2: return prim1 <= prim2;
+                        }
+                        break;
+                    case long prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 <= prim2;
+                            case sbyte prim2: return prim1 <= prim2;
+                            case short prim2: return prim1 <= prim2;
+                            case ushort prim2: return prim1 <= prim2;
+                            case int prim2: return prim1 <= prim2;
+                            case uint prim2: return prim1 <= prim2;
+                            case long prim2: return prim1 <= prim2;
+                            case nint prim2: return prim1 <= prim2;
+                            case char prim2: return prim1 <= prim2;
+                            case decimal prim2: return prim1 <= prim2;
+                            case float prim2: return prim1 <= prim2;
+                            case double prim2: return prim1 <= prim2;
+                        }
+                        break;
+                    case ulong prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 <= prim2;
+                            case ushort prim2: return prim1 <= prim2;
+                            case uint prim2: return prim1 <= prim2;
+                            case ulong prim2: return prim1 <= prim2;
+                            case nuint prim2: return prim1 <= prim2;
+                            case char prim2: return prim1 <= prim2;
+                            case decimal prim2: return prim1 <= prim2;
+                            case float prim2: return prim1 <= prim2;
+                            case double prim2: return prim1 <= prim2;
+                        }
+                        break;
+                    case nint prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 <= prim2;
+                            case sbyte prim2: return prim1 <= prim2;
+                            case short prim2: return prim1 <= prim2;
+                            case ushort prim2: return prim1 <= prim2;
+                            case int prim2: return prim1 <= prim2;
+                            case uint prim2: return prim1 <= prim2;
+                            case long prim2: return prim1 <= prim2;
+                            case nint prim2: return prim1 <= prim2;
+                            case char prim2: return prim1 <= prim2;
+                            case decimal prim2: return prim1 <= prim2;
+                            case float prim2: return prim1 <= prim2;
+                            case double prim2: return prim1 <= prim2;
+                        }
+                        break;
+                    case nuint prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 <= prim2;
+                            case ushort prim2: return prim1 <= prim2;
+                            case uint prim2: return prim1 <= prim2;
+                            case ulong prim2: return prim1 <= prim2;
+                            case nuint prim2: return prim1 <= prim2;
+                            case char prim2: return prim1 <= prim2;
+                            case decimal prim2: return prim1 <= prim2;
+                            case float prim2: return prim1 <= prim2;
+                            case double prim2: return prim1 <= prim2;
+                        }
+                        break;
+                    case char prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 <= prim2;
+                            case sbyte prim2: return prim1 <= prim2;
+                            case short prim2: return prim1 <= prim2;
+                            case ushort prim2: return prim1 <= prim2;
+                            case int prim2: return prim1 <= prim2;
+                            case uint prim2: return prim1 <= prim2;
+                            case long prim2: return prim1 <= prim2;
+                            case ulong prim2: return prim1 <= prim2;
+                            case nint prim2: return prim1 <= prim2;
+                            case nuint prim2: return prim1 <= prim2;
+                            case char prim2: return prim1 <= prim2;
+                            case decimal prim2: return prim1 <= prim2;
+                            case float prim2: return prim1 <= prim2;
+                            case double prim2: return prim1 <= prim2;
+                        }
+                        break;
+                    case decimal prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 <= prim2;
+                            case sbyte prim2: return prim1 <= prim2;
+                            case short prim2: return prim1 <= prim2;
+                            case ushort prim2: return prim1 <= prim2;
+                            case int prim2: return prim1 <= prim2;
+                            case uint prim2: return prim1 <= prim2;
+                            case long prim2: return prim1 <= prim2;
+                            case ulong prim2: return prim1 <= prim2;
+                            case nint prim2: return prim1 <= prim2;
+                            case nuint prim2: return prim1 <= prim2;
+                            case char prim2: return prim1 <= prim2;
+                            case decimal prim2: return prim1 <= prim2;
+                        }
+                        break;
+                    case float prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 <= prim2;
+                            case sbyte prim2: return prim1 <= prim2;
+                            case short prim2: return prim1 <= prim2;
+                            case ushort prim2: return prim1 <= prim2;
+                            case int prim2: return prim1 <= prim2;
+                            case uint prim2: return prim1 <= prim2;
+                            case long prim2: return prim1 <= prim2;
+                            case ulong prim2: return prim1 <= prim2;
+                            case nint prim2: return prim1 <= prim2;
+                            case nuint prim2: return prim1 <= prim2;
+                            case char prim2: return prim1 <= prim2;
+                            case float prim2: return prim1 <= prim2;
+                            case double prim2: return prim1 <= prim2;
+                        }
+                        break;
+                    case double prim1:
+                        switch (arg2)
+                        {
+                            case byte prim2: return prim1 <= prim2;
+                            case sbyte prim2: return prim1 <= prim2;
+                            case short prim2: return prim1 <= prim2;
+                            case ushort prim2: return prim1 <= prim2;
+                            case int prim2: return prim1 <= prim2;
+                            case uint prim2: return prim1 <= prim2;
+                            case long prim2: return prim1 <= prim2;
+                            case ulong prim2: return prim1 <= prim2;
+                            case nint prim2: return prim1 <= prim2;
+                            case nuint prim2: return prim1 <= prim2;
+                            case char prim2: return prim1 <= prim2;
+                            case float prim2: return prim1 <= prim2;
+                            case double prim2: return prim1 <= prim2;
+                        }
+                        break;
+                }
+
+                throw new ArgumentException($"Cannot apply operator <= to types {arg1Type.Name} and {arg2Type.Name}");
+            }
+            else if (arg1Type.IsEnum && arg2Type.IsEnum)
+            {
+                if (arg1Type == arg2Type)
+                {
+                    int arg1Int = Convert.ToInt32(arg1);
+                    int arg2Int = Convert.ToInt32(arg2);
+                    return arg1Int <= arg2Int;
+                }
+
+                throw new ArgumentException($"Cannot apply operator <= to types {arg1Type.Name} and {arg2Type.Name}");
+            }
+
+            return (bool)arg1Type.InvokeStaticMethod("op_LessThanOrEqual", arg1, arg2);
         }
     }
 }

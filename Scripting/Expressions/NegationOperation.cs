@@ -16,16 +16,31 @@ namespace BGC.Scripting
 
             if (!argType.IsExtendedPrimitive() || argType == typeof(string))
             {
-                throw new ScriptParsingException(
-                    source: source,
-                    message: $"Cannot negate a non-numerical value {arg} of type {argType.Name}");
+                string operatorName = source.operatorType switch
+                {
+                    Operator.Negate => "op_UnaryNegation",
+                    Operator.BitwiseComplement => "op_OnesComplement",
+                    _ => null,
+                };
+                if (operatorName == null)
+                {
+                    throw new ArgumentException($"Unexpected Operator: {source.operatorType}");
+                }
+
+                var (canInvoke, error) = argType.CanInvokeStaticMethod(operatorName, argType);
+                if (!canInvoke)
+                {
+                    throw new ScriptParsingException(source, error);
+                }
             }
-
-            Type promotedType = source.GetUnaryPromotedType(argType);
-
-            if (arg is LiteralToken litArg)
+            else
             {
-                return new ConstantToken(source, PerformOperator(litArg.GetAs<object>(), source.operatorType), promotedType);
+                Type promotedType = source.GetUnaryPromotedType(argType);
+
+                if (arg is LiteralToken litArg)
+                {
+                    return new ConstantToken(source, PerformOperator(litArg.GetAs<object>(), source.operatorType), promotedType);
+                }
             }
 
             return new UnaryOperation(arg, argType, source.operatorType);
@@ -62,14 +77,70 @@ namespace BGC.Scripting
 
         public Type GetValueType() => valueType;
 
-        private static object PerformOperator(dynamic arg, Operator operatorType)
+        private static object PerformOperator(object arg, Operator operatorType)
         {
             switch (operatorType)
             {
-                case Operator.Negate: return -arg;
-                case Operator.BitwiseComplement: return ~arg;
-
+                case Operator.Negate: return PerformNegate(arg);
+                case Operator.BitwiseComplement: return PerformBitwiseComplement(arg);
                 default: throw new ArgumentException($"Unexpected Operator {operatorType}");
+            }
+        }
+
+        private static object PerformNegate(object arg)
+        {
+            Type argType = arg.GetType();
+            if (argType.IsPrimitive)
+            {
+                switch (arg)
+                {
+                    case byte prim: return -prim;
+                    case sbyte prim: return -prim;
+                    case short prim: return -prim;
+                    case ushort prim: return -prim;
+                    case int prim: return -prim;
+                    case uint prim: return -prim;
+                    case long prim: return -prim;
+                    case nint prim: return -prim;
+                    case char prim: return -prim;
+                    case decimal prim: return -prim;
+                    case float prim: return -prim;
+                    case double prim: return -prim;
+                }
+
+                throw new ArgumentException($"Cannot apply unary operator - to type {argType.Name}");
+            }
+            else
+            {
+                return argType.InvokeStaticMethod("op_UnaryNegation", arg);
+            }
+        }
+
+        private static object PerformBitwiseComplement(object arg)
+        {
+            Type argType = arg.GetType();
+            if (argType.IsPrimitive)
+            {
+                switch (arg)
+                {
+                    case byte prim: return ~prim;
+                    case sbyte prim: return ~prim;
+                    case short prim: return ~prim;
+                    case ushort prim: return ~prim;
+                    case int prim: return ~prim;
+                    case uint prim: return ~prim;
+                    case long prim: return ~prim;
+                    case ulong prim: return ~prim;
+                    case nint prim: return ~prim;
+                    case nuint prim: return ~prim;
+                    case char prim: return ~prim;
+                }
+
+                throw new ArgumentException($"Cannot apply unary operator - to type {argType.Name}");
+            }
+            else
+            {
+                return argType.InvokeStaticMethod("op_OnesComplement", arg);
             }
         }
     }

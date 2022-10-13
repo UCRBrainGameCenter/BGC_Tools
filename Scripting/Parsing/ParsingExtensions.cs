@@ -436,6 +436,10 @@ namespace BGC.Scripting
             valueType == typeof(byte) || valueType == typeof(sbyte) || valueType == typeof(short) || valueType == typeof(ushort) ||
             valueType == typeof(int) || valueType == typeof(uint) || valueType == typeof(long) || valueType == typeof(ulong);
 
+        public static bool IsEnumCompatible(this Type valueType) =>
+            valueType == typeof(byte) || valueType == typeof(sbyte) || valueType == typeof(short) || valueType == typeof(ushort) ||
+            valueType == typeof(int) || valueType == typeof(char);
+
         public static bool IsLiteralInRange(this LiteralToken literalToken, Type valueType)
         {
             int value = literalToken.GetAs<int>();
@@ -599,6 +603,17 @@ namespace BGC.Scripting
                 }
 
                 return typeof(uint);
+            }
+
+            // Enums
+            if (type1.IsEnum)
+            {
+                return type1;
+            }
+
+            if (type2.IsEnum)
+            {
+                return type2;
             }
 
             return typeof(int);
