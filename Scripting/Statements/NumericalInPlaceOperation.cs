@@ -22,7 +22,7 @@ namespace BGC.Scripting
             this.value = value;
             operatorType = operatorToken.operatorType;
 
-            if (assigneeType.IsPrimitive && valueType.IsPrimitive)
+            if (assigneeType.IsExtendedPrimitive() && valueType.IsExtendedPrimitive())
             {
                 if (!assigneeType.AssignableOrConvertableFromType(valueType))
                 {
@@ -46,14 +46,42 @@ namespace BGC.Scripting
                     case Operator.BitwiseXOrEquals:
                     case Operator.AndEquals:
                     case Operator.OrEquals:
-                        if (!value.GetValueType().IsIntegralType())
+                        if (!valueType.IsIntegralType())
                         {
-                            throw new ScriptParsingException(operatorToken, $"Operator {operatorType} requires the argument be an integral type. Received {value.GetValueType()}.");
+                            throw new ScriptParsingException(operatorToken, $"Operator {operatorType} requires the argument be an integral type. Received {valueType}.");
                         }
                         break;
 
 
                     default: throw new ArgumentException($"Unexpected Operator: {operatorType}");
+                }
+            }
+            else if (assigneeType.IsEnum)
+            {
+                bool isAllowed;
+                switch (operatorType)
+                {
+                    case Operator.PlusEquals:
+                    case Operator.MinusEquals:
+                        isAllowed = valueType.IsEnumCompatible();
+                        break;
+
+                    case Operator.TimesEquals:
+                    case Operator.DivideEquals:
+                    case Operator.ModuloEquals:
+                    case Operator.BitwiseLeftShiftEquals:
+                    case Operator.BitwiseRightShiftEquals:
+                    case Operator.BitwiseXOrEquals:
+                    case Operator.AndEquals:
+                    case Operator.OrEquals:
+                        isAllowed = false;
+                        break;
+
+                    default: throw new ArgumentException($"Unexpected Operator: {operatorType}");
+                }
+                if (!isAllowed)
+                {
+                    throw new ScriptParsingException(operatorToken, $"Operator {operatorType} cannot be applied to operands of type {assigneeType} and {valueType}.");
                 }
             }
             else
@@ -110,8 +138,9 @@ namespace BGC.Scripting
         {
             object assigneeValue = assignee.GetAs<object>(context)!;
             object modValue = value.GetAs<object>(context)!;
+            Type modValueType = modValue.GetType();
 
-            if (assigneeType.IsPrimitive && modValue.GetType().IsPrimitive)
+            if (assigneeType.IsExtendedPrimitive() && modValueType.IsExtendedPrimitive())
             {
                 bool isConvErr = false;
                 switch (assigneeValue)
@@ -449,6 +478,29 @@ namespace BGC.Scripting
                     throw new ArgumentException($"Cannot apply operator += to types {assigneeValue.GetType().Name} and {modValue.GetType().Name}");
                 }
             }
+            else if (assigneeType.IsEnum)
+            {
+                bool isConvErr = true;
+                int assigneeValueInt = Convert.ToInt32(assigneeValue);
+                switch (modValue)
+                {
+                    case byte prim2: assigneeValueInt += prim2; isConvErr = false; break;
+                    case sbyte prim2: assigneeValueInt += prim2; isConvErr = false; break;
+                    case short prim2: assigneeValueInt += prim2; isConvErr = false; break;
+                    case ushort prim2: assigneeValueInt += prim2; isConvErr = false; break;
+                    case int prim2: assigneeValueInt += prim2; isConvErr = false; break;
+                    case char prim2: assigneeValueInt += prim2; isConvErr = false; break;
+                }
+
+                if (isConvErr)
+                {
+                    throw new ArgumentException($"Cannot apply operator += to types {assigneeValue.GetType().Name} and {modValue.GetType().Name}");
+                }
+                else
+                {
+                    assigneeValue = Enum.ToObject(assigneeType, assigneeValueInt);
+                }
+            }
             else
             {
                 object newAssigneeValue = assigneeValue.GetType().InvokeStaticMethod("op_Addition", assigneeValue, modValue);
@@ -468,8 +520,9 @@ namespace BGC.Scripting
         {
             object assigneeValue = assignee.GetAs<object>(context)!;
             object modValue = value.GetAs<object>(context)!;
+            Type modValueType = modValue.GetType();
 
-            if (assigneeValue.GetType().IsPrimitive && modValue.GetType().IsPrimitive)
+            if (assigneeType.IsExtendedPrimitive() && modValueType.IsExtendedPrimitive())
             {
                 bool isConvErr = false;
                 switch (assigneeValue)
@@ -807,6 +860,29 @@ namespace BGC.Scripting
                     throw new ArgumentException($"Cannot apply operator -= to types {assigneeValue.GetType().Name} and {modValue.GetType().Name}");
                 }
             }
+            else if (assigneeType.IsEnum)
+            {
+                bool isConvErr = true;
+                int assigneeValueInt = Convert.ToInt32(assigneeValue);
+                switch (modValue)
+                {
+                    case byte prim2: assigneeValueInt -= prim2; isConvErr = false; break;
+                    case sbyte prim2: assigneeValueInt -= prim2; isConvErr = false; break;
+                    case short prim2: assigneeValueInt -= prim2; isConvErr = false; break;
+                    case ushort prim2: assigneeValueInt -= prim2; isConvErr = false; break;
+                    case int prim2: assigneeValueInt -= prim2; isConvErr = false; break;
+                    case char prim2: assigneeValueInt -= prim2; isConvErr = false; break;
+                }
+
+                if (isConvErr)
+                {
+                    throw new ArgumentException($"Cannot apply operator -= to types {assigneeValue.GetType().Name} and {modValue.GetType().Name}");
+                }
+                else
+                {
+                    assigneeValue = Enum.ToObject(assigneeType, assigneeValueInt);
+                }
+            }
             else
             {
                 object newAssigneeValue = assigneeValue.GetType().InvokeStaticMethod("op_Subtraction", assigneeValue, modValue);
@@ -826,8 +902,9 @@ namespace BGC.Scripting
         {
             object assigneeValue = assignee.GetAs<object>(context)!;
             object modValue = value.GetAs<object>(context)!;
+            Type modValueType = modValue.GetType();
 
-            if (assigneeValue.GetType().IsPrimitive && modValue.GetType().IsPrimitive)
+            if (assigneeType.IsExtendedPrimitive() && modValueType.IsExtendedPrimitive())
             {
                 bool isConvErr = false;
                 switch (assigneeValue)
@@ -1184,8 +1261,9 @@ namespace BGC.Scripting
         {
             object assigneeValue = assignee.GetAs<object>(context)!;
             object modValue = value.GetAs<object>(context)!;
+            Type modValueType = modValue.GetType();
 
-            if (assigneeValue.GetType().IsPrimitive && modValue.GetType().IsPrimitive)
+            if (assigneeType.IsExtendedPrimitive() && modValueType.IsExtendedPrimitive())
             {
                 bool isConvErr = false;
                 switch (assigneeValue)
@@ -1542,8 +1620,9 @@ namespace BGC.Scripting
         {
             object assigneeValue = assignee.GetAs<object>(context)!;
             object modValue = value.GetAs<object>(context)!;
+            Type modValueType = modValue.GetType();
 
-            if (assigneeValue.GetType().IsPrimitive && modValue.GetType().IsPrimitive)
+            if (assigneeType.IsExtendedPrimitive() && modValueType.IsExtendedPrimitive())
             {
                 bool isConvErr = false;
                 switch (assigneeValue)
@@ -1900,8 +1979,9 @@ namespace BGC.Scripting
         {
             object assigneeValue = assignee.GetAs<object>(context)!;
             object modValue = value.GetAs<object>(context)!;
+            Type modValueType = modValue.GetType();
 
-            if (assigneeValue.GetType().IsPrimitive && modValue.GetType().IsPrimitive)
+            if (assigneeType.IsExtendedPrimitive() && modValueType.IsExtendedPrimitive())
             {
                 bool isConvErr = false;
                 switch (assigneeValue)
@@ -2189,8 +2269,9 @@ namespace BGC.Scripting
         {
             object assigneeValue = assignee.GetAs<object>(context)!;
             object modValue = value.GetAs<object>(context)!;
+            Type modValueType = modValue.GetType();
 
-            if (assigneeValue.GetType().IsPrimitive && modValue.GetType().IsPrimitive)
+            if (assigneeType.IsExtendedPrimitive() && modValueType.IsExtendedPrimitive())
             {
                 bool isConvErr = false;
                 switch (assigneeValue)
@@ -2478,8 +2559,9 @@ namespace BGC.Scripting
         {
             object assigneeValue = assignee.GetAs<object>(context)!;
             object modValue = value.GetAs<object>(context)!;
+            Type modValueType = modValue.GetType();
 
-            if (assigneeValue.GetType().IsPrimitive && modValue.GetType().IsPrimitive)
+            if (assigneeType.IsExtendedPrimitive() && modValueType.IsExtendedPrimitive())
             {
                 bool isConvErr = false;
                 switch (assigneeValue)
@@ -2845,8 +2927,9 @@ namespace BGC.Scripting
         {
             object assigneeValue = assignee.GetAs<object>(context)!;
             object modValue = value.GetAs<object>(context)!;
+            Type modValueType = modValue.GetType();
 
-            if (assigneeValue.GetType().IsPrimitive && modValue.GetType().IsPrimitive)
+            if (assigneeType.IsExtendedPrimitive() && modValueType.IsExtendedPrimitive())
             {
                 bool isConvErr = false;
                 switch (assigneeValue)
@@ -3158,8 +3241,9 @@ namespace BGC.Scripting
         {
             object assigneeValue = assignee.GetAs<object>(context)!;
             object modValue = value.GetAs<object>(context)!;
+            Type modValueType = modValue.GetType();
 
-            if (assigneeValue.GetType().IsPrimitive && modValue.GetType().IsPrimitive)
+            if (assigneeType.IsExtendedPrimitive() && modValueType.IsExtendedPrimitive())
             {
                 bool isConvErr = false;
                 switch (assigneeValue)

@@ -49,6 +49,10 @@ namespace BGC.Scripting
             {
                 return CastPrimitive(obj, type);
             }
+            else if (objType.IsPrimitive && type.IsEnum)
+            {
+                return Enum.ToObject(type, Convert.ToInt32(obj));
+            }
 
             return Convert.ChangeType(obj, type);
         }

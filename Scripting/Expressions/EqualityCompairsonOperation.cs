@@ -351,6 +351,15 @@ namespace BGC.Scripting
 
                 throw new ArgumentException($"Cannot apply operator == to types {arg1Type.Name} and {arg2Type.Name}");
             }
+            else if (arg1Type.IsEnum || arg2Type.IsEnum)
+            {
+                if (arg1Type == arg2Type)
+                {
+                    return Convert.ToInt32(arg1) == Convert.ToInt32(arg2);
+                }
+
+                throw new ArgumentException($"Cannot apply operator == to types {arg1Type.Name} and {arg2Type.Name}");
+            }
 
             try
             {

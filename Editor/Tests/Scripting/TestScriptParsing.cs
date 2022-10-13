@@ -6,7 +6,6 @@ using NUnit.Framework;
 using BGC.Scripting;
 using BGC.Reports;
 using BGC.Scripting.Parsing;
-using UnityEngine.UIElements;
 
 namespace BGC.Tests
 {
@@ -2964,6 +2963,74 @@ namespace BGC.Tests
             }
 
             Debug.Log($"Ran {tests.Count} TestUnaryOperators tests");
+        }
+
+        [Test]
+        public void TestEnumOperators()
+        {
+            GlobalRuntimeContext globalContext = new GlobalRuntimeContext();
+
+            ClassRegistrar.TryRegisterClass<Audio.AudioChannel>();
+
+            const string TestEnumsScript = @"
+            List<bool> TestEnums()
+            {
+                List<bool> tests = new List<bool>();
+
+                AudioChannel left = AudioChannel.Left;
+                AudioChannel right = AudioChannel.Right;
+
+                tests.Add(left == AudioChannel.Left);
+                tests.Add(left != AudioChannel.Right);
+                tests.Add(right == AudioChannel.Right);
+                tests.Add(AudioChannel.Left < AudioChannel.Both);
+
+                AudioChannel incr = left + 1;
+                tests.Add(incr == AudioChannel.Right);
+
+                AudioChannel decr = right - 1;
+                tests.Add(decr == AudioChannel.Left);
+
+                left += 1;
+                tests.Add(left == AudioChannel.Right);
+
+                right -= 1;
+                tests.Add(right == AudioChannel.Left);
+
+                left = AudioChannel.Left;
+                left++;
+                tests.Add(left == AudioChannel.Right);
+
+                right = AudioChannel.Right;
+                right--;
+                tests.Add(right == AudioChannel.Left);
+
+                AudioChannel casted = (AudioChannel)1;
+                tests.Add(casted == AudioChannel.Right);
+
+                AudioChannel casted2 = (AudioChannel)1.7;
+                tests.Add(casted == AudioChannel.Right);
+
+                int rightVal = (int)AudioChannel.Right;
+                tests.Add(rightVal == 1);
+
+                return tests;
+            }";
+
+            Script newScript = ScriptParser.LexAndParseScript(
+                script: TestEnumsScript,
+                new FunctionSignature("TestEnums", typeof(List<bool>)));
+
+            ScriptRuntimeContext scriptContext = newScript.PrepareScript(globalContext);
+
+            List<bool> tests = newScript.ExecuteFunction<List<bool>>("TestEnums", 2_000, scriptContext, Array.Empty<object>());
+
+            for (int i = 0; i < tests.Count; i++)
+            {
+                Debug.Assert(tests[i], $"Failed test {i}");
+            }
+
+            Debug.Log($"Ran {tests.Count} TestEnums tests");
         }
     }
 }

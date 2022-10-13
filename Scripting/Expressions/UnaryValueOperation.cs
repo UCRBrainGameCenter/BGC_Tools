@@ -18,7 +18,7 @@ namespace BGC.Scripting
         {
             Type argType = arg.GetValueType();
 
-            if (!argType.IsExtendedPrimitive() || argType == typeof(string))
+            if (!argType.IsExtendedPrimitive() && !argType.IsEnum || argType == typeof(string))
             {
                 string operatorName = operatorToken.operatorType switch
                 {
@@ -90,6 +90,7 @@ namespace BGC.Scripting
         private void Modify(RuntimeContext context)
         {
             object value = arg.GetAs<object>(context)!;
+            Type valueType = value.GetType();
 
             if (operatorType == Operator.Increment)
             {
@@ -112,7 +113,14 @@ namespace BGC.Scripting
                     case double prim: value = prim + 1; break;
                     default:
                     {
-                        value.GetType().InvokeStaticMethod("op_Increment", value);
+                        if (valueType.IsEnum)
+                        {
+                            value = Enum.ToObject(valueType, Convert.ToInt32(value) + 1);
+                        }
+                        else
+                        {
+                            valueType.InvokeStaticMethod("op_Increment", value);
+                        }
                         break;
                     }
                 }
@@ -138,7 +146,14 @@ namespace BGC.Scripting
                     case double prim: value = prim - 1; break;
                     default:
                     {
-                        value.GetType().InvokeStaticMethod("op_Decrement", value);
+                        if (valueType.IsEnum)
+                        {
+                            value = Enum.ToObject(valueType, Convert.ToInt32(value) - 1);
+                        }
+                        else
+                        {
+                            value.GetType().InvokeStaticMethod("op_Decrement", value);
+                        }
                         break;
                     }
                 }

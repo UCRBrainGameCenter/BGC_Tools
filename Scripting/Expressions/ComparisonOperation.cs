@@ -346,6 +346,17 @@ namespace BGC.Scripting
 
                 throw new ArgumentException($"Cannot apply operator > to types {arg1Type.Name} and {arg2Type.Name}");
             }
+            else if (arg1Type.IsEnum && arg2Type.IsEnum)
+            {
+                if (arg1Type == arg2Type)
+                {
+                    int arg1Int = Convert.ToInt32(arg1);
+                    int arg2Int = Convert.ToInt32(arg2);
+                    return arg1Int > arg2Int;
+                }
+
+                throw new ArgumentException($"Cannot apply operator > to types {arg1Type.Name} and {arg2Type.Name}");
+            }
 
             return (bool)arg1Type.InvokeStaticMethod("op_GreaterThan", arg1, arg2);
         }
@@ -601,6 +612,17 @@ namespace BGC.Scripting
                             case double prim2: return prim1 >= prim2;
                         }
                         break;
+                }
+
+                throw new ArgumentException($"Cannot apply operator >= to types {arg1Type.Name} and {arg2Type.Name}");
+            }
+            else if (arg1Type.IsEnum && arg2Type.IsEnum)
+            {
+                if (arg1Type == arg2Type)
+                {
+                    int arg1Int = Convert.ToInt32(arg1);
+                    int arg2Int = Convert.ToInt32(arg2);
+                    return arg1Int >= arg2Int;
                 }
 
                 throw new ArgumentException($"Cannot apply operator >= to types {arg1Type.Name} and {arg2Type.Name}");
@@ -864,6 +886,17 @@ namespace BGC.Scripting
 
                 throw new ArgumentException($"Cannot apply operator < to types {arg1Type.Name} and {arg2Type.Name}");
             }
+            else if (arg1Type.IsEnum && arg2Type.IsEnum)
+            {
+                if (arg1Type == arg2Type)
+                {
+                    int arg1Int = Convert.ToInt32(arg1);
+                    int arg2Int = Convert.ToInt32(arg2);
+                    return arg1Int < arg2Int;
+                }
+
+                throw new ArgumentException($"Cannot apply operator < to types {arg1Type.Name} and {arg2Type.Name}");
+            }
 
             return (bool)arg1Type.InvokeStaticMethod("op_LessThan", arg1, arg2);
         }
@@ -1119,6 +1152,17 @@ namespace BGC.Scripting
                             case double prim2: return prim1 <= prim2;
                         }
                         break;
+                }
+
+                throw new ArgumentException($"Cannot apply operator <= to types {arg1Type.Name} and {arg2Type.Name}");
+            }
+            else if (arg1Type.IsEnum && arg2Type.IsEnum)
+            {
+                if (arg1Type == arg2Type)
+                {
+                    int arg1Int = Convert.ToInt32(arg1);
+                    int arg2Int = Convert.ToInt32(arg2);
+                    return arg1Int <= arg2Int;
                 }
 
                 throw new ArgumentException($"Cannot apply operator <= to types {arg1Type.Name} and {arg2Type.Name}");

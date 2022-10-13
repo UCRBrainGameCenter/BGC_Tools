@@ -17,14 +17,14 @@ namespace BGC.Scripting
             Type arg1Type = arg1.GetValueType();
             Type arg2Type = arg2.GetValueType();
 
-            if (!arg1Type.IsExtendedPrimitive())
+            if (!arg1Type.IsExtendedPrimitive() && !arg1Type.IsEnum)
             {
                 throw new ScriptParsingException(
                     source: operatorToken,
                     message: $"Left side of operator {operatorToken.operatorType} not of expected primitive type: {arg1.GetValueType().Name}");
             }
 
-            if (!arg2Type.IsExtendedPrimitive())
+            if (!arg2Type.IsExtendedPrimitive() && !arg2Type.IsEnum)
             {
                 throw new ScriptParsingException(
                     source: operatorToken,
@@ -58,7 +58,7 @@ namespace BGC.Scripting
 
             Type arg1Type = arg1.GetValueType();
             Type arg2Type = arg2.GetValueType();
-            if (arg1Type.IsPrimitive && arg2Type.IsPrimitive)
+            if (arg1Type.IsExtendedPrimitive() && arg2Type.IsExtendedPrimitive())
             {
                 switch (operatorType)
                 {
@@ -76,11 +76,38 @@ namespace BGC.Scripting
 
                     case Operator.BitwiseLeftShift:
                     case Operator.BitwiseRightShift:
-                        if (!arg2.GetValueType().IsIntegralType())
+                        if (!arg2Type.IsIntegralType())
                         {
-                            throw new ScriptParsingException(operatorToken, $"Operator {operatorType} requires the second argument be an integral type. Received {arg2.GetValueType()}.");
+                            throw new ScriptParsingException(operatorToken, $"Operator {operatorType} requires the second argument be an integral type. Received {arg2Type}.");
                         }
                         break;
+
+
+                    default: throw new ArgumentException($"Unexpected Operator {operatorType}");
+                }
+            }
+            else if (arg1Type.IsEnum || arg2Type.IsEnum)
+            {
+                Type otherType = arg1Type.IsEnum ? arg2Type : arg1Type;
+                switch (operatorType)
+                {
+                    case Operator.Plus:
+                    case Operator.Minus:
+                        if (!otherType.IsEnumCompatible())
+                        {
+                            throw new ScriptParsingException(operatorToken, $"Operator {operatorType} cannot be applied to operands of type {arg1} and {arg2}.");
+                        }
+                        break;
+
+                    case Operator.Times:
+                    case Operator.Divide:
+                    case Operator.Modulo:
+                    case Operator.BitwiseAnd:
+                    case Operator.BitwiseOr:
+                    case Operator.BitwiseXOr:
+                    case Operator.BitwiseLeftShift:
+                    case Operator.BitwiseRightShift:
+                        throw new ScriptParsingException(operatorToken, $"Operator {operatorType} cannot be applied to operands of type {arg1} and {arg2}.");
 
 
                     default: throw new ArgumentException($"Unexpected Operator {operatorType}");
@@ -161,7 +188,7 @@ namespace BGC.Scripting
             Type arg1Type = arg1.GetType();
             Type arg2Type = arg2.GetType();
 
-            if (arg1Type.IsPrimitive && arg2Type.IsPrimitive)
+            if (arg1Type.IsExtendedPrimitive() && arg2Type.IsExtendedPrimitive())
             {
                 switch (arg1)
                 {
@@ -411,6 +438,36 @@ namespace BGC.Scripting
 
                 throw new ArgumentException($"Cannot apply operator + to types {arg1Type.Name} and {arg2Type.Name}");
             }
+            else if (arg1Type.IsEnum)
+            {
+                int arg1Value = Convert.ToInt32(arg1);
+                switch (arg2)
+                {
+                    case byte prim2: return Enum.ToObject(arg1Type, arg1Value + prim2);
+                    case sbyte prim2: return Enum.ToObject(arg1Type, arg1Value + prim2);
+                    case short prim2: return Enum.ToObject(arg1Type, arg1Value + prim2);
+                    case ushort prim2: return Enum.ToObject(arg1Type, arg1Value + prim2);
+                    case int prim2: return Enum.ToObject(arg1Type, arg1Value + prim2);
+                    case char prim2: return Enum.ToObject(arg1Type, arg1Value + prim2);
+                }
+
+                throw new ArgumentException($"Cannot apply operator + to types {arg1Type.Name} and {arg2Type.Name}");
+            }
+            else if (arg2Type.IsEnum)
+            {
+                int arg2Value = Convert.ToInt32(arg2);
+                switch (arg1)
+                {
+                    case byte prim1: return Enum.ToObject(arg2Type, arg2Value + prim1);
+                    case sbyte prim1: return Enum.ToObject(arg2Type, arg2Value + prim1);
+                    case short prim1: return Enum.ToObject(arg2Type, arg2Value + prim1);
+                    case ushort prim1: return Enum.ToObject(arg2Type, arg2Value + prim1);
+                    case int prim1: return Enum.ToObject(arg2Type, arg2Value + prim1);
+                    case char prim1: return Enum.ToObject(arg2Type, arg2Value + prim1);
+                }
+
+                throw new ArgumentException($"Cannot apply operator + to types {arg1Type.Name} and {arg2Type.Name}");
+            }
 
             return arg1Type.InvokeStaticMethod("op_Addition", arg1, arg2);
         }
@@ -420,7 +477,7 @@ namespace BGC.Scripting
             Type arg1Type = arg1.GetType();
             Type arg2Type = arg2.GetType();
 
-            if (arg1Type.IsPrimitive && arg2Type.IsPrimitive)
+            if (arg1Type.IsExtendedPrimitive() && arg2Type.IsExtendedPrimitive())
             {
                 switch (arg1)
                 {
@@ -670,6 +727,36 @@ namespace BGC.Scripting
 
                 throw new ArgumentException($"Cannot apply operator - to types {arg1Type.Name} and {arg2Type.Name}");
             }
+            else if (arg1Type.IsEnum)
+            {
+                int arg1Value = Convert.ToInt32(arg1);
+                switch (arg2)
+                {
+                    case byte prim2: return Enum.ToObject(arg1Type, arg1Value - prim2);
+                    case sbyte prim2: return Enum.ToObject(arg1Type, arg1Value - prim2);
+                    case short prim2: return Enum.ToObject(arg1Type, arg1Value - prim2);
+                    case ushort prim2: return Enum.ToObject(arg1Type, arg1Value - prim2);
+                    case int prim2: return Enum.ToObject(arg1Type, arg1Value - prim2);
+                    case char prim2: return Enum.ToObject(arg1Type, arg1Value - prim2);
+                }
+
+                throw new ArgumentException($"Cannot apply operator - to types {arg1Type.Name} and {arg2Type.Name}");
+            }
+            else if (arg2Type.IsEnum)
+            {
+                int arg2Value = Convert.ToInt32(arg2);
+                switch (arg1)
+                {
+                    case byte prim1: return Enum.ToObject(arg2Type, arg2Value - prim1);
+                    case sbyte prim1: return Enum.ToObject(arg2Type, arg2Value - prim1);
+                    case short prim1: return Enum.ToObject(arg2Type, arg2Value - prim1);
+                    case ushort prim1: return Enum.ToObject(arg2Type, arg2Value - prim1);
+                    case int prim1: return Enum.ToObject(arg2Type, arg2Value - prim1);
+                    case char prim1: return Enum.ToObject(arg2Type, arg2Value - prim1);
+                }
+
+                throw new ArgumentException($"Cannot apply operator - to types {arg1Type.Name} and {arg2Type.Name}");
+            }
 
             return arg1Type.InvokeStaticMethod("op_Subtraction", arg1, arg2);
         }
@@ -679,7 +766,7 @@ namespace BGC.Scripting
             Type arg1Type = arg1.GetType();
             Type arg2Type = arg2.GetType();
 
-            if (arg1Type.IsPrimitive && arg2Type.IsPrimitive)
+            if (arg1Type.IsExtendedPrimitive() && arg2Type.IsExtendedPrimitive())
             {
                 switch (arg1)
                 {
@@ -938,7 +1025,7 @@ namespace BGC.Scripting
             Type arg1Type = arg1.GetType();
             Type arg2Type = arg2.GetType();
 
-            if (arg1Type.IsPrimitive && arg2Type.IsPrimitive)
+            if (arg1Type.IsExtendedPrimitive() && arg2Type.IsExtendedPrimitive())
             {
                 switch (arg1)
                 {
@@ -1197,7 +1284,7 @@ namespace BGC.Scripting
             Type arg1Type = arg1.GetType();
             Type arg2Type = arg2.GetType();
 
-            if (arg1Type.IsPrimitive && arg2Type.IsPrimitive)
+            if (arg1Type.IsExtendedPrimitive() && arg2Type.IsExtendedPrimitive())
             {
                 switch (arg1)
                 {
@@ -1456,7 +1543,7 @@ namespace BGC.Scripting
             Type arg1Type = arg1.GetType();
             Type arg2Type = arg2.GetType();
 
-            if (arg1Type.IsPrimitive && arg2Type.IsPrimitive)
+            if (arg1Type.IsExtendedPrimitive() && arg2Type.IsExtendedPrimitive())
             {
                 switch (arg1)
                 {
@@ -1594,7 +1681,7 @@ namespace BGC.Scripting
             Type arg1Type = arg1.GetType();
             Type arg2Type = arg2.GetType();
 
-            if (arg1Type.IsPrimitive && arg2Type.IsPrimitive)
+            if (arg1Type.IsExtendedPrimitive() && arg2Type.IsExtendedPrimitive())
             {
                 switch (arg1)
                 {
@@ -1732,7 +1819,7 @@ namespace BGC.Scripting
             Type arg1Type = arg1.GetType();
             Type arg2Type = arg2.GetType();
 
-            if (arg1Type.IsPrimitive && arg2Type.IsPrimitive)
+            if (arg1Type.IsExtendedPrimitive() && arg2Type.IsExtendedPrimitive())
             {
                 switch (arg1)
                 {
@@ -1944,7 +2031,7 @@ namespace BGC.Scripting
             Type arg1Type = arg1.GetType();
             Type arg2Type = arg2.GetType();
 
-            if (arg1Type.IsPrimitive && arg2Type.IsPrimitive)
+            if (arg1Type.IsExtendedPrimitive() && arg2Type.IsExtendedPrimitive())
             {
                 switch (arg1)
                 {
@@ -2123,7 +2210,7 @@ namespace BGC.Scripting
             Type arg1Type = arg1.GetType();
             Type arg2Type = arg2.GetType();
 
-            if (arg1Type.IsPrimitive && arg2Type.IsPrimitive)
+            if (arg1Type.IsExtendedPrimitive() && arg2Type.IsExtendedPrimitive())
             {
                 switch (arg1)
                 {
