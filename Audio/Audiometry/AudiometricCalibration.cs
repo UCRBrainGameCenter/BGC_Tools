@@ -78,7 +78,7 @@ namespace BGC.Audio.Audiometry
                 // If no calibration setting was found, use the latest one
                 if (calibrationProfilesByDate.Count > 0 && customCalibration == null)
                 {
-                    customCalibration = calibrationProfilesByDate[0];
+                    customCalibration = calibrationProfilesByDate.Where(c => c.IsComplete()).FirstOrDefault();
                 }
 
                 calibrationErrorThreshold = PlayerData.GlobalData.GetDouble(ErrorThresholdKey, 1.0);
@@ -118,19 +118,31 @@ namespace BGC.Audio.Audiometry
                     path: fileName,
                     successCallback: data =>
                     {
-                        if (data.ContainsKey("CalibrationDate"))
+                        if (fileName.EndsWith("_Progress.json"))
                         {
-                            CalibrationProfile calibrationProfile = new CalibrationProfile(data);
-                            calibrationProfilesByName.Add(Path.GetFileName(fileName), calibrationProfile);
-                            calibrationProfilesByDate.Add(calibrationProfile);
+                            return;
                         }
-                        else if (data.ContainsKey("ValidationDate"))
+
+                        try
                         {
-                            ValidationResults curValidationResults = new ValidationResults(data);
-                            if (validationResults == null || validationResults.ValidationDate < curValidationResults.ValidationDate)
+                            if (data.ContainsKey("CalibrationDate"))
                             {
-                                validationResults = curValidationResults;
+                                CalibrationProfile calibrationProfile = new CalibrationProfile(data);
+                                calibrationProfilesByName.Add(Path.GetFileName(fileName), calibrationProfile);
+                                calibrationProfilesByDate.Add(calibrationProfile);
                             }
+                            else if (data.ContainsKey("ValidationDate"))
+                            {
+                                ValidationResults curValidationResults = new ValidationResults(data);
+                                if (validationResults == null || validationResults.ValidationDate < curValidationResults.ValidationDate)
+                                {
+                                    validationResults = curValidationResults;
+                                }
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogException(e);
                         }
                     });
             }
@@ -138,9 +150,12 @@ namespace BGC.Audio.Audiometry
             SortCalibrationProfilesByDate();
 
             // Don't use validation from previous calibrations
-            if (calibrationProfilesByDate.Count == 0 || validationResults.ValidationDate < calibrationProfilesByDate[0].CalibrationDate)
+            if (validationResults != null)
             {
-                validationResults = null;
+                if (calibrationProfilesByDate.Count == 0 || validationResults.ValidationDate < calibrationProfilesByDate[0].CalibrationDate)
+                {
+                    validationResults = null;
+                }
             }
         }
 
@@ -166,7 +181,8 @@ namespace BGC.Audio.Audiometry
 
             if (!string.IsNullOrEmpty(currentCalibrationName))
             {
-                if (calibrationProfilesByName.ContainsKey(currentCalibrationName))
+                if (calibrationProfilesByName.ContainsKey(currentCalibrationName) &&
+                    calibrationProfilesByName[currentCalibrationName].IsComplete())
                 {
                     customCalibration = calibrationProfilesByName[currentCalibrationName];
                 }
@@ -396,10 +412,18 @@ namespace BGC.Audio.Audiometry
 
         public static ValidationResults GetValidationResults() => validationResults;
 
+        public static bool IsHistoricCalibrationComplete(int index) => GetHistoricCalibrationProfile(index).IsComplete();
+
         public static void SetCustomCalibration(int index)
         {
             if (index >= 0 && index < calibrationProfilesByDate.Count)
             {
+                CalibrationProfile selectedCalibration = GetHistoricCalibrationProfile(index);
+                if (!selectedCalibration.IsComplete())
+                {
+                    throw new ArgumentException($"Cannot set a custom calibration file that is not complete.");
+                }
+
                 customCalibration = GetHistoricCalibrationProfile(index);
                 currentCalibrationName = calibrationProfilesByName.FirstOrDefault(x => x.Value == customCalibration).Key;
                 SerializeCalibrationSettings();

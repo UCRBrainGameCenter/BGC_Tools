@@ -21,7 +21,6 @@ namespace BGC.Audio.Audiometry
         public FrequencyCollection Narrowband { get; }
         public LevelCollection Broadband { get; }
 
-
         public CalibrationProfile(TransducerProfile transducerProfile)
         {
             Version = CURRENT_VERSION;
@@ -67,6 +66,11 @@ namespace BGC.Audio.Audiometry
             ["Narrowband"] = Narrowband.Serialize(),
             ["Broadband"] = Broadband.Serialize()
         };
+
+        public bool IsComplete()
+        {
+            return Oscillator.IsComplete() && PureTone.IsComplete() && Narrowband.IsComplete() && Broadband.IsComplete();
+        }
 
         public double EstimateRMS(
             AudiometricCalibration.CalibrationSet calibrationSet,
@@ -215,6 +219,11 @@ namespace BGC.Audio.Audiometry
             }
         }
 
+        public bool IsComplete()
+        {
+            return Points.Count > 0 && Points.Any(p => p.IsComplete());
+        }
+
         public void SetCalibrationPoint(
             double frequency,
             double levelHL,
@@ -335,6 +344,11 @@ namespace BGC.Audio.Audiometry
                 ["Frequency"] = Frequency,
                 ["Levels"] = Levels.Serialize()
             };
+
+            public bool IsComplete()
+            {
+                return Levels.IsComplete();
+            }
         }
     }
 
@@ -366,6 +380,11 @@ namespace BGC.Audio.Audiometry
             }
 
             return points;
+        }
+
+        public bool IsComplete()
+        {
+            return Points.Count > 0 && Points.Any(p => p.IsComplete());
         }
 
         public void SetCalibrationValue(
@@ -492,6 +511,11 @@ namespace BGC.Audio.Audiometry
 
                 LeftRMS = data.ContainsKey("LeftRMS") ? data["LeftRMS"].AsNumber : double.NaN;
                 RightRMS = data.ContainsKey("RightRMS") ? data["RightRMS"].AsNumber : double.NaN;
+            }
+
+            public bool IsComplete()
+            {
+                return double.IsFinite(LeftRMS) && double.IsFinite(RightRMS);
             }
 
             public double GetRMS(AudioChannel channel)
