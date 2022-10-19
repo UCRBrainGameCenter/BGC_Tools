@@ -101,19 +101,19 @@ namespace BGC.Parameters.Algorithms
                     lastStep = stepDiff;
                 }
 
-                Debug.Log($"Block Algo is Stepping: Diff = {stepDiff}; final = {stepValue + stepDiff}");
+                // Debug.Log($"Block Algo is Stepping: Diff = {stepDiff}; final = {stepValue + stepDiff}");
                 StepStatus stepStatus = SetStepValue(0, stepValue + stepDiff);
 
                 if (stepStatus == StepStatus.Success)
                 {
-                    Debug.Log("Block Algo successfully stepped");
+                    // Debug.Log("Block Algo successfully stepped");
                     stepValue += stepDiff;
                     correctCount = 0;
                     incorrectCount = 0;
                 }
                 else
                 {
-                    Debug.Log($"Block Algo did not successfully step. Result = {stepStatus}");
+                    Debug.LogWarning($"Block Algo did not successfully step. Result = {stepStatus}");
                 }
             }
         
