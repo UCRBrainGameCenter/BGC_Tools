@@ -69,7 +69,10 @@ namespace BGC.Audio.Audiometry
 
         public bool IsComplete()
         {
-            return Oscillator.IsComplete() && PureTone.IsComplete() && Narrowband.IsComplete() && Broadband.IsComplete();
+            return Oscillator != null && Oscillator.IsComplete() &&
+                PureTone != null && PureTone.IsComplete() && 
+                Narrowband != null && Narrowband.IsComplete() && 
+                Broadband != null && Broadband.IsComplete();
         }
 
         public double EstimateRMS(
@@ -221,7 +224,7 @@ namespace BGC.Audio.Audiometry
 
         public bool IsComplete()
         {
-            return Points.Count > 0 && Points.Any(p => p.IsComplete());
+            return Points.Count > 0 && Points.Any(p => p != null && p.IsComplete());
         }
 
         public void SetCalibrationPoint(
@@ -384,7 +387,7 @@ namespace BGC.Audio.Audiometry
 
         public bool IsComplete()
         {
-            return Points.Count > 0 && Points.Any(p => p.IsComplete());
+            return Points.Count > 0 && Points.Any(p => p != null && p.IsComplete());
         }
 
         public void SetCalibrationValue(
