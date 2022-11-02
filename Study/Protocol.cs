@@ -157,6 +157,7 @@ namespace BGC.Study
             //Dictionary
             public const string EnvironmentValues = "Env";
             public const string PasswordId = "Password";
+            public const string LockoutMinutes = "Lockout";
         }
 
         //Explicitly created sessions are added to the Session dictionary
@@ -270,6 +271,32 @@ namespace BGC.Study
                 }
             }
             return null;
+        }
+
+        public Session SetLockoutMinutes(int lockoutMinutes)
+        {
+            if (lockoutMinutes > 0)
+            {
+                envVals[Keys.LockoutMinutes] = lockoutMinutes;
+            }
+            else
+            {
+                envVals.Remove(Keys.LockoutMinutes);
+            }
+            return this;
+        }
+
+        public int GetLockoutMinutes()
+        {
+            if (envVals.ContainsKey(Keys.LockoutMinutes))
+            {
+                int lockoutMinutes = envVals[Keys.LockoutMinutes].AsInteger;
+                if (lockoutMinutes > 0)
+                {
+                    return lockoutMinutes;
+                }
+            }
+            return 0;
         }
 
         public static void HardClear()
