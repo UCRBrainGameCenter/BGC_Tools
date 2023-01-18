@@ -1,4 +1,6 @@
-﻿using System;
+﻿using BGC.Study;
+using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using UnityEngine;
 
@@ -166,7 +168,7 @@ namespace BGC.Utility
 
             return true;
         }
-        
+
         public static ApplicationVersion BuildFromWild(string version, bool upperBound)
         {
             ushort[] parsedVersion = null;
@@ -174,7 +176,7 @@ namespace BGC.Utility
             {
                 string[] splitVersion = version.Split(DELIM);
                 parsedVersion = new ushort[4];
-                
+
                 for (int i = 0; i < splitVersion.Length; i++)
                 {
                     if (splitVersion[i] == WILD_CARD)
@@ -206,6 +208,41 @@ namespace BGC.Utility
         }
 
         public bool IsNull() => this == NullVersion;
+
+        public static bool TryParse(string s, out ApplicationVersion result)
+        {
+            result = NullVersion;
+            ushort[] parsedVersion = null;
+
+            if (string.IsNullOrEmpty(s))
+            {
+                return false;
+            }
+            else
+            {
+                string[] splitString = s.Split(DELIM);
+                parsedVersion = new ushort[splitString.Length];
+
+                for (int i = 0; i < splitString.Length; i++)
+                {
+                    string segment = splitString[i];
+                    if (!ushort.TryParse(segment, out ushort value))
+                    {
+                        return false;
+                    }
+
+                    parsedVersion[i] = value;
+                }
+            }
+
+            if (parsedVersion.Length > 4)
+            {
+                return false;
+            }
+
+            result = new ApplicationVersion(parsedVersion);
+            return true;
+        }
 
         #region Object Overloads
 
