@@ -107,7 +107,7 @@ namespace BGC.Web.Utility
         /// <param name="progressReporter">Progress reporter for the request.</param>
         /// <param name="queryParams">Dictionary of key names hashed to their values of any type</param>
         /// <param name="abortToken">Cancellation token to use for the request.</param>
-        public static async Task<WebRequestResponse> GetRequestAsync(
+        public static async Task<WebRequestResponseWithHandler> GetRequestAsync(
             string url,
             IDictionary<string, string> headers,
             int retries = 0,
@@ -443,7 +443,7 @@ namespace BGC.Web.Utility
         /// <param name="abortToken">Optional cancellation token.</param>
         /// <returns>The finished unity web request. Can be NULL if operation cancelled or error occurs.</returns>
         [ItemCanBeNull]
-        private static async Task<WebRequestResponse> RunGetAsync(
+        private static async Task<WebRequestResponseWithHandler> RunGetAsync(
             string url,
             IDictionary<string, string> headers,
             int retries = 0,
@@ -518,7 +518,7 @@ namespace BGC.Web.Utility
                     }
                 }
 
-                return new WebRequestResponse(request);
+                return new WebRequestResponseWithHandler(request);
             }
             finally
             {
