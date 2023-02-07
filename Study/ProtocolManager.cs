@@ -589,5 +589,21 @@ namespace BGC.Study
             Session.HardClear();
             SessionElement.HardClear();
         }
+
+        public static void DeleteProtocol(string protocolSetName)
+        {
+            string path = Path.Combine(DataManagement.PathForDataDirectory(protocolDataDir, false), $"{protocolSetName}.json");
+            if (File.Exists(path))
+            {
+                try
+                {
+                    File.Delete(path);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
+        }
     }
 }
