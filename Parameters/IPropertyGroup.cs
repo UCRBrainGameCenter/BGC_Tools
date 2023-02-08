@@ -240,7 +240,6 @@ namespace BGC.Parameters
 
                 if (!propertyGroupData.ContainsKey(propertyGroupName))
                 {
-                    Debug.Log($"Data not found for group {propertyGroupName}.  Creating default.");
                     container.ConstructNewInternalPropertyGroup(property);
                     continue;
                 }
