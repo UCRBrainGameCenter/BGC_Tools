@@ -16,6 +16,7 @@ namespace BGC.Localization
             English,
             Espanol,
             Deutsch,
+            Farsi,
             MAX
         }
 
@@ -25,6 +26,7 @@ namespace BGC.Localization
         //RM @TODO When convenient, change all instances of "SP" representing Spanish to "ES" in accordance with ISO 639-1 Language Code
         public static Dictionary<string, string> localizedSP = new Dictionary<string, string>();
         public static Dictionary<string, string> localizedDE = new Dictionary<string, string>();
+        public static Dictionary<string, string> localizedFA = new Dictionary<string, string>();
 
         public static bool isInit;
 
@@ -37,6 +39,7 @@ namespace BGC.Localization
             csvLoader.GetDictionaryValues("en", localizedEN);
             csvLoader.GetDictionaryValues("sp", localizedSP);
             csvLoader.GetDictionaryValues("de", localizedDE);
+            csvLoader.GetDictionaryValues("fa", localizedFA);
 
             isInit = true;
         }
@@ -85,6 +88,9 @@ namespace BGC.Localization
                     break;              
                 case Language.Deutsch:
                     gotValue = localizedDE.TryGetValue(key, out value);
+                    break;
+                case Language.Farsi:
+                    gotValue = localizedFA.TryGetValue(key, out value);
                     break;
             }
 
@@ -142,6 +148,9 @@ namespace BGC.Localization
                 case Language.Deutsch:
                     gotValue = localizedDE.TryGetValue(key, out value);
                     break;
+                case Language.Farsi:
+                    gotValue = localizedFA.TryGetValue(key, out value);
+                    break;
             }
 
             //Debug.Log("Given string: " + value);
@@ -196,6 +205,9 @@ namespace BGC.Localization
                     break;       
                 case Language.Deutsch:
                     gotValue = localizedDE.TryGetValue(key, out value);
+                    break;
+                case Language.Farsi:
+                    gotValue = localizedFA.TryGetValue(key, out value);
                     break;
             }
 
@@ -350,6 +362,7 @@ namespace BGC.Localization
                 SystemLanguage.English => Language.English,
                 SystemLanguage.Spanish => Language.Espanol,
                 SystemLanguage.German => Language.Deutsch,
+                SystemLanguage.Unknown => Language.English, // use English by default
                 _ => Language.English // use English by default
             };
     }
