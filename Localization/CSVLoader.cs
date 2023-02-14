@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -13,10 +14,12 @@ namespace BGC.Localization
         private string csvFile;
         private char lineSeperator = '\n';
         private char surround = '"';
+        private string filePath = "";
         //private readonly string[] fieldSeperator = { "," };
 
         public void LoadCSV(string filepath)
         {
+            this.filePath = filepath;
             csvFile = Resources.Load<TextAsset>(filepath).text;
         }
 
@@ -71,14 +74,24 @@ namespace BGC.Localization
 
                 if (fields.Length > attributeIndex)
                 {
-                    var key = fields[0];
+                    string key = fields[0];
 
                     if (dict.ContainsKey(key))
                     {
                         continue;
                     }
 
-                    var value = fields[attributeIndex];
+                    string value = "";
+                    
+                    try
+                    {
+                        value = fields[attributeIndex];
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning($"File at {filePath} is missing attributeId {attributeId}");
+                        return;
+                    }
 
                     dict.Add(key, value);
                 }
