@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using LightJson;
 
 namespace BGC.Study
@@ -61,7 +62,7 @@ namespace BGC.Study
 
         protected abstract void _PopulateJSONObject(JsonObject jsonObject);
 
-        public abstract void ExecuteElement(bool resuming = false);
+        public abstract Task ExecuteElement(bool resuming = false);
         public virtual void CleanupElement() { }
 
         public static void HardClear()

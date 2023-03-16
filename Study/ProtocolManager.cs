@@ -5,6 +5,7 @@ using UnityEngine;
 using LightJson;
 using BGC.IO;
 using BGC.Users;
+using System.Threading.Tasks;
 
 namespace BGC.Study
 {
@@ -297,7 +298,7 @@ namespace BGC.Study
             ProtocolManager.migrateProtocols = migrateProtocols;
         }
 
-        public static ProtocolStatus ExecuteNextElement(bool resuming = false)
+        public static async Task<ProtocolStatus> ExecuteNextElement(bool resuming = false)
         {
             if (nextSessionElementIndex == -1)
             {
@@ -328,7 +329,7 @@ namespace BGC.Study
 
             prepareNextElement?.Invoke(resuming);
 
-            currentSessionElement.ExecuteElement(resuming);
+            await currentSessionElement.ExecuteElement(resuming);
 
             PlayerData.Save();
 
