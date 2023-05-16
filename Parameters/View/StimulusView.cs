@@ -258,14 +258,14 @@ namespace BGC.Parameters.View
                     propertyGroup: newPropertyGroup,
                     container: parentTransform,
                     protectedWidget: null,
-                    spawningBehavior: SpawningBehavior.NestedInternal);
+                    spawningBehavior: SpawningBehavior.PropertyFrame);
             });
 
             SpawnPropertyWidgets(
                 propertyGroup: propertyGroup,
                 container: parentTransform,
                 protectedWidget: null,
-                spawningBehavior: SpawningBehavior.NestedInternal);
+                spawningBehavior: SpawningBehavior.PropertyFrame);
         }
 
         private void SpawnPropertyGroupList(
