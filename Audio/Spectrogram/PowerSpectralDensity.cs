@@ -13,7 +13,15 @@ namespace BGC.Audio.Visualization
             int windowOrder = 12,
             int targetChannel = 0)
         {
-            double[] spectralValues = Decompose(stream, windowOrder, targetChannel);
+            float[] samples = GetSamples(stream, targetChannel);
+            return DecomposeAndShift(samples, windowOrder);
+        }
+
+        public static (double[] psd, double offset) DecomposeAndShift(
+            float[] samples,
+            int windowOrder = 12)
+        {
+            double[] spectralValues = Decompose(samples, windowOrder);
 
             double maxValue = double.MinValue;
             double minValue = double.MaxValue;
@@ -54,83 +62,102 @@ namespace BGC.Audio.Visualization
             int windowOrder = 12,
             int targetChannel = 0)
         {
+            float[] samples = GetSamples(stream, targetChannel);
+            return Decompose(samples, windowOrder);
+        }
+
+        private static float[] GetSamples(IBGCStream stream, int targetChannel)
+        {
             if (stream.Channels <= targetChannel)
             {
                 throw new ArgumentException(
                     $"TargetChannel ({targetChannel}) exceeded stream channels ({stream.Channels})",
                     nameof(targetChannel));
             }
-
-            return Decompose(
-                samples: stream.IsolateChannel(targetChannel).HardClip().Cache().Samples,
-                windowOrder: windowOrder);
+            return stream.IsolateChannel(targetChannel).HardClip().Cache().Samples;
         }
 
+        public static bool IsClipped(float[] samples, float amplitudeThreshold = 0.95f, float proportionThreshold = 0.25f)
+        {
+            int numClipping = 0;
+            foreach (float sample in samples)
+            {
+                if (Math.Abs(sample) >= amplitudeThreshold)
+                {
+                    numClipping++;
+                }
+            }
+
+            return numClipping >= samples.Length * proportionThreshold;
+        }
+
+        /// <summary>
+        /// Decomposes an input signal into an array of power per frequency using Welch's method
+        /// for power spectral density estimation and the Fast Fourier Transform (FFT) for
+        /// frequency-domain transformation. The Blackman-Harris window function is used to
+        /// minimize spectral leakage.
+        /// </summary>
+        /// <param name="samples">An array of input signal samples (time-domain).</param>
+        /// <param name="windowOrder">The window order, which determines the window size
+        /// used for spectral analysis (default is 12). The window size is calculated as
+        /// 2^windowOrder.</param>
+        /// <param name="overlap">The percentage of overlap between adjacent segments used
+        /// in Welch's method (default is 50).</param>
+        /// <returns>An array of power values in decibels, representing the power per
+        /// frequency for half of the frequency range.</returns>
         public static double[] Decompose(
             float[] samples,
-            int windowOrder = 12)
+            int windowOrder = 12,
+            int overlap = 50)
         {
-            //WindowSize is 2 ^ windowOrder
-            int windowSize = 1 << windowOrder;
+            int windowSize = (int)Math.Pow(2, windowOrder);
+            int halfWindowSize = windowSize / 2;
+            int segmentOverlap = windowSize * overlap / 100;
+            int segmentStep = windowSize - segmentOverlap;
+            int numSegments = Math.Max(1, (samples.Length - segmentOverlap) / segmentStep);
 
-            int sampleOffset = windowSize / 2;
+            double[] powerPerFrequency = new double[halfWindowSize];
 
-            if (windowOrder == 4)
-            {
-                throw new ArgumentException("Clip too short to evaluate");
-            }
-
-            int windowCount = 1 + (int)Math.Ceiling((samples.Length - windowSize) / (double)sampleOffset);
-
-            if (windowCount < 1)
-            {
-                windowCount = 1;
-            }
-
-            //Our output will be just the real-valued amplitudes
-            double[] spectralValues = new double[windowSize / 2];
+            // Create Blackman-Harris window
+            BlackmanHarrisEnvelope blackmanHarris = new BlackmanHarrisEnvelope(windowSize);
 
             Complex64[] fftBuffer = new Complex64[windowSize];
+            double normalizationFactor = 1.0 / (windowSize * numSegments);
 
-            IBGCEnvelopeStream windowStream = new BlackmanHarrisEnvelope(windowSize);
-
-            // 2 x due to negative frequencies
-            // 0.5 x due to overlap
-            double amplitudeAdjustant = 1.0 / (windowCount * windowSize);
-
-            for (int window = 0; window < windowCount; window++)
+            for (int s = 0; s < numSegments; s++)
             {
-                int specificOffset = sampleOffset * window;
-                windowStream.Reset();
+                int segmentStart = s * segmentStep;
 
-                //Copy samples into buffer
+                // Apply Blackman-Harris window and convert to complex buffer
                 for (int i = 0; i < windowSize; i++)
                 {
-                    //Set real value
-                    if (specificOffset + i >= samples.Length)
-                    {
-                        fftBuffer[i] = Complex64.Zero;
-                    }
-                    else
-                    {
-                        fftBuffer[i] = samples[specificOffset + i] * windowStream.ReadNextSample();
-                    }
-                }
+                    int sampleIndex = segmentStart + i;
 
+                    // Use zero-padding for overflowed samples
+                    float sampleValue = sampleIndex < samples.Length ? samples[sampleIndex] : 0;
+
+                    float windowValue = blackmanHarris.ReadNextSample();
+                    fftBuffer[i] = new Complex64(sampleValue * windowValue, 0);
+                }
+                blackmanHarris.Reset();
+
+                // Perform the FFT
                 Fourier.Forward(fftBuffer);
 
-                for (int i = 0; i < fftBuffer.Length / 2; i++)
+                // Calculate the power spectrum for this segment and accumulate
+                for (int i = 0; i < halfWindowSize; i++)
                 {
-                    spectralValues[i] += amplitudeAdjustant * fftBuffer[i].MagnitudeSquared;
+                    powerPerFrequency[i] += normalizationFactor * fftBuffer[i].MagnitudeSquared;
                 }
             }
 
-            for (int i = 0; i < spectralValues.Length; i++)
+            // Convert power values to decibels
+            for (int i = 0; i < halfWindowSize; i++)
             {
-                spectralValues[i] = 10.0 * Math.Log10(spectralValues[i]);
+                powerPerFrequency[i] = 10 * Math.Log10(powerPerFrequency[i]);
             }
 
-            return spectralValues;
+            return powerPerFrequency;
         }
     }
 }

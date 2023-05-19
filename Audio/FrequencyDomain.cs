@@ -68,10 +68,16 @@ namespace BGC.Audio
         }
 
         public static double GetComplexSampleFrequency(int bufferSize, int sample) =>
-            sample * SamplingRate / bufferSize;
+            GetComplexSampleFrequency(bufferSize, sample, SamplingRate);
+
+        public static double GetComplexSampleFrequency(int bufferSize, int sample, double samplingRate) =>
+            sample * samplingRate / bufferSize;
 
         public static double GetComplexFrequencySample(int bufferSize, double frequency) =>
-            frequency * bufferSize / SamplingRate;
+            GetComplexFrequencySample(bufferSize, frequency, SamplingRate);
+
+        public static double GetComplexFrequencySample(int bufferSize, double frequency, double samplingRate) =>
+            frequency * bufferSize / samplingRate;
 
         public static int GetComplexFrequencyBin(int bufferSize, double frequency) =>
            (int)GetComplexFrequencySample(bufferSize, frequency);

@@ -218,12 +218,25 @@ namespace BGC.Audio.Audiometry
         public static double GetCorrectedMicLevel(double power, double frequency = double.NaN)
 #pragma warning restore IDE0060 // Remove unused parameter
         {
-            if (double.IsNaN(micCalibrationOffset))
+            if (!double.IsFinite(micCalibrationOffset))
             {
                 return power;
             }
 
             return power + micCalibrationOffset;
+        }
+
+        public static void CorrectPSD(double[] psd)
+        {
+            if (!double.IsFinite(micCalibrationOffset))
+            {
+                return;
+            }
+
+            for (int i = 0; i < psd.Length; ++i)
+            {
+                psd[i] += micCalibrationOffset;
+            }
         }
 
         public static void SerializeCalibrationSettings()
