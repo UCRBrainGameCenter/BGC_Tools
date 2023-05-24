@@ -29,6 +29,9 @@ namespace BGC.Audio.Audiometry
         private static readonly Dictionary<string, CalibrationProfile> calibrationProfilesByName = new Dictionary<string, CalibrationProfile>();
         private static readonly List<CalibrationProfile> calibrationProfilesByDate = new List<CalibrationProfile>();
 
+        private static CalibrationProfile incompleteCalibration = null;
+        private static DateTime incompleteCalibrationDate = DateTime.MinValue;
+
         private static ValidationResults validationResults = null;
 
         private static double micCalibrationOffset = double.NaN;
@@ -114,29 +117,39 @@ namespace BGC.Audio.Audiometry
                         IgnoreInaccessible = true,
                     }))
             {
+                bool isProgressFile = fileName.EndsWith("_Progress.json");
                 FileReader.ReadJsonFile(
                     path: fileName,
                     successCallback: data =>
                     {
-                        if (fileName.EndsWith("_Progress.json"))
-                        {
-                            return;
-                        }
-
                         try
                         {
                             if (data.ContainsKey("CalibrationDate"))
                             {
                                 CalibrationProfile calibrationProfile = new CalibrationProfile(data);
-                                calibrationProfilesByName.Add(Path.GetFileName(fileName), calibrationProfile);
-                                calibrationProfilesByDate.Add(calibrationProfile);
+                                if (isProgressFile)
+                                {
+                                    if (incompleteCalibration == null || incompleteCalibrationDate < calibrationProfile.CalibrationDate)
+                                    {
+                                        incompleteCalibration = calibrationProfile;
+                                        incompleteCalibrationDate = calibrationProfile.CalibrationDate;
+                                    }
+                                }
+                                else
+                                {
+                                    calibrationProfilesByName.Add(Path.GetFileName(fileName), calibrationProfile);
+                                    calibrationProfilesByDate.Add(calibrationProfile);
+                                }
                             }
                             else if (data.ContainsKey("ValidationDate"))
                             {
-                                ValidationResults curValidationResults = new ValidationResults(data);
-                                if (validationResults == null || validationResults.ValidationDate < curValidationResults.ValidationDate)
+                                if (!isProgressFile)
                                 {
-                                    validationResults = curValidationResults;
+                                    ValidationResults curValidationResults = new ValidationResults(data);
+                                    if (validationResults == null || validationResults.ValidationDate < curValidationResults.ValidationDate)
+                                    {
+                                        validationResults = curValidationResults;
+                                    }
                                 }
                             }
                         }
@@ -360,7 +373,18 @@ namespace BGC.Audio.Audiometry
         public static void InitiateCalibration(TransducerProfile transducerProfile)
         {
             calibrationResults = new CalibrationProfile(transducerProfile);
+            incompleteCalibration = calibrationResults;
+            incompleteCalibrationDate = calibrationResults.CalibrationDate;
         }
+
+        public static void InitiateCalibration(CalibrationProfile existingProfile)
+        {
+            calibrationResults = existingProfile;
+            incompleteCalibration = calibrationResults;
+            incompleteCalibrationDate = calibrationResults.CalibrationDate;
+        }
+
+        public static CalibrationProfile GetIncompleteCalibration() => incompleteCalibration;
 
         public static void FinalizeCalibrationResults()
         {
@@ -372,6 +396,8 @@ namespace BGC.Audio.Audiometry
 
             customCalibration = calibrationResults;
             calibrationResults = null;
+            incompleteCalibration = null;
+            incompleteCalibrationDate = DateTime.MinValue;
 
             currentCalibrationName = $"Calibration_{customCalibration.CalibrationDate:yy_MM_dd_HH_mm_ss}.json";
 
