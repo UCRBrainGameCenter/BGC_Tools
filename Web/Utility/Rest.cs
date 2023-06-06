@@ -66,7 +66,7 @@ namespace BGC.Web.Utility
                 timeoutInSeconds: timeoutInSeconds,
                 headers: headers));
         }
-        
+
         /// <summary>Send a get request with a body.</summary>
         /// <param name="url">The URL to send request to.</param>
         /// <param name="headers">Headers to send in the request, if any.</param>
@@ -134,7 +134,7 @@ namespace BGC.Web.Utility
                 progressReporter,
                 abortToken);
         }
-        
+
         /// <summary>Send an async get request with a body.</summary>
         /// <param name="url">The URL to send request to.</param>
         /// <param name="headers">Headers to send in the request, if any.</param>
@@ -286,6 +286,7 @@ namespace BGC.Web.Utility
             string url,
             IDictionary<string, string> headers,
             string body,
+            string contentType,
             Action<WebRequestResponseWithHandler> callBack = null,
             int timeoutInSeconds = 0)
         {
@@ -293,6 +294,7 @@ namespace BGC.Web.Utility
                 url,
                 headers,
                 body,
+                contentType,
                 callBack,
                 timeoutInSeconds));
         }
@@ -303,6 +305,7 @@ namespace BGC.Web.Utility
             string url,
             IDictionary<string, string> headers,
             string body,
+            string contentType,
             int timeoutInSeconds = 0,
             IProgress<float> progressReporter = null,
             CancellationToken abortToken = default)
@@ -311,6 +314,7 @@ namespace BGC.Web.Utility
                 url,
                 headers,
                 body,
+                contentType,
                 timeoutInSeconds,
                 progressReporter,
                 abortToken);
@@ -384,7 +388,7 @@ namespace BGC.Web.Utility
                 numActiveGets--;
             }
         }
-        
+
         /// <summary>
         /// Run get request with body
         /// </summary>
@@ -431,7 +435,7 @@ namespace BGC.Web.Utility
                 numActiveGets--;
             }
         }
-        
+
         /// <summary>Run async GET request using async/await C# pattern.</summary>
         /// <param name="url">The URL to send the request to.</param>
         /// <param name="headers">The headers to attach to the request.</param>
@@ -525,7 +529,7 @@ namespace BGC.Web.Utility
                 numActiveGets--;
             }
         }
-        
+
         /// <summary>Run async GET request with body using async/await C# pattern.</summary>
         /// <param name="url">The URL to send the request to.</param>
         /// <param name="headers">The headers to attach to the request.</param>
@@ -845,28 +849,22 @@ namespace BGC.Web.Utility
             string url,
             IDictionary<string, string> headers,
             string body,
+            string contentType,
             Action<WebRequestResponseWithHandler> callBack,
             int timeoutInSeconds = 0)
         {
             try
             {
                 numActivePosts++;
-                using UnityWebRequest request = UnityWebRequest.Post(url, "");
-                request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
-                request.disposeDownloadHandlerOnDispose = true;
-                request.disposeUploadHandlerOnDispose = true;
 
-                request.timeout = timeoutInSeconds;
-
-                foreach (KeyValuePair<string, string> pair in headers)
+                WebRequestResponseWithHandler resp;
                 {
-                    request.SetRequestHeader(pair.Key, pair.Value);
+                    using UnityWebRequest request = CreatePostRequest(url, headers, body, contentType, timeoutInSeconds);
+
+                    yield return request.SendWebRequest();
+
+                    resp = new WebRequestResponseWithHandler(request);
                 }
-
-                yield return request.SendWebRequest();
-
-                WebRequestResponseWithHandler resp = new WebRequestResponseWithHandler(request);
-                request.Dispose();
 
                 callBack?.Invoke(resp);
             }
@@ -890,6 +888,7 @@ namespace BGC.Web.Utility
             string url,
             IDictionary<string, string> headers,
             string body,
+            string contentType,
             int timeoutInSeconds = 0,
             IProgress<float> progressReporter = null,
             CancellationToken abortToken = default)
@@ -898,17 +897,7 @@ namespace BGC.Web.Utility
             {
                 numActivePosts++;
 
-                using UnityWebRequest request = UnityWebRequest.Post(url, "");
-                request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
-                request.disposeDownloadHandlerOnDispose = true;
-                request.disposeUploadHandlerOnDispose = true;
-
-                request.timeout = timeoutInSeconds;
-
-                foreach (KeyValuePair<string, string> pair in headers)
-                {
-                    request.SetRequestHeader(pair.Key, pair.Value);
-                }
+                using UnityWebRequest request = CreatePostRequest(url, headers, body, contentType, timeoutInSeconds);
 
                 if (abortToken.IsCancellationRequested)
                 {
@@ -917,18 +906,30 @@ namespace BGC.Web.Utility
 
                 UnityWebRequestAsyncOperation operation = request.SendWebRequest();
 
-                while (!operation.isDone)
-                {
-                    if (abortToken.IsCancellationRequested)
-                    {
-                        request.Abort();
-                        return null;
-                    }
+                var tcs = new TaskCompletionSource<bool>();
+                operation.completed += _ => tcs.SetResult(true);
 
-                    // spin lock while waiting for response. Since method is async, it doesn't block main thread.
+                abortToken.Register(() =>
+                {
+                    request.Abort();
+                    tcs.SetCanceled();
+                });
+
+                while (!tcs.Task.IsCompleted)
+                {
                     progressReporter?.Report(operation.progress);
-                    await Task.Delay(1, abortToken);
+
+                    var delayTask = Task.Delay(500);
+                    await Task.WhenAny(tcs.Task, delayTask);
                 }
+
+                if (tcs.Task.IsCanceled)
+                {
+                    return null;
+                }
+
+                // Update the progress one last time at the end
+                progressReporter?.Report(operation.progress);
 
                 return new WebRequestResponseWithHandler(request);
             }
@@ -936,6 +937,33 @@ namespace BGC.Web.Utility
             {
                 numActivePosts--;
             }
+        }
+
+
+        private static UnityWebRequest CreatePostRequest(
+            string url,
+            IDictionary<string, string> headers,
+            string body,
+            string contentType,
+            int timeoutInSeconds)
+        {
+#if UNITY_2022_2_OR_NEWER
+            UnityWebRequest request = UnityWebRequest.Post(url, "", contentType);
+#else
+            UnityWebRequest request = UnityWebRequest.Post(url, "");
+            request.SetRequestHeader("Content-Type", contentType);
+#endif
+            request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
+            request.timeout = timeoutInSeconds;
+
+            if (headers != null)
+            {
+                foreach (KeyValuePair<string, string> pair in headers)
+                {
+                    request.SetRequestHeader(pair.Key, pair.Value);
+                }
+            }
+            return request;
         }
 
         /// <summary>
