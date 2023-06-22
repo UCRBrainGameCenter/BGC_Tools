@@ -345,6 +345,23 @@ namespace BGC.Web.Utility
                 timeoutInSeconds));
         }
 
+        /// <summary>Send an async PUT request</summary>
+        [ItemCanBeNull]
+        public static async Task<WebRequestResponse> PutRequestAsync(
+            string url,
+            IDictionary<string, string> headers,
+            string body,
+            int timeoutInSeconds = 0,
+            CancellationToken abortToken = default)
+        {
+            return await RunPutAsync(
+                url,
+                headers,
+                body,
+                timeoutInSeconds,
+                abortToken);
+        }
+
         /// <summary>
         /// Run get request
         /// </summary>
@@ -909,12 +926,22 @@ namespace BGC.Web.Utility
                 var tcs = new TaskCompletionSource<bool>();
                 operation.completed += _ => tcs.SetResult(true);
 
-                abortToken.Register(() =>
+                // Perhaps a bit paranoid, but we should not be calling Register on an already-canceled token
+                if (abortToken.IsCancellationRequested)
+                {
+                    request.Abort();
+                    return null;
+                }
+
+                // Register a callback if the abort token is canceled which will cancel the request itself.
+                var cancelRegistration = abortToken.Register(() =>
                 {
                     request.Abort();
                     tcs.SetCanceled();
                 });
 
+                // Wait for the task to either complete or cancel
+                // Also every 500ms, update the progress
                 while (!tcs.Task.IsCompleted)
                 {
                     progressReporter?.Report(operation.progress);
@@ -922,6 +949,9 @@ namespace BGC.Web.Utility
                     var delayTask = Task.Delay(500);
                     await Task.WhenAny(tcs.Task, delayTask);
                 }
+
+                // Unregister the callback as we no longer should be aborting the request if the token is canceled.
+                cancelRegistration.Dispose();
 
                 if (tcs.Task.IsCanceled)
                 {
@@ -1000,6 +1030,80 @@ namespace BGC.Web.Utility
                 WebRequestResponse resp = new WebRequestResponse(request);
                 request.Dispose();
                 callBack?.Invoke(resp);
+            }
+            finally
+            {
+                numActivePuts--;
+            }
+        }
+
+        /// <summary>Run async POST request</summary>
+        /// <param name="url">The URL to send the request to.</param>
+        /// <param name="headers">The headers to attach to the request.</param>
+        /// <param name="body">Stringified body to send in the request.</param>
+        /// <param name="timeoutInSeconds">
+        /// Optional timeout for the request. If set to 0, then there is no timeout behavior.
+        /// </param>
+        /// <param name="abortToken">Cancellation token for the request.</param>
+        [ItemCanBeNull]
+        private static async Task<WebRequestResponse> RunPutAsync(
+            string url,
+            IDictionary<string, string> headers,
+            string body,
+            int timeoutInSeconds = 0,
+            CancellationToken abortToken = default)
+        {
+            try
+            {
+                numActivePuts++;
+
+                using UnityWebRequest request = UnityWebRequest.Put(url, Encoding.UTF8.GetBytes(body));
+                request.timeout = timeoutInSeconds;
+
+                if (headers != null)
+                {
+                    foreach (KeyValuePair<string, string> pair in headers)
+                    {
+                        request.SetRequestHeader(pair.Key, pair.Value);
+                    }
+                }
+
+                if (abortToken.IsCancellationRequested)
+                {
+                    return null;
+                }
+
+                UnityWebRequestAsyncOperation operation = request.SendWebRequest();
+
+                var tcs = new TaskCompletionSource<bool>();
+                operation.completed += _ => tcs.SetResult(true);
+
+                // Perhaps a bit paranoid, but we should not be calling Register on an already-canceled token
+                if (abortToken.IsCancellationRequested)
+                {
+                    request.Abort();
+                    return null;
+                }
+
+                // Register a callback if the abort token is canceled which will cancel the request itself.
+                var cancelRegistration = abortToken.Register(() =>
+                {
+                    request.Abort();
+                    tcs.SetCanceled();
+                });
+
+                // Wait for the task to either complete or cancel
+                await tcs.Task;
+
+                // Unregister the callback as we no longer should be aborting the request if the token is canceled.
+                cancelRegistration.Dispose();
+
+                if (tcs.Task.IsCanceled)
+                {
+                    return null;
+                }
+
+                return new WebRequestResponse(request);
             }
             finally
             {
