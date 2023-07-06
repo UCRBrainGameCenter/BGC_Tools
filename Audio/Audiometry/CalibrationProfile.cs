@@ -258,6 +258,23 @@ namespace BGC.Audio.Audiometry
             return Points[Points.Count - 1].Levels;
         }
 
+        public bool TryGetLevelCollection(double frequency, out LevelCollection levelCollection)
+        {
+            levelCollection = null;
+
+            for (int i = 0; i < Points.Count; i++)
+            {
+                if (Points[i].Frequency == frequency)
+                {
+                    //Found target frequency
+                    levelCollection = Points[i].Levels;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public JsonArray Serialize()
         {
             JsonArray points = new JsonArray();
@@ -432,6 +449,22 @@ namespace BGC.Audio.Audiometry
             //Reached the end without finding it
             Points.Add(new CalibrationPoint(levelHL));
             return Points[Points.Count - 1];
+        }
+
+        public bool TryGetCalibrationPoint(double levelHL, out CalibrationPoint calibrationPoint)
+        {
+            calibrationPoint = null;
+            for (int i = 0; i < Points.Count; i++)
+            {
+                if (Points[i].LevelHL == levelHL)
+                {
+                    //Found target level
+                    calibrationPoint = Points[i];
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public double GetRMS(double levelHL, AudioChannel channel)
