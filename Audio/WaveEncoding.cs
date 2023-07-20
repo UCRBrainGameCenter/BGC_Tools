@@ -301,6 +301,7 @@ namespace BGC.Audio
                         case "cue":
                         case "LIST":
                         case "_PMX":
+                        case "PEAK":
                             //Some chunks we have seen and identified as unneeded.
                             break;
 
