@@ -103,5 +103,18 @@ namespace BGC.Web
             this.UploadBytes = uploadBytes;
             this.Result = UnityWebRequest.Result.ConnectionError;
         }
+
+        /// <summary>Constructor that can be used when you don't have a unity web request to send back.</summary>
+        public WebRequestResponseWithHandler(
+            long statusCode,
+            string error,
+            UnityWebRequest.Result result)
+        {
+            this.StatusCode = statusCode;
+            this.Error = error;
+            this.DownloadBytes = Array.Empty<byte>();
+            this.UploadBytes = Array.Empty<byte>();
+            this.Result = result;
+        }
     }
 }
