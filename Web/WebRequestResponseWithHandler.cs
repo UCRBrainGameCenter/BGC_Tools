@@ -82,6 +82,9 @@ namespace BGC.Web
             switch (request.responseCode)
             {
                 case 200:
+                case 201:
+                case 202:
+                case 203:
                 case 204:
                     this.DetailedErrorMessage = "";
                     break;
