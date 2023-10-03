@@ -87,6 +87,15 @@ namespace BGC.Parameters.Algorithms
             return valueStatus;
         }
 
+        public bool CouldStepTo(
+            int sourceParameter,
+            int stepNumber)
+        {
+            return controlledParameters
+                .Where(x => x.ControllerParameter == sourceParameter)
+                .All(x => x.CouldStepTo(stepNumber));
+        }
+
         #endregion IControlSource
     }
 
