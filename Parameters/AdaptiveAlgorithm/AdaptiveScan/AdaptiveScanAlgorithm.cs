@@ -101,7 +101,7 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
         protected override void FinishInitialization()
         {
             curScanSteps = GenerateScan();
-            if (NarrowOnInvalidScan && curScanSteps.Count < MinimumScanLength)
+            if (NarrowOnInvalidScan && curScanSteps.Count < Steps)
             {
                 Narrow();
                 curScanSteps = GenerateScan();
@@ -169,7 +169,7 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
 
                 // Generate the new scan
                 curScanSteps = GenerateScan();
-                if (NarrowOnInvalidScan && curScanSteps.Count < MinimumScanLength)
+                if (NarrowOnInvalidScan && curScanSteps.Count < Steps)
                 {
                     Narrow();
                     curScanSteps = GenerateScan();
