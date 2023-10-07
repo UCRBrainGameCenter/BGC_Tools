@@ -3,6 +3,7 @@ using BGC.Scripting;
 using BGC.Parameters.Exceptions;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine.UIElements;
 
 namespace BGC.Parameters.Algorithms.AdaptiveScan
 {
@@ -13,9 +14,9 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
         "A successful scan is one where the estimated threshold is inside the scan range.")]
     [IntFieldDisplay("Steps", displayTitle: "Steps Per Scan", initial: 11, minimum: 1, maximum: 10_000)]
     [IntFieldDisplay("InitialStepSize", displayTitle: "Initial Step Size", initial: 4, minimum: 1, maximum: 10_000)]
-    [IntFieldDisplay("MinimumScanLength", displayTitle: "Minimum Scan Length", initial: 1, minimum: 1)]
     [IntFieldDisplay("MaximumSlideDistance", displayTitle: "Maximum Slide Distance", initial: 999, minimum: 0)]
     [BoolDisplay("NarrowOnInvalidScan", "Narrow on Invalid Scan", false)]
+    [IntFieldDisplay("ThresholdScanCount", "Threshold Scan Count", initial: 1, minimum: 1)]
     [BoolDisplay("NarrowingTermination", "Stop At Max Narrowing", true)]
     public class AdaptiveScanAlgorithm : AlgorithmBase, IBinaryOutcomeAlgorithm
     {
@@ -25,19 +26,25 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
         [DisplayInputField("InitialStepSize")]
         public int InitialStepSize { get; set; }
 
-        [DisplayInputField("MinimumScanLength")]
-        public int MinimumScanLength { get; set; }
-
         [DisplayInputField("MaximumSlideDistance")]
         public int MaximumSlideDistance { get; set; }
 
         [DisplayInputField("NarrowOnInvalidScan")]
         public bool NarrowOnInvalidScan { get; set; }
 
+        [DisplayInputField("ThresholdScanCount")]
+        public int ThresholdScanCount { get; set; }
+
         [AppendSelection(
             typeof(ScalarNarrowBehavior),
             typeof(DifferenceNarrowBehavior))]
         public INarrowingBehavior NarrowingBehavior { get; set; }
+
+        [AppendSelection(
+            typeof(ClampOutOfBoundsBehavior),
+            typeof(RepeatOutOfBoundsBehavior),
+            typeof(TruncateOutOfBoundsBehavior))]
+        public IOutOfBoundsBehavior OutOfBoundsBehavior { get; set; }
 
         [AppendSelection(
             typeof(ErrorCountScanTerminationRule),
@@ -81,7 +88,7 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
         private List<int> curScanSteps;
 
         private double taskGuessRate;
-        private double lastThresholdStep;
+        private readonly List<double> thresholdList = new();
 
         private bool exceededMaxNarrowing;
 
@@ -93,21 +100,15 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
             scanStartStep = 0;
             scanCount = 0;
             exceededMaxNarrowing = false;
-            lastThresholdStep = 0.0;
+            thresholdList.Clear();
 
             this.taskGuessRate = taskGuessRate;
         }
 
         protected override void FinishInitialization()
         {
-            curScanSteps = GenerateScan();
-            if (NarrowOnInvalidScan && curScanSteps.Count < Steps)
-            {
-                Narrow();
-                curScanSteps = GenerateScan();
-            }
-
-            if (curScanSteps.Count >= MinimumScanLength)
+            curScanSteps = GenerateScanWithNarrowing();
+            if (curScanSteps.Count != 0 && curScanSteps.Count > OutOfBoundsBehavior.MinimumSteps)
             {
                 SetStepValue(0, curScanSteps[0]);
             }
@@ -124,14 +125,19 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
 
             if (trial >= curScanSteps.Count || ScanTerminationRule.IsDone(trial - correctCount))
             {
-                //Handle Narrowing or Sliding
+                // Handle Narrowing or Sliding
                 double stepThreshold = (correctCount - trial * taskGuessRate) / (1 - taskGuessRate);
 
-                //Calculate the threshold in step units
-                double newThresholdStep = scanStartStep + stepThreshold * stepSize;
+                int stepThresholdFloor = Math.Clamp((int)Math.Floor(stepThreshold), 0, trial - 1);
+                int stepThresholdCeil = Math.Clamp((int)Math.Ceiling(stepThreshold), 0, trial - 1);
+                double stepThresholdRemainder = stepThreshold - stepThresholdFloor;
 
-                // Store the threshold in case this is the last scan
-                lastThresholdStep = newThresholdStep;
+                // The threshold is based on the average of the closest two steps
+                double newThresholdStep = curScanSteps[stepThresholdFloor] * (1 - stepThresholdRemainder) +
+                    curScanSteps[stepThresholdCeil] * stepThresholdRemainder;
+
+                // Store the threshold for this scan
+                thresholdList.Add(newThresholdStep);
 
                 int newScanStartStep = scanStartStep;
                 if (stepThreshold < 2.0)
@@ -168,13 +174,7 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
                 scanStartStep = newScanStartStep;
 
                 // Generate the new scan
-                curScanSteps = GenerateScan();
-                if (NarrowOnInvalidScan && curScanSteps.Count < Steps)
-                {
-                    Narrow();
-                    curScanSteps = GenerateScan();
-                }
-
+                curScanSteps = GenerateScanWithNarrowing();
                 scanCount++;
                 trial = 0;
                 correctCount = 0;
@@ -194,9 +194,15 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
 
         public override void PopulateScriptContext(GlobalRuntimeContext scriptContext)
         {
+            double avgThreshold = 0.0;
+            if (thresholdList.Count > 0 && ThresholdScanCount > 0)
+            {
+                avgThreshold = thresholdList.TakeLast(ThresholdScanCount).Average();
+            }
+
             foreach (ControlledParameterTemplate template in controlledParameters)
             {
-                template.FinalizeParameters(lastThresholdStep);
+                template.FinalizeParameters(avgThreshold);
                 template.PopulateScriptContextOutputs(scriptContext);
             }
         }
@@ -204,7 +210,7 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
         public override bool IsDone() =>
             (NarrowingTermination && exceededMaxNarrowing) ||
             StoppingRule.IsDone(scanCount) ||
-            (curScanSteps != null && curScanSteps.Count < MinimumScanLength);
+            (curScanSteps != null && curScanSteps.Count < OutOfBoundsBehavior.MinimumSteps);
 
         private int ClampStep(int fromStep, int toStep)
         {
@@ -246,20 +252,50 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
 
         private bool CouldStepTo(int step) => CouldStepTo(0, step);
 
-        private List<int> GenerateScan()
+        private List<int> GenerateScanWithNarrowing()
         {
-            List<int> result = new List<int>();
+            (var scan, bool scanIsValid) = GenerateScan();
+            if (NarrowOnInvalidScan && !scanIsValid)
+            {
+                Narrow();
+                scan = GenerateScan().Item1;
+            }
+
+            return scan;
+        }
+
+        private (List<int>, bool) GenerateScan()
+        {
+            bool scanIsValid = true;
+
+            // The first step is always valid because this is enforced by ClampStep()
+            List<int> result = new List<int>() { scanStartStep };
             
-            for (int stepIndex = 0; stepIndex < Steps; stepIndex++)
+            for (int stepIndex = 1; stepIndex < Steps; stepIndex++)
             {
                 int curStep = scanStartStep + stepSize * stepIndex;
+
                 if (CouldStepTo(curStep))
                 {
                     result.Add(curStep);
                 }
+                else
+                {
+                    scanIsValid = false;
+
+                    if (OutOfBoundsBehavior is RepeatOutOfBoundsBehavior)
+                    {
+                        result.Add(result[^1]);
+                    }
+                    else if (OutOfBoundsBehavior is ClampOutOfBoundsBehavior)
+                    {
+                        int clampedStep = ClampStep(result[^1], curStep);
+                        result.Add(clampedStep);
+                    }
+                }
             }
 
-            return result;
+            return (result, scanIsValid);
         }
 
         private void Narrow()

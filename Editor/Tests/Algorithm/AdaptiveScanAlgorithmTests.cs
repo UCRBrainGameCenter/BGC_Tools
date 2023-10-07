@@ -92,12 +92,13 @@ namespace BGC.Tests
             {
                 Steps = 9,
                 InitialStepSize = 8,
-                MinimumScanLength = 3,
                 MaximumSlideDistance = 32,
-                NarrowOnInvalidScan = true,
+                NarrowOnInvalidScan = false,
+                OutOfBoundsBehavior = new ClampOutOfBoundsBehavior(),
                 NarrowingBehavior = new ScalarNarrowBehavior() { Value = 0.5 },
-                ScanTerminationRule = new ErrorCountScanTerminationRule() { Value = 3 },
+                ScanTerminationRule = new NoScanTerminationRule(),
                 StoppingRule = new NoAdditionalStoppingRule(),
+                ThresholdScanCount = 3,
                 NarrowingTermination = true,
             };
 
@@ -144,7 +145,7 @@ namespace BGC.Tests
             //Debug.Log($"stepNumbers: {string.Join(", ", stepNumbers)}");
             //Debug.Log($"stepValues: {string.Join(", ", stepValues)}");
             //Debug.Log($"isCorrect: {string.Join(", ", isCorrect)}");
-            //Debug.Log($"Threshold: {controlledTemplate.Threshold}");
+            Debug.Log($"Threshold: {controlledTemplate.Threshold}");
         }
     }
 }
