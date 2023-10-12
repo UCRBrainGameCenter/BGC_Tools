@@ -40,6 +40,7 @@ namespace BGC.Parameters
     public static class PropertyGroupExtensions
     {
         private const string StateKey = "__STATE__";
+        private const string VersionKey = nameof(IPropertyGroup.__VERSION__);
 
         public static IEnumerable<PropertyInfo> GetPropertyGroupListProperties(this IPropertyGroup container)
         {
@@ -129,10 +130,7 @@ namespace BGC.Parameters
         /// </summary>
         public static JsonObject Internal_GetSerializedStateData(this IPropertyGroup propertyGroup)
         {
-            JsonObject state = new JsonObject
-            {
-                [nameof(IPropertyGroup.__VERSION__)] = propertyGroup.__VERSION__
-            };
+            JsonObject state = new JsonObject();
 
             IEnumerable<MemberInfo> properties = propertyGroup.GetSerializableStateProperties();
             foreach (MemberInfo statePropInfo in properties)
@@ -155,6 +153,7 @@ namespace BGC.Parameters
             JsonObject keyData = new JsonObject();
 
             propertyGroupData.Add("Type", propertyGroup.GetSelectionSerializationName());
+            propertyGroupData.Add(VersionKey, propertyGroup.__VERSION__);
 
             //Grab the key fields
             foreach (PropertyInfo property in propertyGroup.GetKeyProperties())
@@ -738,6 +737,15 @@ namespace BGC.Parameters
         
         public static void Internal_RawDeserialize(this IPropertyGroup container, JsonObject propertyGroupData)
         {
+            // Upgrade property group version, if applicable.
+            bool didUpgrade = container.TryUpgradeVersion(propertyGroupData);
+
+            if (!didUpgrade)
+            {
+                throw new Exception(
+                    $"Unable to upgrade property group to current version. Please update the version number.");
+            }
+            
             //Deserialize Property Groups
             foreach (PropertyInfo property in container.GetPropertyGroupProperties())
             {
@@ -748,7 +756,7 @@ namespace BGC.Parameters
                     container.ConstructNewInternalPropertyGroup(property);
                     continue;
                 }
-
+                
                 container.DeserializeInternalPropertyGroup(property, propertyGroupData[propertyGroupName]);
             }
 
@@ -850,16 +858,11 @@ namespace BGC.Parameters
             }
         }
 
+        /// <summary>Deserializes the state data for a property group.</summary>
+        /// <param name="propertyGroup">The property group to deserialize the state for.</param>
+        /// <param name="data">The serialized data to deserialize.</param>
         public static void Internal_DeserializeStateData(this IPropertyGroup propertyGroup, JsonObject data)
         {
-            bool didUpgrade = propertyGroup.TryUpgradeVersion(data);
-
-            if (!didUpgrade)
-            {
-                throw new Exception(
-                    $"Unable to upgrade {propertyGroup} state data to current version.  Please update the version number.");
-            }
-
             JsonObject state = new JsonObject();
             foreach (MemberInfo statePropInfo in propertyGroup.GetSerializableStateProperties())
             {
