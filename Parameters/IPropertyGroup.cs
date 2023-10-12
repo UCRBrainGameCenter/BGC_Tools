@@ -133,16 +133,17 @@ namespace BGC.Parameters
             {
                 [nameof(IPropertyGroup.__VERSION__)] = propertyGroup.__VERSION__
             };
-            
-            foreach (MemberInfo statePropInfo in propertyGroup.GetSerializableStateProperties())
+
+            IEnumerable<MemberInfo> properties = propertyGroup.GetSerializableStateProperties();
+            foreach (MemberInfo statePropInfo in properties)
             {
                 SerializableStateAttribute parsed = statePropInfo.GetCustomAttribute<SerializableStateAttribute>();
                 
-                SerializePropertyValueToJsonObject(
+                SerializeValueToJsonObject(
                     propertyGroup,
                     statePropInfo,
                     state,
-                    parsed.fieldName);
+                    parsed.FieldName);
             }
 
             return state;
@@ -178,7 +179,7 @@ namespace BGC.Parameters
                     continue;
                 }
 
-                SerializePropertyValueToJsonObject(
+                SerializeValueToJsonObject(
                     propertyGroup: propertyGroup,
                     memberInfo: property,
                     data: propertyGroupData,
@@ -212,7 +213,7 @@ namespace BGC.Parameters
                 {
                     propertyGroupData.Add(
                         key: innerGroup.GetGroupSerializationName(),
-                        value: innerPropertyGroup.Serialize());
+                        value: innerPropertyGroup.Serialize(includeState));
                 }
             }
 
@@ -224,7 +225,7 @@ namespace BGC.Parameters
 
                     foreach (IPropertyGroup listElement in innerPropertyList)
                     {
-                        propertyListValues.Add(listElement.Serialize());
+                        propertyListValues.Add(listElement.Serialize(includeState));
                     }
 
                     if (propertyListValues.Count > 0)
@@ -252,7 +253,7 @@ namespace BGC.Parameters
         /// <summary>
         /// Parses a reflection-based property into a JSON value and saves it into the provided JSON object.
         /// </summary>
-        private static void SerializePropertyValueToJsonObject(
+        private static void SerializeValueToJsonObject(
             IPropertyGroup propertyGroup,
             MemberInfo memberInfo,
             JsonObject data,
@@ -293,6 +294,18 @@ namespace BGC.Parameters
                             data.Add(fieldName, property.GetValue(propertyGroup).ToString());
                             break;
                         }
+                        if(typeof(IEnumerable).IsAssignableFrom(property.PropertyType))
+                        {
+                            // enumerable
+                            SerializeEnumerable(
+                                propertyGroup,
+                                memberInfo,
+                                data,
+                                fieldName);
+                            
+                            break;
+                        }
+                        
                         Debug.LogError($"Unsupported datatype ({propertyTypeName}) for variable {property.Name}");
                         break;
                 }
@@ -332,6 +345,18 @@ namespace BGC.Parameters
                             data.Add(fieldName, field.GetValue(propertyGroup).ToString());
                             break;
                         }
+                        if(typeof(IEnumerable).IsAssignableFrom(field.FieldType))
+                        {
+                            // enumerable
+                            SerializeEnumerable(
+                                propertyGroup,
+                                memberInfo,
+                                data,
+                                fieldName);
+                            
+                            break;
+                        }
+                        
                         Debug.LogError($"Unsupported datatype ({fieldType}) for variable {field.Name}");
                         break;
                 }
@@ -341,7 +366,7 @@ namespace BGC.Parameters
         /// <summary>
         /// Parses a reflection-based member info into a JSON value and saves it into the provided JSON object.
         /// </summary>
-        private static void DeserializePropertyValueFromJson(
+        private static void DeserializeValueFromJson(
             IPropertyGroup propertyGroup,
             MemberInfo memberInfo,
             JsonObject serializedData,
@@ -381,6 +406,16 @@ namespace BGC.Parameters
                         {
                             property.SetValue(propertyGroup,
                                 Enum.Parse(property.PropertyType, serializedData[fieldName].AsString));
+                            break;
+                        }
+                        if(typeof(IEnumerable).IsAssignableFrom(property.PropertyType))
+                        {
+                            DeserializeEnumerable(
+                                propertyGroup,
+                                memberInfo,
+                                serializedData,
+                                fieldName);
+
                             break;
                         }
                         Debug.LogError($"Unsupported datatype ({propertyInfoName}) for variable {property.Name}");
@@ -423,59 +458,284 @@ namespace BGC.Parameters
                                 Enum.Parse(field.FieldType, serializedData[fieldName].AsString));
                             break;
                         }
+                        if(typeof(IEnumerable).IsAssignableFrom(field.FieldType))
+                        {
+                            DeserializeEnumerable(
+                                propertyGroup,
+                                memberInfo,
+                                serializedData,
+                                fieldName);
+
+                            break;
+                        }
+                        
                         Debug.LogError($"Unsupported datatype ({fieldInfoName}) for variable {field.Name}");
                         break;
                 }
             }
         }
         
-        /// <summary>
-        /// Parses a reflection-based property into a JSON value and saves it into the provided JSON object.
-        /// </summary>
-        private static void DeserializeFieldValueFromJson(
+        private static void SerializeEnumerable(
             IPropertyGroup propertyGroup,
-            FieldInfo field,
-            JsonObject data,
+            MemberInfo memberInfo,
+            JsonObject serializedData,
             string fieldName)
         {
-            switch (field.FieldType.Name)
+            if (memberInfo is PropertyInfo property)
             {
-                case "Single":
-                    field.SetValue(propertyGroup, (float)data[fieldName].AsNumber);
-                    break;
-
-                case "Double":
-                    field.SetValue(propertyGroup, data[fieldName].AsNumber);
-                    break;
-
-                case "Int32":
-                    field.SetValue(propertyGroup, data[fieldName].AsInteger);
-                    break;
-
-                case "Int64":
-                    field.SetValue(propertyGroup, data[fieldName].AsInteger);
-                    break;
-
-                case "String":
-                    field.SetValue(propertyGroup, data[fieldName].AsString);
-                    break;
-
-                case "Boolean":
-                    field.SetValue(propertyGroup, data[fieldName].AsBoolean);
-                    break;
-
-                default:
-                    if (field.FieldType.IsEnum)
-                    {
-                        field.SetValue(propertyGroup,
-                            Enum.Parse(field.FieldType, data[fieldName].AsString));
+                Type propertyType = property.PropertyType;
+                Type elementType = propertyType.GetGenericArguments()[0];
+                
+                switch (elementType.Name)
+                {
+                    case "Single":
+                        IEnumerable<double> parsedSingle = (IEnumerable<double>) property.GetValue(propertyGroup);
+                        serializedData.Add(
+                            fieldName,
+                            new JsonArray(parsedSingle.Select(x => new JsonValue(x))));
                         break;
-                    }
-                    Debug.LogError($"Unsupported datatype ({field.FieldType.Name}) for variable {field.Name}");
-                    break;
+
+                    case "Double":
+                        IEnumerable<double> parsedDouble = (IEnumerable<double>) property.GetValue(propertyGroup);
+                        serializedData.Add(
+                            fieldName,
+                            new JsonArray(parsedDouble.Select(x => new JsonValue(x))));
+                        break;
+
+                    case "Int32":
+                        IEnumerable<int> parsedInt32 = (IEnumerable<int>) property.GetValue(propertyGroup);
+                        serializedData.Add(
+                            fieldName,
+                            new JsonArray(parsedInt32.Select(x => new JsonValue(x))));
+                        break;
+
+                    case "Int64":
+                        IEnumerable<int> parsedInt64 = (IEnumerable<int>) property.GetValue(propertyGroup);
+                        serializedData.Add(
+                            fieldName,
+                            new JsonArray(parsedInt64.Select(x => new JsonValue(x))));
+                        break;
+
+                    case "String":
+                        IEnumerable<string> parsedString = (IEnumerable<string>) property.GetValue(propertyGroup);
+                        serializedData.Add(
+                            fieldName,
+                            new JsonArray(parsedString.Select(x => new JsonValue(x))));
+                        break;
+
+                    case "Boolean":
+                        IEnumerable<bool> parsedBool = (IEnumerable<bool>) property.GetValue(propertyGroup);
+                        serializedData.Add(
+                            fieldName,
+                            new JsonArray(parsedBool.Select(x => new JsonValue(x))));
+                        break; 
+                    default:
+                        if (propertyType.IsEnum)
+                        {
+                            IEnumerable<string> parsedStringEnum = (IEnumerable<string>) property.GetValue(propertyGroup);
+                            serializedData.Add(
+                                fieldName,
+                                new JsonArray(parsedStringEnum.Select(x => new JsonValue(x))));
+                            
+                            break;
+                        }
+                        
+                        Debug.LogError($"Unsupported datatype ({propertyType}) for variable {property.Name}");
+                        break;
+                }
+            }
+            if (memberInfo is FieldInfo field)
+            {
+                Type fieldType = field.FieldType;
+                Type elementType = fieldType.GetGenericArguments()[0];
+                
+                switch (elementType.Name)
+                {
+                    case "Single":
+                        IEnumerable<double> parsedSingle = (IEnumerable<double>) field.GetValue(propertyGroup);
+                        serializedData.Add(
+                            fieldName,
+                            new JsonArray(parsedSingle.Select(x => new JsonValue(x))));
+                        break;
+
+                    case "Double":
+                        IEnumerable<double> parsedDouble = (IEnumerable<double>) field.GetValue(propertyGroup);
+                        serializedData.Add(
+                            fieldName,
+                            new JsonArray(parsedDouble.Select(x => new JsonValue(x))));
+                        break;
+
+                    case "Int32":
+                        IEnumerable<int> parsedInt32 = (IEnumerable<int>) field.GetValue(propertyGroup);
+                        serializedData.Add(
+                            fieldName,
+                            new JsonArray(parsedInt32.Select(x => new JsonValue(x))));
+                        break;
+
+                    case "Int64":
+                        IEnumerable<int> parsedInt64 = (IEnumerable<int>) field.GetValue(propertyGroup);
+                        serializedData.Add(
+                            fieldName,
+                            new JsonArray(parsedInt64.Select(x => new JsonValue(x))));
+                        break;
+
+                    case "String":
+                        IEnumerable<string> parsedString = (IEnumerable<string>) field.GetValue(propertyGroup);
+                        serializedData.Add(
+                            fieldName,
+                            new JsonArray(parsedString.Select(x => new JsonValue(x))));
+                        break;
+
+                    case "Boolean":
+                        IEnumerable<bool> parsedBool = (IEnumerable<bool>) field.GetValue(propertyGroup);
+                        serializedData.Add(
+                            fieldName,
+                            new JsonArray(parsedBool.Select(x => new JsonValue(x))));
+                        break; 
+                    default:
+                        if (fieldType.IsEnum)
+                        {
+                            IEnumerable<string> parsedStringEnum = (IEnumerable<string>) field.GetValue(propertyGroup);
+                            serializedData.Add(
+                                fieldName,
+                                new JsonArray(parsedStringEnum.Select(x => new JsonValue(x))));
+                            
+                            break;
+                        }
+                        
+                        Debug.LogError($"Unsupported datatype ({fieldType}) for variable {field.Name}");
+                        break;
+                }
             }
         }
 
+        private static void DeserializeEnumerable(
+            IPropertyGroup propertyGroup,
+            MemberInfo memberInfo,
+            JsonObject serializedData,
+            string fieldName)
+        {
+            if (memberInfo is PropertyInfo property)
+            {
+                Type propertyType = property.PropertyType;
+                Type elementType = propertyType.GetGenericArguments()[0];
+                JsonArray serializedArray = serializedData[fieldName].AsJsonArray;
+
+                // Create an array and populate it
+                switch (elementType.Name)
+                {
+                    case "Single":
+                    case "Double":
+                        property.SetValue(
+                            propertyGroup, 
+                            propertyType.IsArray 
+                                ? serializedArray.ToArray<double>()
+                                : serializedArray.ToList<double>(), 
+                            null);
+                        break;
+
+                    case "Int32":
+                    case "Int64":
+                        property.SetValue(
+                            propertyGroup,
+                            propertyType.IsArray 
+                                ? serializedArray.ToArray<int>()
+                                : serializedArray.ToList<int>(), 
+                            null);
+                        break;
+
+                    case "String":
+                        property.SetValue(
+                            propertyGroup,
+                            propertyType.IsArray
+                                ? serializedArray.ToArray<string>()
+                                : serializedArray.ToList<string>(), 
+                            null);
+                        break;
+
+                    case "Boolean":
+                        property.SetValue(
+                            propertyGroup, 
+                            propertyType.IsArray
+                                ? serializedArray.ToArray<bool>()
+                                : serializedArray.ToList<bool>(), 
+                            null);
+                        break;
+                    default:
+                        if (elementType.IsEnum)
+                        {
+                            property.SetValue(
+                                propertyGroup,
+                                propertyType.IsArray
+                                    ? serializedArray.ToArray<string>()
+                                    : serializedArray.ToList<string>(), 
+                                null);
+                            break;
+                        }
+                    
+                        Debug.LogError($"Unsupported datatype ({elementType}) for variable {fieldName}");
+                        break;
+                }
+            }
+            if (memberInfo is FieldInfo field)
+            {
+                Type fieldType = field.FieldType;
+                Type elementType = fieldType.GetGenericArguments()[0];
+                JsonArray serializedArray = serializedData[fieldName].AsJsonArray;
+
+                // Create an array and populate it
+                switch (elementType.Name)
+                {
+                    case "Single":
+                    case "Double":
+                        field.SetValue(
+                            propertyGroup, 
+                            fieldType.IsArray 
+                                ? serializedArray.ToArray<double>()
+                                : serializedArray.ToList<double>());
+                        break;
+
+                    case "Int32":
+                    case "Int64":
+                        field.SetValue(
+                            propertyGroup,
+                            fieldType.IsArray 
+                                ? serializedArray.ToArray<int>()
+                                : serializedArray.ToList<int>());
+                        break;
+
+                    case "String":
+                        field.SetValue(
+                            propertyGroup,
+                            fieldType.IsArray
+                                ? serializedArray.ToArray<string>()
+                                : serializedArray.ToList<string>());
+                        break;
+
+                    case "Boolean":
+                        field.SetValue(
+                            propertyGroup, 
+                            fieldType.IsArray
+                                ? serializedArray.ToArray<bool>()
+                                : serializedArray.ToList<bool>());
+                        break;
+                    default:
+                        if (elementType.IsEnum)
+                        {
+                            field.SetValue(
+                                propertyGroup,
+                                fieldType.IsArray
+                                    ? serializedArray.ToArray<string>()
+                                    : serializedArray.ToList<string>());
+                            break;
+                        }
+                    
+                        Debug.LogError($"Unsupported datatype ({elementType}) for variable {fieldName}");
+                        break;
+                }
+            }
+        }
+        
         public static void Internal_RawDeserialize(this IPropertyGroup container, JsonObject propertyGroupData)
         {
             //Deserialize Property Groups
@@ -532,7 +792,7 @@ namespace BGC.Parameters
                 string fieldName = property.GetInputFieldName();
                 if (propertyGroupData.ContainsKey(fieldName))
                 {
-                    DeserializePropertyValueFromJson(container, property, propertyGroupData, fieldName);
+                    DeserializeValueFromJson(container, property, propertyGroupData, fieldName);
                 }
             }
 
@@ -565,9 +825,9 @@ namespace BGC.Parameters
                 }
             }
 
+            // deserialize the state data.
             if (propertyGroupData.ContainsKey(StateKey))
             {
-                // deserialize the state data.
                 container.Internal_DeserializeStateData(propertyGroupData[StateKey].AsJsonObject);
                 // propertyGroupData.Add(StateKey, propertyGroup.Internal_GetStateData());
             }
@@ -592,23 +852,31 @@ namespace BGC.Parameters
 
         public static void Internal_DeserializeStateData(this IPropertyGroup propertyGroup, JsonObject data)
         {
+            bool didUpgrade = propertyGroup.TryUpgradeVersion(data);
+
+            if (!didUpgrade)
+            {
+                throw new Exception(
+                    $"Unable to upgrade {propertyGroup} state data to current version.  Please update the version number.");
+            }
+
             JsonObject state = new JsonObject();
             foreach (MemberInfo statePropInfo in propertyGroup.GetSerializableStateProperties())
             {
                 SerializableStateAttribute parsed = statePropInfo.GetCustomAttribute<SerializableStateAttribute>();
 
-                if (data.ContainsKey(parsed.fieldName))
+                if (data.ContainsKey(parsed.FieldName))
                 {
-                    DeserializePropertyValueFromJson(
+                    DeserializeValueFromJson(
                         propertyGroup,
                         statePropInfo,
                         data,
-                        parsed.fieldName);
+                        parsed.FieldName);
                 }
                 else
                 {
                     // use default value
-                    state.Add(parsed.fieldName, parsed.defaultValue);
+                    state.Add(parsed.FieldName, parsed.DefaultValue);
                 }
             }
         }
@@ -672,9 +940,10 @@ namespace BGC.Parameters
 
         public static IPropertyGroup CloneOrphanListItem(
             this IPropertyGroup source,
-            PropertyInfo property)
+            PropertyInfo property,
+            bool includePropertyGroupState = false)
         {
-            JsonObject serializedData = source.Serialize();
+            JsonObject serializedData = source.Serialize(includePropertyGroupState);
 
             Type matchingType = property.FindMatchingListType(serializedData["Type"].AsString);
 
