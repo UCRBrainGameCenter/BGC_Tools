@@ -68,6 +68,7 @@ namespace BGC.UI.Dialogs
             ABC,
             InputInputConfirmCancel,
             DropdownInput,
+            Dropdown,
             InputABC
         }
         private Mode mode = Mode.ConfirmCancel;
@@ -96,6 +97,12 @@ namespace BGC.UI.Dialogs
         public delegate Task ModalDoubleInputCallbackAsync(Response response, string primaryInput, string secondaryInput);
         ModalDoubleInputCallbackAsync doubleInputCallbackAsync;
 
+        public delegate void ModalDropdownCallback(Response response, int selectionIndex);
+        ModalDropdownCallback dropdownCallback;
+        
+        public delegate Task ModalDropdownCallbackAsync(Response response, int selectionIndex);
+        ModalDropdownCallbackAsync dropdownCallbackAsync;
+        
         public delegate void ModalDropdownInputCallback(Response response, int selectionIndex, string secondaryInput);
         ModalDropdownInputCallback dropdownInputCallback;
         
@@ -112,6 +119,8 @@ namespace BGC.UI.Dialogs
             inputToggleCallbackAsync = null;
             doubleInputCallback = null;
             doubleInputCallbackAsync = null;
+            dropdownCallback = null;
+            dropdownCallbackAsync = null;
             dropdownInputCallback = null;
             dropdownInputCallbackAsync = null;
         }
@@ -146,6 +155,7 @@ namespace BGC.UI.Dialogs
                     break;
                 case Mode.ConfirmCancel:
                 case Mode.DropdownInput:
+                case Mode.Dropdown:
                 case Mode.YesNo:
                     if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
                     {
@@ -208,7 +218,7 @@ namespace BGC.UI.Dialogs
             secondaryInputField.text = "";
             secondaryInputField.gameObject.SetActive(mode == Mode.InputInputConfirmCancel || mode == Mode.DropdownInput);
 
-            optionDropdown.gameObject.SetActive(mode == Mode.DropdownInput);
+            optionDropdown.gameObject.SetActive(mode == Mode.DropdownInput || mode == Mode.Dropdown);
 
             toggleButton.gameObject.SetActive(mode == Mode.InputToggleConfirmCancel);
 
@@ -219,6 +229,7 @@ namespace BGC.UI.Dialogs
                 case Mode.InputConfirmCancel:
                 case Mode.InputInputConfirmCancel:
                 case Mode.DropdownInput:
+                case Mode.Dropdown:
                 case Mode.InputToggleConfirmCancel:
                     SetButtonText(a: "Confirm", b: "Cancel");
                     break;
@@ -618,6 +629,30 @@ namespace BGC.UI.Dialogs
         }
 
         /// <summary>
+        /// Shows a singular dropdown modal.
+        /// </summary>
+        public static void ShowDropdownModal(
+            string headerText,
+            string primaryBodyText,
+            IEnumerable<string> dropdownOptions,
+            ModalDropdownCallback inputCallback,
+            ModalButtonCallback buttonCallback = null,
+            InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
+            int initialValue = 0) =>
+            ShowDropdownInputModalHelper(
+                headerText: headerText,
+                primaryBodyText: primaryBodyText,
+                secondaryBodyText: "",
+                dropdownOptions: dropdownOptions,
+                dropdownCallback: inputCallback,
+                buttonCallback: buttonCallback,
+                inputType: inputType,
+                closeImmediately: true,
+                awaitingMessage: null,
+                showSecondaryInput: false,
+                initialValue: initialValue);
+        
+        /// <summary>
         /// Show the modal dialog in the indicated mode, and call the callback when it receives a response
         /// </summary>
         public static void ShowDropdownInputModal(
@@ -627,7 +662,8 @@ namespace BGC.UI.Dialogs
             IEnumerable<string> dropdownOptions,
             ModalDropdownInputCallback inputCallback,
             ModalButtonCallback buttonCallback = null,
-            InputField.ContentType inputType = InputField.ContentType.Alphanumeric) =>
+            InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
+            int initialValue = 0) =>
             ShowDropdownInputModalHelper(
                 headerText: headerText,
                 primaryBodyText: primaryBodyText,
@@ -637,7 +673,8 @@ namespace BGC.UI.Dialogs
                 buttonCallback: buttonCallback,
                 inputType: inputType,
                 closeImmediately: true,
-                awaitingMessage: null);
+                awaitingMessage: null,
+                initialValue: initialValue);
         
         /// <summary>
         /// Show the modal dialog in the indicated mode, and await on the async callback when it receives a response
@@ -651,7 +688,8 @@ namespace BGC.UI.Dialogs
             ModalButtonCallbackAsync buttonCallbackAsync = null,
             InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
             bool closeImmediately = true,
-            string awaitingMessage = null) =>
+            string awaitingMessage = null,
+            int initialValue = 0) =>
             ShowDropdownInputModalHelper(
                 headerText: headerText,
                 primaryBodyText: primaryBodyText,
@@ -661,32 +699,37 @@ namespace BGC.UI.Dialogs
                 buttonCallbackAsync: buttonCallbackAsync,
                 inputType: inputType,
                 closeImmediately: closeImmediately,
-                awaitingMessage: awaitingMessage);       
+                awaitingMessage: awaitingMessage,
+                initialValue: initialValue);       
         
         private static void ShowDropdownInputModalHelper(
             string headerText,
             string primaryBodyText,
             string secondaryBodyText,
             IEnumerable<string> dropdownOptions,
+            ModalDropdownCallback dropdownCallback = null,
+            ModalDropdownCallbackAsync dropdownCallbackAsync = null,
             ModalDropdownInputCallback inputCallback = null,
             ModalDropdownInputCallbackAsync inputCallbackAsync = null,
             ModalButtonCallback buttonCallback = null,
             ModalButtonCallbackAsync buttonCallbackAsync = null,
             InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
             bool closeImmediately = true,
-            string awaitingMessage = null)
+            string awaitingMessage = null,
+            bool showSecondaryInput = true,
+            int initialValue = 0)
         {
             //Update text
             instance.SetHeaderText(headerText);
             instance.SetBodyText(primaryBodyText, secondaryBodyText);
 
             //Update buttons
-            instance.SetMode(Mode.DropdownInput);
+            instance.SetMode(showSecondaryInput ? Mode.DropdownInput : Mode.Dropdown);
 
             //Update dropdown
             instance.optionDropdown.ClearOptions();
             instance.optionDropdown.AddOptions(dropdownOptions.ToList());
-            instance.optionDropdown.value = 0;
+            instance.optionDropdown.value = initialValue;
             instance.optionDropdown.RefreshShownValue();
 
             //Set dialog visible
@@ -696,8 +739,17 @@ namespace BGC.UI.Dialogs
             instance.ResetCallbacks();
             instance.buttonCallback = buttonCallback;
             instance.buttonCallbackAsync = buttonCallbackAsync;
-            instance.dropdownInputCallback = inputCallback;
-            instance.dropdownInputCallbackAsync = inputCallbackAsync;
+
+            if (showSecondaryInput)
+            {
+                instance.dropdownInputCallback = inputCallback;
+                instance.dropdownInputCallbackAsync = inputCallbackAsync;
+            }
+            else
+            {
+                instance.dropdownCallback = dropdownCallback;
+                instance.dropdownCallbackAsync = dropdownCallbackAsync;
+            }
 
             instance.secondaryInputField.contentType = inputType;
             
@@ -835,6 +887,8 @@ namespace BGC.UI.Dialogs
             ModalDoubleInputCallbackAsync tmpDoubleInputCallbackAsync = doubleInputCallbackAsync;
             ModalDropdownInputCallback tmpDropdownInputCallback = dropdownInputCallback;
             ModalDropdownInputCallbackAsync tmpDropdownInputCallbackAsync = dropdownInputCallbackAsync;
+            ModalDropdownCallback tmpDropdownCallback = dropdownCallback;
+            ModalDropdownCallbackAsync tmpDropdownCallbackAsync = dropdownCallbackAsync;
 
             ResetCallbacks();
 
@@ -857,6 +911,8 @@ namespace BGC.UI.Dialogs
             await (tmpDoubleInputCallbackAsync?.Invoke(response, primaryInputField.text, secondaryInputField.text) ?? Task.CompletedTask);
             tmpDropdownInputCallback?.Invoke(response, optionDropdown.value, secondaryInputField.text);
             await (tmpDropdownInputCallbackAsync?.Invoke(response, optionDropdown.value, secondaryInputField.text) ?? Task.CompletedTask);
+            tmpDropdownCallback?.Invoke(response, optionDropdown.value);
+            await (tmpDropdownCallbackAsync?.Invoke(response, optionDropdown.value) ?? Task.CompletedTask);
 
             if (!closeImmediately)
             {
