@@ -12,6 +12,7 @@ namespace BGC.Parameters.Algorithms.SimpleStaircase
     [IntFieldDisplay("WrongToStepUp", displayTitle: "Incorrect Responses To Step Up", initial: 2, minimum: 1, maximum: 10_000, postfix: "misses")]
     [IntFieldDisplay("StepsUp", displayTitle: "Steps Up", initial: 2, minimum: 1, maximum: 10_000, postfix: "steps")]
     [IntFieldDisplay("StepsDown", displayTitle: "Steps Down", initial: 1, minimum: 1, maximum: 10_000, postfix: "steps")]
+    [BoolDisplay("LastCorrectTrialIsReversal", displayTitle: "Last Correct Trial Is Reversal", initial: false)]
     public class SimpleStaircaseAlgorithm : AlgorithmBase, IBinaryOutcomeAlgorithm
     {
         [AppendSelection(
@@ -40,6 +41,11 @@ namespace BGC.Parameters.Algorithms.SimpleStaircase
         [DisplayInputFieldKey("StepsDown")]
         public string StepsDownKey { get; set; }
 
+        [DisplayInputField("LastCorrectTrialIsReversal")]
+        public bool LastCorrectTrialIsReversal { get; set; }
+        [DisplayInputFieldKey("LastCorrectTrialIsReversal")]
+        public string LastCorrectTrialIsReversalKey { get; set; }
+
         #region IControlSource
 
         public override int GetSourceCount() => 1;
@@ -63,6 +69,9 @@ namespace BGC.Parameters.Algorithms.SimpleStaircase
         private int correctCount;
         private int incorrectCount;
         private int reversals;
+        private int prevCorrectStepValue;
+        private bool havePrevCorrectStepValue;
+        private bool prevCorrectStepWasReversal;
         private int stepValue;
         private int lastStep;
         private List<int> reversalValues;
@@ -74,6 +83,10 @@ namespace BGC.Parameters.Algorithms.SimpleStaircase
 
             correctCount = 0;
             incorrectCount = 0;
+
+            prevCorrectStepValue = 0;
+            havePrevCorrectStepValue = false;
+            prevCorrectStepWasReversal = false;
 
             stepValue = 0;
             lastStep = 0;
@@ -94,6 +107,10 @@ namespace BGC.Parameters.Algorithms.SimpleStaircase
 
             if (correct)
             {
+                prevCorrectStepValue = stepValue;
+                havePrevCorrectStepValue = true;
+                prevCorrectStepWasReversal = false;
+
                 incorrectCount = 0;
 
                 if (++correctCount >= CorrectToStepDown)
@@ -117,6 +134,11 @@ namespace BGC.Parameters.Algorithms.SimpleStaircase
                 {
                     reversals++;
                     reversalValues.Add(stepValue);
+
+                    if (correct)
+                    {
+                        prevCorrectStepWasReversal = true;
+                    }
                 }
 
                 if (lastStep != 0 || stepDiff > 0)
@@ -142,12 +164,13 @@ namespace BGC.Parameters.Algorithms.SimpleStaircase
 
         public override void PopulateScriptContext(GlobalRuntimeContext scriptContext)
         {
-            double averageOfReversals = reversalValues.Sum() / (double)reversalValues.Count;
-
-            if (double.IsNaN(averageOfReversals))
+            List<int> allReversalValues = reversalValues.ToList();
+            if (havePrevCorrectStepValue && !prevCorrectStepWasReversal && LastCorrectTrialIsReversal)
             {
-                averageOfReversals = stepValue;
+                allReversalValues.Add(prevCorrectStepValue);
             }
+
+            double averageOfReversals = allReversalValues.Count > 0 ? allReversalValues.Sum() / (double)allReversalValues.Count : stepValue;
 
             foreach (ControlledParameterTemplate template in controlledParameters)
             {
