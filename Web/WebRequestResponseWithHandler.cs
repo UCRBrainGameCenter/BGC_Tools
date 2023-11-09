@@ -88,8 +88,16 @@ namespace BGC.Web
                 case 204:
                     this.DetailedErrorMessage = "";
                     break;
-                default:
-                    this.DetailedErrorMessage = request.downloadHandler?.text ?? "";
+                default: 
+                    if (request.downloadHandler?.GetType() != typeof(DownloadHandlerFile))
+                    {
+                        this.DetailedErrorMessage = request.downloadHandler?.text ?? "";
+                    }
+                    else
+                    {
+                        DownloadHandlerFile downloadHandlerFile = (DownloadHandlerFile)request.downloadHandler;
+                        this.DetailedErrorMessage = downloadHandlerFile?.error;
+                    }
                     break;
             }
         }
