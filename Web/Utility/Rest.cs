@@ -503,7 +503,7 @@ namespace BGC.Web.Utility
                             return null;
                         }
 
-                        await Task.Delay(5, abortToken);
+                        await Task.Delay(10, abortToken);
                     }
 
                     numActiveGets++;
@@ -519,18 +519,33 @@ namespace BGC.Web.Utility
                         }
 
                         progressReporter?.Report(operation.progress);
-                        await Task.Delay(5, abortToken);
+                        await Task.Delay(100, abortToken);
                     }
 
-                    if (!string.IsNullOrEmpty(request.error) && retries > 0)
+                    if (!string.IsNullOrEmpty(request.error))
                     {
-                        // retry if error and retries are specified
-                        shouldRetry = true;
-                        numRetries++;
-
-                        if (numRetries > retries)
+                        if (IsTransientError(request.responseCode) && numRetries < retries)
                         {
-                            throw new WebException($"Unable to download {url}. Retries exceeded.");
+                            // retry if transient error and retry limit not reached.
+                            shouldRetry = true;
+                            numRetries++;
+
+                            if (numRetries > retries)
+                            {
+                                throw new WebException($"Unable to download {url}. Retries exceeded.");
+                            }
+
+                            await BackoffHelper.WaitWithBackoffAsync(numRetries, abortToken);
+                        }
+                        else
+                        {
+                            if (numRetries > retries)
+                            {
+                                throw new WebException($"Unable to download {url}. Retries exceeded.");
+                            }
+                            
+                            // Non-transient error or max retries reached.
+                            return new WebRequestResponseWithHandler(request);
                         }
                     }
                     else
@@ -600,7 +615,7 @@ namespace BGC.Web.Utility
                             return null;
                         }
 
-                        await Task.Delay(5, abortToken);
+                        await Task.Delay(10, abortToken);
                     }
 
                     numActiveGets++;
@@ -616,12 +631,12 @@ namespace BGC.Web.Utility
                         }
 
                         progressReporter?.Report(operation.progress);
-                        await Task.Delay(5, abortToken);
+                        await Task.Delay(100, abortToken);
                     }
 
-                    if (!string.IsNullOrEmpty(request.error) && retries > 0)
+                    if (IsTransientError(request.responseCode) && numRetries < retries)
                     {
-                        // retry if error and retries are specified
+                        // retry if transient error and retry limit not reached.
                         shouldRetry = true;
                         numRetries++;
 
@@ -629,10 +644,18 @@ namespace BGC.Web.Utility
                         {
                             throw new WebException($"Unable to download {url}. Retries exceeded.");
                         }
+
+                        await BackoffHelper.WaitWithBackoffAsync(numRetries, abortToken);
                     }
                     else
                     {
-                        progressReporter?.Report(operation.progress);
+                        if (numRetries > retries)
+                        {
+                            throw new WebException($"Unable to download {url}. Retries exceeded.");
+                        }
+                            
+                        // Non-transient error or max retries reached.
+                        return new WebRequestResponseWithHandler(request);
                     }
                 }
 
@@ -707,7 +730,13 @@ namespace BGC.Web.Utility
                             // retry
                             shouldRetry = true;
                             numRetries++;
-                            numActiveGets--;
+                            
+                            if (numRetries < retries)
+                            {
+                                float timeToWait =
+                                    (float) BackoffHelper.CalculateBackoffInterval(numRetries).TotalSeconds;
+                                yield return new WaitForSeconds(timeToWait);
+                            }
                         }
                         else
                         {
@@ -770,7 +799,7 @@ namespace BGC.Web.Utility
                     abortToken.ThrowIfCancellationRequested();
 
                     // wait for other requests to wrap up to avoid port exhaustion.
-                    await Task.Delay(5, abortToken);
+                    await Task.Delay(10, abortToken);
                 }
 
                 abortToken.ThrowIfCancellationRequested();
@@ -807,7 +836,7 @@ namespace BGC.Web.Utility
 
                         // spin lock while waiting for response. Since method is async, it doesn't block main thread.
                         progressReporter?.Report(operation.progress);
-                        await Task.Delay(1, abortToken);
+                        await Task.Delay(100, abortToken);
                     }
 
                     if (!string.IsNullOrEmpty(request.error) && retries > 0)
@@ -821,13 +850,28 @@ namespace BGC.Web.Utility
                                 return null;
                             }
 
-                            // retry if error and retries are specified
-                            shouldRetry = true;
-                            numRetries++;
-
-                            if (numRetries > retries)
+                            if (IsTransientError(request.responseCode) && numRetries < retries)
                             {
-                                throw new WebException($"Unable to download {url}. Retries exceeded.");
+                                // retry if transient error and retry limit not reached.
+                                shouldRetry = true;
+                                numRetries++;
+
+                                if (numRetries > retries)
+                                {
+                                    throw new WebException($"Unable to download {url}. Retries exceeded.");
+                                }
+
+                                await BackoffHelper.WaitWithBackoffAsync(numRetries, abortToken);
+                            }
+                            else
+                            {
+                                if (numRetries > retries)
+                                {
+                                    throw new WebException($"Unable to download {url}. Retries exceeded.");
+                                }
+                            
+                                // Non-transient error or max retries reached.
+                                return new WebRequestResponse(request);
                             }
                         }
                         else
@@ -934,7 +978,7 @@ namespace BGC.Web.Utility
                 }
 
                 // Register a callback if the abort token is canceled which will cancel the request itself.
-                var cancelRegistration = abortToken.Register(() =>
+                CancellationTokenRegistration cancelRegistration = abortToken.Register(() =>
                 {
                     request.Abort();
                     tcs.SetCanceled();
@@ -946,12 +990,12 @@ namespace BGC.Web.Utility
                 {
                     progressReporter?.Report(operation.progress);
 
-                    var delayTask = Task.Delay(500);
+                    Task delayTask = Task.Delay(500, abortToken);
                     await Task.WhenAny(tcs.Task, delayTask);
                 }
 
                 // Unregister the callback as we no longer should be aborting the request if the token is canceled.
-                cancelRegistration.Dispose();
+                await cancelRegistration.DisposeAsync();
 
                 if (tcs.Task.IsCanceled)
                 {
@@ -1086,7 +1130,7 @@ namespace BGC.Web.Utility
                 }
 
                 // Register a callback if the abort token is canceled which will cancel the request itself.
-                var cancelRegistration = abortToken.Register(() =>
+                CancellationTokenRegistration cancelRegistration = abortToken.Register(() =>
                 {
                     request.Abort();
                     tcs.SetCanceled();
@@ -1096,7 +1140,7 @@ namespace BGC.Web.Utility
                 await tcs.Task;
 
                 // Unregister the callback as we no longer should be aborting the request if the token is canceled.
-                cancelRegistration.Dispose();
+                await cancelRegistration.DisposeAsync();
 
                 if (tcs.Task.IsCanceled)
                 {
@@ -1111,6 +1155,25 @@ namespace BGC.Web.Utility
             }
         }
 
+        /// <summary>Helper method to determine if the error code is transient (i.e., a temporary error).</summary>
+        /// <remarks>These errors are ones that should be retried.</remarks> 
+        private static bool IsTransientError(long responseCode)
+        {
+            // List of transient HTTP response codes.
+            var transientErrors = new HashSet<long>
+            {
+                // Add other status codes as deemed appropriate.
+                408, // Request Timeout
+                429, // Too Many Requests
+                500, // Internal Server Error
+                502, // Bad Gateway
+                503, // Service Unavailable
+                504, // Gateway Timeout
+            };
+
+            return transientErrors.Contains(responseCode);
+        }
+        
         private static string WriteQueryParam(KeyValuePair<string, IConvertible> param) =>
             $"{param.Key}={param.Value.Encode()}";
     }
