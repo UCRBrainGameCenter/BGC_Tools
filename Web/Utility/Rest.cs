@@ -16,10 +16,15 @@ namespace BGC.Web.Utility
 {
     public static class Rest
     {
-        private static int numActiveGets = 0;
-        private static int numActivePosts = 0;
-        private static int numActivePuts = 0;
+        private static int numActiveGets;
+        private static int numActivePosts;
+        private static int numActivePuts;
         private const int MaxNumActiveGets = 20;
+
+        /// <summary>
+        /// The amount of time, in milliseconds, that async GET requests poll the operation to check for progress.
+        /// </summary>
+        // private const int AsyncGetPollingTimeMs = 200;
 
         /// <summary>
         /// Get the number of GET requests which have not yet completed.
@@ -203,20 +208,15 @@ namespace BGC.Web.Utility
                 url += $"?{string.Join("&", queryParams.Select(WriteQueryParam))}";
             }
 
-            var fileHandler = new DownloadHandlerFile(absoluteFilePath)
-            {
-                removeFileOnAbort = true
-            };
-
             // convert URL to HTTP-friendly URL
-            CoroutineUtility.Mono.StartCoroutine(RunGet(
+            CoroutineUtility.Mono.StartCoroutine(RunGetWithFileDownload(
                 url: url,
                 callBack: callBack,
                 progressReporter: progressReporter,
                 timeoutInSeconds: timeoutInSeconds,
                 retries: retries,
                 headers: headers,
-                downloadHandler: fileHandler));
+                absoluteFilePath: absoluteFilePath));
         }
 
         /// <summary>Send an async GET request using a file handler.</summary>
@@ -232,7 +232,6 @@ namespace BGC.Web.Utility
         /// The absolute path to the file the data will be downloaded to. Must include filename and extension.
         /// </param>
         /// <param name="abortToken">Cancellation token for the request.</param>
-        [ItemCanBeNull]
         public static async Task<WebRequestResponse> GetRequestAsync(
             string url,
             IDictionary<string, string> headers,
@@ -248,22 +247,16 @@ namespace BGC.Web.Utility
                 url += $"?{string.Join("&", queryParams.Select(WriteQueryParam))}";
             }
 
-            var fileHandler = new DownloadHandlerFile(absoluteFilePath)
-            {
-                removeFileOnAbort = true
-            };
-
             if (abortToken.IsCancellationRequested)
             {
-                fileHandler.Dispose();
                 abortToken.ThrowIfCancellationRequested();
                 return null;
             }
 
-            WebRequestResponse resp = await RunGetAsync(
+            WebRequestResponse resp = await RunGetAsyncWithFileDownload(
                 url,
                 headers,
-                fileHandler,
+                absoluteFilePath,
                 retries,
                 timeoutInSeconds,
                 progressReporter,
@@ -377,33 +370,27 @@ namespace BGC.Web.Utility
             IDictionary<string, string> headers,
             int timeoutInSeconds = 0)
         {
-            try
+            while (numActiveGets >= MaxNumActiveGets)
             {
-                while (numActiveGets >= MaxNumActiveGets)
-                {
-                    // wait for other requests to wrap up to avoid port exhaustion.
-                    yield return null;
-                }
-
-                numActiveGets++;
-                using UnityWebRequest request = UnityWebRequest.Get(url);
-                request.timeout = timeoutInSeconds;
-
-                foreach (KeyValuePair<string, string> pair in headers)
-                {
-                    request.SetRequestHeader(pair.Key, pair.Value);
-                }
-
-                yield return request.SendWebRequest();
-
-                WebRequestResponseWithHandler resp = new WebRequestResponseWithHandler(request);
-                request.Dispose();
-                callBack?.Invoke(resp);
+                // wait for other requests to wrap up to avoid port exhaustion.
+                yield return null;
             }
-            finally
+
+            Interlocked.Increment(ref numActiveGets);
+            using UnityWebRequest request = UnityWebRequest.Get(url);
+            request.timeout = timeoutInSeconds;
+
+            foreach (KeyValuePair<string, string> pair in headers)
             {
-                numActiveGets--;
+                request.SetRequestHeader(pair.Key, pair.Value);
             }
+
+            yield return request.SendWebRequest();
+
+            WebRequestResponseWithHandler resp = new WebRequestResponseWithHandler(request);
+            request.Dispose();
+            Interlocked.Decrement(ref numActiveGets);
+            callBack?.Invoke(resp);
         }
 
         /// <summary>
@@ -430,7 +417,7 @@ namespace BGC.Web.Utility
                     yield return null;
                 }
 
-                numActiveGets++;
+                Interlocked.Increment(ref numActiveGets);
                 using UnityWebRequest request = UnityWebRequest.Get(url);
                 request.timeout = timeoutInSeconds;
 
@@ -449,7 +436,7 @@ namespace BGC.Web.Utility
             }
             finally
             {
-                numActiveGets--;
+                Interlocked.Decrement(ref numActiveGets);
             }
         }
 
@@ -463,7 +450,6 @@ namespace BGC.Web.Utility
         /// </param>
         /// <param name="abortToken">Optional cancellation token.</param>
         /// <returns>The finished unity web request. Can be NULL if operation cancelled or error occurs.</returns>
-        [ItemCanBeNull]
         private static async Task<WebRequestResponseWithHandler> RunGetAsync(
             string url,
             IDictionary<string, string> headers,
@@ -506,7 +492,7 @@ namespace BGC.Web.Utility
                         await Task.Delay(10, abortToken);
                     }
 
-                    numActiveGets++;
+                    Interlocked.Increment(ref numActiveGets);
 
                     UnityWebRequestAsyncOperation operation = request.SendWebRequest();
 
@@ -519,7 +505,8 @@ namespace BGC.Web.Utility
                         }
 
                         progressReporter?.Report(operation.progress);
-                        await Task.Delay(100, abortToken);
+                        await Task.Yield();
+                        // await Task.Delay(AsyncGetPollingTimeMs, abortToken);
                     }
 
                     if (!string.IsNullOrEmpty(request.error))
@@ -558,7 +545,7 @@ namespace BGC.Web.Utility
             }
             finally
             {
-                numActiveGets--;
+                Interlocked.Decrement(ref numActiveGets);
             }
         }
 
@@ -618,7 +605,7 @@ namespace BGC.Web.Utility
                         await Task.Delay(10, abortToken);
                     }
 
-                    numActiveGets++;
+                    Interlocked.Increment(ref numActiveGets);
 
                     UnityWebRequestAsyncOperation operation = request.SendWebRequest();
 
@@ -631,7 +618,7 @@ namespace BGC.Web.Utility
                         }
 
                         progressReporter?.Report(operation.progress);
-                        await Task.Delay(100, abortToken);
+                        await Task.Yield();
                     }
 
                     if (IsTransientError(request.responseCode) && numRetries < retries)
@@ -663,7 +650,7 @@ namespace BGC.Web.Utility
             }
             finally
             {
-                numActiveGets--;
+                Interlocked.Decrement(ref numActiveGets);
             }
         }
 
@@ -671,111 +658,109 @@ namespace BGC.Web.Utility
         /// <param name="url">The URL to send request to.</param>
         /// <param name="callBack">Code to execute when request completes. Sends back response object.</param>
         /// <param name="headers">Headers to send in the request, if any.</param>
-        /// <param name="downloadHandler">Download handler to use in the request.</param>
+        /// <param name="absoluteFilePath">
+        /// The absolute path to the file the data will be downloaded to. Must include filename and extension.
+        /// </param>
         /// <param name="progressReporter">Progress reporter for the download.</param>
         /// <param name="retries">Max number of retries. If set to 0, then retries will not be used.</param>
         /// <param name="timeoutInSeconds">
         /// The amount of time, in seconds, to wait before timing out. If set to 0, there is no timeout.
         /// </param>
-        private static IEnumerator RunGet(
+        private static IEnumerator RunGetWithFileDownload(
             string url,
             Action<WebRequestResponseWithHandler> callBack,
             IDictionary<string, string> headers,
-            DownloadHandlerFile downloadHandler,
+            string absoluteFilePath,
             IProgress<float> progressReporter = null,
             int retries = 0,
             int timeoutInSeconds = 0)
         {
-            try
+            bool shouldRetry = true;
+            int numRetries = 0;
+
+            while (shouldRetry)
             {
-                bool shouldRetry = true;
-                int numRetries = 0;
+                shouldRetry = false;
 
-                while (shouldRetry)
+                using UnityWebRequest request = UnityWebRequest.Get(url);
+                request.timeout = timeoutInSeconds;
+                using var downloadHandler = new DownloadHandlerFile(absoluteFilePath);
+                downloadHandler.removeFileOnAbort = true;
+                
+                // use file handler
+                request.downloadHandler = downloadHandler;
+                request.disposeDownloadHandlerOnDispose = true;
+
+                foreach (KeyValuePair<string, string> pair in headers)
                 {
-                    shouldRetry = false;
+                    request.SetRequestHeader(pair.Key, pair.Value);
+                }
 
-                    using UnityWebRequest request = UnityWebRequest.Get(url);
-                    request.timeout = timeoutInSeconds;
+                while (numActiveGets >= MaxNumActiveGets)
+                {
+                    // wait for other requests to wrap up to avoid port exhaustion.
+                    yield return new WaitForSeconds(0.100f); // wait for 100 ms
+                }
 
-                    // use file handler
-                    request.downloadHandler = downloadHandler;
-                    request.disposeDownloadHandlerOnDispose = true;
+                Interlocked.Increment(ref numActiveGets);
+                AsyncOperation op = request.SendWebRequest();
 
-                    foreach (KeyValuePair<string, string> pair in headers)
+                while (!op.isDone)
+                {
+                    yield return null;
+                    progressReporter?.Report(op.progress);
+                }
+
+                if (!string.IsNullOrEmpty(request.error))
+                {
+                    // check for cases where it's useless to retry, such as 404
+                    if (request.responseCode != 404 && numRetries < retries)
                     {
-                        request.SetRequestHeader(pair.Key, pair.Value);
-                    }
+                        // retry
+                        shouldRetry = true;
+                        numRetries++;
 
-                    while (numActiveGets >= MaxNumActiveGets)
-                    {
-                        // wait for other requests to wrap up to avoid port exhaustion.
-                        yield return new WaitForSeconds(0.005f); // wait for 5 ms
-                    }
-
-                    numActiveGets++;
-                    AsyncOperation op = request.SendWebRequest();
-
-                    while (!op.isDone)
-                    {
-                        yield return null;
-                        progressReporter?.Report(op.progress);
-                    }
-
-                    if (!string.IsNullOrEmpty(request.error))
-                    {
-                        // check for cases where it's useless to retry, such as 404
-                        if (request.responseCode != 404 && numRetries < retries)
+                        if (numRetries < retries)
                         {
-                            // retry
-                            shouldRetry = true;
-                            numRetries++;
-                            
-                            if (numRetries < retries)
-                            {
-                                float timeToWait =
-                                    (float) BackoffHelper.CalculateBackoffInterval(numRetries).TotalSeconds;
-                                yield return new WaitForSeconds(timeToWait);
-                            }
-                        }
-                        else
-                        {
-                            long statusCode = request.responseCode != 404 ? 504 : 404; // send timeout code if not 404
-                            string err = request.responseCode != 404
-                                ? "The download timed out and retries have been exceeded."
-                                : request.error;
-
-                            WebRequestResponseWithHandler resp = new WebRequestResponseWithHandler(
-                                statusCode: statusCode,
-                                error: err,
-                                downloadBytes: Array.Empty<byte>(),
-                                uploadBytes: Array.Empty<byte>());
-
-                            request.Dispose();
-                            callBack?.Invoke(resp);
+                            float timeToWait =
+                                (float) BackoffHelper.CalculateBackoffInterval(numRetries).TotalSeconds;
+                            yield return new WaitForSeconds(timeToWait);
                         }
                     }
                     else
                     {
-                        progressReporter?.Report(op.progress);
+                        long statusCode = request.responseCode != 404 ? 504 : 404; // send timeout code if not 404
+                        string err = request.responseCode != 404
+                            ? "The download timed out and retries have been exceeded."
+                            : request.error;
 
-                        WebRequestResponseWithHandler resp = new WebRequestResponseWithHandler(request);
-                        request.Dispose();
+                        WebRequestResponseWithHandler resp = new WebRequestResponseWithHandler(
+                            statusCode: statusCode,
+                            error: err,
+                            downloadBytes: Array.Empty<byte>(),
+                            uploadBytes: Array.Empty<byte>());
 
+                        Interlocked.Decrement(ref numActiveGets);
                         callBack?.Invoke(resp);
                     }
                 }
-            }
-            finally
-            {
-                numActiveGets--;
+                else
+                {
+                    progressReporter?.Report(op.progress);
+
+                    WebRequestResponseWithHandler resp = new WebRequestResponseWithHandler(request);
+                    Interlocked.Decrement(ref numActiveGets);
+                    callBack?.Invoke(resp);
+                }
             }
         }
 
         /// <summary>Run async GET request using a file handler.</summary>
         /// <param name="url">The URL to send the request to.</param>
         /// <param name="headers">The headers to attach to the request.</param>
-        /// <param name="downloadHandler">The file download handler to use for the request.</param>
+        /// <param name="absoluteFilePath">
+        /// The absolute path to the file the data will be downloaded to. Must include filename and extension.
+        /// </param>
         /// <param name="retries">Max number of retries. If set to 0, then retries will not be used.</param>
         /// <param name="timeoutInSeconds">Optional timeout for the request. Default is 15 seconds.</param>
         /// <param name="progressReporter">
@@ -783,10 +768,10 @@ namespace BGC.Web.Utility
         /// </param>
         /// <param name="abortToken">Optional cancellation token.</param>
         /// <returns>The finished unity web request. Can be NULL if operation cancelled or error occurs.</returns>
-        private static async Task<WebRequestResponse> RunGetAsync(
+        private static async Task<WebRequestResponse> RunGetAsyncWithFileDownload(
             string url,
             IDictionary<string, string> headers,
-            DownloadHandlerFile downloadHandler,
+            string absoluteFilePath,
             int retries = 0,
             int timeoutInSeconds = 0,
             IProgress<float> progressReporter = null,
@@ -804,7 +789,7 @@ namespace BGC.Web.Utility
 
                 abortToken.ThrowIfCancellationRequested();
 
-                numActiveGets++;
+                Interlocked.Increment(ref numActiveGets);
 
                 int numRetries = 0;
                 bool shouldRetry = true;
@@ -815,6 +800,9 @@ namespace BGC.Web.Utility
 
                     using UnityWebRequest request = UnityWebRequest.Get(url);
                     request.timeout = timeoutInSeconds;
+                    
+                    using var downloadHandler = new DownloadHandlerFile(absoluteFilePath);
+                    downloadHandler.removeFileOnAbort = true;
                     request.downloadHandler = downloadHandler; // use file handler
                     request.disposeDownloadHandlerOnDispose = true;
 
@@ -824,7 +812,7 @@ namespace BGC.Web.Utility
                     }
 
                     UnityWebRequestAsyncOperation operation = request.SendWebRequest();
-
+                    
                     while (!operation.isDone)
                     {
                         if (abortToken.IsCancellationRequested)
@@ -836,7 +824,7 @@ namespace BGC.Web.Utility
 
                         // spin lock while waiting for response. Since method is async, it doesn't block main thread.
                         progressReporter?.Report(operation.progress);
-                        await Task.Delay(100, abortToken);
+                        await Task.Yield();
                     }
 
                     if (!string.IsNullOrEmpty(request.error) && retries > 0)
@@ -892,7 +880,7 @@ namespace BGC.Web.Utility
             }
             finally
             {
-                numActiveGets--;
+                Interlocked.Decrement(ref numActiveGets);
             }
         }
 
@@ -914,25 +902,13 @@ namespace BGC.Web.Utility
             Action<WebRequestResponseWithHandler> callBack,
             int timeoutInSeconds = 0)
         {
-            try
-            {
-                numActivePosts++;
-
-                WebRequestResponseWithHandler resp;
-                {
-                    using UnityWebRequest request = CreatePostRequest(url, headers, body, contentType, timeoutInSeconds);
-
-                    yield return request.SendWebRequest();
-
-                    resp = new WebRequestResponseWithHandler(request);
-                }
-
-                callBack?.Invoke(resp);
-            }
-            finally
-            {
-                numActivePosts--;
-            }
+            using UnityWebRequest request = CreatePostRequest(url, headers, body, contentType, timeoutInSeconds);
+            Interlocked.Increment(ref numActivePosts);
+            yield return request.SendWebRequest();
+            var resp = new WebRequestResponseWithHandler(request);
+            
+            Interlocked.Decrement(ref numActivePosts);
+            callBack?.Invoke(resp);
         }
 
         /// <summary>Run async POST request</summary>
@@ -954,63 +930,59 @@ namespace BGC.Web.Utility
             IProgress<float> progressReporter = null,
             CancellationToken abortToken = default)
         {
-            try
+            using UnityWebRequest request = CreatePostRequest(url, headers, body, contentType, timeoutInSeconds);
+
+            if (abortToken.IsCancellationRequested)
             {
-                numActivePosts++;
+                return null;
+            }
 
-                using UnityWebRequest request = CreatePostRequest(url, headers, body, contentType, timeoutInSeconds);
+            Interlocked.Increment(ref numActivePosts);
+            UnityWebRequestAsyncOperation operation = request.SendWebRequest();
 
-                if (abortToken.IsCancellationRequested)
-                {
-                    return null;
-                }
+            var tcs = new TaskCompletionSource<bool>();
+            operation.completed += _ => tcs.SetResult(true);
 
-                UnityWebRequestAsyncOperation operation = request.SendWebRequest();
+            // Perhaps a bit paranoid, but we should not be calling Register on an already-canceled token
+            if (abortToken.IsCancellationRequested)
+            {
+                Interlocked.Decrement(ref numActivePosts);
+                request.Abort();
+                return null;
+            }
 
-                var tcs = new TaskCompletionSource<bool>();
-                operation.completed += _ => tcs.SetResult(true);
+            // Register a callback if the abort token is canceled which will cancel the request itself.
+            CancellationTokenRegistration cancelRegistration = abortToken.Register(() =>
+            {
+                Interlocked.Decrement(ref numActivePosts);
+                request.Abort();
+                tcs.SetCanceled();
+            });
 
-                // Perhaps a bit paranoid, but we should not be calling Register on an already-canceled token
-                if (abortToken.IsCancellationRequested)
-                {
-                    request.Abort();
-                    return null;
-                }
-
-                // Register a callback if the abort token is canceled which will cancel the request itself.
-                CancellationTokenRegistration cancelRegistration = abortToken.Register(() =>
-                {
-                    request.Abort();
-                    tcs.SetCanceled();
-                });
-
-                // Wait for the task to either complete or cancel
-                // Also every 500ms, update the progress
-                while (!tcs.Task.IsCompleted)
-                {
-                    progressReporter?.Report(operation.progress);
-
-                    Task delayTask = Task.Delay(500, abortToken);
-                    await Task.WhenAny(tcs.Task, delayTask);
-                }
-
-                // Unregister the callback as we no longer should be aborting the request if the token is canceled.
-                await cancelRegistration.DisposeAsync();
-
-                if (tcs.Task.IsCanceled)
-                {
-                    return null;
-                }
-
-                // Update the progress one last time at the end
+            // Wait for the task to either complete or cancel
+            // Also every 500ms, update the progress
+            while (!tcs.Task.IsCompleted)
+            {
                 progressReporter?.Report(operation.progress);
 
-                return new WebRequestResponseWithHandler(request);
+                Task delayTask = Task.Delay(500, abortToken);
+                await Task.WhenAny(tcs.Task, delayTask);
             }
-            finally
+
+            // Unregister the callback as we no longer should be aborting the request if the token is canceled.
+            await cancelRegistration.DisposeAsync();
+
+            if (tcs.Task.IsCanceled)
             {
-                numActivePosts--;
+                Interlocked.Decrement(ref numActivePosts);
+                return null;
             }
+
+            // Update the progress one last time at the end
+            progressReporter?.Report(operation.progress);
+
+            Interlocked.Decrement(ref numActivePosts);
+            return new WebRequestResponseWithHandler(request);
         }
 
 
@@ -1028,6 +1000,7 @@ namespace BGC.Web.Utility
             request.SetRequestHeader("Content-Type", contentType);
 #endif
             request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
+            request.disposeUploadHandlerOnDispose = true;
             request.timeout = timeoutInSeconds;
 
             if (headers != null)
@@ -1037,6 +1010,7 @@ namespace BGC.Web.Utility
                     request.SetRequestHeader(pair.Key, pair.Value);
                 }
             }
+            
             return request;
         }
 
@@ -1057,9 +1031,6 @@ namespace BGC.Web.Utility
             Action<WebRequestResponse> callBack,
             int timeoutInSeconds = 0)
         {
-            try
-            {
-                numActivePuts++;
                 using UnityWebRequest request = UnityWebRequest.Put(url, Encoding.UTF8.GetBytes(body));
 
                 request.timeout = timeoutInSeconds;
@@ -1069,16 +1040,13 @@ namespace BGC.Web.Utility
                     request.SetRequestHeader(pair.Key, pair.Value);
                 }
 
+                Interlocked.Increment(ref numActivePuts);
                 yield return request.SendWebRequest();
 
                 WebRequestResponse resp = new WebRequestResponse(request);
+                Interlocked.Decrement(ref numActivePuts);
                 request.Dispose();
                 callBack?.Invoke(resp);
-            }
-            finally
-            {
-                numActivePuts--;
-            }
         }
 
         /// <summary>Run async POST request</summary>
@@ -1097,62 +1065,58 @@ namespace BGC.Web.Utility
             int timeoutInSeconds = 0,
             CancellationToken abortToken = default)
         {
-            try
+            using UnityWebRequest request = UnityWebRequest.Put(url, Encoding.UTF8.GetBytes(body));
+            request.timeout = timeoutInSeconds;
+
+            if (headers != null)
             {
-                numActivePuts++;
-
-                using UnityWebRequest request = UnityWebRequest.Put(url, Encoding.UTF8.GetBytes(body));
-                request.timeout = timeoutInSeconds;
-
-                if (headers != null)
+                foreach (KeyValuePair<string, string> pair in headers)
                 {
-                    foreach (KeyValuePair<string, string> pair in headers)
-                    {
-                        request.SetRequestHeader(pair.Key, pair.Value);
-                    }
+                    request.SetRequestHeader(pair.Key, pair.Value);
                 }
-
-                if (abortToken.IsCancellationRequested)
-                {
-                    return null;
-                }
-
-                UnityWebRequestAsyncOperation operation = request.SendWebRequest();
-
-                var tcs = new TaskCompletionSource<bool>();
-                operation.completed += _ => tcs.SetResult(true);
-
-                // Perhaps a bit paranoid, but we should not be calling Register on an already-canceled token
-                if (abortToken.IsCancellationRequested)
-                {
-                    request.Abort();
-                    return null;
-                }
-
-                // Register a callback if the abort token is canceled which will cancel the request itself.
-                CancellationTokenRegistration cancelRegistration = abortToken.Register(() =>
-                {
-                    request.Abort();
-                    tcs.SetCanceled();
-                });
-
-                // Wait for the task to either complete or cancel
-                await tcs.Task;
-
-                // Unregister the callback as we no longer should be aborting the request if the token is canceled.
-                await cancelRegistration.DisposeAsync();
-
-                if (tcs.Task.IsCanceled)
-                {
-                    return null;
-                }
-
-                return new WebRequestResponse(request);
             }
-            finally
+
+            if (abortToken.IsCancellationRequested)
             {
-                numActivePuts--;
+                return null;
             }
+
+            Interlocked.Increment(ref numActivePuts);
+            UnityWebRequestAsyncOperation operation = request.SendWebRequest();
+
+            var tcs = new TaskCompletionSource<bool>();
+            operation.completed += _ => tcs.SetResult(true);
+
+            // Perhaps a bit paranoid, but we should not be calling Register on an already-canceled token
+            if (abortToken.IsCancellationRequested)
+            {
+                Interlocked.Decrement(ref numActivePuts);
+                request.Abort();
+                return null;
+            }
+
+            // Register a callback if the abort token is canceled which will cancel the request itself.
+            CancellationTokenRegistration cancelRegistration = abortToken.Register(() =>
+            {
+                Interlocked.Decrement(ref numActivePuts);
+                request.Abort();
+                tcs.SetCanceled();
+            });
+
+            // Wait for the task to either complete or cancel
+            await tcs.Task;
+
+            // Unregister the callback as we no longer should be aborting the request if the token is canceled.
+            await cancelRegistration.DisposeAsync();
+
+            if (tcs.Task.IsCanceled)
+            {
+                Interlocked.Decrement(ref numActivePuts);
+                return null;
+            }
+
+            Interlocked.Decrement(ref numActivePuts);
+            return new WebRequestResponse(request);
         }
 
         /// <summary>Helper method to determine if the error code is transient (i.e., a temporary error).</summary>
