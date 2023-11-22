@@ -127,18 +127,21 @@ namespace BGC.Audio.Audiometry
                             if (data.ContainsKey("CalibrationDate"))
                             {
                                 CalibrationProfile calibrationProfile = new CalibrationProfile(data);
-                                if (isProgressFile)
+                                if (calibrationProfile.IsLatestVersion)
                                 {
-                                    if (incompleteCalibration == null || incompleteCalibrationDate < calibrationProfile.CalibrationDate)
+                                    if (isProgressFile)
                                     {
-                                        incompleteCalibration = calibrationProfile;
-                                        incompleteCalibrationDate = calibrationProfile.CalibrationDate;
+                                        if (incompleteCalibration == null || incompleteCalibrationDate < calibrationProfile.CalibrationDate)
+                                        {
+                                            incompleteCalibration = calibrationProfile;
+                                            incompleteCalibrationDate = calibrationProfile.CalibrationDate;
+                                        }
                                     }
-                                }
-                                else
-                                {
-                                    calibrationProfilesByName.Add(Path.GetFileName(fileName), calibrationProfile);
-                                    calibrationProfilesByDate.Add(calibrationProfile);
+                                    else
+                                    {
+                                        calibrationProfilesByName.Add(Path.GetFileName(fileName), calibrationProfile);
+                                        calibrationProfilesByDate.Add(calibrationProfile);
+                                    }
                                 }
                             }
                             else if (data.ContainsKey("ValidationDate"))
@@ -146,9 +149,12 @@ namespace BGC.Audio.Audiometry
                                 if (!isProgressFile)
                                 {
                                     ValidationResults curValidationResults = new ValidationResults(data);
-                                    if (validationResults == null || validationResults.ValidationDate < curValidationResults.ValidationDate)
+                                    if (curValidationResults.IsLatestVersion)
                                     {
-                                        validationResults = curValidationResults;
+                                        if (validationResults == null || validationResults.ValidationDate < curValidationResults.ValidationDate)
+                                        {
+                                            validationResults = curValidationResults;
+                                        }
                                     }
                                 }
                             }
@@ -279,11 +285,11 @@ namespace BGC.Audio.Audiometry
         }
 
         public static void PushCalibrationValue(
-            double levelHL,
+            double levelSPL,
             CalibrationSet set,
             double frequency,
             AudioChannel channel,
-            double rms)
+            double attenuation)
         {
             if (calibrationResults is null)
             {
@@ -293,15 +299,15 @@ namespace BGC.Audio.Audiometry
             switch (set)
             {
                 case CalibrationSet.PureTone:
-                    calibrationResults.PureTone.SetCalibrationPoint(frequency, levelHL, channel, rms);
+                    calibrationResults.PureTone.SetCalibrationPoint(frequency, levelSPL, channel, attenuation);
                     break;
 
                 case CalibrationSet.Narrowband:
-                    calibrationResults.Narrowband.SetCalibrationPoint(frequency, levelHL, channel, rms);
+                    calibrationResults.Narrowband.SetCalibrationPoint(frequency, levelSPL, channel, attenuation);
                     break;
 
                 case CalibrationSet.Broadband:
-                    calibrationResults.Broadband.SetCalibrationValue(levelHL, channel, rms);
+                    calibrationResults.Broadband.SetCalibrationValue(levelSPL, channel, attenuation);
                     break;
 
                 default:
@@ -313,7 +319,7 @@ namespace BGC.Audio.Audiometry
         }
 
         public static void PushOscillatorCalibrationValue(
-            double levelHL,
+            double levelSPL,
             double frequency,
             AudioChannel channel,
             double attenuation)
@@ -323,7 +329,7 @@ namespace BGC.Audio.Audiometry
                 throw new Exception($"Calibration not initialized");
             }
 
-            calibrationResults.Oscillator.SetCalibrationPoint((int)frequency, levelHL, channel, ConvertOscillatorAttenuationToRMS(attenuation));
+            calibrationResults.Oscillator.SetCalibrationPoint((int)frequency, levelSPL, channel, attenuation);
 
             UpdateCalibrationProgressFile();
         }
@@ -476,7 +482,7 @@ namespace BGC.Audio.Audiometry
         /// To use, multiple every sample by the output of this divided by the stream RMS.
         /// </summary>
         public static double GetLevelRMS(
-            double levelHL,
+            double levelSPL,
             CalibrationSet calibrationSet,
             double calibrationFrequency,
             AudioChannel channel,
@@ -505,21 +511,22 @@ namespace BGC.Audio.Audiometry
 
                 case Source.Default:
                     //Calculate
-                    return (1.0 / 32.0) * Math.Pow(10.0, (levelHL - 110.0) / 20.0);
+                    return (1.0 / 32.0) * Math.Pow(10.0, (levelSPL - 110.0) / 20.0);
 
                 default:
                     Debug.LogError($"Unexpected Source: {source}");
                     goto case Source.Default;
             }
 
-            return calibrationProfile.GetRMS(calibrationSet, calibrationFrequency, levelHL, channel);
+            double attenuation = calibrationProfile.GetAttenuation(calibrationSet, calibrationFrequency, levelSPL, channel);
+            return (1.0 / 32.0) * Math.Pow(10.0, -attenuation / 20.0);
         }
 
-        public static double EstimateRMS(
+        public static double EstimateAttenuation(
             Source calibrationSource,
             CalibrationSet calibrationSet,
             double frequency,
-            double levelHL,
+            double levelSPL,
             AudioChannel channel,
             int historicCalibrationIndex = -1)
         {
@@ -529,22 +536,22 @@ namespace BGC.Audio.Audiometry
                     CalibrationProfile calibrationProfile = GetHistoricCalibrationProfile(historicCalibrationIndex);
                     if (calibrationProfile == null)
                     {
-                        throw new Exception($"Unable to EstimateRMS without calibration profile");
+                        throw new Exception($"Unable to EstimateAttenuation without calibration profile");
                     }
-                    return calibrationProfile.EstimateRMS(calibrationSet, frequency, levelHL, channel);
+                    return calibrationProfile.EstimateAttenuation(calibrationSet, frequency, levelSPL, channel);
 
                 case Source.Results:
                     if (calibrationResults == null)
                     {
-                        throw new Exception($"Unable to EstimateRMS with uninitialized calibration");
+                        throw new Exception($"Unable to EstimateAttenuation with uninitialized calibration");
                     }
-                    return calibrationResults.EstimateRMS(calibrationSet, frequency, levelHL, channel);
+                    return calibrationResults.EstimateAttenuation(calibrationSet, frequency, levelSPL, channel);
 
                 case Source.Default:
-                    throw new Exception($"Unable to EstimateRMS with uninitialized calibration");
+                    throw new Exception($"Unable to EstimateAttenuation with uninitialized calibration");
 
                 default:
-                    throw new Exception($"Unexpected CalibrationSource for EstimateRMS: {calibrationSource}");
+                    throw new Exception($"Unexpected CalibrationSource for EstimateAttenuation: {calibrationSource}");
             }
         }
 
@@ -552,7 +559,7 @@ namespace BGC.Audio.Audiometry
         /// Returns the attenuation for the oscillator
         /// </summary>
         public static double GetOscillatorAttenuation(
-            double levelHL,
+            double levelSPL,
             double calibrationFrequency,
             AudioChannel channel,
             Source source = Source.Custom,
@@ -581,20 +588,20 @@ namespace BGC.Audio.Audiometry
 
                 case Source.Default:
                     //Calculate
-                    return 130 - levelHL;
+                    return 130 - levelSPL;
 
                 default:
                     Debug.LogError($"Unexpected Source: {source}");
                     goto case Source.Default;
             }
 
-            return calibrationProfile.GetOscillatorAttenuation(calibrationFrequency, levelHL, channel);
+            return calibrationProfile.GetOscillatorAttenuation(calibrationFrequency, levelSPL, channel);
         }
 
         public static double EstimateOscillatorAttenuation(
             Source calibrationSource,
             double frequency,
-            double levelHL,
+            double levelSPL,
             AudioChannel channel,
             int historicCalibrationIndex = -1)
         {
@@ -604,22 +611,22 @@ namespace BGC.Audio.Audiometry
                     CalibrationProfile calibrationProfile = GetHistoricCalibrationProfile(historicCalibrationIndex);
                     if (calibrationProfile == null)
                     {
-                        throw new Exception($"Unable to EstimateRMS without calibration profile");
+                        throw new Exception($"Unable to EstimateOscillatorAttenuation without calibration profile");
                     }
-                    return calibrationProfile.EstimateOscillatorAttenuation(frequency, levelHL, channel);
+                    return calibrationProfile.EstimateOscillatorAttenuation(frequency, levelSPL, channel);
 
                 case Source.Results:
                     if (calibrationResults == null)
                     {
-                        throw new Exception($"Unable to EstimateRMS with uninitialized calibration");
+                        throw new Exception($"Unable to EstimateOscillatorAttenuation with uninitialized calibration");
                     }
-                    return calibrationResults.EstimateOscillatorAttenuation(frequency, levelHL, channel);
+                    return calibrationResults.EstimateOscillatorAttenuation(frequency, levelSPL, channel);
 
                 case Source.Default:
-                    throw new Exception($"Unable to EstimateRMS with uninitialized calibration");
+                    throw new Exception($"Unable to EstimateOscillatorAttenuation with uninitialized calibration");
 
                 default:
-                    throw new Exception($"Unexpected CalibrationSource for EstimateRMS: {calibrationSource}");
+                    throw new Exception($"Unexpected CalibrationSource for EstimateOscillatorAttenuation: {calibrationSource}");
             }
         }
 
@@ -685,18 +692,15 @@ namespace BGC.Audio.Audiometry
             }
         }
 
-        public static double ConvertOscillatorRMSToAttenuation(double rms) => -20 * Math.Log10(Math.Sqrt(2.0) * rms);
-        public static double ConvertOscillatorAttenuationToRMS(double attenuation) => Math.Pow(10.0, -attenuation / 20.0) / Math.Sqrt(2.0);
-
         #region Validation
 
         public static void PushValidationValue(
-            double levelHL,
+            double levelSPL,
             CalibrationSet set,
             double frequency,
             AudioChannel channel,
-            double expectedRMS,
-            double measuredLevelHL)
+            double attenuation,
+            double measuredLevelSPL)
         {
             if (validationResults is null)
             {
@@ -706,15 +710,15 @@ namespace BGC.Audio.Audiometry
             switch (set)
             {
                 case CalibrationSet.PureTone:
-                    validationResults.PureTone.SetValidationPoint(frequency, levelHL, channel, expectedRMS, measuredLevelHL);
+                    validationResults.PureTone.SetValidationPoint(frequency, levelSPL, channel, attenuation, measuredLevelSPL);
                     break;
 
                 case CalibrationSet.Narrowband:
-                    validationResults.Narrowband.SetValidationPoint(frequency, levelHL, channel, expectedRMS, measuredLevelHL);
+                    validationResults.Narrowband.SetValidationPoint(frequency, levelSPL, channel, attenuation, measuredLevelSPL);
                     break;
 
                 case CalibrationSet.Broadband:
-                    validationResults.Broadband.SetValidationValue(levelHL, channel, expectedRMS, measuredLevelHL);
+                    validationResults.Broadband.SetValidationValue(levelSPL, channel, attenuation, measuredLevelSPL);
                     break;
 
                 default:
@@ -726,18 +730,18 @@ namespace BGC.Audio.Audiometry
         }
 
         public static void PushOscillatorValidationValue(
-            double levelHL,
+            double levelSPL,
             double frequency,
             AudioChannel channel,
             double expectedAttenuation,
-            double measuredLevelHL)
+            double measuredLevelSPL)
         {
             if (validationResults is null)
             {
                 throw new Exception($"Validation not initialized");
             }
 
-            validationResults.Oscillator.SetValidationPoint(frequency, levelHL, channel, expectedAttenuation, measuredLevelHL);
+            validationResults.Oscillator.SetValidationPoint(frequency, levelSPL, channel, expectedAttenuation, measuredLevelSPL);
 
             UpdateValidationProgressFile();
         }

@@ -218,14 +218,7 @@ namespace BGC.Audio
             return Source.Default;
         }
 
-        /// <summary>
-        /// Returns the scale factor per RMS.
-        /// To use, multiple every sample by the output of this divided by the stream RMS.
-        /// </summary>
-        public static (double levelFactorL, double levelFactorR) GetLevelFactors(
-            double levelL,
-            double levelR,
-            Source source = Source.Custom)
+        private static CalibrationValue GetCalibrationValue(Source source)
         {
             CalibrationValue calibrationValue = PlatformDefaultCalibration();
             switch (source)
@@ -255,8 +248,36 @@ namespace BGC.Audio
                     goto case Source.Default;
             }
 
+            return calibrationValue;
+        }
+
+        /// <summary>
+        /// Returns the scale factor per RMS.
+        /// To use, multiple every sample by the output of this divided by the stream RMS.
+        /// </summary>
+        public static (double levelFactorL, double levelFactorR) GetLevelFactors(
+            double levelL,
+            double levelR,
+            Source source = Source.Custom)
+        {
+            CalibrationValue calibrationValue = GetCalibrationValue(source);
+
             return (TARGET_RMS * Math.Pow(10.0, (levelL - calibrationValue.levelLeft) / 20.0),
                 TARGET_RMS * Math.Pow(10.0, (levelR - calibrationValue.levelRight) / 20.0));
+        }
+
+        /// <summary>
+        /// Get the level (in dB) of a given RMS value, assuming that it was achieved by using the
+        /// given calibration.
+        /// </summary>
+        public static double GetIntendedLevel(
+            double rms,
+            AudioChannel channel,
+            Source source = Source.Custom)
+        {
+            CalibrationValue calibrationValue = GetCalibrationValue(source);
+            double calibrationLevel = (channel == AudioChannel.Left) ? calibrationValue.levelLeft : calibrationValue.levelRight;
+            return 20.0 * Math.Log10(rms / TARGET_RMS) + calibrationLevel;
         }
 
         public static (double softLimit, double hardLimit) GetLimitRecommendations(Source source)

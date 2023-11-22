@@ -7,7 +7,7 @@ namespace BGC.Audio.Audiometry
 {
     public class ValidationResults
     {
-        private int CURRENT_VERSION = 2;
+        private int CURRENT_VERSION = 3;
         public int Version { get; }
 
         public DateTime ValidationDate { get; }
@@ -66,6 +66,8 @@ namespace BGC.Audio.Audiometry
             ["Narrowband"] = Narrowband.Serialize(),
             ["Broadband"] = Broadband.Serialize()
         };
+
+        public bool IsLatestVersion => Version == CURRENT_VERSION;
     }
 
     public class ValidationFrequencyCollection
@@ -89,12 +91,12 @@ namespace BGC.Audio.Audiometry
 
         public void SetValidationPoint(
             double frequency,
-            double levelHL,
+            double levelSPL,
             AudioChannel channel,
             double expectedRMS,
-            double measuredLevelHL) =>
+            double measuredLevelSPL) =>
             GetLevelCollection(frequency)
-            .SetValidationValue(levelHL, channel, expectedRMS, measuredLevelHL);
+            .SetValidationValue(levelSPL, channel, expectedRMS, measuredLevelSPL);
 
         private ValidationLevelCollection GetLevelCollection(double frequency)
         {
@@ -186,21 +188,21 @@ namespace BGC.Audio.Audiometry
             }
 
             public void SetValidationValue(
-                double levelHL,
+                double levelSPL,
                 AudioChannel channel,
                 double expectedRMS,
-                double measuredLevelHL)
+                double measuredLevelSPL)
             {
                 switch (channel)
                 {
                     case AudioChannel.Left:
-                        GetValidationPoint(levelHL).LeftExpectedRMS = expectedRMS;
-                        GetValidationPoint(levelHL).LeftLevelHL = measuredLevelHL;
+                        GetValidationPoint(levelSPL).LeftExpectedRMS = expectedRMS;
+                        GetValidationPoint(levelSPL).LeftLevelSPL = measuredLevelSPL;
                         break;
 
                     case AudioChannel.Right:
-                        GetValidationPoint(levelHL).RightExpectedRMS = expectedRMS;
-                        GetValidationPoint(levelHL).RightLevelHL = measuredLevelHL;
+                        GetValidationPoint(levelSPL).RightExpectedRMS = expectedRMS;
+                        GetValidationPoint(levelSPL).RightLevelSPL = measuredLevelSPL;
                         break;
 
                     default:
@@ -209,66 +211,66 @@ namespace BGC.Audio.Audiometry
 
             }
 
-            private ValidationPoint GetValidationPoint(double levelHL)
+            private ValidationPoint GetValidationPoint(double levelSPL)
             {
                 for (int i = 0; i < Points.Count; i++)
                 {
-                    if (Points[i].AttemptedLevelHL == levelHL)
+                    if (Points[i].AttemptedLevelSPL == levelSPL)
                     {
                         //Found target level
                         return Points[i];
                     }
 
-                    if (Points[i].AttemptedLevelHL > levelHL)
+                    if (Points[i].AttemptedLevelSPL > levelSPL)
                     {
                         //Passed target level - create new
-                        Points.Insert(i, new ValidationPoint(levelHL));
+                        Points.Insert(i, new ValidationPoint(levelSPL));
                         return Points[i];
                     }
                 }
 
                 //Reached the end without finding it
-                Points.Add(new ValidationPoint(levelHL));
+                Points.Add(new ValidationPoint(levelSPL));
                 return Points[Points.Count - 1];
             }
 
             public class ValidationPoint
             {
-                public double AttemptedLevelHL { get; }
+                public double AttemptedLevelSPL { get; }
 
                 public double LeftExpectedRMS { get; set; }
                 public double RightExpectedRMS { get; set; }
 
-                public double LeftLevelHL { get; set; }
-                public double RightLevelHL { get; set; }
+                public double LeftLevelSPL { get; set; }
+                public double RightLevelSPL { get; set; }
 
-                public ValidationPoint(double levelHL)
+                public ValidationPoint(double levelSPL)
                 {
-                    AttemptedLevelHL = levelHL;
+                    AttemptedLevelSPL = levelSPL;
 
                     LeftExpectedRMS = double.NaN;
                     RightExpectedRMS = double.NaN;
 
-                    LeftLevelHL = double.NaN;
-                    RightLevelHL = double.NaN;
+                    LeftLevelSPL = double.NaN;
+                    RightLevelSPL = double.NaN;
                 }
 
                 public ValidationPoint(JsonObject data)
                 {
-                    AttemptedLevelHL = data["AttemptedLevelHL"];
+                    AttemptedLevelSPL = data["AttemptedLevelSPL"];
 
                     LeftExpectedRMS = data.ContainsKey("LeftExpectedRMS") ? data["LeftExpectedRMS"].AsNumber : double.NaN;
                     RightExpectedRMS = data.ContainsKey("RightExpectedRMS") ? data["RightExpectedRMS"].AsNumber : double.NaN;
 
-                    LeftLevelHL = data.ContainsKey("LeftLevelHL") ? data["LeftLevelHL"].AsNumber : double.NaN;
-                    RightLevelHL = data.ContainsKey("RightLevelHL") ? data["RightLevelHL"].AsNumber : double.NaN;
+                    LeftLevelSPL = data.ContainsKey("LeftLevelSPL") ? data["LeftLevelSPL"].AsNumber : double.NaN;
+                    RightLevelSPL = data.ContainsKey("RightLevelSPL") ? data["RightLevelSPL"].AsNumber : double.NaN;
                 }
 
                 public JsonObject Serialize()
                 {
                     JsonObject data = new JsonObject()
                     {
-                        ["AttemptedLevelHL"] = AttemptedLevelHL
+                        ["AttemptedLevelSPL"] = AttemptedLevelSPL
                     };
 
                     if (!double.IsNaN(LeftExpectedRMS))
@@ -281,14 +283,14 @@ namespace BGC.Audio.Audiometry
                         data.Add("RightExpectedRMS",RightExpectedRMS);
                     }
 
-                    if (!double.IsNaN(LeftLevelHL))
+                    if (!double.IsNaN(LeftLevelSPL))
                     {
-                        data.Add("LeftLevelHL", LeftLevelHL);
+                        data.Add("LeftLevelSPL", LeftLevelSPL);
                     }
 
-                    if (!double.IsNaN(RightLevelHL))
+                    if (!double.IsNaN(RightLevelSPL))
                     {
-                        data.Add("RightLevelHL", RightLevelHL);
+                        data.Add("RightLevelSPL", RightLevelSPL);
                     }
 
                     return data;

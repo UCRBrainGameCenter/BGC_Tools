@@ -9,7 +9,7 @@ namespace BGC.Audio.Audiometry
 {
     public class CalibrationProfile
     {
-        private int CURRENT_VERSION = 2;
+        private int CURRENT_VERSION = 3;
         public int Version { get; }
 
         public DateTime CalibrationDate { get; }
@@ -67,6 +67,8 @@ namespace BGC.Audio.Audiometry
             ["Broadband"] = Broadband.Serialize()
         };
 
+        public bool IsLatestVersion => Version == CURRENT_VERSION;
+
         public bool IsComplete()
         {
             return Oscillator != null && Oscillator.IsComplete() &&
@@ -75,50 +77,49 @@ namespace BGC.Audio.Audiometry
                 Broadband != null && Broadband.IsComplete();
         }
 
-        public double EstimateRMS(
+        public double EstimateAttenuation(
             AudiometricCalibration.CalibrationSet calibrationSet,
             double frequency,
-            double levelHL,
+            double levelSPL,
             AudioChannel channel)
         {
-            double rmsEstimate = double.NaN;
+            double attenuationEstimate = double.NaN;
 
             switch (calibrationSet)
             {
                 case AudiometricCalibration.CalibrationSet.PureTone:
                     if (PureTone.Points.Count > 0)
                     {
-                        rmsEstimate = PureTone.GetRMS(frequency, levelHL, channel);
+                        attenuationEstimate = PureTone.GetAttenuation(frequency, levelSPL, channel);
 
-                        if (double.IsNaN(rmsEstimate))
+                        if (double.IsNaN(attenuationEstimate))
                         {
-                            rmsEstimate = PureTone.GetRMS(frequency, levelHL, channel.Flip());
+                            attenuationEstimate = PureTone.GetAttenuation(frequency, levelSPL, channel.Flip());
                         }
                     }
 
-                    if (!double.IsNaN(rmsEstimate))
+                    if (!double.IsNaN(attenuationEstimate))
                     {
-                        return rmsEstimate;
+                        return attenuationEstimate;
                     }
 
                     //Gross estimate to start with
-                    double levelSPL = TransducerProfile.GetSPL(frequency, levelHL);
-                    return (1.0 / 32.0) * Math.Pow(10.0, (levelSPL - 91.0) / 20.0);
+                    return 91.0 - levelSPL;
 
                 case AudiometricCalibration.CalibrationSet.Narrowband:
                     if (Narrowband.Points.Count > 0)
                     {
-                        rmsEstimate = Narrowband.GetRMS(frequency, levelHL, channel);
+                        attenuationEstimate = Narrowband.GetAttenuation(frequency, levelSPL, channel);
 
-                        if (double.IsNaN(rmsEstimate))
+                        if (double.IsNaN(attenuationEstimate))
                         {
-                            rmsEstimate = Narrowband.GetRMS(frequency, levelHL, channel.Flip());
+                            attenuationEstimate = Narrowband.GetAttenuation(frequency, levelSPL, channel.Flip());
                         }
                     }
 
-                    if (!double.IsNaN(rmsEstimate))
+                    if (!double.IsNaN(attenuationEstimate))
                     {
-                        return rmsEstimate;
+                        return attenuationEstimate;
                     }
                     goto case AudiometricCalibration.CalibrationSet.PureTone;
 
@@ -126,17 +127,17 @@ namespace BGC.Audio.Audiometry
                     frequency = 2000.0;
                     if (Broadband.Points.Count > 0)
                     {
-                        rmsEstimate = Broadband.GetRMS(levelHL, channel);
+                        attenuationEstimate = Broadband.GetAttenuation(levelSPL, channel);
 
-                        if (double.IsNaN(rmsEstimate))
+                        if (double.IsNaN(attenuationEstimate))
                         {
-                            rmsEstimate = Broadband.GetRMS(levelHL, channel.Flip());
+                            attenuationEstimate = Broadband.GetAttenuation(levelSPL, channel.Flip());
                         }
                     }
 
-                    if (!double.IsNaN(rmsEstimate))
+                    if (!double.IsNaN(attenuationEstimate))
                     {
-                        return rmsEstimate;
+                        return attenuationEstimate;
                     }
                     goto case AudiometricCalibration.CalibrationSet.Narrowband;
 
@@ -146,22 +147,22 @@ namespace BGC.Audio.Audiometry
             }
         }
 
-        public double GetRMS(
+        public double GetAttenuation(
             AudiometricCalibration.CalibrationSet calibrationSet,
             double frequency,
-            double levelHL,
+            double levelSPL,
             AudioChannel channel)
         {
             switch (calibrationSet)
             {
                 case AudiometricCalibration.CalibrationSet.PureTone:
-                    return PureTone.GetRMS(frequency, levelHL, channel);
+                    return PureTone.GetAttenuation(frequency, levelSPL, channel);
 
                 case AudiometricCalibration.CalibrationSet.Narrowband:
-                    return Narrowband.GetRMS(frequency, levelHL, channel);
+                    return Narrowband.GetAttenuation(frequency, levelSPL, channel);
 
                 case AudiometricCalibration.CalibrationSet.Broadband:
-                    return Broadband.GetRMS(levelHL, channel);
+                    return Broadband.GetAttenuation(levelSPL, channel);
 
                 default:
                     UnityEngine.Debug.LogError($"Unsupported CalibrationSet: {calibrationSet}");
@@ -171,23 +172,23 @@ namespace BGC.Audio.Audiometry
 
         public double GetOscillatorAttenuation(
             double frequency,
-            double levelHL,
-            AudioChannel channel) => Oscillator.GetOscillatorAttenuation(frequency, levelHL, channel);
+            double levelSPL,
+            AudioChannel channel) => Oscillator.GetOscillatorAttenuation(frequency, levelSPL, channel);
 
         public double EstimateOscillatorAttenuation(
             double frequency,
-            double levelHL,
+            double levelSPL,
             AudioChannel channel)
         {
             double oscillatorEstimate = double.NaN;
 
             if (Oscillator.Points.Count > 0)
             {
-                oscillatorEstimate = Oscillator.GetOscillatorAttenuation(frequency, levelHL, channel);
+                oscillatorEstimate = Oscillator.GetOscillatorAttenuation(frequency, levelSPL, channel);
 
                 if (double.IsNaN(oscillatorEstimate))
                 {
-                    oscillatorEstimate = Oscillator.GetOscillatorAttenuation(frequency, levelHL, channel.Flip());
+                    oscillatorEstimate = Oscillator.GetOscillatorAttenuation(frequency, levelSPL, channel.Flip());
                 }
             }
 
@@ -197,7 +198,6 @@ namespace BGC.Audio.Audiometry
             }
 
             //Gross estimate to start with
-            double levelSPL = TransducerProfile.GetSPL(frequency, levelHL);
             return 130 - levelSPL;
         }
     }
@@ -229,11 +229,11 @@ namespace BGC.Audio.Audiometry
 
         public void SetCalibrationPoint(
             double frequency,
-            double levelHL,
+            double levelSPL,
             AudioChannel channel,
-            double rms) =>
+            double attenuation) =>
             GetLevelCollection(frequency)
-            .SetCalibrationValue(levelHL, channel, rms);
+            .SetCalibrationValue(levelSPL, channel, attenuation);
 
         private LevelCollection GetLevelCollection(double frequency)
         {
@@ -286,18 +286,18 @@ namespace BGC.Audio.Audiometry
             return points;
         }
 
-        public double GetRMS(double frequency, double levelHL, AudioChannel channel)
+        public double GetAttenuation(double frequency, double levelSPL, AudioChannel channel)
         {
             //Find Frequency
 
             if (frequency <= Points[0].Frequency)
             {
-                return Points[0].Levels.GetRMS(levelHL, channel);
+                return Points[0].Levels.GetAttenuation(levelSPL, channel);
             }
 
             if (frequency >= Points[Points.Count - 1].Frequency)
             {
-                return Points[Points.Count - 1].Levels.GetRMS(levelHL, channel);
+                return Points[Points.Count - 1].Levels.GetAttenuation(levelSPL, channel);
             }
 
             //Frequency is between the upper and lower bounds of the FrequencyPoints
@@ -316,31 +316,41 @@ namespace BGC.Audio.Audiometry
             //Could be equal to the lowerbound
             if (frequency == Points[upperBound - 1].Frequency)
             {
-                return Points[upperBound - 1].Levels.GetRMS(levelHL, channel);
+                return Points[upperBound - 1].Levels.GetAttenuation(levelSPL, channel);
             }
             else
             {
-                //Interpolation will be Exponential on the input (Octave-scale) and Linear on the output
-                double t = Math.Log(frequency / Points[upperBound - 1].Frequency) /
-                    Math.Log(Points[upperBound].Frequency / Points[upperBound - 1].Frequency);
+                // Interpolate between two adjacent FrequencyPoints
+                double freqLower = Points[upperBound - 1].Frequency;
+                double freqUpper = Points[upperBound].Frequency;
 
-                double lowerBoundRMS = Points[upperBound - 1].Levels.GetRMS(levelHL, channel);
-                double upperBoundRMS = Points[upperBound].Levels.GetRMS(levelHL, channel);
+                // Get the attenuation at the lower and upper bounds
+                double lowerBoundAttenuationDB = Points[upperBound - 1].Levels.GetAttenuation(levelSPL, channel);
+                double upperBoundAttenuationDB = Points[upperBound].Levels.GetAttenuation(levelSPL, channel);
 
-                return GeneralMath.Lerp(lowerBoundRMS, upperBoundRMS, t);
+                // Convert to linear scale
+                double lowerBoundAttenuationLinear = Math.Pow(10, lowerBoundAttenuationDB / 20.0);
+                double upperBoundAttenuationLinear = Math.Pow(10, upperBoundAttenuationDB / 20.0);
+
+                // Interpolate linearly between the two bounds, but use a logarithmic scale due to the frequency domain
+                double t = Math.Log(frequency / freqLower) / Math.Log(freqUpper / freqLower);
+                double attenuationLinear = GeneralMath.Lerp(lowerBoundAttenuationLinear, upperBoundAttenuationLinear, t);
+
+                double attenuationDB = 20.0 * Math.Log10(attenuationLinear);
+                return attenuationDB;
             }
         }
 
         public void SetOscillatorCalibrationPoint(
             double frequency,
-            double levelHL,
+            double levelSPL,
             AudioChannel channel,
             double attenuation) =>
             GetLevelCollection(frequency)
-            .SetCalibrationValue(levelHL, channel, AudiometricCalibration.ConvertOscillatorAttenuationToRMS(attenuation));
+            .SetCalibrationValue(levelSPL, channel, attenuation);
 
-        public double GetOscillatorAttenuation(double frequency, double levelHL, AudioChannel channel) =>
-            AudiometricCalibration.ConvertOscillatorRMSToAttenuation(GetRMS(frequency, levelHL, channel));
+        public double GetOscillatorAttenuation(double frequency, double levelSPL, AudioChannel channel) =>
+            GetAttenuation(frequency, levelSPL, channel);
 
         public class FrequencyPoint
         {
@@ -408,18 +418,18 @@ namespace BGC.Audio.Audiometry
         }
 
         public void SetCalibrationValue(
-            double levelHL,
+            double levelSPL,
             AudioChannel channel,
-            double rms)
+            double attenuation)
         {
             switch (channel)
             {
                 case AudioChannel.Left:
-                    GetCalibrationPoint(levelHL).LeftRMS = rms;
+                    GetCalibrationPoint(levelSPL).LeftAttenuation = attenuation;
                     break;
 
                 case AudioChannel.Right:
-                    GetCalibrationPoint(levelHL).RightRMS = rms;
+                    GetCalibrationPoint(levelSPL).RightAttenuation = attenuation;
                     break;
 
                 default:
@@ -428,35 +438,35 @@ namespace BGC.Audio.Audiometry
 
         }
 
-        private CalibrationPoint GetCalibrationPoint(double levelHL)
+        private CalibrationPoint GetCalibrationPoint(double levelSPL)
         {
             for (int i = 0; i < Points.Count; i++)
             {
-                if (Points[i].LevelHL == levelHL)
+                if (Points[i].LevelSPL == levelSPL)
                 {
                     //Found target level
                     return Points[i];
                 }
 
-                if (Points[i].LevelHL > levelHL)
+                if (Points[i].LevelSPL > levelSPL)
                 {
                     //Passed target level - create new
-                    Points.Insert(i, new CalibrationPoint(levelHL));
+                    Points.Insert(i, new CalibrationPoint(levelSPL));
                     return Points[i];
                 }
             }
 
             //Reached the end without finding it
-            Points.Add(new CalibrationPoint(levelHL));
+            Points.Add(new CalibrationPoint(levelSPL));
             return Points[Points.Count - 1];
         }
 
-        public bool TryGetCalibrationPoint(double levelHL, out CalibrationPoint calibrationPoint)
+        public bool TryGetCalibrationPoint(double levelSPL, out CalibrationPoint calibrationPoint)
         {
             calibrationPoint = null;
             for (int i = 0; i < Points.Count; i++)
             {
-                if (Points[i].LevelHL == levelHL)
+                if (Points[i].LevelSPL == levelSPL)
                 {
                     //Found target level
                     calibrationPoint = Points[i];
@@ -467,9 +477,9 @@ namespace BGC.Audio.Audiometry
             return false;
         }
 
-        public double GetRMS(double levelHL, AudioChannel channel)
+        public double GetAttenuation(double levelSPL, AudioChannel channel)
         {
-            List<CalibrationPoint> validPoints = Points.Where(x => !double.IsNaN(x.GetRMS(channel))).ToList();
+            List<CalibrationPoint> validPoints = Points.Where(x => !double.IsNaN(x.GetAttenuation(channel))).ToList();
 
             if (validPoints.Count == 0)
             {
@@ -477,25 +487,27 @@ namespace BGC.Audio.Audiometry
             }
 
             //Check below min
-            if (levelHL < validPoints[0].LevelHL)
+            if (levelSPL < validPoints[0].LevelSPL)
             {
-                double additionalFactor = Math.Pow(10, (levelHL - validPoints[0].LevelHL) / 20.0);
-                return additionalFactor * validPoints[0].GetRMS(channel);
+                // Add additional attenuation to the first point
+                double additionalAttenuationDB = validPoints[0].LevelSPL - levelSPL;
+                return validPoints[0].GetAttenuation(channel) + additionalAttenuationDB;
             }
-            else if (levelHL == validPoints[0].LevelHL)
+            else if (levelSPL == validPoints[0].LevelSPL)
             {
-                return validPoints[0].GetRMS(channel);
+                return validPoints[0].GetAttenuation(channel);
             }
 
             //Check above max
-            if (levelHL > validPoints[validPoints.Count - 1].LevelHL)
+            if (levelSPL > validPoints[validPoints.Count - 1].LevelSPL)
             {
-                double additionalFactor = Math.Pow(10, (levelHL - validPoints[validPoints.Count - 1].LevelHL) / 20.0);
-                return additionalFactor * validPoints[validPoints.Count - 1].GetRMS(channel);
+                // Subtract additional attenuation from the last point
+                double additionalAttenuationDB = levelSPL - validPoints[validPoints.Count - 1].LevelSPL;
+                return validPoints[validPoints.Count - 1].GetAttenuation(channel) - additionalAttenuationDB;
             }
-            else if (levelHL == validPoints[validPoints.Count - 1].LevelHL)
+            else if (levelSPL == validPoints[validPoints.Count - 1].LevelSPL)
             {
-                return validPoints[validPoints.Count - 1].GetRMS(channel);
+                return validPoints[validPoints.Count - 1].GetAttenuation(channel);
             }
 
             //Level is between upper and lower bounds of the levels
@@ -504,66 +516,71 @@ namespace BGC.Audio.Audiometry
 
             for (upperBound = 1; upperBound < validPoints.Count - 1; upperBound++)
             {
-                if (levelHL < validPoints[upperBound].LevelHL)
+                if (levelSPL < validPoints[upperBound].LevelSPL)
                 {
-                    //Found the first LevelHL larger than the target level
+                    //Found the first LevelSPL larger than the target level
                     break;
                 }
             }
 
-            if (levelHL == validPoints[upperBound - 1].LevelHL)
+            int lowerBound = upperBound - 1;
+
+            double lowerBoundSPL = validPoints[lowerBound].LevelSPL;
+            double upperBoundSPL = validPoints[upperBound].LevelSPL;
+
+            if (levelSPL == lowerBoundSPL)
             {
                 //Equal to the lowerbound
-                return validPoints[upperBound - 1].GetRMS(channel);
+                return validPoints[lowerBound].GetAttenuation(channel);
             }
             else
             {
-                //Interpolate exponentially between two adjacent RMS values
-
-                //The progression parameter is determined linearly
-                double t = (levelHL - validPoints[upperBound - 1].LevelHL) / (validPoints[upperBound].LevelHL - validPoints[upperBound - 1].LevelHL);
-                return Math.Pow(validPoints[upperBound - 1].GetRMS(channel), 1 - t) * Math.Pow(validPoints[upperBound].GetRMS(channel), t);
+                //Interpolate linearly between two adjacent attenuation values
+                double t = (levelSPL - lowerBoundSPL) / (upperBoundSPL - lowerBoundSPL);
+                double lowerBoundAttenuation = validPoints[lowerBound].GetAttenuation(channel);
+                double upperBoundAttenuation = validPoints[upperBound].GetAttenuation(channel);
+                return GeneralMath.Lerp(lowerBoundAttenuation, upperBoundAttenuation, t);
             }
         }
 
         public class CalibrationPoint
         {
-            public double LevelHL { get; }
+            public double LevelSPL { get; }
 
-            public double LeftRMS { get; set; }
-            public double RightRMS { get; set; }
+            public double LeftAttenuation { get; set; }
+            public double RightAttenuation { get; set; }
 
-            public CalibrationPoint(double levelHL)
+            public CalibrationPoint(double levelSPL)
             {
-                LevelHL = levelHL;
+                LevelSPL = levelSPL;
 
-                LeftRMS = double.NaN;
-                RightRMS = double.NaN;
+                LeftAttenuation = double.NaN;
+                RightAttenuation = double.NaN;
             }
 
             public CalibrationPoint(JsonObject data)
             {
-                LevelHL = data["LevelHL"];
+                LevelSPL = data["LevelSPL"];
 
-                LeftRMS = data.ContainsKey("LeftRMS") ? data["LeftRMS"].AsNumber : double.NaN;
-                RightRMS = data.ContainsKey("RightRMS") ? data["RightRMS"].AsNumber : double.NaN;
+                LeftAttenuation = data.ContainsKey("LeftAttenuation") ? data["LeftAttenuation"].AsNumber : double.NaN;
+                RightAttenuation = data.ContainsKey("RightAttenuation") ? data["RightAttenuation"].AsNumber : double.NaN;
             }
 
             public bool IsComplete()
             {
-                return double.IsFinite(LeftRMS) && double.IsFinite(RightRMS);
+                return double.IsFinite(LeftAttenuation) && double.IsFinite(RightAttenuation);
             }
 
-            public double GetRMS(AudioChannel channel)
+            public double GetAttenuation(AudioChannel channel)
             {
                 switch (channel)
                 {
-                    case AudioChannel.Left: return LeftRMS;
-                    case AudioChannel.Right: return RightRMS;
+                    case AudioChannel.Left: return LeftAttenuation;
+                    case AudioChannel.Right: return RightAttenuation;
 
                     case AudioChannel.Both:
                     default:
-                        throw new Exception($"Unexpected AudioChannel for GetRMS: {channel}");
+                        throw new Exception($"Unexpected AudioChannel for GetAttenuation: {channel}");
                 }
             }
 
@@ -571,17 +588,17 @@ namespace BGC.Audio.Audiometry
             {
                 JsonObject data = new JsonObject()
                 {
-                    ["LevelHL"] = LevelHL
+                    ["LevelSPL"] = LevelSPL
                 };
 
-                if (!double.IsNaN(LeftRMS))
+                if (!double.IsNaN(LeftAttenuation))
                 {
-                    data.Add("LeftRMS", LeftRMS);
+                    data.Add("LeftAttenuation", LeftAttenuation);
                 }
 
-                if (!double.IsNaN(RightRMS))
+                if (!double.IsNaN(RightAttenuation))
                 {
-                    data.Add("RightRMS", RightRMS);
+                    data.Add("RightAttenuation", RightAttenuation);
                 }
 
                 return data;

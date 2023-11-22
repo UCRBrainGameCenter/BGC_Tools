@@ -37,15 +37,21 @@ namespace BGC.Audio.Audiometry
                     $"Requested Level: {dbHL} dB");
             }
 
+            // Look up the SPL level for the given HL level
+            double dbSPL = AudiometricCalibration.GetLevelSPL(
+                calibrationSource: source,
+                frequency: calibrationFrequency,
+                levelHL: dbHL);
+
             factorL = AudiometricCalibration.GetLevelRMS(
-                levelHL: dbHL,
+                levelSPL: dbSPL,
                 calibrationSet: calibrationSet,
                 calibrationFrequency: calibrationFrequency,
                 channel: AudioChannel.Left,
                 source: source);
 
             factorR = AudiometricCalibration.GetLevelRMS(
-                levelHL: dbHL,
+                levelSPL: dbSPL,
                 calibrationSet: calibrationSet,
                 calibrationFrequency: calibrationFrequency,
                 channel: AudioChannel.Right,
