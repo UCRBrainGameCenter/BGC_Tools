@@ -98,8 +98,10 @@ namespace BGC.IO.Compression
 
             try
             {
-                using ZipArchive archive = ZipFile.Open(inputFilePath, ZipArchiveMode.Read);
-                DecompressFallback(archive, outputPath);
+                using (ZipArchive archive = ZipFile.Open(inputFilePath, ZipArchiveMode.Read))
+                {
+                    DecompressFallback(archive, outputPath);
+                }
 
                 return true;
             }
