@@ -295,6 +295,82 @@ namespace BGC.Web.Utility
                 abortToken);
         }
 
+        /// <summary> Send a post request that expects a file download in response. </summary>
+        /// <param name="url">The URL to send request to.</param>
+        /// <param name="headers">Headers to send in the request, if any.</param>
+        /// <param name="body">Stringified body to send in the request.</param>
+        /// <param name="contentType">Content type the client expects in response.</param>
+        /// <param name="absoluteFilePath">
+        /// Absolute path on the local device where the file should be downloaded to.
+        /// </param>
+        /// <param name="callBack">false means there was a local parsing error</param>
+        /// <param name="timeoutInSeconds">
+        /// The amount of time, in seconds, to wait before timing out. If set to 0, there is no timeout.
+        /// </param>
+        public static void PostRequestWithFileDownload(
+            string url,
+            IDictionary<string, string> headers,
+            string body,
+            string contentType,
+            string absoluteFilePath,
+            Action<WebRequestResponseWithHandler> callBack = null,
+            int timeoutInSeconds = 0)
+        {
+            DownloadHandlerFile fileHandler = new DownloadHandlerFile(absoluteFilePath)
+            {
+                removeFileOnAbort = true
+            };
+            
+            CoroutineUtility.Mono.StartCoroutine(RunPostWithFileDownload(
+                url,
+                headers,
+                body,
+                contentType,
+                fileHandler,
+                callBack,
+                timeoutInSeconds));
+        }
+
+        /// <summary> Send a post request that expects a file download in response. </summary>
+        /// <param name="url">The URL to send request to.</param>
+        /// <param name="headers">Headers to send in the request, if any.</param>
+        /// <param name="body">Stringified body to send in the request.</param>
+        /// <param name="contentType">Content type the client expects in response.</param>
+        /// <param name="absoluteFilePath">
+        /// Absolute path on the local device where the file should be downloaded to.
+        /// </param>
+        /// <param name="callBack">false means there was a local parsing error</param>
+        /// <param name="timeoutInSeconds">
+        /// The amount of time, in seconds, to wait before timing out. If set to 0, there is no timeout.
+        /// </param>
+        public static async Task<WebRequestResponseWithHandler> PostRequestWithFileDownloadAsync(
+            string url,
+            IDictionary<string, string> headers,
+            string body,
+            string contentType,
+            string absoluteFilePath,
+            int timeoutInSeconds = 0,
+            IProgress<float> progressReporter = null,
+            int maxRetries = 0,
+            CancellationToken abortToken = default)
+        {
+            DownloadHandlerFile fileHandler = new DownloadHandlerFile(absoluteFilePath)
+            {
+                removeFileOnAbort = true
+            };
+            
+            return await RunPostWithFileDownloadAsync(
+                url,
+                headers,
+                body,
+                contentType,
+                fileHandler,
+                timeoutInSeconds,
+                maxRetries,
+                progressReporter: progressReporter,
+                abortToken: abortToken);
+        }
+
         /// <summary>
         /// Send a post request
         /// </summary>
@@ -772,6 +848,92 @@ namespace BGC.Web.Utility
             {
                 using UnityWebRequest request = CreatePostRequest(url, headers, body, contentType, timeoutInSeconds);
 
+                return await ExecuteWebRequestWithHandler(request, abortToken, maxRetries, progressReporter);
+            }
+            finally
+            {
+                RestRequestThrottler.EndRequest(HttpMethod.Post);
+            }
+        }
+
+        /// <summary>
+        /// Run post request
+        /// </summary>
+        /// <param name="url">The URL to send the request to.</param>
+        /// <param name="headers">The headers to attach to the request.</param>
+        /// <param name="body">Stringified body to send in the request.</param>
+        /// <param name="contentType">Content type the client expects in return</param>
+        /// <param name="downloadHandler">File download handler to use.</param>
+        /// <param name="callBack">Code to execute when request finishes. Sends back response object.</param>
+        /// <param name="timeoutInSeconds">
+        /// Optional timeout for the request. If set to 0, then there is no timeout behavior.
+        /// </param>
+        private static IEnumerator RunPostWithFileDownload(
+            string url,
+            IDictionary<string, string> headers,
+            string body,
+            string contentType,
+            DownloadHandlerFile downloadHandler,
+            Action<WebRequestResponseWithHandler> callBack,
+            int timeoutInSeconds = 0)
+        {
+            yield return RestRequestThrottler.TrySubmitRequestCoroutine(HttpMethod.Post);
+            
+            using UnityWebRequest request = CreatePostRequest(url, headers, body, contentType, timeoutInSeconds);
+            request.downloadHandler = downloadHandler;
+            request.disposeDownloadHandlerOnDispose = true;
+            yield return request.SendWebRequest();
+            
+            RestRequestThrottler.EndRequest(HttpMethod.Post);
+            if (!string.IsNullOrEmpty(request.error) || request.result != UnityWebRequest.Result.Success)
+            {
+                WebRequestResponseWithHandler resp = new WebRequestResponseWithHandler(
+                    statusCode: request.responseCode,
+                    error: request.error,
+                    request.result);
+                    
+                callBack?.Invoke(resp);
+            }
+            else
+            {
+                WebRequestResponseWithHandler resp = new WebRequestResponseWithHandler(request);
+                request.Dispose();
+                    
+                callBack?.Invoke(resp);
+            }
+        }
+
+        /// <summary>Run async POST request</summary>
+        /// <param name="url">The URL to send the request to.</param>
+        /// <param name="headers">The headers to attach to the request.</param>
+        /// <param name="body">Stringified body to send in the request.</param>
+        /// <param name="contentType">Content type the client expects in response.</param>
+        /// <param name="downloadHandler">File download handler to use.</param>
+        /// <param name="timeoutInSeconds">
+        /// Optional timeout for the request. If set to 0, then there is no timeout behavior.
+        /// </param>
+        /// <param name="maxRetries">Max number of retries to do before failing.</param>
+        /// <param name="progressReporter">Progress reporter for the download.</param>
+        /// <param name="abortToken">Cancellation token for the request.</param>
+        private static async Task<WebRequestResponseWithHandler> RunPostWithFileDownloadAsync(
+            string url,
+            IDictionary<string, string> headers,
+            string body,
+            string contentType,
+            DownloadHandlerFile downloadHandler,
+            int timeoutInSeconds = 0,
+            int maxRetries = 0,
+            IProgress<float> progressReporter = null,
+            CancellationToken abortToken = default)
+        {
+            await WaitForAvailableRequestSlot(HttpMethod.Post, abortToken);
+
+            try
+            {
+                using UnityWebRequest request = CreatePostRequest(url, headers, body, contentType, timeoutInSeconds);
+                request.downloadHandler = downloadHandler;
+                request.disposeDownloadHandlerOnDispose = true;
+                
                 return await ExecuteWebRequestWithHandler(request, abortToken, maxRetries, progressReporter);
             }
             finally

@@ -73,7 +73,24 @@ namespace BGC.Web
                 ? ""
                 : request.error;
 
-            this.DownloadBytes = request.downloadHandler?.data ?? Array.Empty<byte>();
+            if (request.downloadHandler != null)
+            {
+                if (request.downloadHandler is DownloadHandlerFile)
+                {
+                    // For DownloadHandlerFile, raw data cannot be read so set as empty.
+                    DownloadBytes = Array.Empty<byte>();
+                }
+                else
+                {
+                    // For other download handlers, access the data directly
+                    DownloadBytes = request.downloadHandler?.data ?? Array.Empty<byte>();
+                }
+            }
+            else
+            {
+                DownloadBytes = Array.Empty<byte>();
+            }
+
             this.UploadBytes = request.uploadHandler?.data ?? Array.Empty<byte>();
             this.Result = request.result;
             
