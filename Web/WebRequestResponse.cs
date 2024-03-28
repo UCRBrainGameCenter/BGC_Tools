@@ -1,5 +1,4 @@
-﻿using System;
-using UnityEngine.Networking;
+﻿using UnityEngine.Networking;
 
 namespace BGC.Web
 {
@@ -30,11 +29,23 @@ namespace BGC.Web
             switch (request.responseCode)
             {
                 case 200:
+                case 201:
+                case 202:
+                case 203:
                 case 204:
                     this.DetailedErrorMessage = "";
                     break;
                 default:
-                    this.DetailedErrorMessage = request.downloadHandler?.text ?? "";
+                    if (request.downloadHandler?.GetType() != typeof(DownloadHandlerFile))
+                    {
+                        this.DetailedErrorMessage = request.downloadHandler?.text ?? "";
+                    }
+                    else
+                    {
+                        DownloadHandlerFile downloadHandlerFile = (DownloadHandlerFile)request.downloadHandler;
+                        this.DetailedErrorMessage = downloadHandlerFile?.error;
+                    }
+
                     break;
             }
         }
