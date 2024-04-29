@@ -14,6 +14,8 @@ namespace BGC.Audio.Audiometry
 
         public DateTime CalibrationDate { get; }
 
+        public FilterBehavior FilterBehavior { get; }
+
         public TransducerProfile TransducerProfile { get; }
 
         public FrequencyCollection Oscillator { get; }
@@ -21,11 +23,13 @@ namespace BGC.Audio.Audiometry
         public FrequencyCollection Narrowband { get; }
         public LevelCollection Broadband { get; }
 
-        public CalibrationProfile(TransducerProfile transducerProfile)
+        public CalibrationProfile(TransducerProfile transducerProfile, FilterBehavior filterBehavior)
         {
             Version = CURRENT_VERSION;
 
             CalibrationDate = DateTime.Now;
+
+            FilterBehavior = filterBehavior;
 
             TransducerProfile = transducerProfile;
 
@@ -40,6 +44,15 @@ namespace BGC.Audio.Audiometry
             Version = data.ContainsKey("Version") ? data["Version"].AsInteger : 1;
 
             CalibrationDate = data["CalibrationDate"].AsDateTime.Value;
+
+            if (data.ContainsKey("FilterBehavior"))
+            {
+                FilterBehavior = DeserializeFilterBehavior(data["FilterBehavior"].AsString);
+            }
+            else
+            {
+                FilterBehavior = FilterBehavior.PureToneForHighFrequencies;
+            }
 
             TransducerProfile = new TransducerProfile(data["Transducer"]);
 
@@ -58,6 +71,8 @@ namespace BGC.Audio.Audiometry
             ["Version"] = Version,
 
             ["CalibrationDate"] = CalibrationDate,
+
+            ["FilterBehavior"] = SerializeFilterBehavior(FilterBehavior),
 
             ["Transducer"] = TransducerProfile.Serialize(),
 
@@ -200,6 +215,18 @@ namespace BGC.Audio.Audiometry
             //Gross estimate to start with
             return 130 - levelSPL;
         }
+
+        private static string SerializeFilterBehavior(FilterBehavior filterBehavior) => filterBehavior switch
+        {
+            FilterBehavior.PureToneForHighFrequencies => "PureToneForHighFrequencies",
+            _ => "AlwaysNarrowband",
+        };
+
+        private static FilterBehavior DeserializeFilterBehavior(string filterBehavior) => filterBehavior switch
+        {
+            "PureToneForHighFrequencies" => FilterBehavior.PureToneForHighFrequencies,
+            _ => FilterBehavior.AlwaysNarrowband,
+        };
     }
 
 

@@ -9,6 +9,13 @@ using UnityEngine;
 
 namespace BGC.Audio.Audiometry
 {
+    public enum FilterBehavior
+    {
+        AlwaysNarrowband,
+        PureToneForHighFrequencies,
+        MAX
+    }
+
     /// <summary>
     /// Manages calibration values and processes
     /// </summary>
@@ -102,6 +109,8 @@ namespace BGC.Audio.Audiometry
             PlayerData.GlobalData.SetDouble(ErrorThresholdKey, calibrationErrorThreshold);
             PlayerData.Save();
         }
+
+        public static FilterBehavior GetCalibrationFilterBehavior() => customCalibration != null ? customCalibration.FilterBehavior : FilterBehavior.AlwaysNarrowband;
 
         // Load all calibration data in the data directory
         private static void LoadAllCalibrationFiles()
@@ -376,9 +385,9 @@ namespace BGC.Audio.Audiometry
             }
         }
 
-        public static void InitiateCalibration(TransducerProfile transducerProfile)
+        public static void InitiateCalibration(TransducerProfile transducerProfile, FilterBehavior filterBehavior)
         {
-            calibrationResults = new CalibrationProfile(transducerProfile);
+            calibrationResults = new CalibrationProfile(transducerProfile, filterBehavior);
             incompleteCalibration = calibrationResults;
             incompleteCalibrationDate = calibrationResults.CalibrationDate;
         }
