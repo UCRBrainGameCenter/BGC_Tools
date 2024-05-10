@@ -1052,6 +1052,23 @@ namespace BGC.Parameters
             return newPropertyGroup;
         }
 
+        /// <summary>
+        /// Clone the PropertyGroup and all its serialized properties.
+        /// The cloned PropertyGroup will not have a parent.
+        /// </summary>
+        /// <param name="propertyGroup"></param>
+        /// <returns></returns>
+        public static T Clone<T>(this T propertyGroup) where T : class, IPropertyGroup
+        {
+            JsonObject serializedData = propertyGroup.Serialize();
+            Type type = propertyGroup.GetType();
+
+            T newPropertyGroup = Activator.CreateInstance(type) as T;
+            newPropertyGroup.Deserialize(serializedData);
+
+            return newPropertyGroup;
+        }
+
         public static string GetInitializableFieldName(this PropertyInfo propertyInfo) =>
             propertyInfo.GetCustomAttribute<DisplayInputFieldAttribute>()?.fieldName ??
             propertyInfo.GetCustomAttribute<DisplayOutputFieldKeyAttribute>()?.fieldName ?? "";
