@@ -18,6 +18,7 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
     [BoolDisplay("NarrowOnInvalidScan", "Narrow on Invalid Scan", false)]
     [IntFieldDisplay("ThresholdScanCount", "Threshold Scan Count", initial: 1, minimum: 1)]
     [BoolDisplay("NarrowingTermination", "Stop At Max Narrowing", true)]
+    [IntFieldDisplay("NonAdaptiveScansCount", "Non-Adaptive Scans Count", initial: 0, minimum: 0)]
     public class AdaptiveScanAlgorithm : AlgorithmBase, IBinaryOutcomeAlgorithm
     {
         [DisplayInputField("Steps")]
@@ -34,6 +35,9 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
 
         [DisplayInputField("ThresholdScanCount")]
         public int ThresholdScanCount { get; set; }
+
+        [DisplayInputField("NonAdaptiveScansCount")]
+        public int NonAdaptiveScansCount { get; set; }
 
         [AppendSelection(
             typeof(ScalarNarrowBehavior),
@@ -84,6 +88,7 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
         private int stepSize;
         private int scanStartStep;
         private int scanCount;
+        private int nonAdaptiveScansCount;
 
         private List<int> curScanSteps;
 
@@ -99,6 +104,7 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
             stepSize = InitialStepSize;
             scanStartStep = 0;
             scanCount = 0;
+            nonAdaptiveScansCount = NonAdaptiveScansCount;
             exceededMaxNarrowing = false;
             thresholdList.Clear();
 
@@ -139,42 +145,50 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
                 // Store the threshold for this scan
                 thresholdList.Add(newThresholdStep);
 
-                int newScanStartStep = scanStartStep;
-                if (stepThreshold < 2.0)
+                if (nonAdaptiveScansCount <= 0)
                 {
-                    //Slide Up
-                    newScanStartStep -= (stepSize * curScanSteps.Count) / 2;
-                }
-                else if (stepThreshold >= trial - 1)
-                {
-                    //Slide Down
-                    newScanStartStep += (stepSize * curScanSteps.Count) / 2;
+                    int newScanStartStep = scanStartStep;
+                    if (stepThreshold < 2.0)
+                    {
+                        //Slide Up
+                        newScanStartStep -= (stepSize * curScanSteps.Count) / 2;
+                    }
+                    else if (stepThreshold >= trial - 1)
+                    {
+                        //Slide Down
+                        newScanStartStep += (stepSize * curScanSteps.Count) / 2;
+                    }
+                    else
+                    {
+                        //Narrow
+                        Narrow();
+
+                        newScanStartStep = (int)Math.Round(newThresholdStep - stepSize * (curScanSteps.Count - 1) / 2.0);
+                    }
+
+                    // Clamp the scan start to the configured bounds
+                    newScanStartStep = ClampStep(scanStartStep, newScanStartStep);
+
+                    // Clamp the distance of the slide
+                    int distance = newScanStartStep - scanStartStep;
+                    int distanceAbs = Math.Abs(distance);
+                    int distanceSign = Math.Sign(distance);
+                    if (distanceAbs > MaximumSlideDistance)
+                    {
+                        newScanStartStep = scanStartStep + MaximumSlideDistance * distanceSign;
+                    }
+
+                    // Store the new scan start
+                    scanStartStep = newScanStartStep;
+
+                    // Generate the new scan
+                    curScanSteps = GenerateScanWithNarrowing();
                 }
                 else
                 {
-                    //Narrow
-                    Narrow();
-
-                    newScanStartStep = (int)Math.Round(newThresholdStep - stepSize * (curScanSteps.Count - 1) / 2.0);
+                    nonAdaptiveScansCount--;
                 }
 
-                // Clamp the scan start to the configured bounds
-                newScanStartStep = ClampStep(scanStartStep, newScanStartStep);
-
-                // Clamp the distance of the slide
-                int distance = newScanStartStep - scanStartStep;
-                int distanceAbs = Math.Abs(distance);
-                int distanceSign = Math.Sign(distance);
-                if (distanceAbs > MaximumSlideDistance)
-                {
-                    newScanStartStep = scanStartStep + MaximumSlideDistance * distanceSign;
-                }
-
-                // Store the new scan start
-                scanStartStep = newScanStartStep;
-
-                // Generate the new scan
-                curScanSteps = GenerateScanWithNarrowing();
                 scanCount++;
                 trial = 0;
                 correctCount = 0;

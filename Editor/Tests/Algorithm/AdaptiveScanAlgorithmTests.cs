@@ -94,6 +94,7 @@ namespace BGC.Tests
                 InitialStepSize = 8,
                 MaximumSlideDistance = 32,
                 NarrowOnInvalidScan = false,
+                NonAdaptiveScansCount = 2,
                 OutOfBoundsBehavior = new ClampOutOfBoundsBehavior(),
                 NarrowingBehavior = new ScalarNarrowBehavior() { Value = 0.5 },
                 ScanTerminationRule = new NoScanTerminationRule(),
@@ -142,9 +143,9 @@ namespace BGC.Tests
             Debug.Assert(Math.Abs((double)(controlledTemplate.Threshold - alwaysCorrectValue)) < alwaysCorrectValue / 4.0);
 
             // For inspection to debug the algorithm
-            //Debug.Log($"stepNumbers: {string.Join(", ", stepNumbers)}");
-            //Debug.Log($"stepValues: {string.Join(", ", stepValues)}");
-            //Debug.Log($"isCorrect: {string.Join(", ", isCorrect)}");
+            Debug.Log($"stepNumbers: {string.Join(", ", stepNumbers)}");
+            Debug.Log($"stepValues: {string.Join(", ", stepValues)}");
+            Debug.Log($"isCorrect: {string.Join(", ", isCorrect)}");
             Debug.Log($"Threshold: {controlledTemplate.Threshold}");
         }
     }
