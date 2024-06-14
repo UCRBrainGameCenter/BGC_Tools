@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Diagnostics;
 using System.Collections.Generic;
 using LightJson.Serialization;
@@ -28,6 +29,79 @@ namespace LightJson
         /// <summary>Indicates whether this JsonValue is a Boolean.</summary>
         public bool IsBoolean => Type == JsonValueType.Boolean;
 
+        /// <summary>Converts the JSON value to a concrete C# value with a specific type.</summary>
+        /// <exception cref="NotSupportedException">Thrown if the type requested is not supported.</exception>
+        /// <exception cref="Exception">Thrown if the requested type does not match the underlying JSON type.</exception>
+        public T ToValue<T>()
+        {
+            Type genericType = typeof(T);
+            bool throwTypeException = false;
+            if (genericType == typeof(bool))
+            {
+                if (this.IsBoolean) return (T) Convert.ChangeType(this.AsBoolean, typeof(T));
+                throwTypeException = true;
+            }
+
+            if (genericType == typeof(int))
+            {
+                if(this.IsInteger) return (T) Convert.ChangeType(this.AsInteger, typeof(T));
+                throwTypeException = true;
+            }
+
+            if (genericType == typeof(float) || typeof(T) == typeof(double) || typeof(T) == typeof(decimal))
+            {
+                if(this.IsNumber) return (T) Convert.ChangeType(this.AsNumber, typeof(T));
+                throwTypeException = true;
+            }
+
+            if (genericType == typeof(string))
+            {
+                if(this.IsString) return (T) Convert.ChangeType(this.AsString, typeof(T));
+                throwTypeException = true;
+            }
+
+            if (genericType == typeof(DateTime))
+            {
+                if(this.IsDateTime) return (T) Convert.ChangeType(this.AsDateTime, typeof(T));
+                throwTypeException = true;
+            }
+
+            if (throwTypeException)
+            {
+                throw new Exception(
+                    $"Type of {genericType} was requested, but the underlying JSON Value is not {genericType}. The underlying value is {this.Type}");
+            }
+            
+            throw new NotSupportedException($"Type of {genericType} is not supported.");
+        }
+        
+        /// <summary>Helper method that converts the value to an array, if possible.</summary>
+        /// <exception cref="Exception">Thrown if the underlying type of the JSON value is NOT an array.</exception>
+        public T[] ToArray<T>()
+        {
+            if (this.IsJsonArray) return this.AsJsonArray.ToArray<T>();
+
+            throw new Exception($"Underlying JSON type is not array. It is {this.Type}");
+        }
+
+        /// <summary>Helper method that converts the value to a list, if possible.</summary>
+        /// <exception cref="Exception">Thrown if the underlying type of the JSON value is NOT a list.</exception>
+        public List<T> ToList<T>()
+        {
+            if (this.IsJsonArray) return this.AsJsonArray.ToList<T>();
+            
+            throw new Exception($"Underlying JSON type is not a list. It is {this.Type}");
+        }
+
+        /// <summary>Helper method that converts the value to an enumerable, if possible.</summary>
+        /// <exception cref="Exception">Thrown if the underlying type of the JSON value is NOT a collection.</exception>
+        public IEnumerable<T> ToEnumerable<T>()
+        {
+            if (this.IsJsonArray) return this.AsJsonArray.ToEnumerable<T>();
+            
+            throw new Exception($"Underlying JSON type is not a list. It is {this.Type}");
+        }
+        
         /// <summary>Indicates whether this JsonValue is an Integer.</summary>
         public bool IsInteger
         {
@@ -154,6 +228,7 @@ namespace LightJson
         /// <summary>This value as an JsonArray.</summary>
         public JsonArray AsJsonArray => IsJsonArray ? (JsonArray)reference : null;
 
+       
         /// <summary>This value as a System.DateTime.</summary>
         public DateTime? AsDateTime
         {
