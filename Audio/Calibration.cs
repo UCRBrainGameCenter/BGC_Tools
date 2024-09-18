@@ -371,7 +371,7 @@ namespace BGC.Audio
 
                     //Expanded set
                 case Tone._1500Hz: return 1500;
-                case Tone._3000Hz: return 3000;
+                case Tone._3150Hz: return 3150;
                 case Tone._6000Hz: return 6000;
                 case Tone._6300Hz: return 6300;
                 case Tone._9000Hz: return 9000;
