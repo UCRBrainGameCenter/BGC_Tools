@@ -46,8 +46,10 @@ namespace BGC.Audio
             _1500Hz,
             _2000Hz,
             _3000Hz,
+            _3150Hz,
             _4000Hz,
             _6000Hz,
+            _6300Hz,
             _8000Hz,
             _9000Hz,
             _10_000Hz,
@@ -335,8 +337,10 @@ namespace BGC.Audio
                 case Tone._1500Hz: return "1500 Hz";
                 case Tone._2000Hz: return "2000 Hz";
                 case Tone._3000Hz: return "3000 Hz";
+                case Tone._3150Hz: return "3150 Hz";
                 case Tone._4000Hz: return "4000 Hz";
                 case Tone._6000Hz: return "6000 Hz";
+                case Tone._6300Hz: return "6300 Hz";
                 case Tone._8000Hz: return "8000 Hz";
                 case Tone._9000Hz: return "9000 Hz";
                 case Tone._10_000Hz: return "10.0 kHz";
@@ -361,13 +365,15 @@ namespace BGC.Audio
                 case Tone._500Hz: return 500;
                 case Tone._1000Hz: return 1000;
                 case Tone._2000Hz: return 2000;
+                case Tone._3000Hz: return 3000;
                 case Tone._4000Hz: return 4000;
                 case Tone._8000Hz: return 8000;
 
                     //Expanded set
                 case Tone._1500Hz: return 1500;
-                case Tone._3000Hz: return 3000;
+                case Tone._3150Hz: return 3150;
                 case Tone._6000Hz: return 6000;
+                case Tone._6300Hz: return 6300;
                 case Tone._9000Hz: return 9000;
                 case Tone._10_000Hz: return 10_000;
                 case Tone._11_200Hz: return 11_200;
