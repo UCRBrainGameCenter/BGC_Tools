@@ -18,17 +18,24 @@ namespace BGC.Tests
             public double stepValue;
             public ControlledBasis ControlledBasis => ControlledBasis.FloatingPoint;
 
+            public int __VERSION__ => 1;
+            
             public void Deserialize(JsonObject data)
             {
                 throw new System.NotImplementedException();
             }
 
+            public bool TryUpgradeVersion(JsonObject serializedData)
+            {
+                return true;
+            }
+            
             public IPropertyGroup GetParent()
             {
                 throw new System.NotImplementedException();
             }
 
-            public JsonObject Serialize()
+            public JsonObject Serialize(bool includeState = false)
             {
                 throw new System.NotImplementedException();
             }

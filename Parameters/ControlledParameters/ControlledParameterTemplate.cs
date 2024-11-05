@@ -36,7 +36,7 @@ namespace BGC.Parameters
         protected double GetThresholdValue(double thresholdStepValue) =>
             controlledParameter.GetPartialStepValue(thresholdStepValue, this);
 
-        JsonObject IPropertyGroup.Serialize()
+        JsonObject IPropertyGroup.Serialize(bool includeState = false)
         {
             JsonObject baseData = this.Internal_GetSerializedData();
             baseData.Add("Path", controlledParameter.GetGroupPath(true));
