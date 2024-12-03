@@ -93,7 +93,7 @@ namespace BGC.Audio
             const int BUFFER_SIZE = 512;
             float[] buffer = new float[BUFFER_SIZE];
 
-            
+
             int readSamples;
             stream.Reset();
             do
@@ -482,9 +482,9 @@ namespace BGC.Audio
         }
 
         public static IBGCStream Normalize(
-            this IBGCStream stream,
-            (double levelL, double levelR) presentationLevels,
-            bool safetyLimit = true)
+        this IBGCStream stream,
+        (double levelL, double levelR) presentationLevels,
+        bool safetyLimit = true)
         {
             if (stream.Channels == 1)
             {
@@ -769,6 +769,12 @@ namespace BGC.Audio
                 carrierTones: carrierTones,
                 frameSize: 1 << 11,
                 overlapFactor: 8);
+        }
+
+        public static IBGCStream Segmentor(
+           this IBGCStream stream, bool randomStart, double start, double duration)
+        {
+            return new Segmentor(stream, randomStart, start, duration);
         }
 
         /// <summary>
