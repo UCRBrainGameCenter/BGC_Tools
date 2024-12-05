@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Linq;
 using System.Collections.Generic;
-using static UnityEditor.Experimental.AssetDatabaseExperimental.AssetDatabaseCounters;
 
 namespace BGC.Audio.Filters
 {
@@ -31,11 +29,6 @@ namespace BGC.Audio.Filters
             this.duration = duration;
 
             CalculateStartAndEnd();
-        }
-
-        protected override void _Initialize()
-        {
-            //not sure what to do here
         }
 
         public override void Reset()
