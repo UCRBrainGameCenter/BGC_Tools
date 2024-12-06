@@ -1,4 +1,5 @@
-﻿namespace BGC.Scripting
+﻿
+namespace BGC.Scripting
 {
     public enum FlowState
     {
