@@ -67,6 +67,55 @@ namespace BGC.Audio
             return rms;
         }
 
+
+        /// <summary>
+        /// Calculate the volume in decibels (dB) for each channel of an IBGCStream.
+        /// </summary>
+        /// <returns>A list of dB values, one for each channel.</returns>
+        public static IEnumerable<double> GetVolume(this IBGCStream stream)
+        {
+            double[] rms = new double[stream.Channels];
+            int[] totalReadSamples = new int[stream.Channels];
+
+            const int BUFFER_SIZE = 512;
+            float[] buffer = new float[BUFFER_SIZE];
+
+            int readSamples;
+            stream.Reset();
+            do
+            {
+                readSamples = stream.Read(buffer, 0, BUFFER_SIZE);
+
+                for (int i = 0; i < readSamples; i++)
+                {
+                    int channelIndex = i % stream.Channels;
+                    rms[channelIndex] += buffer[i] * buffer[i];
+                    totalReadSamples[channelIndex]++;
+                }
+            }
+            while (readSamples > 0);
+
+            stream.Reset();
+
+            for (int i = 0; i < stream.Channels; i++)
+            {
+                if (totalReadSamples[i] > 0)
+                {
+                    rms[i] = Math.Sqrt(rms[i] / totalReadSamples[i]);
+                }
+                else
+                {
+                    rms[i] = 0.0;
+                }
+            }
+
+            IEnumerable<double> channelDb = rms
+                .Select(rms => 20 * Math.Log10(rms) + 121.1) //don't know why But there's a 121.1 difference
+                .ToList();
+
+            return channelDb;
+        }
+
         /// <summary>
         /// Calculates a normalization factor to target a specific RMS.
         /// Includes a "peak protection" option so that the normalization factor never
