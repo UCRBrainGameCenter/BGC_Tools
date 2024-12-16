@@ -191,12 +191,17 @@ namespace BGC.Parameters.View
                         continue;
                     }
 
+                    //TODO that's very hacky, needs to change
+                    SpawningBehavior spawnBehavior = spawningBehavior;
+                    if (property.PropertyType.ToString().Equals("Stimuli.StimulusCollection"))
+                        spawnBehavior = SpawningBehavior.ShallowPropertyFrame;
+
                     SpawnPropertyGroup(
                         propertyGroup: propertyGroup,
                         property: property,
                         propertyContainer: propertyContainer,
                         parentTransform: parentTransform,
-                        spawningBehavior: spawningBehavior);
+                        spawningBehavior: spawnBehavior);
                 }
             }
         }
