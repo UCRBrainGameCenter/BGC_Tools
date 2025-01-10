@@ -483,5 +483,127 @@ namespace BGC.Extensions
 
             return found;
         }
+
+        /// <summary>
+        /// Rearranges the list such that no two consecutive elements
+        /// follow their natural sorted order.
+        /// Uses the default comparer for type T to determine the natural order.
+        /// If no valid rearrangement is possible, the list remains unchanged.
+        /// </summary>
+        /// <typeparam name="T">The type of elements in the list.</typeparam>
+        /// <param name="list">The list to be anti-sorted.</param>
+        public static void AntiSort<T>(this List<T> list)
+        {
+            // Use the default comparer for T
+            list.AntiSort(Comparer<T>.Default);
+        }
+
+        /// <summary>
+        /// Rearranges the list such that no two consecutive elements
+        /// follow their order as defined by the provided comparison.
+        /// If no valid rearrangement is possible, the list remains unchanged.
+        /// </summary>
+        /// <typeparam name="T">The type of elements in the list.</typeparam>
+        /// <param name="list">The list to be anti-sorted.</param>
+        /// <param name="comparison">
+        /// The comparison used to determine the sorted order of elements.
+        /// </param>
+        public static void AntiSort<T>(this List<T> list, System.Comparison<T> comparison)
+        {
+            list.AntiSort(Comparer<T>.Create(comparison));
+        }
+
+        /// <summary>
+        /// Rearranges the list such that no two consecutive elements
+        /// follow their order as defined by the provided comparer.
+        /// If no valid rearrangement is possible, the list remains unchanged.
+        /// </summary>
+        /// <typeparam name="T">The type of elements in the list.</typeparam>
+        /// <param name="list">The list to be anti-sorted.</param>
+        /// <param name="comparer">
+        /// The comparer used to determine the sorted order of elements.
+        /// </param>
+        public static void AntiSort<T>(this List<T> list, IComparer<T> comparer)
+        {
+            // Cannot anti-sort a list with less than 2 elements
+            if (list.Count < 2)
+            {
+                return;
+            }
+
+            // Sort the list so we know which pairs cannot appear next to each other
+            List<T> sortedList = new(list);
+            sortedList.Sort(comparer);
+
+            // Create a map of each item to the next item
+            // NOTE: Cannot use Dictionary<T, T> because we cannot trust hash codes due to the provided comparer
+            SortedDictionary<T, T> nextItem = new(comparer);
+            for (int i = 0; i < sortedList.Count - 1; i++)
+            {
+                T item = sortedList[i];
+                T next = sortedList[i + 1];
+
+                // Use the last instance of an item so that the next item isn't just the next instance of the same item
+                if (comparer.Compare(item, next) != 0)
+                {
+                    nextItem[item] = next;
+                }
+            }
+
+            // Use a stack for DFS; each element is (current pattern, remaining values, next index into remaining values)
+            List<(List<T>, List<T>, int)> stack = new()
+            {
+                (new List<T>(), new List<T>(list), 0)
+            };
+
+            while (stack.Count > 0)
+            {
+                var (pattern, remainingValues, nextRemainingValuesindex) = stack[^1];
+                stack.RemoveAt(stack.Count - 1);
+
+                bool hasBannedNext = pattern.Count > 0 && nextItem.ContainsKey(pattern[^1]);
+                T bannedNext = hasBannedNext ? nextItem[pattern[^1]] : default;
+                for (int i = nextRemainingValuesindex; i < remainingValues.Count; i++)
+                {
+                    T candidate = remainingValues[i];
+
+                    // If the candidate equals the latest item in the pattern, skip it
+                    if (pattern.Count > 0 && comparer.Compare(candidate, pattern[^1]) == 0)
+                    {
+                        continue;
+                    }
+
+                    // If the candidate is the banned next item, skip it
+                    if (hasBannedNext && comparer.Compare(candidate, bannedNext!) == 0)
+                    {
+                        continue;
+                    }
+
+                    // If there was only one remaining value, then we have found a valid list and are done
+                    bool isDone = remainingValues.Count == 1;
+
+                    // For continuing where this loop left off after backtracking
+                    if (!isDone && i + 1 < remainingValues.Count)
+                    {
+                        stack.Add((pattern, remainingValues, i + 1));
+                    }
+
+                    List<T> newPattern = pattern.Append(candidate).ToList();
+                    if (isDone)
+                    {
+                        list.Clear();
+                        list.AddRange(newPattern);
+                        return;
+                    }
+
+                    // Create a new remaining values list without this specific candidate instance
+                    List<T> newRemainingValues = new(remainingValues);
+                    newRemainingValues.RemoveAt(i);
+
+                    stack.Add((newPattern, newRemainingValues, 0));
+                    break;
+                }
+            }
+        }
     }
 }
