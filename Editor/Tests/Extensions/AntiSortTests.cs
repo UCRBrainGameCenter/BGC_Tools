@@ -1,11 +1,8 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using NUnit.Framework;
 using BGC.Extensions;
-using System.Linq;
+using NUnit.Framework;
 using System;
-using static DG.DemiEditor.DeEditorUtils;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace BGC.Tests
 {
