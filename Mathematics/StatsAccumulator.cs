@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LightJson;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -25,6 +26,20 @@ namespace BGC.Mathematics
             Mean += delta / Count;
             double delta2 = v - Mean;
             Mean2 += delta * delta2;
+        }
+
+        public JsonValue Serialize() => new JsonObject
+        {
+            ["mean"] = Mean,
+            ["mean2"] = Mean2,
+            ["count"] = Count
+        };
+
+        public void Deserialize(JsonValue json)
+        {
+            Mean = json["mean"].AsNumber;
+            Mean2 = json["mean2"].AsNumber;
+            Count = json["count"].AsInteger;
         }
 
         public double Mean { get; private set; } = 0.0;
@@ -67,6 +82,20 @@ namespace BGC.Mathematics
                 Mean += (w / Weight) * (v - oldMean);
                 Mean2 += w * (v - oldMean) * (v - Mean);
             }
+        }
+
+        public JsonValue Serialize() => new JsonObject
+        {
+            ["mean"] = Mean,
+            ["mean2"] = Mean2,
+            ["weight"] = Weight
+        };
+
+        public void Deserialize(JsonValue json)
+        {
+            Mean = json["mean"].AsNumber;
+            Mean2 = json["mean2"].AsNumber;
+            Weight = json["weight"].AsInteger;
         }
 
         public double Mean { get; private set; } = 0.0;
