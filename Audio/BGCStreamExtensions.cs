@@ -821,9 +821,9 @@ namespace BGC.Audio
         }
 
         public static IBGCStream Segmentor(
-           this IBGCStream stream, bool randomStart, double start, double duration)
+           this IBGCStream stream, bool randomStart, double start, double duration, double easeDuration)
         {
-            return new Segmentor(stream, randomStart, start, duration);
+            return new Segmentor(stream, randomStart, start, duration, easeDuration);
         }
 
         /// <summary>

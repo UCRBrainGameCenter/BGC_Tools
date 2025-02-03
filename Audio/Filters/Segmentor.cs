@@ -15,18 +15,21 @@ namespace BGC.Audio.Filters
 
         private bool randomStart;
         private double start, duration;
-        private int counter, startSample, endSample;
+        private double easeDuration;
+        private int counter, startSample, endSample, easeSample;
 
         public Segmentor(
             IBGCStream stream,
             bool randomStart,
             double start,
-            double duration)
+            double duration,
+            double easeDuration)
             : base(stream)
         {
             this.randomStart = randomStart;
             this.start = start;
             this.duration = duration;
+            this.easeDuration = easeDuration;
 
             CalculateStartAndEnd();
         }
@@ -56,6 +59,15 @@ namespace BGC.Audio.Filters
 
             startSample = (int)(startTime * stream.SamplingRate);
             endSample = (int)(endTime * stream.SamplingRate);
+
+            float easeInTime = (float)(easeDuration / 1000f);
+            easeSample = (int)(easeInTime * stream.SamplingRate);
+
+            if (easeSample > (endSample - startSample) / 2)
+            {
+                UnityEngine.Debug.Log("divide sample");
+                easeSample = (endSample - startSample) / 2;
+            }
         }
 
         public override int Read(float[] data, int offset, int count)
@@ -73,10 +85,28 @@ namespace BGC.Audio.Filters
                 {
                     data[i] = 0;
                 }
+                else
+                {
+                    data[i] *= CalculateEase();
+                }
                 counter++;
             }
 
             return copied;
+        }
+
+        private float CalculateEase()
+        {
+            if (counter < startSample + easeSample)
+            {
+                return UnityEngine.Mathf.InverseLerp(startSample, startSample + easeSample, counter);
+            }
+            else if (counter >= endSample - easeSample)
+            {
+                return UnityEngine.Mathf.InverseLerp(endSample, endSample - easeSample, counter);
+            }
+
+            return 1;
         }
 
         public override IEnumerable<double> GetChannelRMS()
