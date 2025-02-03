@@ -520,7 +520,16 @@ namespace BGC.Parameters.View
 
                 foreach (Type type in propertyGroupChoiceTypes)
                 {
-                    propertyGroupChoices.Add(new Dropdown.OptionData(type.GetSelectionTitle()));
+                    string selectionTitle = type.GetSelectionTitle();
+
+                    //add only if not in options yet
+                    if (propertyGroupChoices.Find((x) => x.text == selectionTitle) != null)
+                    {
+                        continue;
+                    }
+
+                    Dropdown.OptionData optionData = new Dropdown.OptionData(selectionTitle);
+                    propertyGroupChoices.Add(optionData);
 
                     if (type == propertyGroup.GetType())
                     {
