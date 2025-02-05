@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace BGC.Audio.Filters
 {
@@ -15,21 +16,48 @@ namespace BGC.Audio.Filters
 
         private bool randomStart;
         private double start, duration;
-        private double easeDuration;
-        private int counter, startSample, endSample, easeSample;
+        private int counter, startSample, endSample;
+
+        private int easeSampleStart, easeSampleEnd;
+        private double easeDurationStart, easeDurationEnd;
+        private double easeOffsetStart, easeOffsetEnd;
+        private EasingType easeTypeStart, easeTypeEnd;
+
+        private bool isMirrored;
 
         public Segmentor(
             IBGCStream stream,
             bool randomStart,
             double start,
             double duration,
-            double easeDuration)
+            FixedEaseBehaviour startEaseBehaviour,
+            IEaseBehaviour endEaseBehaviour
+            )
             : base(stream)
         {
             this.randomStart = randomStart;
             this.start = start;
             this.duration = duration;
-            this.easeDuration = easeDuration;
+
+            easeDurationStart = startEaseBehaviour.EaseDuration;
+            easeOffsetStart = startEaseBehaviour.EaseOffset;
+            easeTypeStart = startEaseBehaviour.EaseType;
+
+            UnityEngine.Debug.Log(endEaseBehaviour.GetType());
+            if (endEaseBehaviour is FixedEaseBehaviour endEaseBehaviourFixed)
+            {
+                easeDurationEnd = endEaseBehaviourFixed.EaseDuration;
+                easeOffsetEnd = endEaseBehaviourFixed.EaseOffset;
+                easeTypeEnd = endEaseBehaviourFixed.EaseType;
+                isMirrored = false;
+            }
+            else
+            {
+                easeDurationEnd = easeDurationStart;
+                easeOffsetEnd = easeOffsetStart;
+                easeTypeEnd = easeTypeStart;
+                isMirrored = true;
+            }
 
             CalculateStartAndEnd();
         }
@@ -57,17 +85,20 @@ namespace BGC.Audio.Filters
 
             float endTime = startTime + (float)(duration / 1000f);
 
+            float easeOffsetStartTime = (float)(easeOffsetStart / 1000f);
+            float easeOffsetEndTime = (float)(easeOffsetEnd / 1000f);
+
+            startTime -= easeOffsetStartTime;
+            endTime += easeOffsetEndTime;
+
             startSample = (int)(startTime * stream.SamplingRate);
             endSample = (int)(endTime * stream.SamplingRate);
 
-            float easeInTime = (float)(easeDuration / 1000f);
-            easeSample = (int)(easeInTime * stream.SamplingRate);
+            float easeInTimeStart = (float)(easeDurationStart / 1000f);
+            float easeInTimeEnd = (float)(easeDurationEnd / 1000f);
 
-            if (easeSample > (endSample - startSample) / 2)
-            {
-                UnityEngine.Debug.Log("divide sample");
-                easeSample = (endSample - startSample) / 2;
-            }
+            easeSampleStart = (int)(easeInTimeStart * stream.SamplingRate);
+            easeSampleEnd = (int)(easeInTimeEnd * stream.SamplingRate);
         }
 
         public override int Read(float[] data, int offset, int count)
@@ -87,7 +118,9 @@ namespace BGC.Audio.Filters
                 }
                 else
                 {
-                    data[i] *= CalculateEase();
+                    float ease = CalculateEase();
+                    //UnityEngine.Debug.Log(ease);
+                    data[i] *= ease;
                 }
                 counter++;
             }
@@ -97,13 +130,28 @@ namespace BGC.Audio.Filters
 
         private float CalculateEase()
         {
-            if (counter < startSample + easeSample)
+            bool inEaseStart = counter < startSample + easeSampleStart;
+            bool inEaseEnd = counter >= endSample - easeSampleEnd;
+
+            if (inEaseStart && inEaseEnd) //if in both, use smallest ease value
             {
-                return UnityEngine.Mathf.InverseLerp(startSample, startSample + easeSample, counter);
+                float percentStart = UnityEngine.Mathf.InverseLerp(startSample, startSample + easeSampleStart, counter);
+                float percentEnd = UnityEngine.Mathf.InverseLerp(endSample, endSample - easeSampleEnd, counter);
+
+                float easedStart = EasingFunctions.ApplyEasing(easeTypeStart, percentStart);
+                float easedEnd = EasingFunctions.ApplyEasing(easeTypeEnd, percentEnd);
+
+                return Mathf.Min(easedStart, easedEnd);
             }
-            else if (counter >= endSample - easeSample)
+            else if (inEaseStart)
             {
-                return UnityEngine.Mathf.InverseLerp(endSample, endSample - easeSample, counter);
+                float percent = UnityEngine.Mathf.InverseLerp(startSample, startSample + easeSampleStart, counter);
+                return EasingFunctions.ApplyEasing(easeTypeStart, percent);
+            }
+            else if (inEaseEnd)
+            {
+                float percent = UnityEngine.Mathf.InverseLerp(endSample, endSample - easeSampleEnd, counter);
+                return EasingFunctions.ApplyEasing(easeTypeEnd, percent);
             }
 
             return 1;
