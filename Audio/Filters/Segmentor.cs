@@ -75,7 +75,7 @@ namespace BGC.Audio.Filters
 
             if (randomStart)
             {
-                Random random = new Random();
+                System.Random random = new System.Random();
                 startTime = (float)(random.NextDouble() * (stream.Duration() - (duration / 1000f)));
             }
             else
