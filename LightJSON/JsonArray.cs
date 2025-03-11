@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using BGC.Extensions;
 using LightJson.Serialization;
 
 namespace LightJson
@@ -14,6 +15,100 @@ namespace LightJson
 
         /// <summary>The number of values in this collection.</summary>
         public int Count => items.Count;
+
+        /// <summary>
+        /// Gets the underlying type of the JSON array. Supports boolean, integer, number, string, datetime, and JsonObject.
+        /// </summary>
+        /// <remarks>
+        /// If the value in the array is NULL, then type of JsonValue is returned. If array size is 0, type of
+        /// JsonValue is returned.
+        /// </remarks>
+        public Type GetArrayType()
+        {
+            if (this.Count > 0)
+            {
+                JsonValue firstValue = this[0];
+                if (firstValue.IsBoolean) return typeof(bool);
+                if (firstValue.IsInteger) return typeof(int);
+                if (firstValue.IsNull) return typeof(JsonValue);
+                if (firstValue.IsNumber) return typeof(double);
+                if (firstValue.IsString) return typeof(string);
+                if (firstValue.IsDateTime) return typeof(DateTime);
+                if (firstValue.IsJsonObject) return typeof(JsonObject);
+            }
+
+            return typeof(JsonValue);
+        }
+        
+        public T[] ToArray<T>()
+        {
+            T[] array = new T[items.Count];
+
+            for (int i = 0; i < this.Count; i++)
+            {
+                JsonValue jsonValue = this[i];
+                // Convert the JsonValue to the desired type T
+                T item;
+                if (jsonValue.IsNull)
+                {
+                    // Handle null values as default(T)
+                    item = default;
+                }
+                else
+                {
+                    item = jsonValue.ToValue<T>();
+                }
+
+                array[i] = item;
+            }
+
+            return array;
+        }
+        
+        public List<T> ToList<T>()
+        {
+            List<T> list = new List<T>();
+
+            foreach(JsonValue jsonValue in this.items)
+            {
+                // Convert the JsonValue to the desired type T
+                T item;
+                if (jsonValue.IsNull)
+                {
+                    // Handle null values as default(T)
+                    item = default;
+                }
+                else
+                {
+                    item = jsonValue.ToValue<T>();
+                }
+
+                list.Add(item);
+            }
+
+            return list;
+        }
+        
+        /// <summary>Creates a concrete generic enumerable from the JSON value.</summary>
+        public IEnumerable<T> ToEnumerable<T>()
+        {
+            foreach (JsonValue jsonValue in this)
+            {
+                // Convert the JsonValue to the desired type T
+                T item;
+                if (jsonValue.IsNull)
+                {
+                    // Handle null values as default(T)
+                    item = default;
+                }
+                else
+                {
+                    item = jsonValue.ToValue<T>();
+                }
+                yield return item;
+            }
+        }
+
 
         /// <summary>The value at the given index.</summary>
         /// <param name="index">The zero-based index of the value.</param>
