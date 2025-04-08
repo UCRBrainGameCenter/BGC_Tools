@@ -969,6 +969,20 @@ namespace BGC.Parameters
                 }
             }
         }
+        
+        /// <summary>
+        /// Returns the valid Type for this PropertyGroup.
+        /// </summary>
+        public static Type GetListAdditionType(this PropertyInfo propertyInfo)
+        {
+            foreach (AppendAdditionAttributeSimple additionAttribute in
+                     propertyInfo.GetCustomAttributes<AppendAdditionAttributeSimple>())
+            {
+                return additionAttribute.additionType;
+            }
+
+            return null;
+        }
 
         /// <summary>
         /// Returns the valid Types for this PropertyGroup.

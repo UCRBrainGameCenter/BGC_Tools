@@ -91,6 +91,32 @@ namespace BGC.Parameters.View
                         parentTransform: container.propertyFrame.transform,
                         spawningBehavior: SpawningBehavior.ShallowInternal);
                 }
+                else if (property.GetCustomAttribute<PropertyGroupListAttributeSimple>() != null)
+                {
+                    //Internal Property Group List
+
+                    IList propertyGroupList = property.GetValue(propertyContainer) as IList;
+
+                    if (propertyGroupList == null)
+                    {
+                        //Construct a new instance of the List
+                        propertyGroupList = Activator.CreateInstance(property.PropertyType) as IList;
+                        property.SetValue(propertyContainer, propertyGroupList);
+                    }
+
+                    if (propertyGroupList == null)
+                    {
+                        Debug.LogError($"Unable to construct PropertyGroupList: {property}");
+                        continue;
+                    }
+
+                    SpawnPropertyGroupListSimple(
+                        propertyGroupList: propertyGroupList,
+                        property: property,
+                        propertyContainer: propertyContainer,
+                        parentTransform: container.propertyFrame.transform,
+                        spawningBehavior: SpawningBehavior.ShallowInternal);
+                }
             }
         }
 
@@ -167,6 +193,31 @@ namespace BGC.Parameters.View
                     }
 
                     SpawnPropertyGroupList(
+                        propertyGroupList: propertyGroupList,
+                        property: property,
+                        propertyContainer: propertyContainer,
+                        parentTransform: parentTransform,
+                        spawningBehavior: spawningBehavior);
+                }
+                else if(property.GetCustomAttribute<PropertyGroupListAttributeSimple>() != null)
+                {
+                    //Internal Property Group List
+                    IList propertyGroupList = property.GetValue(propertyContainer) as IList;
+
+                    if (propertyGroupList == null)
+                    {
+                        //Construct a new instance of the List
+                        propertyGroupList = Activator.CreateInstance(property.PropertyType) as IList;
+                        property.SetValue(propertyContainer, propertyGroupList);
+                    }
+
+                    if (propertyGroupList == null)
+                    {
+                        Debug.LogError($"Unable to construct PropertyGroupList: {property}");
+                        continue;
+                    }
+
+                    SpawnPropertyGroupListSimple(
                         propertyGroupList: propertyGroupList,
                         property: property,
                         propertyContainer: propertyContainer,
@@ -374,6 +425,107 @@ namespace BGC.Parameters.View
                                 }
                             },
                             inputType: InputField.ContentType.Standard);
+                    },
+                    index: 2);
+
+                widgetFactory.CreateButtonWidget(
+                    parent: baseWidget,
+                    text: "Edit",
+                    onClick: () => ModalListDialog.ShowListEditModal(
+                        headerText: "Edit",
+                        itemList: propertyGroupList,
+                        nameTranslator: ListItemNameTranslator,
+                        nameValidator: ListItemNameValidator,
+                        nameUpdater: ListItemNameUpdater,
+                        callback: _ =>
+                        {
+                            //Refresh items
+                            foreach (Transform t in parentTransform)
+                            {
+                                if (t.gameObject.GetComponent<PropertyListItemContainer>() == null)
+                                {
+                                    //Only destroy PropertyListItems
+                                    continue;
+                                }
+
+                                GameObject.Destroy(t.gameObject);
+                            }
+
+                            RenderAllListItems(
+                                shallow: shallow,
+                                propertyGroupList: propertyGroupList,
+                                parentTransform: parentTransform);
+                        },
+                        inputType: InputField.ContentType.Standard),
+                    index: 3);
+
+                RenderAllListItems(
+                    shallow: shallow,
+                    propertyGroupList: propertyGroupList,
+                    parentTransform: parentTransform);
+            }
+        }
+        
+         private void SpawnPropertyGroupListSimple(
+            IList propertyGroupList,
+            PropertyInfo property,
+            IPropertyGroup propertyContainer,
+            Transform parentTransform,
+            SpawningBehavior spawningBehavior)
+        {
+            bool shallow = false;
+            bool rendered = true;
+
+            switch (spawningBehavior)
+            {
+                case SpawningBehavior.PropertyFrame:
+                case SpawningBehavior.NestedInternal:
+                case SpawningBehavior.FlatInternal:
+                    break;
+
+                case SpawningBehavior.ListTitlesOnly:
+                case SpawningBehavior.ShallowInternal:
+                    shallow = true;
+                    break;
+
+                case SpawningBehavior.NonRendered:
+                    rendered = false;
+                    break;
+
+                case SpawningBehavior.ShallowPropertyFrame:
+                default:
+                    Debug.LogError($"Unexpected SpawningBehavior: {spawningBehavior}");
+                    return;
+            }
+
+            if (rendered)
+            {
+                GameObject baseWidget = widgetFactory.GetContainerWidget(
+                    config: WidgetFactory.ContainerConfig.Config_Normal_Even,
+                    parent: parentTransform.gameObject,
+                    slots: 4);
+
+                LayoutElement layoutElement = baseWidget.AddComponent<LayoutElement>();
+                layoutElement.minHeight = 60;
+
+                widgetFactory.CreateButtonWidget(
+                    parent: baseWidget,
+                    text: "Add",
+                    onClick: () =>
+                    {
+                        Type types = property.GetListAdditionType();
+                        UnityEngine.Debug.Log("click " + types);
+                        
+                        FieldDisplayAttribute attribute = propertyContainer.GetFieldDisplayAttribute("test");
+
+                        SpawnValueInputWidget(
+                            owningPropertyGroup: propertyContainer,
+                            property: property,
+                            attribute: attribute,
+                            baseWidget: baseWidget,
+                            respawnPropertyGroupCallback: null,
+                            concretePropertyGroup: null
+                            );
                     },
                     index: 2);
 
