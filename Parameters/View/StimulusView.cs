@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
@@ -513,19 +514,52 @@ namespace BGC.Parameters.View
                     text: "Add",
                     onClick: () =>
                     {
-                        Type types = property.GetListAdditionType();
-                        UnityEngine.Debug.Log("click " + types);
-                        
-                        FieldDisplayAttribute attribute = propertyContainer.GetFieldDisplayAttribute("test");
+                        FieldDisplayAttribute attribute = null;
 
-                        SpawnValueInputWidget(
-                            owningPropertyGroup: propertyContainer,
-                            property: property,
-                            attribute: attribute,
-                            baseWidget: baseWidget,
-                            respawnPropertyGroupCallback: null,
-                            concretePropertyGroup: null
-                            );
+                        var type = property.PropertyType.GetGenericArguments()[0];
+
+                        if (type == typeof(int))
+                        {
+                            attribute = new IntFieldDisplayAttribute("testInt", "testInt");
+                        }
+                        else if (type == typeof(string))
+                        {
+                            attribute = new StringFieldDisplayAttribute("testString", "testString");
+                        }
+                        else if (type == typeof(bool))
+                        {
+                            attribute = new BoolDisplayAttribute("testBool", "testBool");
+                        }
+
+                        string title = "test";//GetUniqueListItemName(title, propertyGroupList);
+
+                        IPropertyGroup newPropertyGroup = new FixedSimpleValueBehavior<int>();
+                                                          //types[selectionIndex].Build(title, propertyContainer, propertyGroupList);
+
+                        // if (shallow)
+                        // {
+                        //     PropertyListItemContainer propertyListItemContainer = SpawnPropertyListItem();
+                        //
+                        //     propertyListItemContainer.transform.SetParent(parentTransform, false);
+                        //     propertyListItemContainer.typeLabel.text = $"{newPropertyGroup.GetSelectionTitle()}:";
+                        //     propertyListItemContainer.nameLabel.text = newPropertyGroup.GetItemTitle();
+                        //     propertyListItemContainer.ChoiceInfoText = newPropertyGroup.GetType().GetChoiceInfoText();
+                        // }
+                        // else
+                        // {
+                            PropertyListItemContainer propertyListItemContainer = SpawnPropertyListItem();
+
+                            propertyListItemContainer.transform.SetParent(parentTransform, false);
+                            propertyListItemContainer.typeLabel.text = $"{newPropertyGroup.GetSelectionTitle()}:";
+                            propertyListItemContainer.nameLabel.text = newPropertyGroup.GetItemTitle();
+                            propertyListItemContainer.ChoiceInfoText = newPropertyGroup.GetType().GetChoiceInfoText();
+
+                            VisualizePropertyGroup(
+                                propertyContainer: newPropertyGroup,
+                                parentTransform: propertyListItemContainer.propertyFrame.transform,
+                                respawnPropertyGroupCallback: null,
+                                spawningBehavior: SpawningBehavior.NestedInternal);
+                        //}
                     },
                     index: 2);
 
@@ -1022,6 +1056,7 @@ namespace BGC.Parameters.View
             Action respawnPropertyGroupCallback,
             IPropertyGroup concretePropertyGroup = null)
         {
+            
             switch (attribute)
             {
                 case DoubleFieldDisplayAttribute doubleAtt:
