@@ -514,39 +514,39 @@ namespace BGC.Parameters.View
                     text: "Add",
                     onClick: () =>
                     {
-                        FieldDisplayAttribute attribute = null;
-
-                        var type = property.PropertyType.GetGenericArguments()[0];
-
-                        if (type == typeof(int))
-                        {
-                            attribute = new IntFieldDisplayAttribute("testInt", "testInt");
-                        }
-                        else if (type == typeof(string))
-                        {
-                            attribute = new StringFieldDisplayAttribute("testString", "testString");
-                        }
-                        else if (type == typeof(bool))
-                        {
-                            attribute = new BoolDisplayAttribute("testBool", "testBool");
-                        }
+                        // FieldDisplayAttribute attribute = null;
+                        //
+                        // var type = property.PropertyType.GetGenericArguments()[0];
+                        //
+                        // if (type == typeof(int))
+                        // {
+                        //     attribute = new IntFieldDisplayAttribute("testInt", "testInt");
+                        // }
+                        // else if (type == typeof(string))
+                        // {
+                        //     attribute = new StringFieldDisplayAttribute("testString", "testString");
+                        // }
+                        // else if (type == typeof(bool))
+                        // {
+                        //     attribute = new BoolDisplayAttribute("testBool", "testBool");
+                        //}
 
                         string title = "test";//GetUniqueListItemName(title, propertyGroupList);
 
                         IPropertyGroup newPropertyGroup = new FixedSimpleValueBehavior<int>();
                                                           //types[selectionIndex].Build(title, propertyContainer, propertyGroupList);
 
-                        // if (shallow)
-                        // {
-                        //     PropertyListItemContainer propertyListItemContainer = SpawnPropertyListItem();
-                        //
-                        //     propertyListItemContainer.transform.SetParent(parentTransform, false);
-                        //     propertyListItemContainer.typeLabel.text = $"{newPropertyGroup.GetSelectionTitle()}:";
-                        //     propertyListItemContainer.nameLabel.text = newPropertyGroup.GetItemTitle();
-                        //     propertyListItemContainer.ChoiceInfoText = newPropertyGroup.GetType().GetChoiceInfoText();
-                        // }
-                        // else
-                        // {
+                        if (shallow)
+                        {
+                            PropertyListItemContainer propertyListItemContainer = SpawnPropertyListItem();
+                        
+                            propertyListItemContainer.transform.SetParent(parentTransform, false);
+                            propertyListItemContainer.typeLabel.text = $"{newPropertyGroup.GetSelectionTitle()}:";
+                            propertyListItemContainer.nameLabel.text = newPropertyGroup.GetItemTitle();
+                            propertyListItemContainer.ChoiceInfoText = newPropertyGroup.GetType().GetChoiceInfoText();
+                        }
+                        else
+                        {
                             PropertyListItemContainer propertyListItemContainer = SpawnPropertyListItem();
 
                             propertyListItemContainer.transform.SetParent(parentTransform, false);
@@ -559,7 +559,7 @@ namespace BGC.Parameters.View
                                 parentTransform: propertyListItemContainer.propertyFrame.transform,
                                 respawnPropertyGroupCallback: null,
                                 spawningBehavior: SpawningBehavior.NestedInternal);
-                        //}
+                        }
                     },
                     index: 2);
 
