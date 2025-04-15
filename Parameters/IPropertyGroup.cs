@@ -35,6 +35,19 @@ namespace BGC.Parameters
                 }
             }
         }
+        
+        public static IEnumerable<PropertyInfo> GetPropertyGroupListSimpleProperties(this IPropertyGroup container)
+        {
+            foreach (PropertyInfo property in container.GetType().GetProperties())
+            {
+                if (typeof(IList).IsAssignableFrom(property.PropertyType) &&
+                    property.GetCustomAttribute<PropertyGroupListAttributeSimple>() is PropertyGroupListAttributeSimple propertyGroupList &&
+                    propertyGroupList.autoSerialize)
+                {
+                    yield return property;
+                }
+            }
+        }
 
         public static IEnumerable<PropertyInfo> GetPropertyGroupProperties(this IPropertyGroup container)
         {
@@ -222,6 +235,26 @@ namespace BGC.Parameters
                     }
                 }
             }
+            
+            foreach (PropertyInfo innerList in propertyGroup.GetPropertyGroupListSimpleProperties())
+            {
+                if (innerList.GetValue(propertyGroup) is IList innerPropertyList)
+                {
+                    JsonArray propertyListValues = new JsonArray();
+
+                    foreach (string listElement in innerPropertyList.Cast<string>().ToList())
+                    {
+                        propertyListValues.Add(listElement);
+                    }
+
+                    if (propertyListValues.Count > 0)
+                    {
+                        propertyGroupData.Add(
+                            key: innerList.GetGroupListSimpleSerializationName(),
+                            value: propertyListValues);
+                    }
+                }
+            }
 
             if (keyData.Count > 0)
             {
@@ -270,6 +303,44 @@ namespace BGC.Parameters
                         property: property,
                         groupList: groupList,
                         listElement: listElement);
+                }
+            }
+            
+            //Deserialize Property Group Lists Simple
+            foreach (PropertyInfo property in container.GetPropertyGroupListSimpleProperties())
+            {
+                string propertyGroupListName = property.GetGroupListSimpleSerializationName();
+
+                //Instantiate Container (List)
+                property.SetValue(container, Activator.CreateInstance(property.PropertyType));
+
+                if (!propertyGroupData.ContainsKey(propertyGroupListName))
+                {
+                    //No list saved
+                    continue;
+                }
+                
+                JsonArray array = propertyGroupData[propertyGroupListName].AsJsonArray;
+                
+                if (array.Count == 0)
+                    continue;
+
+                var element = array[0];
+
+                if (element.IsBoolean)
+                {
+                    var boolList = array.Select(x => x.AsBoolean).ToList();
+                    property.SetValue(container, boolList);
+                }
+                else if (element.IsInteger)
+                {
+                    var intList = array.Select(x => x.AsInteger).ToList();
+                    property.SetValue(container, intList);
+                }
+                else if (element.IsString)
+                {
+                    var stringList = array.Select(x => x.AsString).ToList();
+                    property.SetValue(container, stringList);
                 }
             }
 
@@ -395,6 +466,42 @@ namespace BGC.Parameters
         }
 
         public static void DeserializeListItem(
+            this IPropertyGroup container,
+            PropertyInfo property,
+            IList groupList,
+            JsonObject listElement,
+            int index = -1)
+        {
+            Type matchingType = property.FindMatchingListType(listElement["Type"].AsString);
+
+            if (matchingType == null)
+            {
+                Debug.LogError($"Requested type not recognized for list: {listElement["Type"].AsString}");
+                return;
+            }
+
+            IPropertyGroup propertyGroup = matchingType.Build();
+
+            if (index == -1)
+            {
+                groupList.Add(propertyGroup);
+            }
+            else if (index < 0 || index > groupList.Count)
+            {
+                Debug.LogError($"Tried to insert PropertyGroup {container.GetGroupPath()} in invalid index {index}");
+                groupList.Add(propertyGroup);
+            }
+            else
+            {
+                groupList.Insert(index, propertyGroup);
+            }
+
+            propertyGroup.SetParent(container);
+            propertyGroup.InitializeProperties();
+            propertyGroup.Deserialize(listElement);
+        }
+        
+        public static void DeserializeSimpleListItem(
             this IPropertyGroup container,
             PropertyInfo property,
             IList groupList,
@@ -566,6 +673,9 @@ namespace BGC.Parameters
 
         public static PropertyGroupListAttribute GetGroupListAttribute(this PropertyInfo propertyInfo) =>
             propertyInfo.GetCustomAttribute<PropertyGroupListAttribute>();
+        
+        public static PropertyGroupListAttributeSimple GetGroupListAttributeSimple(this PropertyInfo propertyInfo) =>
+            propertyInfo.GetCustomAttribute<PropertyGroupListAttributeSimple>();
 
         public static string GetGroupTitle(this PropertyInfo propertyInfo) =>
             propertyInfo.GetGroupAttribute().title;
@@ -575,6 +685,9 @@ namespace BGC.Parameters
 
         public static string GetGroupListSerializationName(this PropertyInfo propertyInfo) =>
             propertyInfo.GetGroupListAttribute().fieldName;
+        
+        public static string GetGroupListSimpleSerializationName(this PropertyInfo propertyInfo) =>
+            propertyInfo.GetGroupListAttributeSimple().fieldName;
 
         public static string GetSelectionSerializationName(this Type type) =>
             type.GetSelectionAttribute().serializationString;

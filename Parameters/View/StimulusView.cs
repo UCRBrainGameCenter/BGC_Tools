@@ -8,6 +8,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using BGC.Mathematics;
 using BGC.UI.Dialogs;
+using Object = UnityEngine.Object;
 
 namespace BGC.Parameters.View
 {
@@ -95,6 +96,7 @@ namespace BGC.Parameters.View
                 else if (property.GetCustomAttribute<PropertyGroupListAttributeSimple>() != null)
                 {
                     //Internal Property Group List
+                    string title = property.GetCustomAttribute<PropertyGroupListAttributeSimple>().fieldName;
 
                     IList propertyGroupList = property.GetValue(propertyContainer) as IList;
 
@@ -112,6 +114,7 @@ namespace BGC.Parameters.View
                     }
 
                     SpawnPropertyGroupListSimple(
+                        title,
                         propertyGroupList: propertyGroupList,
                         property: property,
                         propertyContainer: propertyContainer,
@@ -202,6 +205,8 @@ namespace BGC.Parameters.View
                 }
                 else if(property.GetCustomAttribute<PropertyGroupListAttributeSimple>() != null)
                 {
+                    string title = property.GetCustomAttribute<PropertyGroupListAttributeSimple>().fieldName;
+                    
                     //Internal Property Group List
                     IList propertyGroupList = property.GetValue(propertyContainer) as IList;
 
@@ -219,6 +224,7 @@ namespace BGC.Parameters.View
                     }
 
                     SpawnPropertyGroupListSimple(
+                        title,
                         propertyGroupList: propertyGroupList,
                         property: property,
                         propertyContainer: propertyContainer,
@@ -468,6 +474,7 @@ namespace BGC.Parameters.View
         }
         
          private void SpawnPropertyGroupListSimple(
+             string title,
             IList propertyGroupList,
             PropertyInfo property,
             IPropertyGroup propertyContainer,
@@ -504,100 +511,39 @@ namespace BGC.Parameters.View
                 GameObject baseWidget = widgetFactory.GetContainerWidget(
                     config: WidgetFactory.ContainerConfig.Config_Normal_Even,
                     parent: parentTransform.gameObject,
-                    slots: 4);
+                    slots: 3);
 
                 LayoutElement layoutElement = baseWidget.AddComponent<LayoutElement>();
                 layoutElement.minHeight = 60;
 
-                widgetFactory.CreateButtonWidget(
-                    parent: baseWidget,
-                    text: "Add",
-                    onClick: () =>
-                    {
-                        // FieldDisplayAttribute attribute = null;
-                        //
-                        // var type = property.PropertyType.GetGenericArguments()[0];
-                        //
-                        // if (type == typeof(int))
-                        // {
-                        //     attribute = new IntFieldDisplayAttribute("testInt", "testInt");
-                        // }
-                        // else if (type == typeof(string))
-                        // {
-                        //     attribute = new StringFieldDisplayAttribute("testString", "testString");
-                        // }
-                        // else if (type == typeof(bool))
-                        // {
-                        //     attribute = new BoolDisplayAttribute("testBool", "testBool");
-                        //}
-
-                        string title = "test";//GetUniqueListItemName(title, propertyGroupList);
-
-                        IPropertyGroup newPropertyGroup = new FixedSimpleValueBehavior<int>();
-                                                          //types[selectionIndex].Build(title, propertyContainer, propertyGroupList);
-
-                        if (shallow)
-                        {
-                            PropertyListItemContainer propertyListItemContainer = SpawnPropertyListItem();
-                        
-                            propertyListItemContainer.transform.SetParent(parentTransform, false);
-                            propertyListItemContainer.typeLabel.text = $"{newPropertyGroup.GetSelectionTitle()}:";
-                            propertyListItemContainer.nameLabel.text = newPropertyGroup.GetItemTitle();
-                            propertyListItemContainer.ChoiceInfoText = newPropertyGroup.GetType().GetChoiceInfoText();
-                        }
-                        else
-                        {
-                            PropertyListItemContainer propertyListItemContainer = SpawnPropertyListItem();
-
-                            propertyListItemContainer.transform.SetParent(parentTransform, false);
-                            propertyListItemContainer.typeLabel.text = $"{newPropertyGroup.GetSelectionTitle()}:";
-                            propertyListItemContainer.nameLabel.text = newPropertyGroup.GetItemTitle();
-                            propertyListItemContainer.ChoiceInfoText = newPropertyGroup.GetType().GetChoiceInfoText();
-
-                            VisualizePropertyGroup(
-                                propertyContainer: newPropertyGroup,
-                                parentTransform: propertyListItemContainer.propertyFrame.transform,
-                                respawnPropertyGroupCallback: null,
-                                spawningBehavior: SpawningBehavior.NestedInternal);
-                        }
-                    },
-                    index: 2);
+                widgetFactory.CreateLabelWidget(
+                    baseWidget, 
+                    title, 
+                    alignment: TextAnchor.MiddleLeft,
+                    index: 0);
+                
+                widgetFactory.CreateLabelWidget(
+                    baseWidget, 
+                    propertyGroupList.Count.ToString(), 
+                    alignment: TextAnchor.MiddleRight,
+                    index: 1);
 
                 widgetFactory.CreateButtonWidget(
                     parent: baseWidget,
-                    text: "Edit",
-                    onClick: () => ModalListDialog.ShowListEditModal(
-                        headerText: "Edit",
-                        itemList: propertyGroupList,
-                        nameTranslator: ListItemNameTranslator,
-                        nameValidator: ListItemNameValidator,
-                        nameUpdater: ListItemNameUpdater,
-                        callback: _ =>
+                    text: "Edit list",
+                    onClick: () => ModalListDialog2.ShowListEditModal(
+                        headerText: "Edit list",
+                        propertyList: propertyGroupList,
+                        callback: (valueList) =>
                         {
-                            //Refresh items
-                            foreach (Transform t in parentTransform)
+                            propertyGroupList.Clear();
+
+                            foreach (var t in valueList)
                             {
-                                if (t.gameObject.GetComponent<PropertyListItemContainer>() == null)
-                                {
-                                    //Only destroy PropertyListItems
-                                    continue;
-                                }
-
-                                GameObject.Destroy(t.gameObject);
+                                propertyGroupList.Add(t);
                             }
-
-                            RenderAllListItems(
-                                shallow: shallow,
-                                propertyGroupList: propertyGroupList,
-                                parentTransform: parentTransform);
-                        },
-                        inputType: InputField.ContentType.Standard),
-                    index: 3);
-
-                RenderAllListItems(
-                    shallow: shallow,
-                    propertyGroupList: propertyGroupList,
-                    parentTransform: parentTransform);
+                        }),
+                    index: 2);
             }
         }
 
