@@ -5,6 +5,8 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using BGC.DataStructures.Generic;
+using BGC.Parameters;
+using BGC.Parameters.View;
 
 namespace BGC.UI.Dialogs
 {
@@ -41,6 +43,9 @@ namespace BGC.UI.Dialogs
         private static ModalListDialog instance;
 
         private InputField.ContentType inputType = InputField.ContentType.Alphanumeric;
+        
+        private IPropertyGroup selectedPropertyGroup;
+        public static IPropertyGroup SelectedProperty => instance.selectedPropertyGroup;
 
         public enum Response
         {
@@ -116,6 +121,8 @@ namespace BGC.UI.Dialogs
             instance.editButtonsContainer.SetActive(true);
 
             instance.forceSelection = false;
+            
+            instance.selectedPropertyGroup = null;
 
             instance.itemList = itemList;
             instance.nameTranslator = nameTranslator;
@@ -355,6 +362,9 @@ namespace BGC.UI.Dialogs
             if (selectedItem != null)
             {
                 SetButtonState(buttonMap[selectedItem], true);
+                
+                //use to send this property to selected property panel
+                selectedPropertyGroup = selectedItem as IPropertyGroup;
             }
 
             //Update Edit Buttons

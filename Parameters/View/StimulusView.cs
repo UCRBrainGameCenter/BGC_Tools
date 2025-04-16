@@ -113,7 +113,7 @@ namespace BGC.Parameters.View
                         continue;
                     }
 
-                    SpawnPropertyGroupListSimple(
+                    SpawnPrimitivePropertyGroupList(
                         title,
                         propertyGroupList: propertyGroupList,
                         property: property,
@@ -223,7 +223,7 @@ namespace BGC.Parameters.View
                         continue;
                     }
 
-                    SpawnPropertyGroupListSimple(
+                    SpawnPrimitivePropertyGroupList(
                         title,
                         propertyGroupList: propertyGroupList,
                         property: property,
@@ -473,7 +473,7 @@ namespace BGC.Parameters.View
             }
         }
         
-         private void SpawnPropertyGroupListSimple(
+         private void SpawnPrimitivePropertyGroupList(
              string title,
             IList propertyGroupList,
             PropertyInfo property,
@@ -481,7 +481,6 @@ namespace BGC.Parameters.View
             Transform parentTransform,
             SpawningBehavior spawningBehavior)
         {
-            bool shallow = false;
             bool rendered = true;
 
             switch (spawningBehavior)
@@ -489,11 +488,8 @@ namespace BGC.Parameters.View
                 case SpawningBehavior.PropertyFrame:
                 case SpawningBehavior.NestedInternal:
                 case SpawningBehavior.FlatInternal:
-                    break;
-
                 case SpawningBehavior.ListTitlesOnly:
                 case SpawningBehavior.ShallowInternal:
-                    shallow = true;
                     break;
 
                 case SpawningBehavior.NonRendered:
