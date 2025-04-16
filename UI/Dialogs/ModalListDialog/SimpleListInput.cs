@@ -23,8 +23,8 @@ namespace BGC.UI.Dialogs
         [SerializeField]
         private Text text;
         
-        private Action<SimpleListInput> onSelectCallback;
-        private Action onValueChangeCallback;
+        protected Action<SimpleListInput> onSelectCallback;
+        protected Action onValueChangeCallback;
 
         public virtual object GetValue()
         {
@@ -41,12 +41,16 @@ namespace BGC.UI.Dialogs
             if (activated)
             {
                 background.color = SelectedItemBG;
-                text.color = SelectedItemText;
+                
+                if(text != null)
+                    text.color = SelectedItemText;
             }
             else
             {
                 background.color = EnabledItemBG;
-                text.color = EnabledItemText;
+               
+                if(text != null)
+                    text.color = EnabledItemText;
             }
         }
         
@@ -61,7 +65,7 @@ namespace BGC.UI.Dialogs
             onSelectCallback?.Invoke(this);
         }
 
-        protected void OnValueChanged(string value)
+        protected void OnValueChanged(object value)
         {
             onValueChangeCallback?.Invoke();
         }

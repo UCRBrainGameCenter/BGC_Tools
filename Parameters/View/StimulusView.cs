@@ -93,10 +93,10 @@ namespace BGC.Parameters.View
                         parentTransform: container.propertyFrame.transform,
                         spawningBehavior: SpawningBehavior.ShallowInternal);
                 }
-                else if (property.GetCustomAttribute<PropertyGroupListAttributeSimple>() != null)
+                else if (property.GetCustomAttribute<PrimitiveListAttribute>() != null)
                 {
                     //Internal Property Group List
-                    string title = property.GetCustomAttribute<PropertyGroupListAttributeSimple>().fieldName;
+                    string title = property.GetCustomAttribute<PrimitiveListAttribute>().fieldName;
 
                     IList propertyGroupList = property.GetValue(propertyContainer) as IList;
 
@@ -203,9 +203,9 @@ namespace BGC.Parameters.View
                         parentTransform: parentTransform,
                         spawningBehavior: spawningBehavior);
                 }
-                else if(property.GetCustomAttribute<PropertyGroupListAttributeSimple>() != null)
+                else if(property.GetCustomAttribute<PrimitiveListAttribute>() != null)
                 {
-                    string title = property.GetCustomAttribute<PropertyGroupListAttributeSimple>().fieldName;
+                    string title = property.GetCustomAttribute<PrimitiveListAttribute>().fieldName;
                     
                     //Internal Property Group List
                     IList propertyGroupList = property.GetValue(propertyContainer) as IList;
@@ -531,7 +531,7 @@ namespace BGC.Parameters.View
                 widgetFactory.CreateButtonWidget(
                     parent: baseWidget,
                     text: "Edit list",
-                    onClick: () => ModalListDialog2.ShowListEditModal(
+                    onClick: () => PrimitiveListModalDialog.ShowListEditModal(
                         headerText: "Edit list",
                         propertyList: propertyGroupList,
                         callback: (valueList) =>

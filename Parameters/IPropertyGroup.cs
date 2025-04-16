@@ -36,12 +36,12 @@ namespace BGC.Parameters
             }
         }
         
-        public static IEnumerable<PropertyInfo> GetPropertyGroupListSimpleProperties(this IPropertyGroup container)
+        public static IEnumerable<PropertyInfo> GetPrimitiveListProperties(this IPropertyGroup container)
         {
             foreach (PropertyInfo property in container.GetType().GetProperties())
             {
                 if (typeof(IList).IsAssignableFrom(property.PropertyType) &&
-                    property.GetCustomAttribute<PropertyGroupListAttributeSimple>() is PropertyGroupListAttributeSimple propertyGroupList &&
+                    property.GetCustomAttribute<PrimitiveListAttribute>() is PrimitiveListAttribute propertyGroupList &&
                     propertyGroupList.autoSerialize)
                 {
                     yield return property;
@@ -236,21 +236,26 @@ namespace BGC.Parameters
                 }
             }
             
-            foreach (PropertyInfo innerList in propertyGroup.GetPropertyGroupListSimpleProperties())
+            foreach (PropertyInfo innerList in propertyGroup.GetPrimitiveListProperties())
             {
                 if (innerList.GetValue(propertyGroup) is IList innerPropertyList)
                 {
                     JsonArray propertyListValues = new JsonArray();
 
-                    foreach (string listElement in innerPropertyList.Cast<string>().ToList())
+                    foreach (object listElement in innerPropertyList)
                     {
-                        propertyListValues.Add(listElement);
+                        if (listElement is int i)
+                            propertyListValues.Add(i);
+                        else if (listElement is double d)
+                            propertyListValues.Add(d);
+                        else if (listElement is string s)
+                            propertyListValues.Add(s);
                     }
 
                     if (propertyListValues.Count > 0)
                     {
                         propertyGroupData.Add(
-                            key: innerList.GetGroupListSimpleSerializationName(),
+                            key: innerList.GetPrimitiveListSerializationName(),
                             value: propertyListValues);
                     }
                 }
@@ -306,10 +311,10 @@ namespace BGC.Parameters
                 }
             }
             
-            //Deserialize Property Group Lists Simple
-            foreach (PropertyInfo property in container.GetPropertyGroupListSimpleProperties())
+            //Deserialize Property Group Lists Primitive
+            foreach (PropertyInfo property in container.GetPrimitiveListProperties())
             {
-                string propertyGroupListName = property.GetGroupListSimpleSerializationName();
+                string propertyGroupListName = property.GetPrimitiveListSerializationName();
 
                 //Instantiate Container (List)
                 property.SetValue(container, Activator.CreateInstance(property.PropertyType));
@@ -326,21 +331,25 @@ namespace BGC.Parameters
                     continue;
 
                 var element = array[0];
-
-                if (element.IsBoolean)
-                {
-                    var boolList = array.Select(x => x.AsBoolean).ToList();
-                    property.SetValue(container, boolList);
-                }
-                else if (element.IsInteger)
+                
+                if (element.IsInteger)
                 {
                     var intList = array.Select(x => x.AsInteger).ToList();
                     property.SetValue(container, intList);
+                }
+                else if (element.IsNumber)
+                {
+                    var doubleList = array.Select(x => x.AsNumber).ToList();
+                    property.SetValue(container, doubleList);
                 }
                 else if (element.IsString)
                 {
                     var stringList = array.Select(x => x.AsString).ToList();
                     property.SetValue(container, stringList);
+                }
+                else
+                {
+                    Debug.LogError("No good type");
                 }
             }
 
@@ -674,8 +683,8 @@ namespace BGC.Parameters
         public static PropertyGroupListAttribute GetGroupListAttribute(this PropertyInfo propertyInfo) =>
             propertyInfo.GetCustomAttribute<PropertyGroupListAttribute>();
         
-        public static PropertyGroupListAttributeSimple GetGroupListAttributeSimple(this PropertyInfo propertyInfo) =>
-            propertyInfo.GetCustomAttribute<PropertyGroupListAttributeSimple>();
+        public static PrimitiveListAttribute GetPrimitiveListAttribute(this PropertyInfo propertyInfo) =>
+            propertyInfo.GetCustomAttribute<PrimitiveListAttribute>();
 
         public static string GetGroupTitle(this PropertyInfo propertyInfo) =>
             propertyInfo.GetGroupAttribute().title;
@@ -686,8 +695,8 @@ namespace BGC.Parameters
         public static string GetGroupListSerializationName(this PropertyInfo propertyInfo) =>
             propertyInfo.GetGroupListAttribute().fieldName;
         
-        public static string GetGroupListSimpleSerializationName(this PropertyInfo propertyInfo) =>
-            propertyInfo.GetGroupListAttributeSimple().fieldName;
+        public static string GetPrimitiveListSerializationName(this PropertyInfo propertyInfo) =>
+            propertyInfo.GetPrimitiveListAttribute().fieldName;
 
         public static string GetSelectionSerializationName(this Type type) =>
             type.GetSelectionAttribute().serializationString;

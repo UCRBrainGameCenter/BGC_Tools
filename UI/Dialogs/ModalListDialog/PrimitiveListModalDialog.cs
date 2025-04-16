@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
 using BGC.DataStructures.Generic;
@@ -9,7 +10,7 @@ using BGC.Extensions;
 
 namespace BGC.UI.Dialogs
 {
-    public class ModalListDialog2 : MonoBehaviour
+    public class PrimitiveListModalDialog : MonoBehaviour
     {
         [Header("Dialog Buttons")]
         [SerializeField]
@@ -35,11 +36,12 @@ namespace BGC.UI.Dialogs
 
         [Header("Prefabs")]
         [SerializeField]
-        private GameObject listItemButton = null;
+        private GameObject listItemString = null;
 
-        private static ModalListDialog2 instance;
+        private static PrimitiveListModalDialog instance;
         
         private IList valueList = null;
+        private Type listType;
         
         private List<SimpleListInput> itemList;
         private SimpleListInput selectedItem;
@@ -48,7 +50,7 @@ namespace BGC.UI.Dialogs
 
         private ConstructingPool<GameObject> listButtonPool;
 
-        public ModalListDialog2()
+        public PrimitiveListModalDialog()
         {
             instance = this;
         }
@@ -61,10 +63,10 @@ namespace BGC.UI.Dialogs
             downButton.onClick.AddListener(() => DirectionPressed(false));
             deleteButton.onClick.AddListener(DeletePressed);
             addButton.onClick.AddListener(AddPressed);
-
+            
             listButtonPool = new ConstructingPool<GameObject>(BuildListItem);
-            listButtonPool.onCheckIn = CheckIn;
             listButtonPool.onCheckOut = CheckOut;
+            listButtonPool.onCheckIn = CheckIn;
         }
 
         private void SetButtonText(string a = "")
@@ -82,19 +84,19 @@ namespace BGC.UI.Dialogs
             instance.SetButtonText(a: "Done");
             instance.editButtonsContainer.SetActive(true);
 
-            Type listType = instance.CheckListType(propertyList);
+             instance.listType = instance.CheckListType(propertyList);
 
-            if (listType == typeof(int))
+            if (instance.listType == typeof(int))
             {
                 instance.valueList = new List<int>();
             }
-            else if (listType == typeof(string))
+            else if (instance.listType == typeof(string))
             {
                 instance.valueList = new List<string>();
             }
-            else if (listType == typeof(bool))
+            else if (instance.listType == typeof(double))
             {
-                instance.valueList = new List<bool>();
+                instance.valueList = new List<double>();
             }
 
             foreach (var t in propertyList)
@@ -133,10 +135,10 @@ namespace BGC.UI.Dialogs
             selectedItem = null;
             
             callback = null;
-
-            foreach (Transform listItemButton in listWidgetArea)
+            
+            foreach (Transform listItem in listWidgetArea)
             {
-                listButtonPool.CheckIn(listItemButton.gameObject);
+                listButtonPool.CheckIn(listItem.gameObject);
             }
 
             gameObject.SetActive(false);
@@ -178,14 +180,30 @@ namespace BGC.UI.Dialogs
             if(index == -1) return;
             
             valueList.RemoveAt(index);
-            RebuildList();
+            itemList.RemoveAt(index);
+
+            Transform target = selectedItem.transform.parent;
+            listButtonPool.CheckIn(target.gameObject);
+            target.SetAsLastSibling();
             
             SelectItem(null);
         }
 
         private void AddPressed()
         {
-            valueList.Add("New empty");
+            if (listType == typeof(int))
+            {
+                valueList.Add(0);
+            }
+            else if (listType == typeof(string))
+            {
+                valueList.Add("New empty");
+            }
+            else if (listType == typeof(double))
+            {
+                valueList.Add(0.0);
+            }
+           
             RebuildList();
             
             if (itemList.Count > 0)
@@ -200,12 +218,14 @@ namespace BGC.UI.Dialogs
 
         private void RebuildList()
         {
+            SelectItem(null);
+            
             //clear list area
-            foreach (Transform listItemButton in listWidgetArea)
+            foreach (Transform listItem in listWidgetArea)
             {
-                if (listItemButton.gameObject.activeSelf)
+                if (listItem.gameObject.activeSelf)
                 {
-                    listButtonPool.CheckIn(listItemButton.gameObject);
+                    listButtonPool.CheckIn(listItem.gameObject);
                 }
             }
             
@@ -214,8 +234,6 @@ namespace BGC.UI.Dialogs
             foreach (object t in valueList)
             {
                 GameObject newListItem = listButtonPool.CheckOut();
-                
-                newListItem.transform.SetAsLastSibling();
                 
                 SimpleListInput input = newListItem.GetComponentInChildren<SimpleListInput>();
                 input.SetValue(t);
@@ -242,13 +260,45 @@ namespace BGC.UI.Dialogs
             int index = itemList.IndexOf(selectedItem);
             
             if(index == -1) return;
-            
-            valueList[index] = selectedItem.GetValue();
+
+            if (listType == typeof(int))
+            {
+                if (int.TryParse(selectedItem.GetValue().ToString(), out int result))
+                {
+                    valueList[index] = result;
+                    return;
+                }
+
+                valueList[index] = 0;
+                selectedItem.SetValue("0");
+            }
+            else if (listType == typeof(string))
+            {
+                valueList[index] = selectedItem.GetValue();
+            }
+            else if (listType == typeof(double))
+            {
+                string input = selectedItem.GetValue().ToString();
+
+                // Check if it's an in-progress float (e.g. "3.", ".")
+                bool looksLikeFloat = Regex.IsMatch(input, @"^\d*\.$|^\.$");
+
+                if (double.TryParse(input, out double result))
+                {
+                    valueList[index] = result;
+                }
+                else if (!looksLikeFloat)
+                {
+                    valueList[index] = 0f;
+                    selectedItem.SetValue("0");
+                }
+            }
         }
 
         private GameObject BuildListItem()
         {
-            GameObject temp = Instantiate(listItemButton);
+            GameObject temp = Instantiate(listItemString);;
+            
             temp.transform.SetParent(listWidgetArea);
             temp.transform.localScale = Vector3.one;
 
@@ -264,11 +314,13 @@ namespace BGC.UI.Dialogs
         {
             listItem.SetActive(true);
             SetButtonState(listItem, false);
+            listItem.transform.SetAsLastSibling();
         }
 
         public void SetButtonState(GameObject listItem, bool active)
         {
-            listItem.GetComponentInChildren<SimpleListInput>().SetButtonState(active);
+            if(listType != null)
+                listItem.GetComponentInChildren<SimpleListInput>().SetButtonState(active);
         }
     }
 }

@@ -18,13 +18,16 @@ namespace BGC.Parameters
         }
     }
     
+    /// <summary>
+    /// Labels IList containers of Primitives (int, double, string)
+    /// </summary>
     [AttributeUsage(AttributeTargets.Property)]
-    public class PropertyGroupListAttributeSimple : Attribute
+    public class PrimitiveListAttribute : Attribute
     {
         public readonly string fieldName;
         public readonly bool autoSerialize; 
 
-        public PropertyGroupListAttributeSimple(string fieldName, bool autoSerialize = true)
+        public PrimitiveListAttribute(string fieldName, bool autoSerialize = true)
         {
             this.fieldName = fieldName;
             this.autoSerialize = autoSerialize;
