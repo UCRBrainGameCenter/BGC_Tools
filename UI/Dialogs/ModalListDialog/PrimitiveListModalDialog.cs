@@ -280,16 +280,16 @@ namespace BGC.UI.Dialogs
             {
                 string input = selectedItem.GetValue().ToString();
 
-                // Check if it's an in-progress float (e.g. "3.", ".")
-                bool looksLikeFloat = Regex.IsMatch(input, @"^\d*\.$|^\.$");
+                // Check if it's an in-progress double (e.g. "3.", ".")
+                bool looksLikeDouble = Regex.IsMatch(input, @"^\d*\.$|^\.$");
 
                 if (double.TryParse(input, out double result))
                 {
                     valueList[index] = result;
                 }
-                else if (!looksLikeFloat)
+                else if (!looksLikeDouble)
                 {
-                    valueList[index] = 0f;
+                    valueList[index] = 0.0;
                     selectedItem.SetValue("0");
                 }
             }
