@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
@@ -7,6 +8,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using BGC.Mathematics;
 using BGC.UI.Dialogs;
+using Object = UnityEngine.Object;
 
 namespace BGC.Parameters.View
 {
@@ -85,6 +87,31 @@ namespace BGC.Parameters.View
                     }
 
                     SpawnPropertyGroupList(
+                        propertyGroupList: propertyGroupList,
+                        property: property,
+                        propertyContainer: propertyContainer,
+                        parentTransform: container.propertyFrame.transform,
+                        spawningBehavior: SpawningBehavior.ShallowInternal);
+                }
+                else if (property.GetCustomAttribute<PrimitiveListAttribute>() != null)
+                {
+                    //Internal Property Group List
+                    IList propertyGroupList = property.GetValue(propertyContainer) as IList;
+
+                    if (propertyGroupList == null)
+                    {
+                        //Construct a new instance of the List
+                        propertyGroupList = Activator.CreateInstance(property.PropertyType) as IList;
+                        property.SetValue(propertyContainer, propertyGroupList);
+                    }
+
+                    if (propertyGroupList == null)
+                    {
+                        Debug.LogError($"Unable to construct PropertyGroupList: {property}");
+                        continue;
+                    }
+
+                    SpawnPrimitivePropertyGroupList(
                         propertyGroupList: propertyGroupList,
                         property: property,
                         propertyContainer: propertyContainer,
@@ -173,6 +200,31 @@ namespace BGC.Parameters.View
                         parentTransform: parentTransform,
                         spawningBehavior: spawningBehavior);
                 }
+                else if(property.GetCustomAttribute<PrimitiveListAttribute>() != null)
+                {
+                    //Internal Property Group List
+                    IList propertyGroupList = property.GetValue(propertyContainer) as IList;
+
+                    if (propertyGroupList == null)
+                    {
+                        //Construct a new instance of the List
+                        propertyGroupList = Activator.CreateInstance(property.PropertyType) as IList;
+                        property.SetValue(propertyContainer, propertyGroupList);
+                    }
+
+                    if (propertyGroupList == null)
+                    {
+                        Debug.LogError($"Unable to construct PropertyGroupList: {property}");
+                        continue;
+                    }
+
+                    SpawnPrimitivePropertyGroupList(
+                        propertyGroupList: propertyGroupList,
+                        property: property,
+                        propertyContainer: propertyContainer,
+                        parentTransform: parentTransform,
+                        spawningBehavior: spawningBehavior);
+                }
                 else if (typeof(IPropertyGroup).IsAssignableFrom(property.PropertyType))
                 {
                     //Internal PropertyGroup
@@ -191,17 +243,12 @@ namespace BGC.Parameters.View
                         continue;
                     }
 
-                    //TODO that's very hacky, needs to change
-                    SpawningBehavior spawnBehavior = spawningBehavior;
-                    if (property.PropertyType.ToString().Equals("Stimuli.StimulusCollection"))
-                        spawnBehavior = SpawningBehavior.ShallowPropertyFrame;
-
                     SpawnPropertyGroup(
                         propertyGroup: propertyGroup,
                         property: property,
                         propertyContainer: propertyContainer,
                         parentTransform: parentTransform,
-                        spawningBehavior: spawnBehavior);
+                        spawningBehavior: spawningBehavior);
                 }
             }
         }
@@ -280,17 +327,17 @@ namespace BGC.Parameters.View
             Transform parentTransform,
             SpawningBehavior spawningBehavior)
         {
-            bool shallow = false;
             bool rendered = true;
-
+            bool shallow = false;
+            
             switch (spawningBehavior)
             {
                 case SpawningBehavior.PropertyFrame:
                 case SpawningBehavior.NestedInternal:
                 case SpawningBehavior.FlatInternal:
-                    break;
-
                 case SpawningBehavior.ListTitlesOnly:
+                    break;
+                
                 case SpawningBehavior.ShallowInternal:
                     shallow = true;
                     break;
@@ -319,6 +366,18 @@ namespace BGC.Parameters.View
 
                 LayoutElement layoutElement = baseWidget.AddComponent<LayoutElement>();
                 layoutElement.minHeight = 60;
+                
+                widgetFactory.CreateLabelWidget(
+                    baseWidget, 
+                    property.GetCustomAttribute<PropertyGroupListAttribute>().fieldName,
+                    alignment: TextAnchor.MiddleLeft,
+                    index: 0);
+                
+                GameObject listCount = widgetFactory.CreateLabelWidget(
+                    baseWidget, 
+                    propertyGroupList.Count.ToString(), 
+                    alignment: TextAnchor.MiddleRight,
+                    index: 1);
 
                 widgetFactory.CreateButtonWidget(
                     parent: baseWidget,
@@ -338,15 +397,17 @@ namespace BGC.Parameters.View
                                 {
                                     return;
                                 }
+                                
+                                IPropertyGroup newPropertyGroup = Activator.CreateInstance(types[selectionIndex]) as IPropertyGroup;
+                                propertyGroupList.Add(newPropertyGroup);
 
                                 if (string.IsNullOrEmpty(title))
                                 {
                                     title = types[selectionIndex].GetSelectionTitle();
                                 }
-
+    
                                 title = GetUniqueListItemName(title, propertyGroupList);
-
-                                IPropertyGroup newPropertyGroup = types[selectionIndex].Build(title, propertyContainer, propertyGroupList);
+                                newPropertyGroup.SetItemTitle(title);
 
                                 if (shallow)
                                 {
@@ -357,21 +418,13 @@ namespace BGC.Parameters.View
                                     propertyListItemContainer.nameLabel.text = newPropertyGroup.GetItemTitle();
                                     propertyListItemContainer.ChoiceInfoText = newPropertyGroup.GetType().GetChoiceInfoText();
                                 }
-                                else
-                                {
-                                    PropertyListItemContainer propertyListItemContainer = SpawnPropertyListItem();
-
-                                    propertyListItemContainer.transform.SetParent(parentTransform, false);
-                                    propertyListItemContainer.typeLabel.text = $"{newPropertyGroup.GetSelectionTitle()}:";
-                                    propertyListItemContainer.nameLabel.text = newPropertyGroup.GetItemTitle();
-                                    propertyListItemContainer.ChoiceInfoText = newPropertyGroup.GetType().GetChoiceInfoText();
-
-                                    VisualizePropertyGroup(
-                                        propertyContainer: newPropertyGroup,
-                                        parentTransform: propertyListItemContainer.propertyFrame.transform,
-                                        respawnPropertyGroupCallback: null,
-                                        spawningBehavior: SpawningBehavior.NestedInternal);
-                                }
+                                
+                                Destroy(listCount);
+                                listCount = widgetFactory.CreateLabelWidget(
+                                    baseWidget, 
+                                    propertyGroupList.Count.ToString(), 
+                                    alignment: TextAnchor.MiddleRight,
+                                    index: 1);
                             },
                             inputType: InputField.ContentType.Standard);
                     },
@@ -399,19 +452,109 @@ namespace BGC.Parameters.View
 
                                 GameObject.Destroy(t.gameObject);
                             }
+                            
+                            Destroy(listCount);
+                            listCount = widgetFactory.CreateLabelWidget(
+                                baseWidget, 
+                                propertyGroupList.Count.ToString(), 
+                                alignment: TextAnchor.MiddleRight,
+                                index: 1);
 
-                            RenderAllListItems(
-                                shallow: shallow,
-                                propertyGroupList: propertyGroupList,
-                                parentTransform: parentTransform);
+                            if (shallow)
+                            {
+                                RenderAllListItems(
+                                    shallow: true,
+                                    propertyGroupList: propertyGroupList,
+                                    parentTransform: parentTransform);
+                            }
                         },
                         inputType: InputField.ContentType.Standard),
                     index: 3);
 
-                RenderAllListItems(
-                    shallow: shallow,
-                    propertyGroupList: propertyGroupList,
-                    parentTransform: parentTransform);
+                if (shallow)
+                {
+                    RenderAllListItems(
+                        shallow: true,
+                        propertyGroupList: propertyGroupList,
+                        parentTransform: parentTransform);
+                }
+            }
+        }
+        
+         private void SpawnPrimitivePropertyGroupList(
+            IList propertyGroupList,
+            PropertyInfo property,
+            IPropertyGroup propertyContainer,
+            Transform parentTransform,
+            SpawningBehavior spawningBehavior)
+        {
+            bool rendered = true;
+
+            switch (spawningBehavior)
+            {
+                case SpawningBehavior.PropertyFrame:
+                case SpawningBehavior.NestedInternal:
+                case SpawningBehavior.FlatInternal:
+                case SpawningBehavior.ListTitlesOnly:
+                case SpawningBehavior.ShallowInternal:
+                    break;
+
+                case SpawningBehavior.NonRendered:
+                    rendered = false;
+                    break;
+
+                case SpawningBehavior.ShallowPropertyFrame:
+                default:
+                    Debug.LogError($"Unexpected SpawningBehavior: {spawningBehavior}");
+                    return;
+            }
+
+            if (rendered)
+            {
+                GameObject baseWidget = widgetFactory.GetContainerWidget(
+                    config: WidgetFactory.ContainerConfig.Config_Normal_Even,
+                    parent: parentTransform.gameObject,
+                    slots: 4);
+
+                LayoutElement layoutElement = baseWidget.AddComponent<LayoutElement>();
+                layoutElement.minHeight = 60;
+
+                widgetFactory.CreateLabelWidget(
+                    baseWidget, 
+                    property.GetCustomAttribute<PrimitiveListAttribute>().fieldName,
+                    alignment: TextAnchor.MiddleLeft,
+                    index: 0);
+                
+                GameObject listCount = widgetFactory.CreateLabelWidget(
+                    baseWidget, 
+                    propertyGroupList.Count.ToString(), 
+                    alignment: TextAnchor.MiddleRight,
+                    index: 2);
+
+                widgetFactory.CreateButtonWidget(
+                    parent: baseWidget,
+                    text: "Edit list",
+                    onClick: () => PrimitiveListModalDialog.ShowListEditModal(
+                        headerText: "Edit list",
+                        propertyList: propertyGroupList,
+                        callback: (valueList) =>
+                        {
+                            propertyGroupList.Clear();
+
+                            foreach (var t in valueList)
+                            {
+                                propertyGroupList.Add(t);
+                            }
+                            
+                            Destroy(listCount);
+                            
+                            listCount = widgetFactory.CreateLabelWidget(
+                                baseWidget, 
+                                propertyGroupList.Count.ToString(), 
+                                alignment: TextAnchor.MiddleRight,
+                                index: 2);
+                        }),
+                    index: 3);
             }
         }
 
@@ -870,6 +1013,7 @@ namespace BGC.Parameters.View
             Action respawnPropertyGroupCallback,
             IPropertyGroup concretePropertyGroup = null)
         {
+            
             switch (attribute)
             {
                 case DoubleFieldDisplayAttribute doubleAtt:

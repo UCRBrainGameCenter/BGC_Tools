@@ -872,7 +872,7 @@ namespace BGC.UI.Dialogs
         }
 
         /// <summary>
-        /// Accept the button repsonse as input, invoke and clear the callbacks, and hide the dialog
+        /// Accept the button response as input, invoke and clear the callbacks, and hide the dialog
         /// </summary>
         private async Task HandleButtons(Response response)
         {
