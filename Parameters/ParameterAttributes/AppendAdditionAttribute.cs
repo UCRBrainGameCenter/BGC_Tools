@@ -25,15 +25,4 @@ namespace BGC.Parameters
             this.additionTypes = additionTypes.Clone() as Type[];
         }
     }
-    
-    [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
-    public class AppendAdditionAttributeSimple : Attribute
-    {
-        public readonly Type additionType;
-
-        public AppendAdditionAttributeSimple(Type additionType)
-        {
-            this.additionType = additionType;
-        }
-    }
 }
