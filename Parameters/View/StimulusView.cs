@@ -102,7 +102,12 @@ namespace BGC.Parameters.View
         {
             foreach (PropertyInfo property in propertyContainer.GetType().GetSortedProperties())
             {
-                if (property.GetCustomAttribute<DisplayInputFieldAttribute>() != null)
+                DisplayInputFieldAttribute displayAttribute = property.GetCustomAttribute<DisplayInputFieldAttribute>();
+                DisplayOutputFieldKeyAttribute outputKeyAttribute = property.GetCustomAttribute<DisplayOutputFieldKeyAttribute>();
+                PropertyGroupListAttribute listAttribute = property.GetCustomAttribute<PropertyGroupListAttribute>();
+                DisplayPropertyGroupInlineAttribute inlineAttribute = property.GetCustomAttribute<DisplayPropertyGroupInlineAttribute>();
+
+                if (displayAttribute != null)
                 {
                     //Input field
                     GameObject baseWidget = widgetFactory.GetContainerWidget(
@@ -132,7 +137,7 @@ namespace BGC.Parameters.View
                             baseWidget: baseWidget);
                     }
                 }
-                else if (property.GetCustomAttribute<DisplayOutputFieldKeyAttribute>() != null)
+                else if (outputKeyAttribute != null)
                 {
                     //Output Field
                     GameObject baseWidget = widgetFactory.GetContainerWidget(
@@ -148,7 +153,7 @@ namespace BGC.Parameters.View
                         property: property,
                         baseWidget: baseWidget);
                 }
-                else if (property.GetCustomAttribute<PropertyGroupListAttribute>() != null)
+                else if (listAttribute != null)
                 {
                     //Internal Property Group List
                     IList propertyGroupList = property.GetValue(propertyContainer) as IList;
@@ -172,6 +177,47 @@ namespace BGC.Parameters.View
                         propertyContainer: propertyContainer,
                         parentTransform: parentTransform,
                         spawningBehavior: spawningBehavior);
+                }
+                else if (inlineAttribute != null && typeof(IPropertyGroup).IsAssignableFrom(property.PropertyType))
+                {
+                    IPropertyGroup propertyGroup = property.GetValue(propertyContainer) as IPropertyGroup;
+
+                    if (propertyGroup == null)
+                    {
+                        // Try to instantiate if null
+                        try
+                        {
+                            propertyGroup = Activator.CreateInstance(property.PropertyType) as IPropertyGroup;
+                            if (propertyGroup != null)
+                            {
+                                property.SetValue(propertyContainer, propertyGroup);
+                            }
+                            else
+                            {
+                                Debug.LogError($"Failed to create instance of {property.PropertyType.Name} for inline display.");
+                                continue;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogError($"Error instantiating {property.PropertyType.Name} for inline display: {ex.Message}");
+                            continue;
+                        }
+                    }
+
+                    // Spawn a container without the dropdown logic
+                    PropertyGroupContainer inlineContainer = SpawnPropertyGroupContainer();
+                    inlineContainer.transform.SetParent(parentTransform, false);
+                    inlineContainer.label.text = string.IsNullOrWhiteSpace(inlineAttribute.Title) ? property.Name : inlineAttribute.Title; // Use attribute title or property name
+                    inlineContainer.options.gameObject.SetActive(false); // Hide the dropdown
+                    inlineContainer.infoButton?.gameObject.SetActive(false); // Optionally hide info button
+
+                    // Recursively visualize the properties of the inline group
+                    VisualizePropertyGroup(
+                        propertyContainer: propertyGroup,
+                        parentTransform: inlineContainer.propertyFrame.transform,
+                        respawnPropertyGroupCallback: respawnPropertyGroupCallback, // Pass the callback along
+                        spawningBehavior: SpawningBehavior.NestedInternal); // Use NestedInternal or FlatInternal
                 }
                 else if (typeof(IPropertyGroup).IsAssignableFrom(property.PropertyType))
                 {

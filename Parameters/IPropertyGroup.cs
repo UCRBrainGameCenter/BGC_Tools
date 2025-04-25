@@ -193,16 +193,20 @@ namespace BGC.Parameters
                 }
             }
 
+            // Handle property groups
             foreach (PropertyInfo innerGroup in propertyGroup.GetPropertyGroupProperties())
             {
                 if (innerGroup.GetValue(propertyGroup) is IPropertyGroup innerPropertyGroup)
                 {
+                    DisplayPropertyGroupInlineAttribute inlineAttribute = innerGroup.GetCustomAttribute<DisplayPropertyGroupInlineAttribute>();
+                    string propertyKey = inlineAttribute != null ? inlineAttribute.FieldName : innerGroup.GetGroupSerializationName();
                     propertyGroupData.Add(
-                        key: innerGroup.GetGroupSerializationName(),
+                        key: propertyKey,
                         value: innerPropertyGroup.Serialize());
                 }
             }
 
+            // Handle property group lists
             foreach (PropertyInfo innerList in propertyGroup.GetPropertyGroupListProperties())
             {
                 if (innerList.GetValue(propertyGroup) is IList innerPropertyList)
@@ -236,15 +240,33 @@ namespace BGC.Parameters
             //Deserialize Property Groups
             foreach (PropertyInfo property in container.GetPropertyGroupProperties())
             {
-                string propertyGroupName = property.GetGroupSerializationName();
+                // Determine if this is an inline group
+                DisplayPropertyGroupInlineAttribute inlineAttribute = property.GetCustomAttribute<DisplayPropertyGroupInlineAttribute>();
+                string propertyKey = inlineAttribute != null ? inlineAttribute.FieldName : property.GetGroupSerializationName();
 
-                if (!propertyGroupData.ContainsKey(propertyGroupName))
+                if (!propertyGroupData.ContainsKey(propertyKey))
                 {
-                    container.ConstructNewInternalPropertyGroup(property);
+                    // Construct default if missing
+                    if (inlineAttribute != null)
+                    {
+                        container.ConstructNewInlinePropertyGroup(property);
+                    }
+                    else
+                    {
+                        container.ConstructNewInternalPropertyGroup(property);
+                    }
                     continue;
                 }
 
-                container.DeserializeInternalPropertyGroup(property, propertyGroupData[propertyGroupName]);
+                JsonObject groupData = propertyGroupData[propertyKey].AsJsonObject;
+                if (inlineAttribute != null)
+                {
+                    container.DeserializeInlinePropertyGroup(property, groupData);
+                }
+                else
+                {
+                    container.DeserializeInternalPropertyGroup(property, groupData);
+                }
             }
 
             //Deserialize Property Group Lists
@@ -377,6 +399,10 @@ namespace BGC.Parameters
             this IPropertyGroup container,
             PropertyInfo property) => property.GetDefaultSelectionType().Build(container, property);
 
+        public static void ConstructNewInlinePropertyGroup(
+            this IPropertyGroup container,
+            PropertyInfo property) => property.PropertyType.Build(container, property);
+
         public static void DeserializeInternalPropertyGroup(
             this IPropertyGroup container,
             PropertyInfo property,
@@ -391,6 +417,15 @@ namespace BGC.Parameters
             }
 
             matchingType.Build(container, property)
+                .Deserialize(internalPropertyGroupData);
+        }
+
+        public static void DeserializeInlinePropertyGroup(
+            this IPropertyGroup container,
+            PropertyInfo property,
+            JsonObject internalPropertyGroupData)
+        {
+            property.PropertyType.Build(container, property)
                 .Deserialize(internalPropertyGroupData);
         }
 
