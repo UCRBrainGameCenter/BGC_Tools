@@ -261,6 +261,18 @@ namespace BGC.Parameters
                 JsonObject groupData = propertyGroupData[propertyKey].AsJsonObject;
                 if (inlineAttribute != null)
                 {
+                    if (groupData == null)
+                    {
+                        // Sometimes a single value was replaced with an inline property group.
+                        // In those cases, we can sometimes reconstruct the group from the value.
+                        // This is up to the deserialization method to handle.
+                        // This avoids needing to do specialized versioning when this specific case occurs.
+                        groupData = new JsonObject
+                        {
+                            { "UpgradeFromValue", propertyGroupData[propertyKey] }
+                        };
+                    }
+
                     container.DeserializeInlinePropertyGroup(property, groupData);
                 }
                 else
