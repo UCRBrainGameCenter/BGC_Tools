@@ -106,6 +106,7 @@ namespace BGC.Parameters.View
                 DisplayOutputFieldKeyAttribute outputKeyAttribute = property.GetCustomAttribute<DisplayOutputFieldKeyAttribute>();
                 PropertyGroupListAttribute listAttribute = property.GetCustomAttribute<PropertyGroupListAttribute>();
                 DisplayPropertyGroupInlineAttribute inlineAttribute = property.GetCustomAttribute<DisplayPropertyGroupInlineAttribute>();
+                AppendSelectionAttribute appendSelectionAttribute = property.GetCustomAttribute<AppendSelectionAttribute>();
 
                 if (displayAttribute != null)
                 {
@@ -219,7 +220,7 @@ namespace BGC.Parameters.View
                         respawnPropertyGroupCallback: respawnPropertyGroupCallback, // Pass the callback along
                         spawningBehavior: SpawningBehavior.NestedInternal); // Use NestedInternal or FlatInternal
                 }
-                else if (typeof(IPropertyGroup).IsAssignableFrom(property.PropertyType))
+                else if (appendSelectionAttribute != null && typeof(IPropertyGroup).IsAssignableFrom(property.PropertyType))
                 {
                     //Internal PropertyGroup
 

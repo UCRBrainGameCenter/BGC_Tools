@@ -199,10 +199,14 @@ namespace BGC.Parameters
                 if (innerGroup.GetValue(propertyGroup) is IPropertyGroup innerPropertyGroup)
                 {
                     DisplayPropertyGroupInlineAttribute inlineAttribute = innerGroup.GetCustomAttribute<DisplayPropertyGroupInlineAttribute>();
-                    string propertyKey = inlineAttribute != null ? inlineAttribute.FieldName : innerGroup.GetGroupSerializationName();
-                    propertyGroupData.Add(
-                        key: propertyKey,
-                        value: innerPropertyGroup.Serialize());
+                    AppendSelectionAttribute appendSelectionAttribute = innerGroup.GetCustomAttribute<AppendSelectionAttribute>();
+                    if (inlineAttribute != null || appendSelectionAttribute != null)
+                    {
+                        string propertyKey = inlineAttribute != null ? inlineAttribute.FieldName : innerGroup.GetGroupSerializationName();
+                        propertyGroupData.Add(
+                            key: propertyKey,
+                            value: innerPropertyGroup.Serialize());
+                    }
                 }
             }
 
@@ -242,6 +246,13 @@ namespace BGC.Parameters
             {
                 // Determine if this is an inline group
                 DisplayPropertyGroupInlineAttribute inlineAttribute = property.GetCustomAttribute<DisplayPropertyGroupInlineAttribute>();
+                AppendSelectionAttribute appendSelectionAttribute = property.GetCustomAttribute<AppendSelectionAttribute>();
+                if (inlineAttribute == null && appendSelectionAttribute == null)
+                {
+                    // One of these attributes must be present for a property group
+                    continue;
+                }
+
                 string propertyKey = inlineAttribute != null ? inlineAttribute.FieldName : property.GetGroupSerializationName();
 
                 if (!propertyGroupData.ContainsKey(propertyKey))
