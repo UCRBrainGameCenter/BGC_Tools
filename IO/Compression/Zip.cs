@@ -148,8 +148,6 @@ namespace BGC.IO.Compression
                 float newCurrentProgress = 0f;
                 int totalFiles = archive.Entries.Count;
 
-                List<Task> writeTasks = new List<Task>();
-
                 if (abortToken.IsCancellationRequested)
                 {
                     return false;
@@ -173,37 +171,21 @@ namespace BGC.IO.Compression
                         continue;
                     }
 
-                    writeTasks.Add(Task.Run(() => WriteArchiveEntry(entry, fullPath), abortToken));
-                }
+                    entry.ExtractToFile(fullPath);
+                    // await WriteArchiveEntry(
+                    //     entry,
+                    //     fullPath,
+                    //     abortToken);
+                    
+                    newCurrentProgress += 1f / totalFiles;
+                    progressReporter?.Report(newCurrentProgress);
 
-                if (abortToken.IsCancellationRequested)
-                {
-                    return false;
-                }
-
-                if (progressReporter != null)
-                {
-                    // handle progress reporting
-
-                    while (writeTasks.Any())
+                    if (abortToken.IsCancellationRequested)
                     {
-                        // when any task completes, update progress
-                        Task completedTask = await Task.WhenAny(writeTasks);
-                        writeTasks.Remove(completedTask);
-
-                        newCurrentProgress += 1f / totalFiles;
-                        progressReporter.Report(newCurrentProgress);
-
-                        if (abortToken.IsCancellationRequested)
-                        {
-                            return false;
-                        }
+                        return false;
                     }
-                }
-                else
-                {
-                    // no progress reporting, so just wait for them all to finish.
-                    await Task.WhenAll(writeTasks);
+
+                    // await Task.Yield();
                 }
 
                 return true;
@@ -224,9 +206,10 @@ namespace BGC.IO.Compression
                     while (!writeTask.IsCompleted)
                     {
                         // fake the progress
-                        await Task.Delay(1, abortToken);
+                        await Task.Yield();
+                        // await Task.Delay(1, abortToken);
                         prog += 0.001f;
-                        progressReporter.Report(prog);
+                        progressReporter?.Report(prog);
                     }
                     
                     progressReporter?.Report(1f);
@@ -235,7 +218,7 @@ namespace BGC.IO.Compression
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning($"Preferred Zip extraction of {inputFilePath} failed with \"{e.Message}\".  Trying fallback extraction to: {outputPath}");
+                    Debug.LogError($"Preferred Zip extraction of {inputFilePath} failed with \"{e.Message}\".  Trying fallback extraction to: {outputPath}");
 
                     return false;
                 }
@@ -248,16 +231,27 @@ namespace BGC.IO.Compression
             }
         }
 
-        private static async Task WriteArchiveEntry(ZipArchiveEntry entry, string filepath)
-        {
+        private static async Task WriteArchiveEntry(
+            ZipArchiveEntry entry,
+            string filepath,
+            CancellationToken abortToken)
+        { 
+            abortToken.ThrowIfCancellationRequested();
             if (Path.HasExtension(filepath))
             {
                 // we may have entries that represent a directory. Rule those out and only extract files.
 
                 //Copy binary data into new file
-                using Stream entryStream = entry.Open();
-                using FileStream fileStream = File.OpenWrite(filepath);
-                await entryStream.CopyToAsync(fileStream);
+                await using FileStream fileStream = new FileStream(
+                    filepath,
+                    FileMode.Create,
+                    FileAccess.Write,
+                    FileShare.None,
+                    81920,
+            true);
+                
+                await using Stream entryStream = entry.Open();
+                await entryStream.CopyToAsync(fileStream, 81920, abortToken);
             }
         }
 
