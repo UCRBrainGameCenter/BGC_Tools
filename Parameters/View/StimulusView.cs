@@ -106,7 +106,7 @@ namespace BGC.Parameters.View
                 DisplayOutputFieldKeyAttribute outputKeyAttribute = property.GetCustomAttribute<DisplayOutputFieldKeyAttribute>();
                 PropertyGroupListAttribute listAttribute = property.GetCustomAttribute<PropertyGroupListAttribute>();
                 DisplayPropertyGroupInlineAttribute inlineAttribute = property.GetCustomAttribute<DisplayPropertyGroupInlineAttribute>();
-                AppendSelectionAttribute appendSelectionAttribute = property.GetCustomAttribute<AppendSelectionAttribute>();
+                AppendSelectionAttribute appendSelectionAttribute = property.GetCustomAttribute<AppendSelectionAttribute>(inherit: false);
 
                 if (displayAttribute != null)
                 {

@@ -199,7 +199,7 @@ namespace BGC.Parameters
                 if (innerGroup.GetValue(propertyGroup) is IPropertyGroup innerPropertyGroup)
                 {
                     DisplayPropertyGroupInlineAttribute inlineAttribute = innerGroup.GetCustomAttribute<DisplayPropertyGroupInlineAttribute>();
-                    AppendSelectionAttribute appendSelectionAttribute = innerGroup.GetCustomAttribute<AppendSelectionAttribute>();
+                    AppendSelectionAttribute appendSelectionAttribute = innerGroup.GetCustomAttribute<AppendSelectionAttribute>(inherit: false);
                     if (inlineAttribute != null || appendSelectionAttribute != null)
                     {
                         string propertyKey = inlineAttribute != null ? inlineAttribute.FieldName : innerGroup.GetGroupSerializationName();
@@ -246,7 +246,7 @@ namespace BGC.Parameters
             {
                 // Determine if this is an inline group
                 DisplayPropertyGroupInlineAttribute inlineAttribute = property.GetCustomAttribute<DisplayPropertyGroupInlineAttribute>();
-                AppendSelectionAttribute appendSelectionAttribute = property.GetCustomAttribute<AppendSelectionAttribute>();
+                AppendSelectionAttribute appendSelectionAttribute = property.GetCustomAttribute<AppendSelectionAttribute>(inherit: false);
                 if (inlineAttribute == null && appendSelectionAttribute == null)
                 {
                     // One of these attributes must be present for a property group
