@@ -19,6 +19,7 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
     [IntFieldDisplay("ThresholdScanCount", "Threshold Scan Count", initial: 1, minimum: 1)]
     [BoolDisplay("NarrowingTermination", "Stop At Max Narrowing", true)]
     [IntFieldDisplay("NonAdaptiveScansCount", "Non-Adaptive Scans Count", initial: 0, minimum: 0)]
+    [DoubleFieldDisplay("NeverNarrowRatio", "Never Narrow When Clamped Ratio", initial: 0.5, minimum: 0.0, maximum: 1.0)]
     public class AdaptiveScanAlgorithm : AlgorithmBase, IBinaryOutcomeAlgorithm
     {
         [DisplayInputField("Steps")]
@@ -38,6 +39,9 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
 
         [DisplayInputField("NonAdaptiveScansCount")]
         public int NonAdaptiveScansCount { get; set; }
+
+        [DisplayInputField("NeverNarrowRatio")]
+        public double NeverNarrowRatio { get; set; }
 
         [AppendSelection(
             typeof(ScalarNarrowBehavior),
@@ -97,6 +101,14 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
 
         private bool exceededMaxNarrowing;
 
+        // For inspection
+        public int CurTrial => trial;
+        public int CurCorrectCount => correctCount;
+        public int CurStepSize => stepSize;
+        public int CurScanStartStep => scanStartStep;
+        public int CurScanCount => scanCount;
+        public int CurNonAdaptiveScansCount => nonAdaptiveScansCount;
+
         public void Initialize(double taskGuessRate)
         {
             trial = 0;
@@ -147,22 +159,33 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
 
                 if (nonAdaptiveScansCount <= 0)
                 {
+                    // Calculate the actual range used in the scan
+                    int actualMinStep = curScanSteps[0];
+                    int actualMaxStep = curScanSteps[^1];
+                    int actualRange = actualMaxStep - actualMinStep;
+
                     int newScanStartStep = scanStartStep;
                     if (stepThreshold < 2.0)
                     {
                         //Slide Up
-                        newScanStartStep -= (stepSize * curScanSteps.Count) / 2;
+                        newScanStartStep -= actualRange / 2;
                     }
                     else if (stepThreshold >= trial - 1)
                     {
                         //Slide Down
-                        newScanStartStep += (stepSize * curScanSteps.Count) / 2;
+                        newScanStartStep += actualRange / 2;
                     }
                     else
                     {
-                        //Narrow
-                        Narrow();
+                        // Count how many steps are clamped to the last step
+                        double clampedSteps = curScanSteps.Count((step) => step == curScanSteps[^1]);
 
+                        // Only narrow if the number of clamped steps in the scan isn't beyond the ratio threshold
+                        double neverNarrowThreshold = curScanSteps.Count * NeverNarrowRatio;
+                        if (clampedSteps <= neverNarrowThreshold)
+                        {
+                            Narrow();
+                        }
                         newScanStartStep = (int)Math.Round(newThresholdStep - stepSize * (curScanSteps.Count - 1) / 2.0);
                     }
 
@@ -228,40 +251,55 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
 
         private int ClampStep(int fromStep, int toStep)
         {
-            // Quick check to see if toStep is valid
+            // If target step is valid, use it
             if (CouldStepTo(toStep))
             {
                 return toStep;
             }
-
-            // It is easier to search within a normalized range
-            int distance = Math.Abs(fromStep - toStep);
-            int low = 1; // No need to check 0 since fromStep is assumed valid
-            int high = distance - 1; // No need to check distance because toStep was checked above and shown to be invalid
-            int lastValidStep = fromStep; // Default return if the search finds no valid values
-
-            // Binary search for the closest value to toStep that can be stepped to
-            while (low <= high)
+    
+            if (CouldStepTo(fromStep))
             {
-                // 'mid' is in normalized space
-                int mid = low + (high - low) / 2;
+                // Determine direction
+                int direction = Math.Sign(toStep - fromStep);
+                int validStep = fromStep;
+                int testStep = fromStep + direction;
+                int pastToStep = toStep + direction;
 
-                // Convert 'mid' back to original range
-                int actualMid = fromStep + (toStep > fromStep ? mid : -mid);
-
-                if (CouldStepTo(actualMid))
+                // We should stop when:
+                // 1. We can't step further, OR
+                // 2. We've passed toStep
+                while (CouldStepTo(testStep) && testStep != pastToStep)
                 {
-                    lastValidStep = actualMid;
-                    low = mid + 1;  // Expand search
+                    validStep = testStep;
+                    testStep += direction;
                 }
-                else
-                {
-                    high = mid - 1;  // Shrink search
-                }
+        
+                return validStep;
             }
-
-            // Convert last valid step back to original range for the return value
-            return lastValidStep;
+    
+            // Neither fromStep nor toStep is valid, so find the nearest valid step
+            int searchRadius = 1;
+            int maxSearchRadius = 999; // Prevent infinite loops
+    
+            while (searchRadius < maxSearchRadius)
+            {
+                // Check above fromStep
+                if (CouldStepTo(fromStep + searchRadius))
+                {
+                    return fromStep + searchRadius;
+                }
+        
+                // Check below fromStep
+                if (CouldStepTo(fromStep - searchRadius))
+                {
+                    return fromStep - searchRadius;
+                }
+        
+                searchRadius++;
+            }
+    
+            // If we couldn't find any valid steps, return a default
+            return 0;
         }
 
         private bool CouldStepTo(int step) => CouldStepTo(0, step);
