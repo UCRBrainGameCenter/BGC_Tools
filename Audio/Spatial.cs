@@ -2,6 +2,7 @@
 using UnityEngine;
 using BGC.IO;
 using BGC.Mathematics;
+using System.IO;
 
 namespace BGC.Audio
 {
@@ -23,11 +24,20 @@ namespace BGC.Audio
             return (int)Math.Round(10.0 * offset);
         }
 
-        public static IBGCStream GetFilter(double angle)
+        public static IBGCStream GetFilter(double angle, string customHrtfBasePath = null)
         {
             int position = NearestValidOffset(angle);
+            string path;
+            string filePrefix = GenerateFilterFilePrefix(position);
 
-            string path = GetFilterFilename(position);
+            if (!string.IsNullOrWhiteSpace(customHrtfBasePath))
+            {
+                path = Path.Combine(customHrtfBasePath, $"{filePrefix}_impulse.wav");
+            }
+            else
+            {
+                path = DataManagement.PathForDataFile(HRTFDirectory, $"{filePrefix}_impulse.wav");
+            }
 
             bool loadSuccess = WaveEncoding.LoadBGCStream(
                 filepath: path,
@@ -42,7 +52,7 @@ namespace BGC.Audio
             return filter;
         }
 
-        private static string GetFilterFilename(int position)
+        private static string GenerateFilterFilePrefix(int position)
         {
             string filePrefix;
 
@@ -53,16 +63,12 @@ namespace BGC.Audio
             else
             {
                 string directionPrefix = (position > 0) ? "pos" : "neg";
-
-                position = Math.Abs(position);
-
-                int decimalPlace = position % 10;
-                int integralPlace = position / 10;
-
+                int absPosition = Math.Abs(position);
+                int decimalPlace = absPosition % 10;
+                int integralPlace = absPosition / 10;
                 filePrefix = $"{directionPrefix}{integralPlace}p{decimalPlace}";
             }
-
-            return DataManagement.PathForDataFile(HRTFDirectory, $"{filePrefix}_impulse.wav");
+            return filePrefix;
         }
     }
 }
