@@ -17,6 +17,7 @@ namespace BGC.Utility
                 {
                     mono = new GameObject().AddComponent<EmptyMonobehaviour>();
                     mono.gameObject.AddComponent<DestroyOnDestroy>();
+                    UnityEngine.Object.DontDestroyOnLoad(mono.gameObject);
                 }
 
                 return mono;
