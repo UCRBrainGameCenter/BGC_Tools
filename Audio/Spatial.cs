@@ -11,8 +11,6 @@ namespace BGC.Audio
     /// </summary>
     public static class Spatial
     {
-        private const string HRTFDirectory = "HRTF";
-
         public static int NearestValidOffset(double offset)
         {
             if (offset < -90.0 || offset > 90.0)
@@ -24,20 +22,19 @@ namespace BGC.Audio
             return (int)Math.Round(10.0 * offset);
         }
 
-        public static IBGCStream GetFilter(double angle, string customHrtfBasePath = null)
+        public static IBGCStream GetFilter(double angle, string hrtfBasePath)
         {
+            if (string.IsNullOrWhiteSpace(hrtfBasePath))
+            {
+                Debug.LogError($"GetFilter requires a non-null hrtfBasePath");
+                throw new ArgumentNullException(nameof(hrtfBasePath));
+            }
+
             int position = NearestValidOffset(angle);
             string path;
             string filePrefix = GenerateFilterFilePrefix(position);
 
-            if (!string.IsNullOrWhiteSpace(customHrtfBasePath))
-            {
-                path = Path.Combine(customHrtfBasePath, $"{filePrefix}_impulse.wav");
-            }
-            else
-            {
-                path = DataManagement.PathForDataFile(HRTFDirectory, $"{filePrefix}_impulse.wav");
-            }
+            path = Path.Combine(hrtfBasePath, $"{filePrefix}_impulse.wav");
 
             bool loadSuccess = WaveEncoding.LoadBGCStream(
                 filepath: path,

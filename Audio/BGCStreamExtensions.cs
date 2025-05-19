@@ -442,9 +442,9 @@ namespace BGC.Audio
         public static IBGCStream Spatialize(
             this IBGCStream stream,
             double angle,
-            string customHrtfBasePath = null)
+            string hrtfBasePath)
         {
-            return new MultiConvolutionFilter(stream, Spatial.GetFilter(angle, customHrtfBasePath), TransformRMSBehavior.Passthrough);
+            return new MultiConvolutionFilter(stream, Spatial.GetFilter(angle, hrtfBasePath), TransformRMSBehavior.Passthrough);
         }
 
         public static IBGCStream MultiConvolve(

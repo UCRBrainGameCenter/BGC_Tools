@@ -164,61 +164,6 @@ namespace BGC.Tests
         }
 
         [Test]
-        public void TestNewSpatialization()
-        {
-            string baseFile = "000000";
-
-            WaveEncoding.LoadBGCStream(
-                filepath: DataManagement.PathForDataFile("Test", $"{baseFile}.wav"),
-                stream: out IBGCStream stream);
-
-            Debug.Log($"Pre  RMS: {string.Join(", ", stream.CalculateRMS().Select(x => x.ToString()).ToArray())}");
-
-            {
-                IBGCStream spatialized = stream.Spatialize(0f);
-
-                string rms = string.Join(", ", spatialized.CalculateRMS().Select(x => x.ToString()).ToArray());
-
-                Debug.Log($"Post RMS: {rms}");
-
-                //Write to File
-                WaveEncoding.SaveStream(
-                    filepath: DataManagement.PathForDataFile("Test", $"{baseFile}_Spatialized_0.wav"),
-                    stream: spatialized,
-                    overwrite: true);
-            }
-
-            {
-                IBGCStream spatialized = stream.Spatialize(25f);
-
-                string rms = string.Join(", ", spatialized.CalculateRMS().Select(x => x.ToString()).ToArray());
-
-                Debug.Log($"Post RMS: {rms}");
-
-                //Write to File
-                WaveEncoding.SaveStream(
-                    filepath: DataManagement.PathForDataFile("Test", $"{baseFile}_Spatialized_25.wav"),
-                    stream: spatialized,
-                    overwrite: true);
-            }
-
-            {
-                IBGCStream spatialized = stream.Spatialize(-25f);
-
-                string rms = string.Join(", ", spatialized.CalculateRMS().Select(x => x.ToString()).ToArray());
-
-                Debug.Log($"Post RMS: {rms}");
-
-                //Write to File
-                WaveEncoding.SaveStream(
-                    filepath: DataManagement.PathForDataFile("Test", $"{baseFile}_Spatialized_n25.wav"),
-                    stream: spatialized,
-                    overwrite: true);
-            }
-
-        }
-
-        [Test]
         public void TestNewFFTs()
         {
             Complex32[] samples = new Complex32[1000];
