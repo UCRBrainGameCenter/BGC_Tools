@@ -1,13 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace BGC.Utility
 {
     public static class Epoch
     {
-        private static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        
-        /// <summary> Get current Epoch time in milliseconds </summary>
-        public static double Time => (DateTime.UtcNow - UnixEpoch).TotalMilliseconds;
+        // Coarse, absolute epoch sample at startup
+        private static readonly long _epochMillisAtStartup = DateTimeOffset
+            .UtcNow
+            .ToUnixTimeMilliseconds();
+
+        // High-resolution tick count at the same instant
+        private static readonly long _stopwatchTicksAtStartup = Stopwatch.GetTimestamp();
+
+        // Conversion factor from ticks to milliseconds
+        private static readonly double _ticksToMillis = 1000.0 / Stopwatch.Frequency;
+
+        /// <summary>
+        /// Current time in milliseconds since Unix epoch,
+        /// with sub-millisecond precision courtesy of Stopwatch.
+        /// </summary>
+        public static double Time => _epochMillisAtStartup + (Stopwatch.GetTimestamp() - _stopwatchTicksAtStartup) * _ticksToMillis;
     }
+
 }
