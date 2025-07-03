@@ -38,7 +38,7 @@ namespace BGC.Utility.Unity
         /// </summary>
         private void Update()
         {
-            if (active && Input.GetKeyUp(keyCode))
+            if (active && NewInput.GetKeyUp(keyCode))
             {
                 string title = $"{screenShotTitle}{screenShotIndex}.png";
                 ScreenCapture.CaptureScreenshot(title);

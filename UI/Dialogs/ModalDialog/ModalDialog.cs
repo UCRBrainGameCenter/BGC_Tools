@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BGC.Utility;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -148,7 +149,7 @@ namespace BGC.UI.Dialogs
             {
                 // Simple modal types
                 case Mode.Accept:
-                    if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                    if (NewInput.GetKeyDown(KeyCode.Space) || NewInput.GetKeyDown(KeyCode.Return) || NewInput.GetKeyDown(KeyCode.KeypadEnter))
                     {
                         await HandleButtons(Response.A);
                     }
@@ -157,11 +158,11 @@ namespace BGC.UI.Dialogs
                 case Mode.DropdownInput:
                 case Mode.Dropdown:
                 case Mode.YesNo:
-                    if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                    if (NewInput.GetKeyDown(KeyCode.Space) || NewInput.GetKeyDown(KeyCode.Return) || NewInput.GetKeyDown(KeyCode.KeypadEnter))
                     {
                         await HandleButtons(Response.A);
                     }
-                    if (Input.GetKeyDown(KeyCode.Escape))
+                    if (NewInput.GetKeyDown(KeyCode.Escape))
                     {
                         await HandleButtons(Response.B);
                     }
@@ -169,7 +170,7 @@ namespace BGC.UI.Dialogs
 
                 // Input types
                 case Mode.InputAccept:
-                    if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                    if (NewInput.GetKeyDown(KeyCode.Return) || NewInput.GetKeyDown(KeyCode.KeypadEnter))
                     {
                         await HandleButtons(Response.A);
                     }
@@ -177,11 +178,11 @@ namespace BGC.UI.Dialogs
                 case Mode.InputConfirmCancel:
                 case Mode.InputToggleConfirmCancel:
                 case Mode.InputInputConfirmCancel:
-                    if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                    if (NewInput.GetKeyDown(KeyCode.Return) || NewInput.GetKeyDown(KeyCode.KeypadEnter))
                     {
                         await HandleButtons(Response.A);
                     }
-                    if (Input.GetKeyDown(KeyCode.Escape))
+                    if (NewInput.GetKeyDown(KeyCode.Escape))
                     {
                         await HandleButtons(Response.B);
                     }
