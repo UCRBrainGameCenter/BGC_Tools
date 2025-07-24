@@ -174,6 +174,19 @@ namespace BGC.Utility
 #endif
 
         /// <summary>
+        /// Converts <see cref="Input.anyKey"/> to the new input system/>
+        /// </summary>
+        public static bool anyKey =>
+#if ENABLE_INPUT_SYSTEM
+            Keyboard.current.anyKey.isPressed ||
+            Mouse.current.leftButton.isPressed ||
+            Mouse.current.rightButton.isPressed ||
+            Mouse.current.middleButton.isPressed;
+#else
+            Input.anyKey;
+#endif
+
+        /// <summary>
         /// Converts a <see cref="KeyCode"/> to its corresponding <see cref="Key"/>.
         /// </summary>
         /// <param name="keyCode">The <see cref="KeyCode"/> to convert.</param>
