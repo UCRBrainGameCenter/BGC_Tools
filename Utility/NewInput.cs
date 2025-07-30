@@ -159,11 +159,10 @@ namespace BGC.Utility
         };
 #endif
 
-
         /// <summary>
         /// Converts <see cref="Input.anyKeyDown"/> to the new input system/>
         /// </summary>
-        public static bool anyKeyDown =>
+        public static bool AnyKeyDown =>
 #if ENABLE_INPUT_SYSTEM
             Keyboard.current.anyKey.wasPressedThisFrame ||
             Mouse.current.leftButton.wasPressedThisFrame ||
@@ -176,7 +175,7 @@ namespace BGC.Utility
         /// <summary>
         /// Converts <see cref="Input.anyKey"/> to the new input system/>
         /// </summary>
-        public static bool anyKey =>
+        public static bool AnyKey =>
 #if ENABLE_INPUT_SYSTEM
             Keyboard.current.anyKey.isPressed ||
             Mouse.current.leftButton.isPressed ||
