@@ -185,6 +185,70 @@ namespace BGC.Utility
             Input.anyKey;
 #endif
 
+        public static List<NewTouch> Touches => GetTouches();
+
+        public static List<NewTouch> GetTouches()
+        {
+            List<NewTouch> touches = new();
+#if ENABLE_INPUT_SYSTEM
+            foreach (var t in Touchscreen.current.touches)
+            {
+                touches.Add(new()
+                {
+                    fingerId = t.touchId.ReadValue(),
+                    position = t.position.ReadValue(),
+                    deltaPosition = t.delta.ReadValue(),
+                    deltaTime = NewTouchDeltaTimeHelper.Instance.GetDeltaTimeForTouch(t.touchId.ReadValue()),
+                    phase = ConvertPhase(t.phase.ReadValue()),
+                    pressure = t.pressure.ReadValue(),
+                });
+            }
+#else
+            foreach (var t in Input.touches)
+            {
+                touches.Add(new()
+                {
+                    fingerId = t.fingerId,
+                    position = t.position,
+                    deltaPosition = t.deltaPosition,
+                    deltaTime = t.deltaTime,
+                    phase = ConvertPhase(t.phase),
+                    pressure = t.pressure
+                });
+            }
+#endif
+            return touches;
+        }
+
+#if ENABLE_INPUT_SYSTEM
+        private static NewTouchPhase ConvertPhase(UnityEngine.InputSystem.TouchPhase phase)
+        {
+            return phase switch
+            {
+                UnityEngine.InputSystem.TouchPhase.None => NewTouchPhase.None,
+                UnityEngine.InputSystem.TouchPhase.Began => NewTouchPhase.Began,
+                UnityEngine.InputSystem.TouchPhase.Moved => NewTouchPhase.Moved,
+                UnityEngine.InputSystem.TouchPhase.Stationary => NewTouchPhase.Stationary,
+                UnityEngine.InputSystem.TouchPhase.Ended => NewTouchPhase.Ended,
+                UnityEngine.InputSystem.TouchPhase.Canceled => NewTouchPhase.Canceled,
+                _ => NewTouchPhase.Canceled
+            };
+        }
+#else
+        private static NewTouchPhase ConvertPhase(UnityEngine.TouchPhase phase)
+        {
+            return phase switch
+            {
+                UnityEngine.TouchPhase.Began => NewTouchPhase.Began,
+                UnityEngine.TouchPhase.Moved => NewTouchPhase.Moved,
+                UnityEngine.TouchPhase.Stationary => NewTouchPhase.Stationary,
+                UnityEngine.TouchPhase.Ended => NewTouchPhase.Ended,
+                UnityEngine.TouchPhase.Canceled => NewTouchPhase.Canceled,
+                _ => NewTouchPhase.Canceled
+            };
+        }
+#endif
+
         /// <summary>
         /// Converts a <see cref="KeyCode"/> to its corresponding <see cref="Key"/>.
         /// </summary>
