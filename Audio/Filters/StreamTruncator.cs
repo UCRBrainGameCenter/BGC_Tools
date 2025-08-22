@@ -7,7 +7,7 @@ using BGC.Mathematics;
 namespace BGC.Audio.Filters
 {
     /// <summary>
-    /// Truncates underlying stream
+    /// Truncates underlying stream, with a random start if sampleShift == -1
     /// </summary>
     public class StreamTruncator : SimpleBGCFilter
     {
@@ -25,14 +25,22 @@ namespace BGC.Audio.Filters
         public StreamTruncator(
             IBGCStream stream,
             int totalChannelSamples = -1,
-            int sampleShift = 0,
+            int sampleShift = -1,
             TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
             : base(stream)
         {
-            if (sampleShift > stream.ChannelSamples)
+            if (sampleShift != -1)
             {
-                Debug.LogError("Requested a sampleOffset larger than clip length");
-                sampleShift = 0;
+                if (sampleShift > stream.ChannelSamples)
+                {
+                    Debug.LogError("Requested a sampleOffset larger than clip length");
+                    sampleShift = 0;
+                }
+            }
+            else if(totalChannelSamples != -1)
+            {
+                System.Random random = new System.Random();
+                sampleShift = (int)(random.NextDouble() * (stream.ChannelSamples - totalChannelSamples));
             }
 
             this.sampleShift = sampleShift;
@@ -63,17 +71,28 @@ namespace BGC.Audio.Filters
             Reset();
         }
 
+        /// <summary>
+        /// Truncates underlying stream, with a random start if sampleShift == -1
+        /// </summary>
         public StreamTruncator(
             IBGCStream stream,
             double totalDuration = double.NaN,
-            int sampleShift = 0,
+            int sampleShift = -1,
             TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
             : base(stream)
         {
-            if (sampleShift > stream.ChannelSamples)
+            if (sampleShift != -1)
             {
-                Debug.LogError("Requested a sampleOffset larger than clip length");
-                sampleShift = 0;
+                if (sampleShift > stream.ChannelSamples)
+                {
+                    Debug.LogError("Requested a sampleOffset larger than clip length");
+                    sampleShift = 0;
+                }
+            }
+            else if(!double.IsNaN(totalDuration))
+            {
+                System.Random random = new System.Random();
+                sampleShift = (int)(random.NextDouble() * (stream.ChannelSamples - (totalDuration * SamplingRate)));
             }
 
             this.sampleShift = sampleShift;

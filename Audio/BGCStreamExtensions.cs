@@ -417,7 +417,7 @@ namespace BGC.Audio
         public static IBGCStream Truncate(
             this IBGCStream stream,
             double totalDuration,
-            int offset = 0,
+            int offset = -1,
             TransformRMSBehavior transformRMSBehavior = TransformRMSBehavior.Passthrough)
         {
             return new StreamTruncator(stream, totalDuration, offset, transformRMSBehavior);
@@ -426,7 +426,7 @@ namespace BGC.Audio
         public static IBGCStream Truncate(
             this IBGCStream stream,
             int totalChannelSamples,
-            int offset = 0,
+            int offset = -1,
             TransformRMSBehavior transformRMSBehavior = TransformRMSBehavior.Passthrough)
         {
             return new StreamTruncator(stream, totalChannelSamples, offset, transformRMSBehavior);
