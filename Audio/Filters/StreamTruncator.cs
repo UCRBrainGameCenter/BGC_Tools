@@ -9,80 +9,93 @@ namespace BGC.Audio.Filters
     /// <summary>
     /// Truncates underlying stream
     /// </summary>
-    public class StreamTruncator : SimpleBGCFilter
+    public class StreamTruncator : SimpleBGCFilter //TODO rename?
     {
         public override int Channels => stream.Channels;
-
         public override int TotalSamples { get; }
         public override int ChannelSamples { get; }
+        public int Position { get; protected set; }
 
-        private readonly int sampleShift;
-
-        private readonly TransformRMSBehavior rmsBehavior;
-
-        public int Position { get; private set; }
-
+        private int offset;
+        private TransformRMSBehavior rmsBehavior;
+        
         public StreamTruncator(
             IBGCStream stream,
+            bool randomStart,
             int totalChannelSamples = -1,
-            int sampleShift = 0,
+            int offset = 0,
             TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
             : base(stream)
         {
-            if (sampleShift > stream.ChannelSamples)
+            if (totalChannelSamples > stream.ChannelSamples && stream.ChannelSamples != int.MaxValue)
             {
-                Debug.LogError("Requested a sampleOffset larger than clip length");
-                sampleShift = 0;
+                Debug.LogError("Requested a duration larger than clip length");
+                totalChannelSamples = stream.ChannelSamples;
+            }
+            else if (totalChannelSamples == -1)
+            {
+                totalChannelSamples = stream.ChannelSamples; // may be int.MaxValue
+            }
+            
+            if (randomStart)
+            {
+                System.Random random = new System.Random();
+                offset = (int)(random.NextDouble() * (stream.ChannelSamples - totalChannelSamples));
+            }
+            else if (offset > stream.ChannelSamples)
+            {
+                Debug.LogError("Requested an offset larger than clip length");
+                offset = 0;
             }
 
-            this.sampleShift = sampleShift;
-
-            if (totalChannelSamples != -1)
-            {
-                ChannelSamples = Math.Min(
-                    totalChannelSamples,
-                    stream.ChannelSamples - sampleShift);
-                TotalSamples = Channels * ChannelSamples;
-            }
-            else
-            {
-                if (stream.ChannelSamples == int.MaxValue)
-                {
-                    ChannelSamples = int.MaxValue;
-                    TotalSamples = int.MaxValue;
-                }
-                else
-                {
-                    ChannelSamples = stream.ChannelSamples - sampleShift;
-                    TotalSamples = Channels * ChannelSamples;
-                }
-            }
+            this.offset = offset;
+            
+            ChannelSamples = Math.Min(
+                totalChannelSamples,
+                stream.ChannelSamples - offset);
+            TotalSamples = Channels * ChannelSamples;
 
             this.rmsBehavior = rmsBehavior;
 
             Reset();
         }
-
+        
         public StreamTruncator(
             IBGCStream stream,
+            bool randomStart,
             double totalDuration = double.NaN,
-            int sampleShift = 0,
+            int offset = 0,
             TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
             : base(stream)
         {
-            if (sampleShift > stream.ChannelSamples)
+            this.rmsBehavior = rmsBehavior;
+            
+            if (offset > stream.ChannelSamples)
             {
-                Debug.LogError("Requested a sampleOffset larger than clip length");
-                sampleShift = 0;
+                Debug.LogError("Requested an offset larger than clip length");
+                offset = 0;
             }
-
-            this.sampleShift = sampleShift;
+            
+            this.offset = offset;
 
             if (!double.IsNaN(totalDuration))
             {
+                double clipDuration = stream.Duration();
+                if (totalDuration > clipDuration)
+                {
+                    Debug.LogError("Requested a duration larger than clip length");
+                    totalDuration = clipDuration;
+                }
+                
+                if (randomStart)
+                {
+                    System.Random random = new System.Random();
+                    this.offset = (int)(random.NextDouble() * (stream.ChannelSamples - (totalDuration * SamplingRate)));
+                }
+
                 ChannelSamples = Math.Min(
                     (int)Math.Round(totalDuration * SamplingRate),
-                    stream.ChannelSamples - sampleShift);
+                    stream.ChannelSamples - this.offset);
                 TotalSamples = Channels * ChannelSamples;
             }
             else
@@ -94,13 +107,11 @@ namespace BGC.Audio.Filters
                 }
                 else
                 {
-                    ChannelSamples = stream.ChannelSamples - sampleShift;
+                    ChannelSamples = stream.ChannelSamples - this.offset;
                     TotalSamples = Channels * ChannelSamples;
                 }
             }
-
-            this.rmsBehavior = rmsBehavior;
-
+            
             Reset();
         }
 
@@ -108,16 +119,16 @@ namespace BGC.Audio.Filters
         {
             Position = 0;
             stream.Reset();
-            if (sampleShift > 0)
+            if (offset > 0)
             {
-                stream.Seek(sampleShift);
+                stream.Seek(offset);
             }
         }
 
         public override void Seek(int position)
         {
             Position = GeneralMath.Clamp(position, 0, ChannelSamples);
-            stream.Seek(Position + sampleShift);
+            stream.Seek(Position + offset);
         }
 
         public override int Read(float[] data, int offset, int count)
