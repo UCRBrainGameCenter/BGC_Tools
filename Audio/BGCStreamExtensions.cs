@@ -379,9 +379,11 @@ namespace BGC.Audio
         {
             return new StreamWindower(
                 stream: stream,
-                function: function,
-                totalDuration: totalDuration,
-                smoothingSamples: smoothingSamples);
+                openingFunction: function,
+                closingFunction: function,
+                openingSmoothingSamples: smoothingSamples,
+                closingSmoothingSamples: smoothingSamples,
+                totalDuration: totalDuration);
         }
 
         //TODO rename?
@@ -392,8 +394,11 @@ namespace BGC.Audio
         {
             return new StreamWindower(
                 stream: stream,
-                function: function,
-                smoothingSamples: smoothingSamples);
+                openingFunction: function,
+                closingFunction: function,
+                openingSmoothingSamples: smoothingSamples,
+                closingSmoothingSamples: smoothingSamples,
+                totalDuration: double.NaN);
         }
 
         //TODO rename?
