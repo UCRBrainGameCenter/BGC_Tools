@@ -14,13 +14,11 @@ namespace BGC.Audio.Filters
         public override int Channels => stream.Channels;
         public override int TotalSamples { get; }
         public override int ChannelSamples { get; }
-
-        private int offset;
-
-        private TransformRMSBehavior rmsBehavior;
-
         public int Position { get; protected set; }
 
+        private int offset;
+        private TransformRMSBehavior rmsBehavior;
+        
         public StreamTruncator(
             IBGCStream stream,
             bool randomStart,
@@ -29,16 +27,14 @@ namespace BGC.Audio.Filters
             TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
             : base(stream)
         {
-            if (totalChannelSamples == -1)
+            if (totalChannelSamples > stream.ChannelSamples && stream.ChannelSamples != int.MaxValue)
             {
-                if (stream.ChannelSamples == int.MaxValue)
-                {
-                    totalChannelSamples = int.MaxValue;
-                }
-                else
-                {
-                    totalChannelSamples = stream.ChannelSamples;
-                }
+                Debug.LogError("Requested a duration larger than clip length");
+                totalChannelSamples = stream.ChannelSamples;
+            }
+            else if (totalChannelSamples == -1)
+            {
+                totalChannelSamples = stream.ChannelSamples; // may be int.MaxValue
             }
             
             if (randomStart)
@@ -46,7 +42,7 @@ namespace BGC.Audio.Filters
                 System.Random random = new System.Random();
                 offset = (int)(random.NextDouble() * (stream.ChannelSamples - totalChannelSamples));
             }
-            else if(offset > stream.ChannelSamples)
+            else if (offset > stream.ChannelSamples)
             {
                 Debug.LogError("Requested an offset larger than clip length");
                 offset = 0;
@@ -63,10 +59,7 @@ namespace BGC.Audio.Filters
 
             Reset();
         }
-
-        /// <summary>
-        /// Truncates underlying stream
-        /// </summary>
+        
         public StreamTruncator(
             IBGCStream stream,
             bool randomStart,
@@ -74,16 +67,6 @@ namespace BGC.Audio.Filters
             int offset = 0,
             TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
             : base(stream)
-        {
-            (ChannelSamples, TotalSamples) = CalculateChannels(randomStart, totalDuration, offset, rmsBehavior);
-            Reset(); //should find a way to not call this if called from children class
-        }
-
-        protected (int, int) CalculateChannels( 
-            bool randomStart,
-            double totalDuration,
-            int offset,
-            TransformRMSBehavior rmsBehavior)
         {
             this.rmsBehavior = rmsBehavior;
             
@@ -94,31 +77,42 @@ namespace BGC.Audio.Filters
             }
             
             this.offset = offset;
-            
-            if (totalDuration > stream.Duration())
-            {
-                Debug.LogError("Requested a duration larger than clip length");
-                totalDuration = stream.Duration();
-            }
 
             if (!double.IsNaN(totalDuration))
             {
+                double clipDuration = stream.Duration();
+                if (totalDuration > clipDuration)
+                {
+                    Debug.LogError("Requested a duration larger than clip length");
+                    totalDuration = clipDuration;
+                }
+                
                 if (randomStart)
                 {
                     System.Random random = new System.Random();
                     this.offset = (int)(random.NextDouble() * (stream.ChannelSamples - (totalDuration * SamplingRate)));
                 }
-                
-                return (Math.Min(
-                    (int)Math.Round(totalDuration * SamplingRate),
-                    stream.ChannelSamples - this.offset), 
-                    Channels * ChannelSamples);
-            }
 
-            if (stream.ChannelSamples == int.MaxValue)
-                return (int.MaxValue, int.MaxValue);
+                ChannelSamples = Math.Min(
+                    (int)Math.Round(totalDuration * SamplingRate),
+                    stream.ChannelSamples - this.offset);
+                TotalSamples = Channels * ChannelSamples;
+            }
+            else
+            {
+                if (stream.ChannelSamples == int.MaxValue)
+                {
+                    ChannelSamples = int.MaxValue;
+                    TotalSamples = int.MaxValue;
+                }
+                else
+                {
+                    ChannelSamples = stream.ChannelSamples - this.offset;
+                    TotalSamples = Channels * ChannelSamples;
+                }
+            }
             
-            return (stream.ChannelSamples - this.offset, Channels * ChannelSamples);
+            Reset();
         }
 
         public override void Reset()
