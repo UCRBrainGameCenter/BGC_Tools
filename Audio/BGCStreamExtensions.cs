@@ -379,11 +379,14 @@ namespace BGC.Audio
         {
             return new StreamWindower(
                 stream: stream,
-                function: function,
-                totalDuration: totalDuration,
-                smoothingSamples: smoothingSamples);
+                openingFunction: function,
+                closingFunction: function,
+                openingSmoothingSamples: smoothingSamples,
+                closingSmoothingSamples: smoothingSamples,
+                totalDuration: totalDuration);
         }
 
+        //TODO rename?
         public static IBGCStream Window(
             this IBGCStream stream,
             Windowing.Function function = Windowing.Function.Hamming,
@@ -391,17 +394,21 @@ namespace BGC.Audio
         {
             return new StreamWindower(
                 stream: stream,
-                function: function,
-                smoothingSamples: smoothingSamples);
+                openingFunction: function,
+                closingFunction: function,
+                openingSmoothingSamples: smoothingSamples,
+                closingSmoothingSamples: smoothingSamples,
+                totalDuration: double.NaN);
         }
 
+        //TODO rename?
         public static IBGCStream Window(
             this IBGCStream stream,
             Windowing.Function openingFunction,
             Windowing.Function closingFunction,
             int openingSmoothingSamples = 1000,
             int closingSmoothingSamples = 1000,
-            int sampleShift = 0,
+            int offset = 0,
             int totalChannelSamples = -1)
         {
             return new StreamWindower(
@@ -410,26 +417,49 @@ namespace BGC.Audio
                 closingFunction: closingFunction,
                 openingSmoothingSamples: openingSmoothingSamples,
                 closingSmoothingSamples: closingSmoothingSamples,
-                sampleShift: sampleShift,
+                offset: offset,
                 totalChannelSamples: totalChannelSamples);
         }
-
-        public static IBGCStream Truncate(
+        
+        public static IBGCStream Window(
             this IBGCStream stream,
-            double totalDuration,
+            Windowing.Function openingFunction,
+            Windowing.Function closingFunction,
+            int openingSmoothingSamples = 1000,
+            int closingSmoothingSamples = 1000,
             int offset = 0,
-            TransformRMSBehavior transformRMSBehavior = TransformRMSBehavior.Passthrough)
+            double totalDuration = double.NaN)
         {
-            return new StreamTruncator(stream, totalDuration, offset, transformRMSBehavior);
+            return new StreamWindower(
+                stream: stream,
+                openingFunction: openingFunction,
+                closingFunction: closingFunction,
+                openingSmoothingSamples: openingSmoothingSamples,
+                closingSmoothingSamples: closingSmoothingSamples,
+                offset: offset,
+                totalDuration: totalDuration);
         }
 
+        //TODO rename?
         public static IBGCStream Truncate(
             this IBGCStream stream,
-            int totalChannelSamples,
+            double totalDuration = double.NaN,
+            bool randomStart = false,
             int offset = 0,
             TransformRMSBehavior transformRMSBehavior = TransformRMSBehavior.Passthrough)
         {
-            return new StreamTruncator(stream, totalChannelSamples, offset, transformRMSBehavior);
+            return new StreamTruncator(stream, randomStart, totalDuration, offset, transformRMSBehavior);
+        }
+
+        //TODO rename?
+        public static IBGCStream Truncate(
+            this IBGCStream stream,
+            int totalChannelSamples = -1,
+            bool randomStart = false,
+            int offset = 0,
+            TransformRMSBehavior transformRMSBehavior = TransformRMSBehavior.Passthrough)
+        {
+            return new StreamTruncator(stream, randomStart, totalChannelSamples, offset, transformRMSBehavior);
         }
 
         public static IBGCStream IsolateChannel(
@@ -822,9 +852,24 @@ namespace BGC.Audio
         }
 
         public static IBGCStream Segmentor(
-           this IBGCStream stream, bool randomStart, double start, double duration, FixedEaseBehaviour startEaseBehaviour, IEaseBehaviour endEaseBehaviour)
+           this IBGCStream stream, 
+           Windowing.Function windowingFunctionStart, 
+           Windowing.Function windowingFunctionEnd,
+           bool randomStart = false, 
+           int offset = 0, 
+           double totalDuration = Double.NaN, 
+           int openingSmoothingSamples = 1000,
+           int closingSmoothingSamples = 1000)
         {
-            return new Segmentor(stream, randomStart, start, duration, startEaseBehaviour, endEaseBehaviour);
+            return new StreamWindower(
+                stream,
+                windowingFunctionStart,
+                windowingFunctionEnd,
+                openingSmoothingSamples,
+                closingSmoothingSamples,
+                randomStart: randomStart, 
+                offset: offset, 
+                totalDuration: totalDuration);
         }
 
         /// <summary>
