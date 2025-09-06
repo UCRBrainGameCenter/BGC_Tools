@@ -157,13 +157,43 @@ namespace BGC.Utility
             { KeyCode.Break, Key.None },
             { KeyCode.Menu, Key.ContextMenu },
         };
+        public static readonly NewGyroscope gyro = new NewGyroscope();
 #endif
 
+        /// <summary>
+        /// Converts <see cref="Input.touchCount"/> to the new input system
+        /// </summary>
+        public static int TouchCount =>
+#if ENABLE_INPUT_SYSTEM
+            CountInProgressTouches();
+#else
+            Input.touchCount;
+#endif
+
+#if ENABLE_INPUT_SYSTEM
+        private static int CountInProgressTouches()
+        {
+            if (Touchscreen.current == null) return 0;
+
+            int count = 0;
+            foreach (var t in Touchscreen.current.touches)
+            {
+                var phase = t.phase.ReadValue();
+                if (phase == UnityEngine.InputSystem.TouchPhase.Began ||
+                    phase == UnityEngine.InputSystem.TouchPhase.Moved ||
+                    phase == UnityEngine.InputSystem.TouchPhase.Stationary)
+                {
+                    count++;
+                }
+            }
+            return count;
+        }
+#endif
 
         /// <summary>
-        /// Converts <see cref="Input.anyKeyDown"/> to the new input system/>
+        /// Converts <see cref="Input.anyKeyDown"/> to the new input system
         /// </summary>
-        public static bool anyKeyDown =>
+        public static bool AnyKeyDown =>
 #if ENABLE_INPUT_SYSTEM
             Keyboard.current.anyKey.wasPressedThisFrame ||
             Mouse.current.leftButton.wasPressedThisFrame ||
@@ -174,9 +204,9 @@ namespace BGC.Utility
 #endif
 
         /// <summary>
-        /// Converts <see cref="Input.anyKey"/> to the new input system/>
+        /// Converts <see cref="Input.anyKey"/> to the new input system
         /// </summary>
-        public static bool anyKey =>
+        public static bool AnyKey =>
 #if ENABLE_INPUT_SYSTEM
             Keyboard.current.anyKey.isPressed ||
             Mouse.current.leftButton.isPressed ||
@@ -184,6 +214,93 @@ namespace BGC.Utility
             Mouse.current.middleButton.isPressed;
 #else
             Input.anyKey;
+#endif
+
+        /// <summary>
+        /// Converts <see cref="Input.touches"/> to the new input system
+        /// </summary>
+        public static List<NewTouch> Touches => GetTouches();
+
+        /// <summary>
+        /// Returns object representing status of a specific touch, following
+        /// the same behavior as <see cref="UnityEngine.Input.GetTouch(int)"/>.
+        /// </summary>
+        public static NewTouch GetTouch(int index)
+        {
+            var touches = Touches;
+
+            if (index < 0 || index >= touches.Count)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(index),
+                    $"Invalid touch index {index}. Valid range is [0..{touches.Count - 1}]."
+                );
+            }
+
+            return touches[index];
+        }
+
+
+        public static List<NewTouch> GetTouches()
+        {
+            List<NewTouch> touches = new();
+#if ENABLE_INPUT_SYSTEM
+            foreach (var t in Touchscreen.current.touches)
+            {
+                touches.Add(new()
+                {
+                    fingerId = t.touchId.ReadValue(),
+                    position = t.position.ReadValue(),
+                    deltaPosition = t.delta.ReadValue(),
+                    deltaTime = NewTouchDeltaTimeHelper.Instance.GetDeltaTimeForTouch(t.touchId.ReadValue()),
+                    phase = ConvertPhase(t.phase.ReadValue()),
+                    pressure = t.pressure.ReadValue(),
+                });
+            }
+#else
+            foreach (var t in Input.touches)
+            {
+                touches.Add(new()
+                {
+                    fingerId = t.fingerId,
+                    position = t.position,
+                    deltaPosition = t.deltaPosition,
+                    deltaTime = t.deltaTime,
+                    phase = ConvertPhase(t.phase),
+                    pressure = t.pressure
+                });
+            }
+#endif
+            return touches;
+        }
+
+#if ENABLE_INPUT_SYSTEM
+        private static NewTouchPhase ConvertPhase(UnityEngine.InputSystem.TouchPhase phase)
+        {
+            return phase switch
+            {
+                UnityEngine.InputSystem.TouchPhase.None => NewTouchPhase.None,
+                UnityEngine.InputSystem.TouchPhase.Began => NewTouchPhase.Began,
+                UnityEngine.InputSystem.TouchPhase.Moved => NewTouchPhase.Moved,
+                UnityEngine.InputSystem.TouchPhase.Stationary => NewTouchPhase.Stationary,
+                UnityEngine.InputSystem.TouchPhase.Ended => NewTouchPhase.Ended,
+                UnityEngine.InputSystem.TouchPhase.Canceled => NewTouchPhase.Canceled,
+                _ => NewTouchPhase.Canceled
+            };
+        }
+#else
+        private static NewTouchPhase ConvertPhase(UnityEngine.TouchPhase phase)
+        {
+            return phase switch
+            {
+                UnityEngine.TouchPhase.Began => NewTouchPhase.Began,
+                UnityEngine.TouchPhase.Moved => NewTouchPhase.Moved,
+                UnityEngine.TouchPhase.Stationary => NewTouchPhase.Stationary,
+                UnityEngine.TouchPhase.Ended => NewTouchPhase.Ended,
+                UnityEngine.TouchPhase.Canceled => NewTouchPhase.Canceled,
+                _ => NewTouchPhase.Canceled
+            };
+        }
 #endif
 
         /// <summary>
@@ -409,5 +526,83 @@ namespace BGC.Utility
             return Input.GetAxisRaw(axisName);
 #endif
         }
+
+            /// <summary>
+            /// Returns the smoothed value of a virtual axis (“Horizontal”, “Vertical”, “Mouse X” or “Mouse Y”)
+            /// similar to <see cref="Input.GetAxis"/>. Uses new Input System if ENABLE_INPUT_SYSTEM is defined.
+            /// </summary>
+public static float GetAxis(string axisName)
+        {
+#if ENABLE_INPUT_SYSTEM
+            // Tune these to taste to approximate your old Input Manager settings.
+            const float stickSensitivity = 10f; // how fast we reach the target when there is input
+            const float stickGravity = 3f;  // how fast we fall back to 0 when input stops
+            const float mouseSensitivity = 20f; // smoothing for mouse deltas
+            const float mouseGravity = 20f; // decay of mouse response toward 0
+
+            // Use your raw mapping as the target, then smooth toward it.
+            float target = GetAxisRaw(axisName);
+
+            switch (axisName)
+            {
+                case "Horizontal":
+                    return SmoothAxis(axisName, target, stickSensitivity, stickGravity);
+
+                case "Vertical":
+                    return SmoothAxis(axisName, target, stickSensitivity, stickGravity);
+
+                case "Mouse X":
+                    return SmoothAxis(axisName, target, mouseSensitivity, mouseGravity);
+
+                case "Mouse Y":
+                    return SmoothAxis(axisName, target, mouseSensitivity, mouseGravity);
+
+                default:
+                    return 0f;
+            }
+#else
+    // old Input Manager fallback
+    return Input.GetAxis(axisName);
+#endif
+        }
+
+#if ENABLE_INPUT_SYSTEM
+        // Backing storage for smoothed values per axis.
+        private static readonly System.Collections.Generic.Dictionary<string, float> _axisValues
+            = new System.Collections.Generic.Dictionary<string, float>();
+
+        private static float SmoothAxis(string name, float target, float sensitivity, float gravity)
+        {
+            float current = 0f;
+            if (!_axisValues.TryGetValue(name, out current))
+                _axisValues[name] = 0f;
+
+            // Move toward the target at 'sensitivity' when there is input,
+            // otherwise decay toward 0 at 'gravity'.
+            float rate = (Mathf.Approximately(target, 0f) ? gravity : sensitivity) * Time.deltaTime;
+            float next = Mathf.MoveTowards(current, target, rate);
+            _axisValues[name] = next;
+            return next;
+        }
+#endif
+        /// <summary>
+        /// Returns the device acceleration vector. Equivalent to <see cref="UnityEngine.Input.acceleration"/>.
+        /// </summary>
+        public static Vector3 Acceleration
+        {
+            get
+            {
+#if ENABLE_INPUT_SYSTEM
+                if (Accelerometer.current != null)
+                {
+                    return Accelerometer.current.acceleration.ReadValue();
+                }
+                return Vector3.zero;
+#else
+        return Input.acceleration;
+#endif
+            }
+        }
+
     }
 }
