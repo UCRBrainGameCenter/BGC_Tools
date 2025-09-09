@@ -111,7 +111,7 @@ namespace BGC.MonoUtility.Interpolation
             {
                 yield return null;
 
-                ElapsedTime += Time.deltaTime;
+                ElapsedTime += Time.unscaledDeltaTime;
 
                 //As per best-practices, we are not using null-conditional operators in
                 //every-frame loops
