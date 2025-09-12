@@ -303,6 +303,7 @@ namespace BGC.Utility
         }
 #endif
 
+#if ENABLE_INPUT_SYSTEM
         /// <summary>
         /// Converts a <see cref="KeyCode"/> to its corresponding <see cref="Key"/>.
         /// </summary>
@@ -318,6 +319,7 @@ namespace BGC.Utility
             Debug.LogWarning($"No mapping found for KeyCode: {keyCode}. Returning Key.None.");
             return Key.None;
         }
+#endif
 
         /// <summary>
         /// Returns true during the frame the user starts pressing down the key identified by the <see cref="KeyCode"/> enum parameter.

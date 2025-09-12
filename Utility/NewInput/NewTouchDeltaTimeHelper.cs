@@ -1,6 +1,8 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
+#if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
+#endif
 
 /// <summary>
 /// A singleton MonoBehaviour that tracks touch events to calculate a precise
@@ -42,6 +44,7 @@ public class NewTouchDeltaTimeHelper : MonoBehaviour
         Instance = this;
     }
 
+#if ENABLE_INPUT_SYSTEM
     private void Update()
     {
         if (Touchscreen.current == null) return;
@@ -71,7 +74,8 @@ public class NewTouchDeltaTimeHelper : MonoBehaviour
                 _touchIdToLastTime.Remove(touchId);
             }
         }
-    }
+}
+#endif
 
     /// <summary>
     /// Gets the calculated delta time for a specific finger for the current frame.
