@@ -325,6 +325,7 @@ namespace BGC.Study
             currentSessionElement = currentSession[nextSessionElementIndex];
 
             ElementNumber = nextSessionElementIndex;
+            ++nextSessionElementIndex;
             SessionInProgress = true;
 
             prepareNextElement?.Invoke(resuming);
@@ -332,8 +333,6 @@ namespace BGC.Study
             await currentSessionElement.ExecuteElement(resuming);
 
             PlayerData.Save();
-
-            ++nextSessionElementIndex;
 
             return ProtocolStatus.SessionReady;
         }
