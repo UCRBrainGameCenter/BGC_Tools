@@ -6,7 +6,7 @@
         public const string CSV = ".csv";
         public const string XML = ".xml";
         public const string BGC = ".bgc";
-        public const string JSONS = ".jsons";
+        public const string JSONL = ".jsonl";
 
         /// <summary>
         /// Add json extension to string
@@ -49,8 +49,8 @@
         public static bool HasBgcExtension(string str) => str.EndsWith(BGC);
 
         /// <summary>
-        /// Return true if the string ends with the jsons extension
+        /// Return true if the string ends with the jsonl extension
         /// </summary>
-        public static bool HasJsonsExtension(string str) => str.EndsWith(JSONS);
+        public static bool HasJsonlExtension(string str) => str.EndsWith(JSONL);
     }
 }
