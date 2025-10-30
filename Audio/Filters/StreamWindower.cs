@@ -16,7 +16,21 @@ namespace BGC.Audio.Filters
 
         protected int endOpeningWindow;
         protected int startClosingWindow;
-        
+
+        public StreamWindower(
+            IBGCStream stream,
+            Windowing.Function function,
+            int openingSmoothingSamples = 1000,
+            int closingSmoothingSamples = 1000,
+            bool randomStart = false,
+            int offset = 0,
+            double totalDuration = double.NaN,
+            TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
+            : base(stream, randomStart, totalDuration, offset, rmsBehavior)
+        {
+            CalculateWindows(function, function, openingSmoothingSamples, closingSmoothingSamples);
+        }
+
         public StreamWindower(
             IBGCStream stream,
             Windowing.Function openingFunction,
