@@ -19,13 +19,12 @@ namespace BGC.Audio.Filters
 
         public StreamWindower(
             IBGCStream stream,
-            Windowing.Function function,
-            int smoothingSamples = 1000,
-            bool randomStart = false,
-            int offset = 0,
+            Windowing.Function function = Windowing.Function.Hamming,
             double totalDuration = double.NaN,
+            int smoothingSamples = 1000,
+            int sampleShift = 0,
             TransformRMSBehavior rmsBehavior = TransformRMSBehavior.Passthrough)
-            : base(stream, randomStart, totalDuration, offset, rmsBehavior)
+            : base(stream, false, totalDuration, sampleShift, rmsBehavior)
         {
             CalculateWindows(function, function, smoothingSamples, smoothingSamples);
         }
