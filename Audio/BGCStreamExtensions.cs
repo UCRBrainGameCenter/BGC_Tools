@@ -6,6 +6,7 @@ using BGC.Audio.Envelopes;
 using BGC.Audio.Filters;
 using BGC.Audio.Synthesis;
 using BGC.Mathematics;
+using BGC.IO;
 
 namespace BGC.Audio
 {
@@ -467,6 +468,13 @@ namespace BGC.Audio
             int channelIndex)
         {
             return new ChannelIsolaterFilter(stream, channelIndex);
+        }
+
+        public static IBGCStream SpatializeDefaultHRTF(
+            this IBGCStream stream,
+            double angle)
+        {
+            return new MultiConvolutionFilter(stream, Spatial.GetFilter(angle, DataManagement.PathForDataDirectory("HRTF", false)), TransformRMSBehavior.Passthrough);
         }
 
         public static IBGCStream Spatialize(
