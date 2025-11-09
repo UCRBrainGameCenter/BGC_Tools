@@ -1047,7 +1047,7 @@ namespace BGC.Parameters.View
 
             GameObject deleteButton = widgetFactory.CreateButtonWidget(
                 parent: row,
-                text: "Delete",
+                text: "X",
                 buttonOptions: WidgetFactory.ButtonFormattingOptions.Config_DeleteButton,
                 onClick: () =>
                 {
@@ -1210,47 +1210,49 @@ namespace BGC.Parameters.View
             entryContainer.ChoiceInfoText = childGroup.GetType().GetChoiceInfoText();
 
             Dropdown dropdown = entryContainer.options;
-            dropdown.onValueChanged.RemoveAllListeners();
-            dropdown.ClearOptions();
+            bool showDropdown = listAttribute.SelectionTypes.Count > 1;
+            dropdown.gameObject.SetActive(showDropdown);
 
-            List<string> optionTitles = new List<string>();
-            int selectionIndex = 0;
-            for (int i = 0; i < listAttribute.SelectionTypes.Count; i++)
+            if (showDropdown)
             {
-                optionTitles.Add(listAttribute.SelectionTypes[i].GetSelectionTitle());
-                if (listAttribute.SelectionTypes[i] == childGroup.GetType())
+                dropdown.onValueChanged.RemoveAllListeners();
+                dropdown.ClearOptions();
+
+                List<string> optionTitles = new List<string>();
+                int selectionIndex = 0;
+                for (int i = 0; i < listAttribute.SelectionTypes.Count; i++)
                 {
-                    selectionIndex = i;
+                    optionTitles.Add(listAttribute.SelectionTypes[i].GetSelectionTitle());
+                    if (listAttribute.SelectionTypes[i] == childGroup.GetType())
+                    {
+                        selectionIndex = i;
+                    }
                 }
+
+                dropdown.AddOptions(optionTitles);
+                dropdown.value = selectionIndex;
+                dropdown.RefreshShownValue();
+                dropdown.onValueChanged.AddListener(value =>
+                {
+                    IList targetList = property.GetValue(ownerGroup) as IList;
+                    if (targetList == null)
+                    {
+                        return;
+                    }
+
+                    Type selectedType = listAttribute.SelectionTypes[value];
+                    IPropertyGroup newEntry = listAttribute.CreateEntry(ownerGroup, selectedType);
+                    targetList[index] = newEntry;
+                    respawnPropertyGroupCallback?.Invoke();
+                });
             }
 
-            dropdown.AddOptions(optionTitles);
-            dropdown.value = selectionIndex;
-            dropdown.RefreshShownValue();
-            dropdown.onValueChanged.AddListener(value =>
-            {
-                IList targetList = property.GetValue(ownerGroup) as IList;
-                if (targetList == null)
-                {
-                    return;
-                }
-
-                Type selectedType = listAttribute.SelectionTypes[value];
-                IPropertyGroup newEntry = listAttribute.CreateEntry(ownerGroup, selectedType);
-                targetList[index] = newEntry;
-                respawnPropertyGroupCallback?.Invoke();
-            });
-
-            GameObject deleteRow = widgetFactory.GetContainerWidget(
-                config: WidgetFactory.ContainerConfig.Config_Normal_Even,
-                parent: entryContainer.propertyFrame,
-                slots: 1);
-            deleteRow.transform.SetAsFirstSibling();
-
+            Transform deleteParent = entryContainer.titleBox == null ? entryContainer.transform : entryContainer.titleBox;
             GameObject deleteButton = widgetFactory.CreateButtonWidget(
-                parent: deleteRow,
-                text: "Delete",
+                parent: deleteParent.gameObject,
+                text: "×",
                 buttonOptions: WidgetFactory.ButtonFormattingOptions.Config_DeleteButton,
+                configOverride: WidgetFactory.ContainerConfig.Config_AddSpecial_OptionDelete,
                 onClick: () =>
                 {
                     IList targetList = property.GetValue(ownerGroup) as IList;
@@ -1263,6 +1265,31 @@ namespace BGC.Parameters.View
                     respawnPropertyGroupCallback?.Invoke();
                 });
 
+            RectTransform deleteRect = deleteButton.GetComponent<RectTransform>();
+            if (deleteRect != null)
+            {
+                deleteRect.anchorMin = new Vector2(1f, 0.5f);
+                deleteRect.anchorMax = new Vector2(1f, 0.5f);
+                deleteRect.pivot = new Vector2(1f, 0.5f);
+                deleteRect.anchoredPosition = new Vector2(-10f, 0f);
+                deleteRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 36f);
+                deleteRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 36f);
+            }
+
+            LayoutElement deleteLayout = deleteButton.GetComponent<LayoutElement>();
+            if (deleteLayout == null)
+            {
+                deleteLayout = deleteButton.AddComponent<LayoutElement>();
+            }
+            deleteLayout.ignoreLayout = true;
+
+            RectTransform dropdownRect = dropdown.GetComponent<RectTransform>();
+            if (dropdownRect != null)
+            {
+                dropdownRect.offsetMax = new Vector2(-60f, dropdownRect.offsetMax.y);
+            }
+
+            deleteButton.transform.SetAsLastSibling();
             Button deleteComponent = deleteButton.GetComponent<Button>();
             if (deleteComponent != null)
             {
