@@ -71,6 +71,22 @@ namespace BGC.Parameters
                         yield return propertyGroupListItem;
                     }
                 }
+                else if (typeof(IList).IsAssignableFrom(property.PropertyType) &&
+                    property.GetValue(container) is IList inlineList &&
+                    property.GetCustomAttribute<PropertyGroupListAttribute>() == null)
+                {
+                    Type elementType = property.GetListElementType();
+                    if (elementType != null && typeof(IPropertyGroup).IsAssignableFrom(elementType))
+                    {
+                        foreach (object listItem in inlineList)
+                        {
+                            if (listItem is IPropertyGroup inlineGroup)
+                            {
+                                yield return inlineGroup;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -99,6 +115,23 @@ namespace BGC.Parameters
                         foreach (IPropertyGroup propertyGroupListItem in propertyGroupList)
                         {
                             yield return propertyGroupListItem;
+                        }
+                    }
+                }
+                else if (typeof(IList).IsAssignableFrom(property.PropertyType) &&
+                    property.GetValue(container) is IList inlineList &&
+                    property.GetCustomAttribute<PropertyGroupListAttribute>() == null)
+                {
+                    Type elementType = property.GetListElementType();
+                    if (elementType != null && typeof(IPropertyGroup).IsAssignableFrom(elementType) &&
+                        predicate(property))
+                    {
+                        foreach (object listItem in inlineList)
+                        {
+                            if (listItem is IPropertyGroup inlineGroup)
+                            {
+                                yield return inlineGroup;
+                            }
                         }
                     }
                 }
@@ -132,6 +165,22 @@ namespace BGC.Parameters
                 if (keyData.ContainsKey(att.fieldName))
                 {
                     //Skip values being serialized by key
+                    continue;
+                }
+
+                FieldDisplayAttribute fieldAttribute = propertyGroup.GetFieldDisplayAttribute(att.fieldName);
+
+                if (property.IsListProperty())
+                {
+                    if (fieldAttribute is ListFieldDisplayAttribute)
+                    {
+                        SerializeListField(propertyGroup, propertyGroupData, property, att.fieldName);
+                    }
+                    else
+                    {
+                        Debug.LogError($"Unable to serialize list property {property.Name} without a ListFieldDisplayAttribute.");
+                    }
+
                     continue;
                 }
 
@@ -239,6 +288,215 @@ namespace BGC.Parameters
             return propertyGroupData;
         }
 
+        private static void SerializeListField(
+            IPropertyGroup propertyGroup,
+            JsonObject propertyGroupData,
+            PropertyInfo property,
+            string fieldName)
+        {
+            IList list = property.GetValue(propertyGroup) as IList;
+            if (list == null)
+            {
+                list = Activator.CreateInstance(property.PropertyType) as IList;
+                property.SetValue(propertyGroup, list);
+            }
+
+            JsonArray serializedArray = new JsonArray();
+            Type elementType = property.GetListElementType();
+
+            if (elementType != null && typeof(IPropertyGroup).IsAssignableFrom(elementType))
+            {
+                foreach (object item in list)
+                {
+                    if (item is IPropertyGroup group)
+                    {
+                        serializedArray.Add(group.Serialize());
+                    }
+                }
+            }
+            else
+            {
+                foreach (object item in list)
+                {
+                    serializedArray.Add(ConvertPrimitiveListValue(elementType, item));
+                }
+            }
+
+            propertyGroupData.Add(fieldName, serializedArray);
+        }
+
+        private static JsonValue ConvertPrimitiveListValue(Type elementType, object value)
+        {
+            if (value == null)
+            {
+                return JsonValue.Null;
+            }
+
+            if (elementType != null && elementType.IsEnum)
+            {
+                return new JsonValue(value.ToString());
+            }
+
+            Type targetType = elementType ?? value.GetType();
+            TypeCode typeCode = Type.GetTypeCode(targetType);
+
+            switch (typeCode)
+            {
+                case TypeCode.Boolean:
+                    return new JsonValue(Convert.ToBoolean(value));
+
+                case TypeCode.Byte:
+                case TypeCode.SByte:
+                case TypeCode.Int16:
+                case TypeCode.UInt16:
+                case TypeCode.Int32:
+                case TypeCode.UInt32:
+                case TypeCode.Int64:
+                case TypeCode.UInt64:
+                case TypeCode.Single:
+                case TypeCode.Double:
+                case TypeCode.Decimal:
+                    return new JsonValue(Convert.ToDouble(value));
+
+                case TypeCode.Char:
+                case TypeCode.String:
+                    return new JsonValue(value.ToString());
+
+                default:
+                    return new JsonValue(value.ToString());
+            }
+        }
+
+        private static void DeserializeListField(
+            IPropertyGroup container,
+            PropertyInfo property,
+            JsonValue serializedValue,
+            ListFieldDisplayAttribute listAttribute)
+        {
+            JsonArray dataArray = serializedValue.AsJsonArray;
+            if (dataArray == null)
+            {
+                Debug.LogError($"Serialized data for list {property.Name} is not an array.");
+                return;
+            }
+
+            IList targetList = property.GetValue(container) as IList;
+            if (targetList == null)
+            {
+                targetList = Activator.CreateInstance(property.PropertyType) as IList;
+                property.SetValue(container, targetList);
+            }
+            else
+            {
+                targetList.Clear();
+            }
+
+            Type elementType = property.GetListElementType();
+
+            if (elementType != null && typeof(IPropertyGroup).IsAssignableFrom(elementType))
+            {
+                if (!(listAttribute is PropertyGroupListFieldDisplayAttribute groupListAttribute))
+                {
+                    Debug.LogError($"List property {property.Name} requires PropertyGroupListFieldDisplayAttribute.");
+                    return;
+                }
+
+                foreach (JsonValue entry in dataArray)
+                {
+                    if (listAttribute.IsAtMaximumCount(targetList))
+                    {
+                        break;
+                    }
+
+                    JsonObject entryObject = entry.AsJsonObject;
+                    if (entryObject == null)
+                    {
+                        continue;
+                    }
+
+                    string typeName = entryObject["Type"].AsString;
+                    Type matchingType = groupListAttribute.GetSelectionType(typeName);
+                    if (matchingType == null)
+                    {
+                        Debug.LogError($"Requested type not recognized for list: {typeName}");
+                        continue;
+                    }
+
+                    IPropertyGroup childGroup = groupListAttribute.CreateEntry(container, matchingType);
+                    childGroup.Deserialize(entryObject);
+                    targetList.Add(childGroup);
+                }
+            }
+            else
+            {
+                foreach (JsonValue entry in dataArray)
+                {
+                    if (listAttribute.IsAtMaximumCount(targetList))
+                    {
+                        break;
+                    }
+
+                    targetList.Add(ConvertJsonValueToPrimitive(entry, elementType));
+                }
+            }
+
+            listAttribute.EnsureMinimumCount(container, property, targetList);
+        }
+
+        private static object ConvertJsonValueToPrimitive(JsonValue value, Type targetType)
+        {
+            if (targetType == null)
+            {
+                targetType = typeof(string);
+            }
+
+            if (targetType.IsEnum)
+            {
+                return Enum.Parse(targetType, value.AsString);
+            }
+
+            TypeCode typeCode = Type.GetTypeCode(targetType);
+
+            switch (typeCode)
+            {
+                case TypeCode.Boolean:
+                    return value.AsBoolean;
+
+                case TypeCode.Byte:
+                    return (byte)value.AsInteger;
+                case TypeCode.SByte:
+                    return (sbyte)value.AsInteger;
+                case TypeCode.Int16:
+                    return (short)value.AsInteger;
+                case TypeCode.UInt16:
+                    return (ushort)value.AsInteger;
+                case TypeCode.Int32:
+                    return value.AsInteger;
+                case TypeCode.UInt32:
+                    return (uint)Math.Max(0, value.AsInteger);
+                case TypeCode.Int64:
+                    return (long)value.AsNumber;
+                case TypeCode.UInt64:
+                    return (ulong)Math.Max(0, value.AsNumber);
+
+                case TypeCode.Single:
+                    return (float)value.AsNumber;
+                case TypeCode.Double:
+                case TypeCode.Decimal:
+                    return Convert.ChangeType(value.AsNumber, targetType);
+
+                case TypeCode.Char:
+                    string asString = value.IsNull ? string.Empty : value.AsString;
+                    return string.IsNullOrEmpty(asString) ? '\0' : asString[0];
+
+                case TypeCode.String:
+                    return value.IsNull ? string.Empty : value.AsString;
+
+                default:
+                    return value.ToString();
+            }
+        }
+
         public static void Internal_RawDeserialize(this IPropertyGroup container, JsonObject propertyGroupData)
         {
             //Deserialize Property Groups
@@ -332,6 +590,26 @@ namespace BGC.Parameters
                 string fieldName = property.GetInputFieldName();
                 if (propertyGroupData.ContainsKey(fieldName))
                 {
+                    FieldDisplayAttribute displayAttribute = container.GetFieldDisplayAttribute(fieldName);
+
+                    if (property.IsListProperty())
+                    {
+                        if (displayAttribute is ListFieldDisplayAttribute listAttribute)
+                        {
+                            DeserializeListField(
+                                container: container,
+                                property: property,
+                                serializedValue: propertyGroupData[fieldName],
+                                listAttribute: listAttribute);
+                        }
+                        else
+                        {
+                            Debug.LogError($"Unable to deserialize list property {property.Name} without a ListFieldDisplayAttribute.");
+                        }
+
+                        continue;
+                    }
+
                     switch (property.PropertyType.Name)
                     {
                         case "Single":
@@ -1013,6 +1291,38 @@ namespace BGC.Parameters
             throw new Exception($"Failed to locate a Selection for property: {info}");
         }
 
+        public static bool IsListProperty(this PropertyInfo propertyInfo) =>
+            typeof(IList).IsAssignableFrom(propertyInfo.PropertyType);
+
+        public static Type GetListElementType(this PropertyInfo propertyInfo)
+        {
+            if (!propertyInfo.IsListProperty())
+            {
+                return null;
+            }
+
+            if (propertyInfo.PropertyType.IsArray)
+            {
+                return propertyInfo.PropertyType.GetElementType();
+            }
+
+            if (propertyInfo.PropertyType.IsGenericType)
+            {
+                return propertyInfo.PropertyType.GetGenericArguments()[0];
+            }
+
+            foreach (Type interfaceType in propertyInfo.PropertyType.GetInterfaces())
+            {
+                if (interfaceType.IsGenericType &&
+                    interfaceType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+                {
+                    return interfaceType.GetGenericArguments()[0];
+                }
+            }
+
+            return typeof(object);
+        }
+
         /// <summary>
         /// Returns the valid Types for this PropertyGroup.
         /// </summary>
@@ -1181,6 +1491,38 @@ namespace BGC.Parameters
                 return;
             }
 
+            if (property.IsListProperty())
+            {
+                if (attribute is ListFieldDisplayAttribute listAttribute)
+                {
+                    if (!listAttribute.IsCompatible(property))
+                    {
+                        Debug.LogError($"ListFieldDisplayAttribute is incompatible with property {property.Name}");
+                        return;
+                    }
+
+                    IList listInstance = Activator.CreateInstance(property.PropertyType) as IList;
+                    if (listInstance == null)
+                    {
+                        Debug.LogError($"Unable to instantiate list for property {property.Name}");
+                        return;
+                    }
+
+                    property.SetValue(propertyGroup, listInstance);
+                    listAttribute.PopulateList(propertyGroup, property, listInstance);
+                    return;
+                }
+
+                Debug.LogError($"Property {property.Name} is a list but does not use a ListFieldDisplayAttribute.");
+                return;
+            }
+
+            if (attribute is ListFieldDisplayAttribute)
+            {
+                Debug.LogError($"ListFieldDisplayAttribute assigned to non-list property: {property.Name}");
+                return;
+            }
+
             object initialValue = attribute.GetInitialValue();
 
             if (attribute is FieldMirrorDisplayAttribute mirrored)
@@ -1219,6 +1561,34 @@ namespace BGC.Parameters
                 foreach (IPropertyGroup internalPropertyGroup in internalPropertyGroupList)
                 {
                     internalPropertyGroup.BuildPartialPropertyGroup();
+                }
+            }
+
+            foreach (PropertyInfo property in propertyGroup.GetInputFieldProperties())
+            {
+                if (!property.IsListProperty())
+                {
+                    continue;
+                }
+
+                FieldDisplayAttribute attribute = propertyGroup.GetFieldDisplayAttribute(property.GetInputFieldName());
+                if (!(attribute is PropertyGroupListFieldDisplayAttribute))
+                {
+                    continue;
+                }
+
+                IList inlineList = property.GetValue(propertyGroup) as IList;
+                if (inlineList == null)
+                {
+                    continue;
+                }
+
+                foreach (object listItem in inlineList)
+                {
+                    if (listItem is IPropertyGroup inlineGroup)
+                    {
+                        inlineGroup.BuildPartialPropertyGroup();
+                    }
                 }
             }
         }

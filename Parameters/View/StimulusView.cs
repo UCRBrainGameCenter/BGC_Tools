@@ -110,6 +110,18 @@ namespace BGC.Parameters.View
 
                 if (displayAttribute != null)
                 {
+                    FieldDisplayAttribute fieldAttribute = propertyContainer.GetFieldDisplayAttribute(displayAttribute.fieldName);
+                    if (fieldAttribute is ListFieldDisplayAttribute listFieldAttribute)
+                    {
+                        SpawnListPropertyWidget(
+                            propertyGroup: propertyContainer,
+                            property: property,
+                            listAttribute: listFieldAttribute,
+                            parentTransform: parentTransform,
+                            respawnPropertyGroupCallback: respawnPropertyGroupCallback);
+                        continue;
+                    }
+
                     //Input field
                     GameObject baseWidget = widgetFactory.GetContainerWidget(
                         config: WidgetFactory.ContainerConfig.Config_Normal_Even,
@@ -907,6 +919,361 @@ namespace BGC.Parameters.View
                     baseWidget: baseWidget,
                     respawnPropertyGroupCallback: respawnPropertyGroupCallback);
             }
+        }
+
+        private void SpawnListPropertyWidget(
+            IPropertyGroup propertyGroup,
+            PropertyInfo property,
+            ListFieldDisplayAttribute listAttribute,
+            Transform parentTransform,
+            Action respawnPropertyGroupCallback)
+        {
+            IList list = property.GetValue(propertyGroup) as IList;
+            if (list == null)
+            {
+                list = Activator.CreateInstance(property.PropertyType) as IList;
+                property.SetValue(propertyGroup, list);
+                listAttribute.PopulateList(propertyGroup, property, list);
+            }
+
+            GameObject headerWidget = widgetFactory.GetContainerWidget(
+                config: WidgetFactory.ContainerConfig.Config_Normal_Even,
+                parent: parentTransform.gameObject,
+                slots: 3);
+
+            LayoutElement headerLayout = headerWidget.AddComponent<LayoutElement>();
+            headerLayout.minHeight = 60;
+
+            widgetFactory.CreateLabelWidget(
+                parent: headerWidget,
+                text: $"{listAttribute.displayTitle}:",
+                alignment: TextAnchor.MiddleLeft);
+
+            string maxLabel = listAttribute.MaximumCount == int.MaxValue ? "" : $"/{listAttribute.MaximumCount}";
+            widgetFactory.CreateLabelWidget(
+                parent: headerWidget,
+                text: $"Count: {list.Count}{maxLabel}",
+                alignment: TextAnchor.MiddleCenter,
+                index: 1);
+
+            GameObject addButton = widgetFactory.CreateButtonWidget(
+                parent: headerWidget,
+                text: "Add",
+                buttonOptions: WidgetFactory.ButtonFormattingOptions.Config_ListEntry,
+                onClick: () =>
+                {
+                    IList targetList = property.GetValue(propertyGroup) as IList;
+                    if (targetList == null || listAttribute.IsAtMaximumCount(targetList))
+                    {
+                        return;
+                    }
+
+                    listAttribute.AddNewItem(propertyGroup, property, targetList);
+                    respawnPropertyGroupCallback?.Invoke();
+                },
+                index: 2);
+
+            Button addComponent = addButton.GetComponent<Button>();
+            if (addComponent != null)
+            {
+                addComponent.interactable = !listAttribute.IsAtMaximumCount(list);
+            }
+
+            GameObject listContainer = widgetFactory.GetContainerWidget(
+                config: WidgetFactory.ContainerConfig.Config_AddSpecial_Instructions,
+                parent: parentTransform.gameObject,
+                slots: 1);
+
+            LayoutElement listLayout = listContainer.AddComponent<LayoutElement>();
+            listLayout.minHeight = Mathf.Max(60, Math.Max(1, list.Count) * 60);
+
+            if (listAttribute is PropertyGroupListFieldDisplayAttribute propertyGroupListAttribute)
+            {
+                for (int i = 0; i < list.Count; i++)
+                {
+                    RenderPropertyGroupListEntry(
+                        listAttribute: propertyGroupListAttribute,
+                        ownerGroup: propertyGroup,
+                        property: property,
+                        list: list,
+                        index: i,
+                        parentTransform: listContainer.transform,
+                        respawnPropertyGroupCallback: respawnPropertyGroupCallback);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < list.Count; i++)
+                {
+                    RenderPrimitiveListEntry(
+                        list: list,
+                        index: i,
+                        propertyGroup: propertyGroup,
+                        property: property,
+                        listAttribute: listAttribute,
+                        parentTransform: listContainer.transform,
+                        respawnPropertyGroupCallback: respawnPropertyGroupCallback);
+                }
+            }
+        }
+
+        private void RenderPrimitiveListEntry(
+            IList list,
+            int index,
+            IPropertyGroup propertyGroup,
+            PropertyInfo property,
+            ListFieldDisplayAttribute listAttribute,
+            Transform parentTransform,
+            Action respawnPropertyGroupCallback)
+        {
+            GameObject row = widgetFactory.GetContainerWidget(
+                config: WidgetFactory.ContainerConfig.Config_Normal_Even,
+                parent: parentTransform.gameObject,
+                slots: 3);
+
+            LayoutElement layoutElement = row.AddComponent<LayoutElement>();
+            layoutElement.minHeight = 60;
+
+            widgetFactory.CreateLabelWidget(
+                parent: row,
+                text: $"[{index + 1}]",
+                alignment: TextAnchor.MiddleLeft);
+
+            SpawnPrimitiveListValueEditor(
+                row: row,
+                list: list,
+                index: index,
+                listAttribute: listAttribute);
+
+            GameObject deleteButton = widgetFactory.CreateButtonWidget(
+                parent: row,
+                text: "Delete",
+                buttonOptions: WidgetFactory.ButtonFormattingOptions.Config_DeleteButton,
+                onClick: () =>
+                {
+                    if (list.Count <= listAttribute.MinimumCount)
+                    {
+                        return;
+                    }
+
+                    list.RemoveAt(index);
+                    respawnPropertyGroupCallback?.Invoke();
+                },
+                index: 2);
+
+            Button deleteComponent = deleteButton.GetComponent<Button>();
+            if (deleteComponent != null)
+            {
+                deleteComponent.interactable = list.Count > listAttribute.MinimumCount;
+            }
+        }
+
+        private void SpawnPrimitiveListValueEditor(
+            GameObject row,
+            IList list,
+            int index,
+            ListFieldDisplayAttribute listAttribute)
+        {
+            switch (listAttribute)
+            {
+                case DoubleListFieldDisplayAttribute doubleList:
+                    {
+                        double currentValue = list.Count > index && list[index] != null
+                            ? Convert.ToDouble(list[index])
+                            : doubleList.initial;
+
+                        widgetFactory.CreateInputFieldWidget(
+                            parent: row,
+                            formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_ValueEntry,
+                            text: currentValue,
+                            postfixText: doubleList.postfix,
+                            contentType: InputField.ContentType.DecimalNumber,
+                            newOnEndEdit: (string input, InputField inputField) =>
+                            {
+                                if (!double.TryParse(input, out double parsedValue))
+                                {
+                                    parsedValue = currentValue;
+                                }
+
+                                double clampedValue = GeneralMath.Clamp(parsedValue, doubleList.minimum, doubleList.maximum);
+
+                                if (Math.Abs(clampedValue - parsedValue) > double.Epsilon)
+                                {
+                                    inputField.text = clampedValue.ToString();
+                                }
+
+                                list[index] = clampedValue;
+                            },
+                            index: 1);
+                        break;
+                    }
+
+                case IntListFieldDisplayAttribute intList:
+                    {
+                        int currentValue = list.Count > index && list[index] != null
+                            ? Convert.ToInt32(list[index])
+                            : intList.initial;
+
+                        widgetFactory.CreateInputFieldWidget(
+                            parent: row,
+                            formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_ValueEntry,
+                            text: currentValue,
+                            postfixText: intList.postfix,
+                            contentType: InputField.ContentType.IntegerNumber,
+                            newOnEndEdit: (string input, InputField inputField) =>
+                            {
+                                if (!int.TryParse(input, out int parsedValue))
+                                {
+                                    parsedValue = currentValue;
+                                }
+
+                                int clampedValue = GeneralMath.Clamp(parsedValue, intList.minimum, intList.maximum);
+
+                                if (clampedValue != parsedValue)
+                                {
+                                    inputField.text = clampedValue.ToString();
+                                }
+
+                                list[index] = clampedValue;
+                            },
+                            index: 1);
+                        break;
+                    }
+
+                case StringListFieldDisplayAttribute _:
+                    {
+                        string currentValue = list.Count > index && list[index] != null
+                            ? list[index] as string
+                            : string.Empty;
+
+                        widgetFactory.CreateInputFieldWidget(
+                            parent: row,
+                            formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_ValueEntry,
+                            text: currentValue ?? string.Empty,
+                            contentType: InputField.ContentType.Standard,
+                            onEndEdit: input =>
+                            {
+                                list[index] = input?.Trim()?.Replace("\r", "") ?? string.Empty;
+                            },
+                            index: 1);
+                        break;
+                    }
+
+                case BoolListFieldDisplayAttribute boolList:
+                    {
+                        bool currentValue = list.Count > index && list[index] != null
+                            ? Convert.ToBoolean(list[index])
+                            : boolList.initial;
+
+                        widgetFactory.CreateToggleWidget(
+                            parent: row,
+                            value: currentValue,
+                            formattingOptions: WidgetFactory.ButtonFormattingOptions.Config_ToggleValue,
+                            onValueChanged: value => list[index] = value,
+                            index: 1);
+                        break;
+                    }
+
+                default:
+                    Debug.LogError($"Unsupported list attribute type: {listAttribute.GetType()}");
+                    widgetFactory.CreateLabelWidget(
+                        parent: row,
+                        text: "<unsupported>",
+                        alignment: TextAnchor.MiddleLeft,
+                        index: 1);
+                    break;
+            }
+        }
+
+        private void RenderPropertyGroupListEntry(
+            PropertyGroupListFieldDisplayAttribute listAttribute,
+            IPropertyGroup ownerGroup,
+            PropertyInfo property,
+            IList list,
+            int index,
+            Transform parentTransform,
+            Action respawnPropertyGroupCallback)
+        {
+            IPropertyGroup childGroup = list[index] as IPropertyGroup;
+            if (childGroup == null)
+            {
+                childGroup = listAttribute.CreateEntry(ownerGroup, listAttribute.SelectionTypes[0]);
+                list[index] = childGroup;
+            }
+
+            childGroup.SetParent(ownerGroup);
+
+            PropertyGroupContainer entryContainer = SpawnNestedPropertyGroupContainer();
+            entryContainer.transform.SetParent(parentTransform, false);
+            entryContainer.label.text = $"{listAttribute.displayTitle} #{index + 1}";
+            entryContainer.GroupInfoText = property.GetGroupInfoText();
+            entryContainer.ChoiceInfoText = childGroup.GetType().GetChoiceInfoText();
+
+            Dropdown dropdown = entryContainer.options;
+            dropdown.onValueChanged.RemoveAllListeners();
+            dropdown.ClearOptions();
+
+            List<string> optionTitles = new List<string>();
+            int selectionIndex = 0;
+            for (int i = 0; i < listAttribute.SelectionTypes.Count; i++)
+            {
+                optionTitles.Add(listAttribute.SelectionTypes[i].GetSelectionTitle());
+                if (listAttribute.SelectionTypes[i] == childGroup.GetType())
+                {
+                    selectionIndex = i;
+                }
+            }
+
+            dropdown.AddOptions(optionTitles);
+            dropdown.value = selectionIndex;
+            dropdown.RefreshShownValue();
+            dropdown.onValueChanged.AddListener(value =>
+            {
+                IList targetList = property.GetValue(ownerGroup) as IList;
+                if (targetList == null)
+                {
+                    return;
+                }
+
+                Type selectedType = listAttribute.SelectionTypes[value];
+                IPropertyGroup newEntry = listAttribute.CreateEntry(ownerGroup, selectedType);
+                targetList[index] = newEntry;
+                respawnPropertyGroupCallback?.Invoke();
+            });
+
+            GameObject deleteRow = widgetFactory.GetContainerWidget(
+                config: WidgetFactory.ContainerConfig.Config_Normal_Even,
+                parent: entryContainer.propertyFrame,
+                slots: 1);
+            deleteRow.transform.SetAsFirstSibling();
+
+            GameObject deleteButton = widgetFactory.CreateButtonWidget(
+                parent: deleteRow,
+                text: "Delete",
+                buttonOptions: WidgetFactory.ButtonFormattingOptions.Config_DeleteButton,
+                onClick: () =>
+                {
+                    IList targetList = property.GetValue(ownerGroup) as IList;
+                    if (targetList == null || targetList.Count <= listAttribute.MinimumCount)
+                    {
+                        return;
+                    }
+
+                    targetList.RemoveAt(index);
+                    respawnPropertyGroupCallback?.Invoke();
+                });
+
+            Button deleteComponent = deleteButton.GetComponent<Button>();
+            if (deleteComponent != null)
+            {
+                deleteComponent.interactable = list.Count > listAttribute.MinimumCount;
+            }
+
+            VisualizePropertyGroup(
+                propertyContainer: childGroup,
+                parentTransform: entryContainer.propertyFrame.transform,
+                respawnPropertyGroupCallback: respawnPropertyGroupCallback,
+                spawningBehavior: SpawningBehavior.NestedInternal);
         }
 
         private GameObject SpawnValueInputWidget(
