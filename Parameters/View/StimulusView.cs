@@ -936,9 +936,17 @@ namespace BGC.Parameters.View
                 listAttribute.PopulateList(propertyGroup, property, list);
             }
 
+            PropertyGroupContainer frameContainer = SpawnPropertyGroupContainer();
+            frameContainer.transform.SetParent(parentTransform, false);
+            frameContainer.label.text = listAttribute.displayTitle;
+            frameContainer.GroupInfoText = property.GetGroupInfoText();
+            frameContainer.ChoiceInfoText = null;
+            frameContainer.options.gameObject.SetActive(false);
+            frameContainer.infoButton?.gameObject.SetActive(false);
+
             GameObject headerWidget = widgetFactory.GetContainerWidget(
                 config: WidgetFactory.ContainerConfig.Config_Normal_Even,
-                parent: parentTransform.gameObject,
+                parent: frameContainer.propertyFrame.gameObject,
                 slots: 3);
 
             LayoutElement headerLayout = headerWidget.AddComponent<LayoutElement>();
@@ -981,7 +989,7 @@ namespace BGC.Parameters.View
 
             GameObject listContainer = widgetFactory.GetContainerWidget(
                 config: WidgetFactory.ContainerConfig.Config_AddSpecial_Instructions,
-                parent: parentTransform.gameObject,
+                parent: frameContainer.propertyFrame.gameObject,
                 slots: 1);
 
             LayoutElement listLayout = listContainer.AddComponent<LayoutElement>();
@@ -1080,7 +1088,7 @@ namespace BGC.Parameters.View
                     {
                         double currentValue = list.Count > index && list[index] != null
                             ? Convert.ToDouble(list[index])
-                            : doubleList.initial;
+                            : doubleList.defaultValue;
 
                         widgetFactory.CreateInputFieldWidget(
                             parent: row,
@@ -1112,7 +1120,7 @@ namespace BGC.Parameters.View
                     {
                         int currentValue = list.Count > index && list[index] != null
                             ? Convert.ToInt32(list[index])
-                            : intList.initial;
+                            : intList.defaultValue;
 
                         widgetFactory.CreateInputFieldWidget(
                             parent: row,
@@ -1163,7 +1171,7 @@ namespace BGC.Parameters.View
                     {
                         bool currentValue = list.Count > index && list[index] != null
                             ? Convert.ToBoolean(list[index])
-                            : boolList.initial;
+                            : boolList.defaultValue;
 
                         widgetFactory.CreateToggleWidget(
                             parent: row,

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Reflection;
 
@@ -7,32 +7,52 @@ namespace BGC.Parameters
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
     public class IntListFieldDisplayAttribute : ListFieldDisplayAttribute
     {
-        public readonly int initial;
+        public readonly int defaultValue;
         public readonly int minimum;
         public readonly int maximum;
         public readonly string postfix;
+        private readonly int[] initialValues;
 
         public IntListFieldDisplayAttribute(
             string fieldName,
             string displayTitle,
-            int initialValue = 0,
+            int defaultValue = 0,
             int minimum = int.MinValue,
             int maximum = int.MaxValue,
             string postfix = "",
-            int initialCount = 0,
             int minimumCount = 0,
-            int maximumCount = int.MaxValue)
-            : base(fieldName, displayTitle, initialCount, minimumCount, maximumCount)
+            int maximumCount = int.MaxValue,
+            params int[] initialValues)
+            : base(fieldName, displayTitle, minimumCount, maximumCount)
         {
-            initial = initialValue;
+            this.defaultValue = defaultValue;
             this.minimum = minimum;
             this.maximum = maximum;
             this.postfix = postfix;
+            this.initialValues = initialValues ?? Array.Empty<int>();
         }
 
         public override Type ElementType => typeof(int);
 
+        protected override void AddInitialValues(IPropertyGroup owner, PropertyInfo propertyInfo, IList list)
+        {
+            if (initialValues == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < initialValues.Length; i++)
+            {
+                if (IsAtMaximumCount(list))
+                {
+                    break;
+                }
+
+                list.Add(initialValues[i]);
+            }
+        }
+
         protected override void AddDefaultValue(IPropertyGroup owner, PropertyInfo propertyInfo, IList list) =>
-            list.Add(initial);
+            list.Add(defaultValue);
     }
 }
