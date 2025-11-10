@@ -10,6 +10,7 @@ namespace BGC.Parameters
     public class PropertyGroupListFieldDisplayAttribute : ListFieldDisplayAttribute
     {
         private readonly Type[] selectionTypes;
+        private readonly Type[] initialSelectionTypes;
 
         public IReadOnlyList<Type> SelectionTypes => selectionTypes;
 
@@ -17,10 +18,10 @@ namespace BGC.Parameters
             string fieldName,
             string displayTitle,
             Type[] selectionTypes,
-            int initialCount = 0,
             int minimumCount = 0,
-            int maximumCount = int.MaxValue)
-            : base(fieldName, displayTitle, initialCount, minimumCount, maximumCount)
+            int maximumCount = int.MaxValue,
+            params Type[] initialSelectionTypes)
+            : base(fieldName, displayTitle, minimumCount, maximumCount)
         {
             if (selectionTypes == null || selectionTypes.Length == 0)
             {
@@ -38,6 +39,30 @@ namespace BGC.Parameters
                 }
 
                 this.selectionTypes[i] = type;
+            }
+
+            if (initialSelectionTypes != null && initialSelectionTypes.Length > 0)
+            {
+                foreach (Type initialType in initialSelectionTypes)
+                {
+                    if (initialType == null)
+                    {
+                        throw new ArgumentException("Initial selection types cannot contain null entries.", nameof(initialSelectionTypes));
+                    }
+
+                    if (!selectionTypes.Contains(initialType))
+                    {
+                        throw new ArgumentException(
+                            $"Initial selection type {initialType} must also be included in the selectionTypes list.",
+                            nameof(initialSelectionTypes));
+                    }
+                }
+
+                this.initialSelectionTypes = initialSelectionTypes.ToArray();
+            }
+            else
+            {
+                this.initialSelectionTypes = Array.Empty<Type>();
             }
         }
 
@@ -62,6 +87,19 @@ namespace BGC.Parameters
 
         protected override void AddDefaultValue(IPropertyGroup owner, PropertyInfo propertyInfo, IList list) =>
             list.Add(CreateEntry(owner, selectionTypes[0]));
+
+        protected override void AddInitialValues(IPropertyGroup owner, PropertyInfo propertyInfo, IList list)
+        {
+            for (int i = 0; i < initialSelectionTypes.Length; i++)
+            {
+                if (IsAtMaximumCount(list))
+                {
+                    break;
+                }
+
+                list.Add(CreateEntry(owner, initialSelectionTypes[i]));
+            }
+        }
 
         public IPropertyGroup CreateEntry(IPropertyGroup owner, Type selectionType)
         {
