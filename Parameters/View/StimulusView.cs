@@ -1034,29 +1034,102 @@ namespace BGC.Parameters.View
             Transform parentTransform,
             Action respawnPropertyGroupCallback)
         {
+            const int rowSlots = 3;
             GameObject row = widgetFactory.GetContainerWidget(
                 config: WidgetFactory.ContainerConfig.Config_Normal_Even,
                 parent: parentTransform.gameObject,
-                slots: 3);
+                slots: rowSlots);
 
             LayoutElement layoutElement = row.AddComponent<LayoutElement>();
             layoutElement.minHeight = 60;
 
-            widgetFactory.CreateLabelWidget(
+            HorizontalLayoutGroup rowLayout = row.GetComponent<HorizontalLayoutGroup>();
+            if (rowLayout == null)
+            {
+                rowLayout = row.AddComponent<HorizontalLayoutGroup>();
+            }
+            rowLayout.childAlignment = TextAnchor.MiddleCenter;
+            rowLayout.spacing = 8f;
+            rowLayout.childControlWidth = true;
+            rowLayout.childControlHeight = true;
+            rowLayout.childForceExpandWidth = false;
+            rowLayout.childForceExpandHeight = true;
+
+            GameObject indexLabel = widgetFactory.CreateLabelWidget(
                 parent: row,
                 text: $"[{index + 1}]",
                 alignment: TextAnchor.MiddleLeft);
 
-            SpawnPrimitiveListValueEditor(
+            LayoutElement indexLayout = indexLabel.GetComponent<LayoutElement>() ?? indexLabel.AddComponent<LayoutElement>();
+            indexLayout.minWidth = 60f;
+            indexLayout.preferredWidth = 70f;
+            indexLayout.flexibleWidth = 0f;
+
+            GameObject valueWidget = SpawnPrimitiveListValueEditor(
                 row: row,
                 list: list,
                 index: index,
                 listAttribute: listAttribute);
 
-            GameObject deleteButton = widgetFactory.CreateButtonWidget(
-                parent: row,
-                text: "X",
-                buttonOptions: WidgetFactory.ButtonFormattingOptions.Config_DeleteButton,
+            if (valueWidget != null)
+            {
+                LayoutElement valueLayout = valueWidget.GetComponent<LayoutElement>() ?? valueWidget.AddComponent<LayoutElement>();
+                valueLayout.minWidth = 140f;
+                valueLayout.preferredWidth = 220f;
+                valueLayout.flexibleWidth = 1f;
+            }
+
+            GameObject buttonPanel = CreateInlineButtonStrip(row);
+
+            GameObject moveUpButton = CreateInlineListButton(
+                parent: buttonPanel,
+                label: "↑",
+                formatting: WidgetFactory.ButtonFormattingOptions.Config_ListEntry,
+                slotIndex: 0,
+                onClick: () =>
+                {
+                    if (index <= 0)
+                    {
+                        return;
+                    }
+
+                    SwapListEntries(list, index, index - 1);
+                    respawnPropertyGroupCallback?.Invoke();
+                });
+
+            Button moveUpComponent = moveUpButton.GetComponent<Button>();
+            if (moveUpComponent != null)
+            {
+                moveUpComponent.interactable = index > 0;
+            }
+
+            GameObject moveDownButton = CreateInlineListButton(
+                parent: buttonPanel,
+                label: "↓",
+                formatting: WidgetFactory.ButtonFormattingOptions.Config_ListEntry,
+                slotIndex: 1,
+                onClick: () =>
+                {
+                    if (index >= list.Count - 1)
+                    {
+                        return;
+                    }
+
+                    SwapListEntries(list, index, index + 1);
+                    respawnPropertyGroupCallback?.Invoke();
+                });
+
+            Button moveDownComponent = moveDownButton.GetComponent<Button>();
+            if (moveDownComponent != null)
+            {
+                moveDownComponent.interactable = index < list.Count - 1;
+            }
+
+            GameObject deleteButton = CreateInlineListButton(
+                parent: buttonPanel,
+                label: "X",
+                formatting: WidgetFactory.ButtonFormattingOptions.Config_DeleteButton,
+                slotIndex: 2,
                 onClick: () =>
                 {
                     if (list.Count <= listAttribute.MinimumCount)
@@ -1066,8 +1139,7 @@ namespace BGC.Parameters.View
 
                     list.RemoveAt(index);
                     respawnPropertyGroupCallback?.Invoke();
-                },
-                index: 2);
+                });
 
             Button deleteComponent = deleteButton.GetComponent<Button>();
             if (deleteComponent != null)
@@ -1076,7 +1148,7 @@ namespace BGC.Parameters.View
             }
         }
 
-        private void SpawnPrimitiveListValueEditor(
+        private GameObject SpawnPrimitiveListValueEditor(
             GameObject row,
             IList list,
             int index,
@@ -1090,7 +1162,7 @@ namespace BGC.Parameters.View
                             ? Convert.ToDouble(list[index])
                             : doubleList.defaultValue;
 
-                        widgetFactory.CreateInputFieldWidget(
+                        return widgetFactory.CreateInputFieldWidget(
                             parent: row,
                             formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_ValueEntry,
                             text: currentValue,
@@ -1113,7 +1185,7 @@ namespace BGC.Parameters.View
                                 list[index] = clampedValue;
                             },
                             index: 1);
-                        break;
+                        
                     }
 
                 case IntListFieldDisplayAttribute intList:
@@ -1122,7 +1194,7 @@ namespace BGC.Parameters.View
                             ? Convert.ToInt32(list[index])
                             : intList.defaultValue;
 
-                        widgetFactory.CreateInputFieldWidget(
+                        return widgetFactory.CreateInputFieldWidget(
                             parent: row,
                             formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_ValueEntry,
                             text: currentValue,
@@ -1145,7 +1217,7 @@ namespace BGC.Parameters.View
                                 list[index] = clampedValue;
                             },
                             index: 1);
-                        break;
+                        
                     }
 
                 case StringListFieldDisplayAttribute _:
@@ -1154,7 +1226,7 @@ namespace BGC.Parameters.View
                             ? list[index] as string
                             : string.Empty;
 
-                        widgetFactory.CreateInputFieldWidget(
+                        return widgetFactory.CreateInputFieldWidget(
                             parent: row,
                             formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_ValueEntry,
                             text: currentValue ?? string.Empty,
@@ -1164,7 +1236,7 @@ namespace BGC.Parameters.View
                                 list[index] = input?.Trim()?.Replace("\r", "") ?? string.Empty;
                             },
                             index: 1);
-                        break;
+                        
                     }
 
                 case BoolListFieldDisplayAttribute boolList:
@@ -1173,24 +1245,25 @@ namespace BGC.Parameters.View
                             ? Convert.ToBoolean(list[index])
                             : boolList.defaultValue;
 
-                        widgetFactory.CreateToggleWidget(
+                        return widgetFactory.CreateToggleWidget(
                             parent: row,
                             value: currentValue,
                             formattingOptions: WidgetFactory.ButtonFormattingOptions.Config_ToggleValue,
                             onValueChanged: value => list[index] = value,
                             index: 1);
-                        break;
+                        
                     }
 
                 default:
                     Debug.LogError($"Unsupported list attribute type: {listAttribute.GetType()}");
-                    widgetFactory.CreateLabelWidget(
+                    return widgetFactory.CreateLabelWidget(
                         parent: row,
                         text: "<unsupported>",
                         alignment: TextAnchor.MiddleLeft,
                         index: 1);
-                    break;
             }
+
+            return null;
         }
 
         private void RenderPropertyGroupListEntry(
@@ -1253,14 +1326,25 @@ namespace BGC.Parameters.View
                     targetList[index] = newEntry;
                     respawnPropertyGroupCallback?.Invoke();
                 });
+
+                RectTransform dropdownRect = dropdown.GetComponent<RectTransform>();
+                if (dropdownRect != null)
+                {
+                    Vector2 offsetMax = dropdownRect.offsetMax;
+                    offsetMax.x = -150f;
+                    dropdownRect.offsetMax = offsetMax;
+                }
             }
 
-            Transform deleteParent = entryContainer.titleBox == null ? entryContainer.transform : entryContainer.titleBox;
-            GameObject deleteButton = widgetFactory.CreateButtonWidget(
-                parent: deleteParent.gameObject,
-                text: "×",
-                buttonOptions: WidgetFactory.ButtonFormattingOptions.Config_DeleteButton,
-                configOverride: WidgetFactory.ContainerConfig.Config_AddSpecial_OptionDelete,
+            const float deleteOffset = 12f;
+            const float downOffset = 52f;
+            const float upOffset = 92f;
+
+            GameObject deleteButton = CreateTitleBarButton(
+                container: entryContainer,
+                label: "X",
+                formatting: WidgetFactory.ButtonFormattingOptions.Config_DeleteButton,
+                rightOffset: deleteOffset,
                 onClick: () =>
                 {
                     IList targetList = property.GetValue(ownerGroup) as IList;
@@ -1273,31 +1357,40 @@ namespace BGC.Parameters.View
                     respawnPropertyGroupCallback?.Invoke();
                 });
 
-            RectTransform deleteRect = deleteButton.GetComponent<RectTransform>();
-            if (deleteRect != null)
-            {
-                deleteRect.anchorMin = new Vector2(1f, 0.5f);
-                deleteRect.anchorMax = new Vector2(1f, 0.5f);
-                deleteRect.pivot = new Vector2(1f, 0.5f);
-                deleteRect.anchoredPosition = new Vector2(-10f, 0f);
-                deleteRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 36f);
-                deleteRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 36f);
-            }
+            GameObject moveDownButton = CreateTitleBarButton(
+                container: entryContainer,
+                label: "↓",
+                formatting: WidgetFactory.ButtonFormattingOptions.Config_ListEntry,
+                rightOffset: downOffset,
+                onClick: () =>
+                {
+                    IList targetList = property.GetValue(ownerGroup) as IList;
+                    if (targetList == null || index >= targetList.Count - 1)
+                    {
+                        return;
+                    }
 
-            LayoutElement deleteLayout = deleteButton.GetComponent<LayoutElement>();
-            if (deleteLayout == null)
-            {
-                deleteLayout = deleteButton.AddComponent<LayoutElement>();
-            }
-            deleteLayout.ignoreLayout = true;
+                    SwapListEntries(targetList, index, index + 1);
+                    respawnPropertyGroupCallback?.Invoke();
+                });
 
-            RectTransform dropdownRect = dropdown.GetComponent<RectTransform>();
-            if (dropdownRect != null)
-            {
-                dropdownRect.offsetMax = new Vector2(-60f, dropdownRect.offsetMax.y);
-            }
+            GameObject moveUpButton = CreateTitleBarButton(
+                container: entryContainer,
+                label: "↑",
+                formatting: WidgetFactory.ButtonFormattingOptions.Config_ListEntry,
+                rightOffset: upOffset,
+                onClick: () =>
+                {
+                    IList targetList = property.GetValue(ownerGroup) as IList;
+                    if (targetList == null || index <= 0)
+                    {
+                        return;
+                    }
 
-            deleteButton.transform.SetAsLastSibling();
+                    SwapListEntries(targetList, index, index - 1);
+                    respawnPropertyGroupCallback?.Invoke();
+                });
+
             Button deleteComponent = deleteButton.GetComponent<Button>();
             if (deleteComponent != null)
             {
@@ -1564,6 +1657,134 @@ namespace BGC.Parameters.View
                     Debug.LogError($"Unexpected PropertyType: {property.PropertyType}");
                     return null;
             }
+        }
+
+        private GameObject CreateInlineListButton(
+            GameObject parent,
+            string label,
+            WidgetFactory.ButtonFormattingOptions formatting,
+            int slotIndex,
+            UnityEngine.Events.UnityAction onClick)
+        {
+            GameObject button = widgetFactory.CreateButtonWidget(
+                parent: parent,
+                text: label,
+                buttonOptions: formatting,
+                onClick: onClick,
+                configOverride: WidgetFactory.ContainerConfig.Config_Normal_Even,
+                index: slotIndex);
+
+            ConfigureInlineButtonLayout(button);
+            return button;
+        }
+
+        private void ConfigureInlineButtonLayout(GameObject button)
+        {
+            const float width = 40f;
+            const float height = 32f;
+
+            LayoutElement layout = button.GetComponent<LayoutElement>() ?? button.AddComponent<LayoutElement>();
+            layout.minWidth = width;
+            layout.preferredWidth = width;
+            layout.minHeight = height;
+            layout.preferredHeight = height;
+            layout.flexibleWidth = 0f;
+            layout.flexibleHeight = 0f;
+
+            RectTransform rect = button.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.anchorMin = new Vector2(0.5f, 0.5f);
+                rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
+                rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
+            }
+        }
+
+        private GameObject CreateTitleBarButton(
+            PropertyGroupContainer container,
+            string label,
+            WidgetFactory.ButtonFormattingOptions formatting,
+            float rightOffset,
+            UnityEngine.Events.UnityAction onClick)
+        {
+            Transform parent = container.titleBox == null ? container.transform : container.titleBox;
+
+            GameObject button = widgetFactory.CreateButtonWidget(
+                parent: parent.gameObject,
+                text: label,
+                buttonOptions: formatting,
+                configOverride: WidgetFactory.ContainerConfig.Config_AddSpecial_OptionDelete,
+                onClick: onClick);
+
+            RectTransform rect = button.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.anchorMin = new Vector2(1f, 0.5f);
+                rect.anchorMax = new Vector2(1f, 0.5f);
+                rect.pivot = new Vector2(1f, 0.5f);
+                rect.anchoredPosition = new Vector2(-rightOffset, 0f);
+                rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 32f);
+                rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 32f);
+            }
+
+            LayoutElement layout = button.GetComponent<LayoutElement>() ?? button.AddComponent<LayoutElement>();
+            layout.minWidth = 32f;
+            layout.preferredWidth = 32f;
+            layout.minHeight = 32f;
+            layout.preferredHeight = 32f;
+            layout.flexibleWidth = 0f;
+            layout.flexibleHeight = 0f;
+            layout.ignoreLayout = true;
+
+            return button;
+        }
+
+        private GameObject CreateInlineButtonStrip(GameObject row)
+        {
+            GameObject panel = widgetFactory.GetContainerWidget(
+                config: WidgetFactory.ContainerConfig.Config_Normal_Even,
+                parent: row,
+                slots: 3);
+
+            panel.name = "InlineButtons";
+
+            HorizontalLayoutGroup layoutGroup = panel.GetComponent<HorizontalLayoutGroup>();
+            if (layoutGroup == null)
+            {
+                layoutGroup = panel.AddComponent<HorizontalLayoutGroup>();
+            }
+            layoutGroup.childAlignment = TextAnchor.MiddleCenter;
+            layoutGroup.spacing = 4f;
+            layoutGroup.childControlWidth = false;
+            layoutGroup.childControlHeight = true;
+            layoutGroup.childForceExpandWidth = false;
+            layoutGroup.childForceExpandHeight = false;
+
+            LayoutElement layoutElement = panel.GetComponent<LayoutElement>() ?? panel.AddComponent<LayoutElement>();
+            layoutElement.minWidth = 140f;
+            layoutElement.preferredWidth = 140f;
+            layoutElement.flexibleWidth = 0f;
+
+            return panel;
+        }
+
+        private static void SwapListEntries(IList list, int firstIndex, int secondIndex)
+        {
+            if (list == null ||
+                firstIndex < 0 ||
+                secondIndex < 0 ||
+                firstIndex >= list.Count ||
+                secondIndex >= list.Count ||
+                firstIndex == secondIndex)
+            {
+                return;
+            }
+
+            object temp = list[firstIndex];
+            list[firstIndex] = list[secondIndex];
+            list[secondIndex] = temp;
         }
 
         #region Spawning Methods
