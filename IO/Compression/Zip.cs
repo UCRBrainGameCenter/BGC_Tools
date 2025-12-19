@@ -117,148 +117,128 @@ namespace BGC.IO.Compression
 
             return false;
         }
-        
-        /// <summary>Decompresses a zip archive onto disc.</summary>
+
+        /// <summary>Decompresses a zip archive onto disk.</summary>
         /// <param name="inputFilePath">The absolute file path of the zip archive on local storage.</param>
         /// <param name="outputPath">The absolute path to where the archive should be output to on local storage.</param>
         /// <param name="progressReporter">Optional progress reporter.</param>
         /// <param name="abortToken">Optional cancellation token.</param>
         /// <returns>TRUE if successful. FALSE otherwise.</returns>
-        public static async Task<bool> DecompressFileAsync(
-            string inputFilePath,
-            string outputPath,
-            IProgress<float> progressReporter = null,
-            CancellationToken abortToken = default)
+        public static Task<bool> DecompressFileAsync(
+        string inputFilePath,
+        string outputPath,
+        IProgress<float> progressReporter = null,
+        CancellationToken abortToken = default)
         {
             if (!File.Exists(inputFilePath))
             {
                 Debug.LogError($"Zip Decompress Input File not found: {inputFilePath}");
-                return false;
+                return Task.FromResult(false);
             }
 
-            if (!Directory.Exists(outputPath))
+            Directory.CreateDirectory(outputPath);
+
+            // Do the extraction work on a background thread, but keep it single-threaded.
+            return Task.Run(() =>
             {
-                Directory.CreateDirectory(outputPath);
-            }
-
-            try
-            {
-                using ZipArchive archive = ZipFile.OpenRead(inputFilePath);
-
-                float newCurrentProgress = 0f;
-                int totalFiles = archive.Entries.Count;
-
-                List<Task> writeTasks = new List<Task>();
-
-                if (abortToken.IsCancellationRequested)
-                {
-                    return false;
-                }
-
-                foreach (ZipArchiveEntry entry in archive.Entries)
-                {
-                    string fullPath = Path.Combine(outputPath, entry.FullName);
-
-                    string dirName = Path.GetDirectoryName(entry.FullName);
-
-                    if (!string.IsNullOrEmpty(dirName))
-                    {
-                        string dirPath = Path.Combine(outputPath, dirName);
-                        Directory.CreateDirectory(dirPath);
-                    }
-
-                    if (entry.FullName.Last() == '/')
-                    {
-                        // If we're here, skip because this entry is a directory
-                        continue;
-                    }
-
-                    writeTasks.Add(Task.Run(() => WriteArchiveEntry(entry, fullPath), abortToken));
-                }
-
-                if (abortToken.IsCancellationRequested)
-                {
-                    return false;
-                }
-
-                if (progressReporter != null)
-                {
-                    // handle progress reporting
-
-                    while (writeTasks.Any())
-                    {
-                        // when any task completes, update progress
-                        Task completedTask = await Task.WhenAny(writeTasks);
-                        writeTasks.Remove(completedTask);
-
-                        newCurrentProgress += 1f / totalFiles;
-                        progressReporter.Report(newCurrentProgress);
-
-                        if (abortToken.IsCancellationRequested)
-                        {
-                            return false;
-                        }
-                    }
-                }
-                else
-                {
-                    // no progress reporting, so just wait for them all to finish.
-                    await Task.WhenAll(writeTasks);
-                }
-
-                return true;
-            }
-            catch (InvalidDataException)
-            {
-                // We might be dealing with an incompatible zip64 file, as per MS issue report:
-                // https://github.com/dotnet/runtime/issues/49580
-                
-                // in this case, fallback to try and use the known working method. Unfortunately, we can't report
-                // progress with this.
-
                 try
                 {
-                    Task writeTask = Task.Run(() => ZipFile.ExtractToDirectory(inputFilePath, outputPath), abortToken);
+                    using var archive = ZipFile.OpenRead(inputFilePath);
 
-                    float prog = 0f;
-                    while (!writeTask.IsCompleted)
+                    var fileEntries = archive.Entries
+                        .Where(e => !string.IsNullOrEmpty(e.Name)) // directories have empty Name
+                        .ToList();
+
+                    int total = fileEntries.Count;
+                    if (total == 0)
                     {
-                        // fake the progress
-                        await Task.Delay(1, abortToken);
-                        prog += 0.001f;
-                        progressReporter.Report(prog);
+                        progressReporter?.Report(1f);
+                        return true;
                     }
-                    
-                    progressReporter?.Report(1f);
-                
+
+                    int done = 0;
+
+                    foreach (var entry in fileEntries)
+                    {
+                        abortToken.ThrowIfCancellationRequested();
+
+                        string destinationPath = GetSafeDestinationPath(outputPath, entry.FullName);
+
+                        string destinationDir = Path.GetDirectoryName(destinationPath);
+                        if (!string.IsNullOrEmpty(destinationDir))
+                        {
+                            Directory.CreateDirectory(destinationDir);
+                        }
+
+                        // Extract
+                        using var inStream = entry.Open();
+                        using var outStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                        inStream.CopyTo(outStream);
+
+                        done++;
+                        progressReporter?.Report((float)done / total);
+                    }
+
                     return true;
+                }
+                catch (OperationCanceledException)
+                {
+                    return false;
+                }
+                catch (InvalidDataException ide)
+                {
+                    // Optional: fallback to ExtractToDirectory if your runtime supports it.
+                    // Note: progress is not available here.
+                    Debug.LogWarning($"Zip extraction hit InvalidDataException: {ide.Message}. Trying ExtractToDirectory fallback.");
+
+                    try
+                    {
+                        abortToken.ThrowIfCancellationRequested();
+                        ZipFile.ExtractToDirectory(inputFilePath, outputPath);
+                        progressReporter?.Report(1f);
+                        return true;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return false;
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning($"Fallback ExtractToDirectory failed: {e.Message}");
+                        return false;
+                    }
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning($"Preferred Zip extraction of {inputFilePath} failed with \"{e.Message}\".  Trying fallback extraction to: {outputPath}");
-
+                    Debug.LogWarning($"Zip extraction failed: {e.Message}");
                     return false;
                 }
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"Preferred Zip extraction of {inputFilePath} failed with \"{e.Message}\".  Trying fallback extraction to: {outputPath}");
-
-                return false;
-            }
+            }, abortToken);
         }
 
-        private static async Task WriteArchiveEntry(ZipArchiveEntry entry, string filepath)
+        private static string GetSafeDestinationPath(string outputRoot, string entryFullName)
         {
-            if (Path.HasExtension(filepath))
-            {
-                // we may have entries that represent a directory. Rule those out and only extract files.
+            // Normalize separators to current platform
+            string relativePath = entryFullName.Replace('\\', Path.DirectorySeparatorChar)
+                                               .Replace('/', Path.DirectorySeparatorChar);
 
-                //Copy binary data into new file
-                using Stream entryStream = entry.Open();
-                using FileStream fileStream = File.OpenWrite(filepath);
-                await entryStream.CopyToAsync(fileStream);
+            // Prevent rooted paths from ignoring outputRoot
+            while (relativePath.Length > 0 && (relativePath[0] == Path.DirectorySeparatorChar))
+            {
+                relativePath = relativePath.Substring(1);
             }
+
+            string fullOutputRoot = Path.GetFullPath(outputRoot);
+            string combined = Path.GetFullPath(Path.Combine(fullOutputRoot, relativePath));
+
+            // Ensure the final path stays within outputRoot
+            if (!combined.StartsWith(fullOutputRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(combined, fullOutputRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException($"Blocked zip entry path traversal: {entryFullName}");
+            }
+
+            return combined;
         }
 
         private static bool Decompress(ZipArchive archive, string outputPath)
