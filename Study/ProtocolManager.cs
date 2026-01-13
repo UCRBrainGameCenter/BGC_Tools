@@ -85,6 +85,8 @@ namespace BGC.Study
             public const string SequenceTimes = "SequenceTimes";
             public const string CurrentSequenceStartTime = "CurrentSequenceStartTime";
             public const string SequenceIndex = "SequenceIndex";
+
+            public const string ExtensionState = "ProtocolManager.ExtensionState";
         }
 
         public static Dictionary<string, Protocol> protocolDictionary = new Dictionary<string, Protocol>();
@@ -877,9 +879,9 @@ namespace BGC.Study
                     if (sequences[i].type == SequenceType.Session && sessionRemapping.ContainsKey(sequences[i].id))
                     {
                         sequences[i] = new SequenceElement(sessionRemapping[sequences[i].id], SequenceType.Session);
-                    }
-                }
-            }
+                      }
+                  }
+              }
 
             //Remove eliminated SessionElements
             foreach (int sessionElementID in sessionElementRemapping.Keys)
@@ -1159,6 +1161,9 @@ namespace BGC.Study
             lockoutDictionary.Clear();
             lockoutElementDictionary.Clear();
 
+            // Clear runtime history stored in PlayerData
+            ClearExtensionState();
+
             Protocol.HardClear();
             Session.HardClear();
             SessionElement.HardClear();
@@ -1180,6 +1185,83 @@ namespace BGC.Study
                     Debug.LogException(e);
                 }
             }
+        }
+
+        private static JsonObject GetExtensionStateRoot()
+        {
+            JsonValue val = PlayerData.GetJsonValue(DataKeys.ExtensionState);
+            return val.IsJsonObject ? val.AsJsonObject : new JsonObject();
+        }
+
+        private static void SetExtensionStateRoot(JsonObject root) =>
+            PlayerData.SetJsonValue(DataKeys.ExtensionState, root ?? new JsonObject());
+
+        public static JsonValue GetExtensionState(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return default(JsonValue);
+            }
+
+            JsonObject root = GetExtensionStateRoot();
+            return root.ContainsKey(key) ? root[key] : default(JsonValue);
+        }
+
+        public static JsonObject GetExtensionStateObject(string key)
+        {
+            JsonValue val = GetExtensionState(key);
+            return val.IsJsonObject ? val.AsJsonObject : null;
+        }
+
+        public static void SetExtensionState(string key, JsonValue value)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return;
+            }
+
+            JsonObject root = GetExtensionStateRoot();
+            root[key] = value;
+            SetExtensionStateRoot(root);
+        }
+
+        public static void RemoveExtensionState(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return;
+            }
+
+            JsonObject root = GetExtensionStateRoot();
+            root.Remove(key);
+            SetExtensionStateRoot(root);
+        }
+
+        public static void ClearExtensionState(string prefix = null)
+        {
+            if (string.IsNullOrEmpty(prefix))
+            {
+                SetExtensionStateRoot(new JsonObject());
+                return;
+            }
+
+            JsonObject root = GetExtensionStateRoot();
+            List<string> keysToRemove = new List<string>();
+
+            foreach (var kvp in root)
+            {
+                if (kvp.Key != null && kvp.Key.StartsWith(prefix, StringComparison.Ordinal))
+                {
+                    keysToRemove.Add(kvp.Key);
+                }
+            }
+
+            foreach (string k in keysToRemove)
+            {
+                root.Remove(k);
+            }
+
+            SetExtensionStateRoot(root);
         }
     }
 }

@@ -65,6 +65,9 @@ namespace BGC.Study
 
         public abstract bool CheckLockout(DateTime currentTime, IEnumerable<SequenceTime> sequenceTimes);
         public virtual string GetBypassPassword() { return null; }
+        public virtual void OnLockoutCompleted(DateTime encounteredTime, DateTime completedTime)
+        {
+        }
 
         public static void HardClear()
         {

@@ -1,6 +1,7 @@
 using LightJson;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace BGC.Study
 {
@@ -37,34 +38,19 @@ namespace BGC.Study
 
         public override bool CheckLockout(DateTime currentTime, IEnumerable<SequenceTime> sequenceTimes)
         {
-            if (sequenceTimes == null)
-            {
-                return false;
-            }
-
-            // Filter for sessions
-            List<SequenceTime> sessions = new List<SequenceTime>();
-            foreach (var st in sequenceTimes)
-            {
-                if (st.type == SequenceType.Session)
-                {
-                    sessions.Add(st);
-                }
-            }
-
-            if (sessions.Count == 0)
-            {
-                return false;
-            }
-
             if (TimeMinutes <= 0)
             {
                 return false;
             }
 
-            DateTime lastSessionTime = sessions[sessions.Count - 1].completedTime;
-            TimeSpan timeSinceLastSession = currentTime - lastSessionTime;
-            return timeSinceLastSession.TotalMinutes < TimeMinutes;
+            DateTime lockoutStartTime = ProtocolManager.CurrentSequenceStartTime;
+            if (lockoutStartTime == DateTime.MinValue)
+            {
+                return false;
+            }
+
+            TimeSpan timeSinceLockoutStart = currentTime - lockoutStartTime;
+            return timeSinceLockoutStart.TotalMinutes < TimeMinutes;
         }
     }
 
@@ -142,69 +128,109 @@ namespace BGC.Study
             }
         }
 
+        public override void OnLockoutCompleted(DateTime encounteredTime, DateTime completedTime)
+        {
+            if (WindowTimeMinutes <= 0 || MaxSessions <= 0)
+            {
+                return;
+            }
+
+            // Ensure we're updating the active window that this attempt belongs to.
+            string key = $"BGC.Study.WindowLockout:{id}";
+            JsonObject obj = ProtocolManager.GetExtensionStateObject(key);
+
+            DateTime windowStart = DateTime.MinValue;
+            DateTime lastPassTime = DateTime.MinValue;
+            int passCount = 0;
+
+            if (obj != null)
+            {
+                windowStart = obj.ContainsKey("windowStart") ? (obj["windowStart"].AsDateTime ?? DateTime.MinValue) : DateTime.MinValue;
+                lastPassTime = obj.ContainsKey("lastPassTime") ? (obj["lastPassTime"].AsDateTime ?? DateTime.MinValue) : DateTime.MinValue;
+                passCount = obj.ContainsKey("passCount") ? obj["passCount"].AsInteger : 0;
+            }
+
+            if (windowStart == DateTime.MinValue ||
+                encounteredTime >= windowStart + TimeSpan.FromMinutes(WindowTimeMinutes))
+            {
+                windowStart = encounteredTime;
+                lastPassTime = DateTime.MinValue;
+                passCount = 0;
+            }
+
+            ProtocolManager.SetExtensionState(
+                key,
+                new JsonValue(new JsonObject
+                {
+                    { "windowStart", windowStart },
+                    { "lastPassTime", completedTime },
+                    { "passCount", passCount + 1 }
+                }));
+        }
+
         public override bool CheckLockout(DateTime currentTime, IEnumerable<SequenceTime> sequenceTimes)
         {
-            if (sequenceTimes == null)
+            DateTime attemptStartTime = ProtocolManager.CurrentSequenceStartTime;
+            if (attemptStartTime == DateTime.MinValue)
             {
                 return false;
             }
 
-            // Filter for sessions
-            List<SequenceTime> sessions = new List<SequenceTime>();
-            foreach (var st in sequenceTimes)
+            if (WindowTimeMinutes <= 0 || MaxSessions <= 0)
             {
-                if (st.type == SequenceType.Session)
+                return false;
+            }
+
+            string key = $"BGC.Study.WindowLockout:{id}";
+            JsonObject obj = ProtocolManager.GetExtensionStateObject(key);
+
+            DateTime windowStart = DateTime.MinValue;
+            DateTime lastPassTime = DateTime.MinValue;
+            int passCount = 0;
+
+            if (obj != null)
+            {
+                windowStart = obj.ContainsKey("windowStart") ? (obj["windowStart"].AsDateTime ?? DateTime.MinValue) : DateTime.MinValue;
+                lastPassTime = obj.ContainsKey("lastPassTime") ? (obj["lastPassTime"].AsDateTime ?? DateTime.MinValue) : DateTime.MinValue;
+                passCount = obj.ContainsKey("passCount") ? obj["passCount"].AsInteger : 0;
+            }
+
+            bool hasActiveWindow = windowStart != DateTime.MinValue;
+            if (hasActiveWindow)
+            {
+                DateTime windowEnd = windowStart + TimeSpan.FromMinutes(WindowTimeMinutes);
+                if (attemptStartTime >= windowEnd)
                 {
-                    sessions.Add(st);
+                    hasActiveWindow = false;
                 }
             }
 
-            if (sessions.Count == 0)
+            if (!hasActiveWindow)
             {
-                return false;
+                windowStart = attemptStartTime;
+                lastPassTime = DateTime.MinValue;
+                passCount = 0;
+
+                ProtocolManager.SetExtensionState(
+                    key,
+                    new JsonValue(new JsonObject
+                    {
+                        { "windowStart", windowStart },
+                        { "lastPassTime", lastPassTime },
+                        { "passCount", passCount }
+                    }));
             }
 
-            // 1. Check MinTime
-            DateTime lastSessionTime = sessions[sessions.Count - 1].completedTime;
-            TimeSpan timeSinceLastSession = currentTime - lastSessionTime;
-            if (timeSinceLastSession.TotalMinutes < MinTimeMinutes)
+            if (passCount >= MaxSessions)
             {
                 return true;
             }
 
-            // 2. Check Window
-            if (WindowTimeMinutes > 0 && MaxSessions > 0)
+            if (lastPassTime != DateTime.MinValue && MinTimeMinutes > 0)
             {
-                // Simulate windows from the beginning of history to determine the current window state
-                DateTime currentWindowStart = sessions[0].completedTime;
-                int sessionsInCurrentWindow = 1;
-
-                for (int i = 1; i < sessions.Count; i++)
+                if ((attemptStartTime - lastPassTime).TotalMinutes < MinTimeMinutes)
                 {
-                    DateTime sessionTime = sessions[i].completedTime;
-
-                    // Is this session inside the current window?
-                    if ((sessionTime - currentWindowStart).TotalMinutes < WindowTimeMinutes)
-                    {
-                        sessionsInCurrentWindow++;
-                    }
-                    else
-                    {
-                        // Start a new window
-                        currentWindowStart = sessionTime;
-                        sessionsInCurrentWindow = 1;
-                    }
-                }
-
-                // Now check against current time
-                // If we are still inside the last established window...
-                if ((currentTime - currentWindowStart).TotalMinutes < WindowTimeMinutes)
-                {
-                    // ...and we have hit the max sessions...
-                    if (sessionsInCurrentWindow >= MaxSessions)
-                    {
-                        return true; // Locked
-                    }
+                    return true;
                 }
             }
 

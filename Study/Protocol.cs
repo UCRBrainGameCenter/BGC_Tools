@@ -534,8 +534,17 @@ namespace BGC.Study
 
         public void OnCompleted()
         {
+            DateTime encounteredTime = ProtocolManager.CurrentSequenceStartTime;
+            DateTime completedTime = DateTime.Now;
+
             ProtocolManager.AddSequenceTime(
-                new SequenceTime(SequenceType.Lockout, id, ProtocolManager.CurrentSequenceStartTime, DateTime.Now));
+                new SequenceTime(SequenceType.Lockout, id, encounteredTime, completedTime));
+
+            foreach (LockoutElementID elementId in lockoutElements)
+            {
+                LockoutElement element = elementId.Element;
+                element?.OnLockoutCompleted(encounteredTime, completedTime);
+            }
         }
 
         #region IEnumerator
