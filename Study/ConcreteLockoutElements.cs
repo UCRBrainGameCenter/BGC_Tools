@@ -12,6 +12,8 @@ namespace BGC.Study
         public double TimeMinutes { get; private set; }
         public string BypassPassword { get; private set; }
 
+        private string StateKey => $"BGC.Study.FixedTimeLockout:{id}";
+
         public FixedTimeLockout(JsonObject data) : base(data)
         {
             if (data.ContainsKey(ProtocolKeys.LockoutElement.Time))
@@ -26,6 +28,46 @@ namespace BGC.Study
         }
 
         public override string GetBypassPassword() => BypassPassword;
+        public override bool IsTimeBased => true;
+
+        public override DateTime? GetLockoutExpiration()
+        {
+            if (TimeMinutes <= 0)
+            {
+                return null;
+            }
+
+            // Check for stored state (persisted across app restarts)
+            JsonObject state = ProtocolManager.GetExtensionStateObject(StateKey);
+            if (state != null && state.ContainsKey("expiration"))
+            {
+                DateTime storedExpiration = state["expiration"].AsDateTime ?? DateTime.MinValue;
+                if (storedExpiration > DateTime.MinValue)
+                {
+                    return storedExpiration;
+                }
+            }
+
+            // Fallback: calculate from start time (will be stored on first CheckLockout)
+            DateTime lockoutStartTime = ProtocolManager.CurrentSequenceStartTime;
+            if (lockoutStartTime == DateTime.MinValue)
+            {
+                return null;
+            }
+
+            return lockoutStartTime.AddMinutes(TimeMinutes);
+        }
+
+        public override string GetLockoutMessage()
+        {
+            DateTime? expiration = GetLockoutExpiration();
+            if (expiration.HasValue)
+            {
+                DateTime displayTime = RoundUpToNextMinute(expiration.Value);
+                return $"Session is locked until {displayTime:g}.";
+            }
+            return "Session is locked.";
+        }
 
         protected override void _PopulateJSONObject(JsonObject jsonObject)
         {
@@ -36,6 +78,12 @@ namespace BGC.Study
             }
         }
 
+        public override void OnLockoutCompleted(DateTime encounteredTime, DateTime completedTime)
+        {
+            // Clear stored state so this lockout starts fresh if encountered again
+            ProtocolManager.RemoveExtensionState(StateKey);
+        }
+
         public override bool CheckLockout(DateTime currentTime, IEnumerable<SequenceTime> sequenceTimes)
         {
             if (TimeMinutes <= 0)
@@ -43,14 +91,41 @@ namespace BGC.Study
                 return false;
             }
 
-            DateTime lockoutStartTime = ProtocolManager.CurrentSequenceStartTime;
-            if (lockoutStartTime == DateTime.MinValue)
+            // Check for stored state
+            JsonObject state = ProtocolManager.GetExtensionStateObject(StateKey);
+            
+            if (state != null && state.ContainsKey("expiration"))
+            {
+                DateTime storedExpiration = state["expiration"].AsDateTime ?? DateTime.MinValue;
+                
+                if (storedExpiration > DateTime.MinValue)
+                {
+                    // If stored expiration is in the future, we're still locked
+                    if (currentTime < storedExpiration)
+                    {
+                        return true;
+                    }
+                    
+                    // Stored expiration has passed - lockout is no longer active
+                    // Don't recalculate; let it stay expired until explicitly re-encountered
+                    return false;
+                }
+            }
+
+            // No stored state - this is a fresh encounter, calculate and store expiration
+            DateTime encounteredTime = ProtocolManager.CurrentSequenceStartTime;
+            if (encounteredTime == DateTime.MinValue)
             {
                 return false;
             }
 
-            TimeSpan timeSinceLockoutStart = currentTime - lockoutStartTime;
-            return timeSinceLockoutStart.TotalMinutes < TimeMinutes;
+            DateTime expiration = encounteredTime.AddMinutes(TimeMinutes);
+            ProtocolManager.SetExtensionState(StateKey, new JsonValue(new JsonObject
+            {
+                { "expiration", expiration }
+            }));
+
+            return currentTime < expiration;
         }
     }
 
@@ -66,6 +141,13 @@ namespace BGC.Study
             {
                 Password = data[ProtocolKeys.LockoutElement.Password].AsString;
             }
+        }
+
+        public override string GetPassword() => Password;
+
+        public override string GetLockoutMessage()
+        {
+            return "Please enter the password to begin the session.";
         }
 
         protected override void _PopulateJSONObject(JsonObject jsonObject)
@@ -92,6 +174,8 @@ namespace BGC.Study
         public int MaxSessions { get; private set; }
         public string BypassPassword { get; private set; }
 
+        private string StateKey => $"BGC.Study.WindowLockout:{id}";
+
         public WindowLockout(JsonObject data) : base(data)
         {
             if (data.ContainsKey(ProtocolKeys.LockoutElement.WindowTime))
@@ -116,6 +200,66 @@ namespace BGC.Study
         }
 
         public override string GetBypassPassword() => BypassPassword;
+        public override bool IsTimeBased => true;
+
+        public override DateTime? GetLockoutExpiration()
+        {
+            if (WindowTimeMinutes <= 0 || MaxSessions <= 0)
+            {
+                return null;
+            }
+
+            JsonObject obj = ProtocolManager.GetExtensionStateObject(StateKey);
+            if (obj == null)
+            {
+                return null;
+            }
+
+            DateTime windowStart = obj.ContainsKey("windowStart") 
+                ? (obj["windowStart"].AsDateTime ?? DateTime.MinValue) 
+                : DateTime.MinValue;
+            
+            if (windowStart == DateTime.MinValue)
+            {
+                return null;
+            }
+
+            int passCount = obj.ContainsKey("passCount") ? obj["passCount"].AsInteger : 0;
+            DateTime lastPassTime = obj.ContainsKey("lastPassTime") 
+                ? (obj["lastPassTime"].AsDateTime ?? DateTime.MinValue) 
+                : DateTime.MinValue;
+
+            DateTime? expiration = null;
+
+            // If at max sessions, locked until window ends
+            if (passCount >= MaxSessions)
+            {
+                expiration = windowStart.AddMinutes(WindowTimeMinutes);
+            }
+            // If there's a min time between sessions, calculate next available time
+            else if (MinTimeMinutes > 0 && lastPassTime != DateTime.MinValue)
+            {
+                DateTime minTimeExpiration = lastPassTime.AddMinutes(MinTimeMinutes);
+                // Only return MinTime expiration if it's in the future
+                if (minTimeExpiration > DateTime.Now)
+                {
+                    expiration = minTimeExpiration;
+                }
+            }
+
+            return expiration;
+        }
+
+        public override string GetLockoutMessage()
+        {
+            DateTime? expiration = GetLockoutExpiration();
+            if (expiration.HasValue)
+            {
+                DateTime displayTime = RoundUpToNextMinute(expiration.Value);
+                return $"Session limit reached. Next session available at {displayTime:g}.";
+            }
+            return "Session limit reached for this time window.";
+        }
 
         protected override void _PopulateJSONObject(JsonObject jsonObject)
         {
@@ -135,9 +279,7 @@ namespace BGC.Study
                 return;
             }
 
-            // Ensure we're updating the active window that this attempt belongs to.
-            string key = $"BGC.Study.WindowLockout:{id}";
-            JsonObject obj = ProtocolManager.GetExtensionStateObject(key);
+            JsonObject obj = ProtocolManager.GetExtensionStateObject(StateKey);
 
             DateTime windowStart = DateTime.MinValue;
             DateTime lastPassTime = DateTime.MinValue;
@@ -150,39 +292,35 @@ namespace BGC.Study
                 passCount = obj.ContainsKey("passCount") ? obj["passCount"].AsInteger : 0;
             }
 
-            if (windowStart == DateTime.MinValue ||
-                encounteredTime >= windowStart + TimeSpan.FromMinutes(WindowTimeMinutes))
+            // Check if the window has expired using completedTime (the actual current time)
+            DateTime windowEnd = windowStart.AddMinutes(WindowTimeMinutes);
+            if (windowStart == DateTime.MinValue || completedTime >= windowEnd)
             {
                 windowStart = encounteredTime;
                 lastPassTime = DateTime.MinValue;
                 passCount = 0;
             }
 
+            int newPassCount = passCount + 1;
+
             ProtocolManager.SetExtensionState(
-                key,
+                StateKey,
                 new JsonValue(new JsonObject
                 {
                     { "windowStart", windowStart },
                     { "lastPassTime", completedTime },
-                    { "passCount", passCount + 1 }
+                    { "passCount", newPassCount }
                 }));
         }
 
         public override bool CheckLockout(DateTime currentTime, IEnumerable<SequenceTime> sequenceTimes)
         {
-            DateTime attemptStartTime = ProtocolManager.CurrentSequenceStartTime;
-            if (attemptStartTime == DateTime.MinValue)
-            {
-                return false;
-            }
-
             if (WindowTimeMinutes <= 0 || MaxSessions <= 0)
             {
                 return false;
             }
 
-            string key = $"BGC.Study.WindowLockout:{id}";
-            JsonObject obj = ProtocolManager.GetExtensionStateObject(key);
+            JsonObject obj = ProtocolManager.GetExtensionStateObject(StateKey);
 
             DateTime windowStart = DateTime.MinValue;
             DateTime lastPassTime = DateTime.MinValue;
@@ -195,40 +333,47 @@ namespace BGC.Study
                 passCount = obj.ContainsKey("passCount") ? obj["passCount"].AsInteger : 0;
             }
 
+            // Check if we have an active window using currentTime (not stale CurrentSequenceStartTime)
             bool hasActiveWindow = windowStart != DateTime.MinValue;
             if (hasActiveWindow)
             {
-                DateTime windowEnd = windowStart + TimeSpan.FromMinutes(WindowTimeMinutes);
-                if (attemptStartTime >= windowEnd)
+                DateTime windowEnd = windowStart.AddMinutes(WindowTimeMinutes);
+                if (currentTime >= windowEnd)
                 {
                     hasActiveWindow = false;
                 }
             }
 
+            // If no active window, start a new one and we're not locked
             if (!hasActiveWindow)
             {
-                windowStart = attemptStartTime;
+                windowStart = currentTime;
                 lastPassTime = DateTime.MinValue;
                 passCount = 0;
 
                 ProtocolManager.SetExtensionState(
-                    key,
+                    StateKey,
                     new JsonValue(new JsonObject
                     {
                         { "windowStart", windowStart },
                         { "lastPassTime", lastPassTime },
                         { "passCount", passCount }
                     }));
+
+                return false;
             }
 
+            // Check if at max sessions for this window
             if (passCount >= MaxSessions)
             {
                 return true;
             }
 
+            // Check if min time between sessions has passed (use currentTime)
             if (lastPassTime != DateTime.MinValue && MinTimeMinutes > 0)
             {
-                if ((attemptStartTime - lastPassTime).TotalMinutes < MinTimeMinutes)
+                double minutesSinceLastPass = (currentTime - lastPassTime).TotalMinutes;
+                if (minutesSinceLastPass < MinTimeMinutes)
                 {
                     return true;
                 }

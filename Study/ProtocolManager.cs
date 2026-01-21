@@ -85,6 +85,8 @@ namespace BGC.Study
             public const string SequenceTimes = "SequenceTimes";
             public const string CurrentSequenceStartTime = "CurrentSequenceStartTime";
             public const string SequenceIndex = "SequenceIndex";
+            public const string LockoutExpiration = "LockoutExpiration";
+            public const string LastEncounteredSequenceIndex = "LastEncounteredSequenceIndex";
 
             public const string ExtensionState = "ProtocolManager.ExtensionState";
         }
@@ -142,6 +144,17 @@ namespace BGC.Study
             set => PlayerData.SetJsonValue(DataKeys.CurrentSequenceStartTime, value);
         }
 
+        /// <summary>
+        /// Cached lockout expiration for UI display purposes only.
+        /// This allows OnlineUserButton to show lockout times without loading the protocol.
+        /// The actual lockout logic is handled by each LockoutElement using its own persisted state.
+        /// </summary>
+        public static DateTime LockoutExpiration
+        {
+            get => PlayerData.GetJsonValue(DataKeys.LockoutExpiration).AsDateTime ?? DateTime.MinValue;
+            set => PlayerData.SetJsonValue(DataKeys.LockoutExpiration, value);
+        }
+
         public static int nextSessionElementIndex = -1;
 
         public static int ElementNumber
@@ -160,6 +173,16 @@ namespace BGC.Study
         {
             get => PlayerData.GetInt(DataKeys.SequenceIndex, 0);
             set => PlayerData.SetInt(DataKeys.SequenceIndex, value);
+        }
+
+        /// <summary>
+        /// Tracks the last sequence index for which OnEncountered() was called.
+        /// Used to prevent calling OnEncountered() multiple times on the same sequence element.
+        /// </summary>
+        private static int LastEncounteredSequenceIndex
+        {
+            get => PlayerData.GetInt(DataKeys.LastEncounteredSequenceIndex, -1);
+            set => PlayerData.SetInt(DataKeys.LastEncounteredSequenceIndex, value);
         }
 
         public static bool SessionInProgress
@@ -311,12 +334,6 @@ namespace BGC.Study
                 return ProtocolStatus.Uninitialized;
             }
 
-            DateTime lockoutRelease = PlayerData.GetJsonValue("Lockout").AsDateTime ?? DateTime.MinValue;
-            if (DateTime.Now < lockoutRelease)
-            {
-                return ProtocolStatus.Locked;
-            }
-
             EnsureSequenceIndexMigrated();
 
             int seqIndex = SequenceIndex;
@@ -331,7 +348,14 @@ namespace BGC.Study
                     return ProtocolStatus.InvalidProtocol;
                 }
 
-                member.OnEncountered();
+                // Only call OnEncountered() if this is a new sequence element
+                // This prevents resetting timers when re-checking status after app restart
+                if (seqIndex != LastEncounteredSequenceIndex)
+                {
+                    member.OnEncountered();
+                    LastEncounteredSequenceIndex = seqIndex;
+                }
+                
                 ProtocolStatus status = member.CheckStatus();
 
                 if (status == ProtocolStatus.Locked)
@@ -339,6 +363,26 @@ namespace BGC.Study
                     if (sequence.type == SequenceType.Lockout)
                     {
                         currentLockout = sequence.Lockout;
+                        
+                        // Cache the lockout expiration for UI display (e.g., OnlineUserButton)
+                        // Each LockoutElement manages its own persisted state internally
+                        DateTime maxExpiration = DateTime.MinValue;
+                        foreach (LockoutElementID elementId in currentLockout)
+                        {
+                            LockoutElement element = elementId.Element;
+                            if (element != null)
+                            {
+                                DateTime? expiration = element.GetLockoutExpiration();
+                                if (expiration.HasValue && expiration.Value > maxExpiration)
+                                {
+                                    maxExpiration = expiration.Value;
+                                }
+                            }
+                        }
+                        if (maxExpiration > DateTime.MinValue)
+                        {
+                            LockoutExpiration = maxExpiration;
+                        }
                     }
                     return ProtocolStatus.Locked;
                 }
@@ -395,6 +439,9 @@ namespace BGC.Study
             currentLockout = null;
             SessionInProgress = false;
             ElementNumber = 0;
+            
+            // Clear the stored lockout expiration since we're advancing past the lockout
+            LockoutExpiration = DateTime.MinValue;
 
             return CheckSequenceStatus();
         }
@@ -444,7 +491,7 @@ namespace BGC.Study
             }
         }
 
-        private static int GetSequenceIndexForSession(int sessionNumber)
+        public static int GetSequenceIndexForSession(int sessionNumber)
         {
             if (currentProtocol == null) return -1;
             int sessionCount = 0;
@@ -458,111 +505,11 @@ namespace BGC.Study
             }
             return -1;
         }
-
-        public static ProtocolStatus CheckLockoutStatus()
-        {
-            currentLockout = null;
-
-            // 1. Old Time Lockout
-            DateTime lockoutRelease = PlayerData.GetJsonValue("Lockout").AsDateTime ?? DateTime.MinValue;
-            if (DateTime.Now < lockoutRelease)
-            {
-                return ProtocolStatus.Locked;
-            }
-
-            // 2. Old Password
-            if (currentSession != null)
-            {
-                string password = currentSession.GetPassword();
-                if (!string.IsNullOrEmpty(password))
-                {
-                    return ProtocolStatus.Locked;
-                }
-            }
-
-            // 3. New Lockouts
-            int currentSequenceIndex = GetSequenceIndexForSession(SessionNumber);
-            // If we can't find the session, we might be at the end or uninitialized.
-            // If SessionNumber is valid (checked elsewhere), this should be valid.
-            // If SessionNumber >= SessionCount, we are finished.
-            if (currentSequenceIndex == -1)
-            {
-                // If SessionNumber is valid but not found, it might be because we are past the last session?
-                // But GetSequenceIndexForSession iterates all sequences.
-                // If SessionNumber is valid, it should be found.
-                // Unless SessionNumber is out of bounds.
-                // TryUpdateProtocol checks bounds.
-                return ProtocolStatus.Uninitialized;
-            }
-
-            for (int i = currentSequenceIndex - 1; i >= 0; i--)
-            {
-                if (currentProtocol.sequences[i].type == SequenceType.Session) break;
                 
-                if (currentProtocol.sequences[i].type == SequenceType.Lockout)
-                {
-                    Lockout lockout = currentProtocol.sequences[i].Lockout;
-                    if (lockout != null)
-                    {
-                        foreach (LockoutElementID elementId in lockout)
-                        {
-                            LockoutElement element = elementId.Element;
-                            if (element == null)
-                            {
-                                Debug.LogError($"Lockout element is null for ID: {elementId.id}");
-                                continue;
-                            }
-
-                            if (element.CheckLockout(DateTime.Now, SequenceTimes))
-                            {
-                                currentLockout = lockout;
-                                return ProtocolStatus.Locked;
-                            }
-                        }
-                    }
-                }
-            }
-
-            return ProtocolStatus.SessionReady;
-        }
-
-        [Obsolete("Transition to string-based Protocol IDs when convenient")]
-        public static ProtocolStatus TryUpdateProtocol(
-            string protocolName,
-            int protocolID,
-            int sessionIndex,
-            int sessionElementIndex = 0)
-        {
-            if (LoadProtocolSet(protocolName))
-            {
-                if (protocolDictionary.ContainsKey(protocolID.ToString()))
-                {
-                    currentProtocol = protocolDictionary[protocolID.ToString()];
-                    ElementNumber = sessionElementIndex;
-
-                    int seqIndex = GetSequenceIndexForSession(sessionIndex);
-                    if (seqIndex < 0)
-                    {
-                        return ProtocolStatus.SessionLimitExceeded;
-                    }
-
-                    SequenceIndex = seqIndex;
-                    return CheckSequenceStatus();
-                }
-                else
-                {
-                    Debug.LogError($"Loaded Protocol \"{loadedProtocolSet}\" does not contain requested protocolID {protocolID}.");
-                    return ProtocolStatus.InvalidProtocol;
-                }
-            }
-
-            return ProtocolStatus.Uninitialized;
-        }
-
         public static ProtocolStatus TryUpdateProtocol(
             string protocolSetName,
             string protocolKey,
-            int sessionIndex,
+            int sequenceIndex,
             int sessionElementIndex = 0)
         {
             if (LoadProtocolSet(protocolSetName))
@@ -571,14 +518,7 @@ namespace BGC.Study
                 {
                     currentProtocol = protocolDictionary[protocolKey];
                     ElementNumber = sessionElementIndex;
-
-                    int seqIndex = GetSequenceIndexForSession(sessionIndex);
-                    if (seqIndex < 0)
-                    {
-                        return ProtocolStatus.SessionLimitExceeded;
-                    }
-
-                    SequenceIndex = seqIndex;
+                    SequenceIndex = sequenceIndex;
                     return CheckSequenceStatus();
                 }
                 else
@@ -704,14 +644,11 @@ namespace BGC.Study
 
         public static async Task<ProtocolStatus> ExecuteNextElement(bool resuming = false)
         {
-            if (nextSessionElementIndex == -1)
+            // If session state isn't initialized, check the sequence status to determine
+            // the actual protocol state (could be Locked, SessionFinished, etc.)
+            if (nextSessionElementIndex == -1 || currentSession == null)
             {
-                return ProtocolStatus.Uninitialized;
-            }
-
-            if (currentSession == null)
-            {
-                return ProtocolStatus.Uninitialized;
+                return CheckSequenceStatus();
             }
 
             if (nextSessionElementIndex == currentSession.Count)

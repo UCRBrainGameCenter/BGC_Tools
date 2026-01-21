@@ -310,6 +310,7 @@ namespace BGC.Study
             return newSession;
         }
 
+        [Obsolete("Use PasswordLockout sequence elements instead. This method is only for migration compatibility.")]
         public Session SetPassword(string password)
         {
             if (!string.IsNullOrWhiteSpace(password))
@@ -323,6 +324,7 @@ namespace BGC.Study
             return this;
         }
 
+        [Obsolete("Use PasswordLockout sequence elements instead. This method is only for migration compatibility.")]
         public string GetPassword()
         {
             if (envVals.ContainsKey(Keys.PasswordId) && envVals[Keys.PasswordId].IsString)
@@ -336,6 +338,7 @@ namespace BGC.Study
             return null;
         }
 
+        [Obsolete("Use FixedTimeLockout sequence elements instead. This method is only for migration compatibility.")]
         public Session SetLockoutMinutes(int lockoutMinutes)
         {
             if (lockoutMinutes > 0)
@@ -349,6 +352,7 @@ namespace BGC.Study
             return this;
         }
 
+        [Obsolete("Use FixedTimeLockout sequence elements instead. This method is only for migration compatibility.")]
         public int GetLockoutMinutes()
         {
             if (envVals.ContainsKey(Keys.LockoutMinutes))
@@ -369,12 +373,8 @@ namespace BGC.Study
 
         public ProtocolStatus CheckStatus()
         {
-            string password = GetPassword();
-            if (!string.IsNullOrEmpty(password))
-            {
-                return ProtocolStatus.Locked;
-            }
-
+            // All lockouts are now handled via the sequence system.
+            // Session-level passwords are migrated to PasswordLockout elements during protocol load.
             return ProtocolStatus.SessionReady;
         }
 

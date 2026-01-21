@@ -63,8 +63,63 @@ namespace BGC.Study
 
         protected abstract void _PopulateJSONObject(JsonObject jsonObject);
 
+        /// <summary>
+        /// Checks if this lockout is currently blocking.
+        /// </summary>
         public abstract bool CheckLockout(DateTime currentTime, IEnumerable<SequenceTime> sequenceTimes);
-        public virtual string GetBypassPassword() { return null; }
+
+        /// <summary>
+        /// Gets the bypass password for this lockout, if any.
+        /// </summary>
+        public virtual string GetBypassPassword() => null;
+
+
+        /// <summary>
+        /// Gets the required password for this lockout, if it's a password-based lockout.
+        /// Returns null if this is not a password lockout.
+        /// </summary>
+        public virtual string GetPassword() => null;
+
+        /// <summary>
+        /// Returns true if this is a time-based lockout (has an expiration time).
+        /// </summary>
+        public virtual bool IsTimeBased => false;
+
+        /// <summary>
+        /// Gets when this lockout expires. Returns null if not time-based or cannot be calculated.
+        /// </summary>
+        public virtual DateTime? GetLockoutExpiration() => null;
+
+        /// <summary>
+        /// Rounds a time up to the next full minute for user-friendly display.
+        /// Avoids confusion when showing "locked until 7:44 PM" at 7:44:30 PM.
+        /// </summary>
+        protected static DateTime RoundUpToNextMinute(DateTime time)
+        {
+            if (time.Second == 0 && time.Millisecond == 0)
+            {
+                return time;
+            }
+            return new DateTime(time.Year, time.Month, time.Day, time.Hour, time.Minute, 0).AddMinutes(1);
+        }
+
+        /// <summary>
+        /// Gets a user-friendly message describing why the session is locked.
+        /// </summary>
+        public virtual string GetLockoutMessage()
+        {
+            DateTime? expiration = GetLockoutExpiration();
+            if (expiration.HasValue)
+            {
+                DateTime displayTime = RoundUpToNextMinute(expiration.Value);
+                return $"Session is locked until {displayTime:g}.";
+            }
+            return "Session is locked.";
+        }
+
+        /// <summary>
+        /// Called when the lockout is passed/completed.
+        /// </summary>
         public virtual void OnLockoutCompleted(DateTime encounteredTime, DateTime completedTime)
         {
         }

@@ -49,6 +49,21 @@ namespace BGC.Study
             // Attributes
             public const string Id = "Id";
             public const string Type = "Type";
+
+            // Type values
+            public const string SessionType = "Session";
+            public const string LockoutType = "Lockout";
+
+            /// <summary>
+            /// Determines if a sequence element type can be the final element in a protocol sequence.
+            /// This mirrors the CanBeFinalElement property on IProtocolSequenceMember but works with
+            /// type strings before instantiation.
+            /// </summary>
+            public static bool CanTypeBeFinal(string type)
+            {
+                // Sessions can be final, lockouts cannot (they require a subsequent session to complete)
+                return type == SessionType;
+            }
         }
     }
 }
