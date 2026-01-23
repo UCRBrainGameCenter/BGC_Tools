@@ -124,53 +124,28 @@ namespace BGC.Study
 
         public JsonObject ToJson()
         {
-            // Prefer serializing as sessions unless lockouts are present
-            if (sequences.TrueForAll(seq => seq.type == SequenceType.Session))
+            JsonArray jsonSequences = new JsonArray();
+            foreach (SequenceElement sequence in sequences)
             {
-                JsonArray sessionIDs = new();
-                foreach (SequenceElement sequence in sequences)
+                JsonObject sequenceObject = new()
                 {
-                    sessionIDs.Add(sequence.id);
-                }
-
-                JsonObject serializedData = new()
-                {
-                    { Keys.Name, name },
-                    { Keys.SessionIDs, sessionIDs }
+                    { ProtocolKeys.SequenceElement.Type, SequenceElement.SequenceTypeNames[sequence.type] },
+                    { ProtocolKeys.SequenceElement.Id, sequence.id }
                 };
-
-                if (envVals.Count > 0)
-                {
-                    serializedData.Add(Keys.EnvironmentValues, envVals);
-                }
-
-                return serializedData;
+                jsonSequences.Add(sequenceObject);
             }
-            else
+
+            JsonObject serializedData = new()
             {
-                JsonArray jsonSequences = new JsonArray();
-                foreach (SequenceElement sequence in sequences)
-                {
-                    JsonObject sequenceObject = new()
-                    {
-                        { ProtocolKeys.SequenceElement.Type, SequenceElement.SequenceTypeNames[sequence.type] },
-                        { ProtocolKeys.SequenceElement.Id, sequence.id }
-                    };
-                    jsonSequences.Add(sequenceObject);
-                }
+                { Keys.Name, name },
+                { Keys.Sequence, jsonSequences }
+            };
 
-                JsonObject serializedData = new()
-                {
-                    { Keys.Name, name },
-                    { Keys.Sequence, jsonSequences }
-                };
-
-                if (envVals.Count > 0)
-                {
-                    serializedData.Add(Keys.EnvironmentValues, envVals);
-                }
-                return serializedData;
+            if (envVals.Count > 0)
+            {
+                serializedData.Add(Keys.EnvironmentValues, envVals);
             }
+            return serializedData;
         }
 
         public int Count => sequences.Count;
