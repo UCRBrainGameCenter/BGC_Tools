@@ -334,6 +334,11 @@ namespace BGC.Study
                 return ProtocolStatus.Uninitialized;
             }
 
+            // Clear stale lockout/session state from previous calls.
+            // This ensures we don't return stale references if the sequence has advanced.
+            currentLockout = null;
+            currentSession = null;
+
             EnsureSequenceIndexMigrated();
 
             int seqIndex = SequenceIndex;
@@ -363,6 +368,10 @@ namespace BGC.Study
                     if (sequence.type == SequenceType.Lockout)
                     {
                         currentLockout = sequence.Lockout;
+                        
+                        // Update SessionNumber to reflect the number of completed sessions.
+                        // At a Lockout, we've completed all sessions before this point.
+                        SessionNumber = GetSessionOrdinalAtSequenceIndex(seqIndex) + 1;
                         
                         // Cache the lockout expiration for UI display (e.g., OnlineUserButton)
                         // Each LockoutElement manages its own persisted state internally
@@ -418,6 +427,12 @@ namespace BGC.Study
                 seqIndex = SequenceIndex;
             }
 
+            // All sequences completed - update SessionNumber to reflect total completed sessions
+            if (currentProtocol != null)
+            {
+                SessionNumber = currentProtocol.SessionCount;
+            }
+
             return ProtocolStatus.SessionFinished;
         }
 
@@ -443,7 +458,8 @@ namespace BGC.Study
             // Clear the stored lockout expiration since we're advancing past the lockout
             LockoutExpiration = DateTime.MinValue;
 
-            return CheckSequenceStatus();
+            ProtocolStatus result = CheckSequenceStatus();
+            return result;
         }
 
         [Obsolete("Transition to string-based Protocol IDs when convenient")]
@@ -1199,6 +1215,56 @@ namespace BGC.Study
             }
 
             SetExtensionStateRoot(root);
+        }
+
+        /// <summary>
+        /// Skips/clears the current lockout if the current sequence element is a lockout.
+        /// This is an admin feature for when the device is unlocked.
+        /// Returns true if a lockout was skipped, false otherwise.
+        /// </summary>
+        public static bool SkipCurrentLockout()
+        {
+            if (currentProtocol == null)
+            {
+                Debug.LogWarning("SkipCurrentLockout: No protocol loaded");
+                return false;
+            }
+
+            int seqIndex = SequenceIndex;
+            if (seqIndex < 0 || seqIndex >= currentProtocol.sequences.Count)
+            {
+                Debug.LogWarning($"SkipCurrentLockout: Invalid sequence index {seqIndex}");
+                return false;
+            }
+
+            SequenceElement element = currentProtocol.sequences[seqIndex];
+            if (element.type != SequenceType.Lockout)
+            {
+                Debug.LogWarning($"SkipCurrentLockout: Current sequence element is not a lockout (type: {element.type})");
+                return false;
+            }
+
+            if (!lockoutDictionary.TryGetValue(element.id, out Lockout lockout))
+            {
+                Debug.LogWarning($"SkipCurrentLockout: Lockout {element.id} not found in dictionary");
+                return false;
+            }
+
+            // Clear all lockout elements in this lockout
+            foreach (LockoutElementID elementId in lockout)
+            {
+                LockoutElement lockoutElement = elementId.Element;
+                if (lockoutElement != null)
+                {
+                    lockoutElement.ClearLockout();
+                }
+            }
+
+            // Clear cached lockout expiration
+            LockoutExpiration = DateTime.MinValue;
+
+            Debug.Log($"SkipCurrentLockout: Cleared lockout {element.id}");
+            return true;
         }
     }
 }

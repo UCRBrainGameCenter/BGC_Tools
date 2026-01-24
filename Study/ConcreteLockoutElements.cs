@@ -84,6 +84,16 @@ namespace BGC.Study
             ProtocolManager.RemoveExtensionState(StateKey);
         }
 
+        public override void ClearLockout()
+        {
+            // Set expiration to the past so the lockout is no longer blocking
+            ProtocolManager.SetExtensionState(StateKey, new JsonValue(new JsonObject
+            {
+                { "expiration", DateTime.MinValue }
+            }));
+            UnityEngine.Debug.Log($"[FixedTimeLockout:{id}] Lockout cleared/skipped");
+        }
+
         public override bool CheckLockout(DateTime currentTime, IEnumerable<SequenceTime> sequenceTimes)
         {
             if (TimeMinutes <= 0)
@@ -270,6 +280,14 @@ namespace BGC.Study
             {
                 jsonObject.Add(ProtocolKeys.LockoutElement.BypassPassword, BypassPassword);
             }
+        }
+
+        public override void ClearLockout()
+        {
+            // Clear all stored state so the lockout is no longer blocking
+            // Removing state effectively expires the window on next check
+            ProtocolManager.RemoveExtensionState(StateKey);
+            UnityEngine.Debug.Log($"[WindowLockout:{id}] Lockout cleared/skipped");
         }
 
         public override void OnLockoutCompleted(DateTime encounteredTime, DateTime completedTime)

@@ -124,6 +124,16 @@ namespace BGC.Study
         {
         }
 
+        /// <summary>
+        /// Clears/skips this lockout's stored state so it no longer blocks.
+        /// Used by admin features to bypass time-based lockouts.
+        /// </summary>
+        public virtual void ClearLockout()
+        {
+            // Default implementation does nothing.
+            // Override in concrete classes that have persistent state.
+        }
+
         public static void HardClear()
         {
             nextElementID = 1;
