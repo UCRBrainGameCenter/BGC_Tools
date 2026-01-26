@@ -1,12 +1,10 @@
 ﻿using BGC.IO;
 using BGC.Users;
-using BGC.Utility;
 using LightJson;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Unity.Android.Gradle;
 using UnityEngine;
 
 namespace BGC.Study
