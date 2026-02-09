@@ -104,6 +104,12 @@ namespace BGC.Parameters
             return false;
         }
 
+        public override void PopulateAdditionalThresholds(GlobalRuntimeContext scriptContext)
+        {
+            // String templates don't have a ThresholdKey, so additional thresholds are not supported
+            // This is intentional - string-based controlled parameters don't have numeric thresholds
+        }
+
         #region IDoubleParameterTemplate
 
         string IStringParameterTemplate.GetValue(int stepNumber)

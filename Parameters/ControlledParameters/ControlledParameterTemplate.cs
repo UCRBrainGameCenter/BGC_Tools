@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using BGC.Scripting;
 using LightJson;
 
 namespace BGC.Parameters
@@ -35,6 +37,29 @@ namespace BGC.Parameters
 
         protected double GetThresholdValue(double thresholdStepValue) =>
             controlledParameter.GetPartialStepValue(thresholdStepValue, this);
+
+        /// <summary>
+        /// Additional thresholds (already transformed to parameter space), keyed by prefix.
+        /// </summary>
+        public Dictionary<string, double> AdditionalThresholds { get; } = new();
+
+        /// <summary>
+        /// Transforms additional threshold step values to parameter space and stores them.
+        /// </summary>
+        public void FinalizeAdditionalThresholds(IEnumerable<(string prefix, double stepValue)> additionalStepThresholds)
+        {
+            AdditionalThresholds.Clear();
+            foreach (var (prefix, stepValue) in additionalStepThresholds)
+            {
+                AdditionalThresholds[prefix] = GetThresholdValue(stepValue);
+            }
+        }
+
+        /// <summary>
+        /// Populates additional thresholds to script context using the threshold key as base.
+        /// Must be implemented by derived classes that have a ThresholdKey property.
+        /// </summary>
+        public abstract void PopulateAdditionalThresholds(GlobalRuntimeContext scriptContext);
 
         JsonObject IPropertyGroup.Serialize()
         {
@@ -84,6 +109,18 @@ namespace BGC.Parameters
 
         public override bool CouldStepTo(int stepNumber) => StepTemplate.CouldStepTo(stepNumber);
 
+        public override void PopulateAdditionalThresholds(GlobalRuntimeContext scriptContext)
+        {
+            if (string.IsNullOrEmpty(ThresholdKey))
+                return;
+
+            foreach (var kvp in AdditionalThresholds)
+            {
+                // Creates variables like "SKMyThreshold" if ThresholdKey = "MyThreshold" and prefix = "SK"
+                scriptContext.AddOrSetValue($"{kvp.Key}{ThresholdKey}", typeof(double), kvp.Value);
+            }
+        }
+
         #region IDoubleParameterTemplate
 
         double IDoubleParameterTemplate.GetValue(int stepNumber) => StepTemplate.GetValue(stepNumber);
@@ -118,6 +155,18 @@ namespace BGC.Parameters
         public override void Initialize() => StepTemplate.Initialize();
 
         public override bool CouldStepTo(int stepNumber) => StepTemplate.CouldStepTo(stepNumber);
+
+        public override void PopulateAdditionalThresholds(GlobalRuntimeContext scriptContext)
+        {
+            if (string.IsNullOrEmpty(ThresholdKey))
+                return;
+
+            foreach (var kvp in AdditionalThresholds)
+            {
+                // Creates variables like "SKMyThreshold" if ThresholdKey = "MyThreshold" and prefix = "SK"
+                scriptContext.AddOrSetValue($"{kvp.Key}{ThresholdKey}", typeof(double), kvp.Value);
+            }
+        }
 
         #region IIntParameterTemplate
 

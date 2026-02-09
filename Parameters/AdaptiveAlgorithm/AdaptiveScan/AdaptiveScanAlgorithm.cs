@@ -98,8 +98,16 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
 
         private double taskGuessRate;
         private readonly List<double> thresholdList = new();
+        private readonly List<ScanData> scanDataList = new();
+        private List<bool> curScanResults;
 
         private bool exceededMaxNarrowing;
+
+        private struct ScanData
+        {
+            public List<int> Steps;
+            public List<bool> Results;
+        }
 
         // For inspection
         public int CurTrial => trial;
@@ -119,6 +127,7 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
             nonAdaptiveScansCount = NonAdaptiveScansCount;
             exceededMaxNarrowing = false;
             thresholdList.Clear();
+            scanDataList.Clear();
 
             this.taskGuessRate = taskGuessRate;
         }
@@ -126,6 +135,7 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
         protected override void FinishInitialization()
         {
             curScanSteps = GenerateScanWithNarrowing();
+            curScanResults = new List<bool>();
             if (curScanSteps.Count != 0 && curScanSteps.Count > OutOfBoundsBehavior.MinimumSteps)
             {
                 SetStepValue(0, curScanSteps[0]);
@@ -134,6 +144,8 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
 
         public void SubmitTrialResult(bool correct)
         {
+            curScanResults.Add(correct);
+
             if (correct)
             {
                 correctCount++;
@@ -143,19 +155,20 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
 
             if (trial >= curScanSteps.Count || ScanTerminationRule.IsDone(trial - correctCount))
             {
-                // Handle Narrowing or Sliding
-                double stepThreshold = (correctCount - trial * taskGuessRate) / (1 - taskGuessRate);
-
-                int stepThresholdFloor = Math.Clamp((int)Math.Floor(stepThreshold), 0, trial - 1);
-                int stepThresholdCeil = Math.Clamp((int)Math.Ceiling(stepThreshold), 0, trial - 1);
-                double stepThresholdRemainder = stepThreshold - stepThresholdFloor;
-
-                // The threshold is based on the average of the closest two steps
-                double newThresholdStep = curScanSteps[stepThresholdFloor] * (1 - stepThresholdRemainder) +
-                    curScanSteps[stepThresholdCeil] * stepThresholdRemainder;
+                // Calculate threshold from the steps used in this scan
+                double newThresholdStep = CalculateThresholdFromSteps(
+                    curScanSteps.Take(trial).ToList(),
+                    correctCount);
 
                 // Store the threshold for this scan
                 thresholdList.Add(newThresholdStep);
+
+                // Store the scan data for SKThreshold calculation (before curScanSteps is regenerated)
+                scanDataList.Add(new ScanData
+                {
+                    Steps = curScanSteps.Take(trial).ToList(),
+                    Results = new List<bool>(curScanResults)
+                });
 
                 if (nonAdaptiveScansCount <= 0)
                 {
@@ -163,6 +176,9 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
                     int actualMinStep = curScanSteps[0];
                     int actualMaxStep = curScanSteps[^1];
                     int actualRange = actualMaxStep - actualMinStep;
+
+                    // Calculate stepThreshold for sliding logic comparisons
+                    double stepThreshold = (correctCount - trial * taskGuessRate) / (1 - taskGuessRate);
 
                     int newScanStartStep = scanStartStep;
                     if (stepThreshold < 2.0)
@@ -215,6 +231,7 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
                 scanCount++;
                 trial = 0;
                 correctCount = 0;
+                curScanResults = new List<bool>();
             }
 
             // This is just an edge case check, and if this happens IsDone() ought to be returning true at this point
@@ -237,11 +254,87 @@ namespace BGC.Parameters.Algorithms.AdaptiveScan
                 avgThreshold = thresholdList.TakeLast(ThresholdScanCount).Average();
             }
 
+            // Get additional thresholds in step space
+            var additionalThresholds = GetAdditionalThresholdStepValues();
+
             foreach (ControlledParameterTemplate template in controlledParameters)
             {
                 template.FinalizeParameters(avgThreshold);
+                template.FinalizeAdditionalThresholds(additionalThresholds);
                 template.PopulateScriptContextOutputs(scriptContext);
+                template.PopulateAdditionalThresholds(scriptContext);
             }
+        }
+
+        public override IEnumerable<(string prefix, double stepValue)> GetAdditionalThresholdStepValues()
+        {
+            double skThresholdStepValue = CalculateSKThreshold();
+            yield return ("SK", skThresholdStepValue);
+        }
+
+        private double CalculateSKThreshold()
+        {
+            if (scanDataList.Count == 0 || ThresholdScanCount <= 0)
+            {
+                return 0.0;
+            }
+
+            // Gather all data points from the last ThresholdScanCount scans
+            var recentScans = scanDataList.TakeLast(ThresholdScanCount);
+
+            // Combine all step/result pairs and sort by step value
+            var combinedData = new List<(int step, bool correct)>();
+            foreach (var scan in recentScans)
+            {
+                for (int i = 0; i < scan.Steps.Count && i < scan.Results.Count; i++)
+                {
+                    combinedData.Add((scan.Steps[i], scan.Results[i]));
+                }
+            }
+
+            if (combinedData.Count == 0)
+            {
+                return 0.0;
+            }
+
+            // Sort by step value
+            combinedData.Sort((a, b) => a.step.CompareTo(b.step));
+
+            // Extract sorted steps and count correct
+            var sortedSteps = combinedData.Select(x => x.step).ToList();
+            int totalCorrect = combinedData.Count(x => x.correct);
+
+            return CalculateThresholdFromSteps(sortedSteps, totalCorrect);
+        }
+
+        /// <summary>
+        /// Calculates the threshold step value from an ordered list of steps and the number of correct responses.
+        /// The steps should be ordered from easiest to hardest (ascending step values).
+        /// </summary>
+        /// <param name="steps">Ordered list of step values (easiest to hardest)</param>
+        /// <param name="correctCount">Number of correct responses</param>
+        /// <returns>The interpolated threshold step value</returns>
+        private double CalculateThresholdFromSteps(IReadOnlyList<int> steps, int correctCount)
+        {
+            if (steps.Count == 0)
+            {
+                return 0.0;
+            }
+
+            int trialCount = steps.Count;
+
+            // Calculate the threshold index based on correct count adjusted for guessing
+            double stepThreshold = (correctCount - trialCount * taskGuessRate) / (1 - taskGuessRate);
+
+            int stepThresholdFloor = Math.Clamp((int)Math.Floor(stepThreshold), 0, trialCount - 1);
+            int stepThresholdCeil = Math.Clamp((int)Math.Ceiling(stepThreshold), 0, trialCount - 1);
+            double stepThresholdRemainder = stepThreshold - stepThresholdFloor;
+
+            // Interpolate between the two closest step values
+            double threshold = steps[stepThresholdFloor] * (1 - stepThresholdRemainder) +
+                steps[stepThresholdCeil] * stepThresholdRemainder;
+
+            return threshold;
         }
 
         public override bool IsDone() =>

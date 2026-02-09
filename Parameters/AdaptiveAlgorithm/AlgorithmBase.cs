@@ -56,6 +56,13 @@ namespace BGC.Parameters.Algorithms
         public virtual void CleanupLinks() => controlledParameters.Clear();
         public abstract void PopulateScriptContext(GlobalRuntimeContext scriptContext);
 
+        /// <summary>
+        /// Returns additional threshold values (in step space) that should be transformed and logged.
+        /// The prefix will be prepended to the standard threshold output names.
+        /// </summary>
+        public virtual IEnumerable<(string prefix, double stepValue)> GetAdditionalThresholdStepValues()
+            => Enumerable.Empty<(string, double)>();
+
         public StepStatus SetStepValue(
             int sourceParameter,
             int stepNumber,
