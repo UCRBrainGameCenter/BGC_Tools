@@ -155,6 +155,14 @@ namespace BGC.Study
 
         public static int nextSessionElementIndex = -1;
 
+        /// <summary>
+        /// Set to true by CheckSequenceStatus() when it detects that SessionInProgress
+        /// was already true on disk — indicating someone force-closed during an active session.
+        /// Consumers can check this to log a force-close interruption event.
+        /// Reset to false after being read.
+        /// </summary>
+        public static bool WasForceCloseInterrupted { get; set; } = false;
+
         public static int ElementNumber
         {
             get => PlayerData.GetInt(DataKeys.ElementNumber, 0);
@@ -336,6 +344,14 @@ namespace BGC.Study
             // This ensures we don't return stale references if the sequence has advanced.
             currentLockout = null;
             currentSession = null;
+
+            // Detect if a previous session was interrupted by a force-close.
+            // SessionInProgress is persisted to disk, so if it's still true here
+            // it means the app exited without properly ending the session.
+            if (SessionInProgress)
+            {
+                WasForceCloseInterrupted = true;
+            }
 
             EnsureSequenceIndexMigrated();
 
@@ -685,6 +701,11 @@ namespace BGC.Study
             ElementNumber = nextSessionElementIndex;
             ++nextSessionElementIndex;
             SessionInProgress = true;
+
+            // Save immediately so that if the app is force-closed during element
+            // execution, the on-disk state correctly reflects the running element
+            // and a resume will be offered on next launch.
+            PlayerData.Save();
 
             prepareNextElement?.Invoke(resuming);
 
