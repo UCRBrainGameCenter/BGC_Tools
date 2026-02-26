@@ -84,6 +84,7 @@ namespace BGC.Study
             public const string CurrentSequenceStartTime = "CurrentSequenceStartTime";
             public const string SequenceIndex = "SequenceIndex";
             public const string LockoutExpiration = "LockoutExpiration";
+            public const string LockoutHasBypassPassword = "LockoutHasBypassPassword";
             public const string LastEncounteredSequenceIndex = "LastEncounteredSequenceIndex";
 
             public const string ExtensionState = "ProtocolManager.ExtensionState";
@@ -151,6 +152,16 @@ namespace BGC.Study
         {
             get => PlayerData.GetJsonValue(DataKeys.LockoutExpiration).AsDateTime ?? DateTime.MinValue;
             set => PlayerData.SetJsonValue(DataKeys.LockoutExpiration, value);
+        }
+
+        /// <summary>
+        /// Cached flag indicating whether the current lockout has a bypass password.
+        /// This allows OnlineUserButton to show the bypass button without loading the protocol.
+        /// </summary>
+        public static bool LockoutHasBypassPassword
+        {
+            get => PlayerData.GetBool(DataKeys.LockoutHasBypassPassword, false);
+            set => PlayerData.SetBool(DataKeys.LockoutHasBypassPassword, value);
         }
 
         public static int nextSessionElementIndex = -1;
@@ -390,6 +401,7 @@ namespace BGC.Study
                         // Cache the lockout expiration for UI display (e.g., OnlineUserButton)
                         // Each LockoutElement manages its own persisted state internally
                         DateTime maxExpiration = DateTime.MinValue;
+                        bool hasBypassPassword = false;
                         foreach (LockoutElementID elementId in currentLockout)
                         {
                             LockoutElement element = elementId.Element;
@@ -400,12 +412,18 @@ namespace BGC.Study
                                 {
                                     maxExpiration = expiration.Value;
                                 }
+
+                                if (!string.IsNullOrEmpty(element.GetBypassPassword()))
+                                {
+                                    hasBypassPassword = true;
+                                }
                             }
                         }
                         if (maxExpiration > DateTime.MinValue)
                         {
                             LockoutExpiration = maxExpiration;
                         }
+                        LockoutHasBypassPassword = hasBypassPassword;
                     }
                     return ProtocolStatus.Locked;
                 }
@@ -454,7 +472,8 @@ namespace BGC.Study
         {
             if (currentProtocol != null && SequenceIndex < currentProtocol.sequences.Count)
             {
-                IProtocolSequenceMember member = ResolveSequenceMember(currentProtocol.sequences[SequenceIndex]);
+                SequenceElement seq = currentProtocol.sequences[SequenceIndex];
+                IProtocolSequenceMember member = ResolveSequenceMember(seq);
                 if (markCompletion)
                 {
                     member?.OnCompleted();

@@ -1,7 +1,6 @@
 using LightJson;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace BGC.Study
 {
@@ -48,14 +47,9 @@ namespace BGC.Study
                 }
             }
 
-            // Fallback: calculate from start time (will be stored on first CheckLockout)
-            DateTime lockoutStartTime = ProtocolManager.CurrentSequenceStartTime;
-            if (lockoutStartTime == DateTime.MinValue)
-            {
-                return null;
-            }
-
-            return lockoutStartTime.AddMinutes(TimeMinutes);
+            // Fallback: calculate from current time (will be stored on first CheckLockout)
+            DateTime expiration = DateTime.Now.AddMinutes(TimeMinutes);
+            return expiration;
         }
 
         public override string GetLockoutMessage()
@@ -91,7 +85,6 @@ namespace BGC.Study
             {
                 { "expiration", DateTime.MinValue }
             }));
-            UnityEngine.Debug.Log($"[FixedTimeLockout:{id}] Lockout cleared/skipped");
         }
 
         public override bool CheckLockout(DateTime currentTime, IEnumerable<SequenceTime> sequenceTimes)
@@ -123,13 +116,10 @@ namespace BGC.Study
             }
 
             // No stored state - this is a fresh encounter, calculate and store expiration
-            DateTime encounteredTime = ProtocolManager.CurrentSequenceStartTime;
-            if (encounteredTime == DateTime.MinValue)
-            {
-                return false;
-            }
-
-            DateTime expiration = encounteredTime.AddMinutes(TimeMinutes);
+            // Use currentTime rather than CurrentSequenceStartTime so the lockout
+            // begins when first checked (i.e. after the session ends), not when the
+            // previous session started.
+            DateTime expiration = currentTime.AddMinutes(TimeMinutes);
             ProtocolManager.SetExtensionState(StateKey, new JsonValue(new JsonObject
             {
                 { "expiration", expiration }
@@ -287,7 +277,6 @@ namespace BGC.Study
             // Clear all stored state so the lockout is no longer blocking
             // Removing state effectively expires the window on next check
             ProtocolManager.RemoveExtensionState(StateKey);
-            UnityEngine.Debug.Log($"[WindowLockout:{id}] Lockout cleared/skipped");
         }
 
         public override void OnLockoutCompleted(DateTime encounteredTime, DateTime completedTime)
@@ -314,7 +303,10 @@ namespace BGC.Study
             DateTime windowEnd = windowStart.AddMinutes(WindowTimeMinutes);
             if (windowStart == DateTime.MinValue || completedTime >= windowEnd)
             {
-                windowStart = encounteredTime;
+                // Use completedTime (DateTime.Now) rather than encounteredTime
+                // (which comes from CurrentSequenceStartTime and may be stale).
+                // This is consistent with CheckLockout() which uses currentTime.
+                windowStart = completedTime;
                 lastPassTime = DateTime.MinValue;
                 passCount = 0;
             }
@@ -381,7 +373,9 @@ namespace BGC.Study
                 return false;
             }
 
-            // Check if at max sessions for this window
+            // Check if we've already reached the max sessions limit for this window.
+            // passCount is incremented by OnLockoutCompleted each time this gate is
+            // passed through, so it already reflects completed passes.
             if (passCount >= MaxSessions)
             {
                 return true;
