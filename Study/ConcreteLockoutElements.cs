@@ -231,19 +231,23 @@ namespace BGC.Study
 
             DateTime? expiration = null;
 
-            // If at max sessions, locked until window ends
+            // If at max sessions, locked until at least the window end
             if (passCount >= MaxSessions)
             {
                 expiration = windowStart.AddMinutes(WindowTimeMinutes);
             }
-            // If there's a min time between sessions, calculate next available time
-            else if (MinTimeMinutes > 0 && lastPassTime != DateTime.MinValue)
+
+            // Also check MinTime — CheckLockout enforces this before checking
+            // window state, so it can extend the lockout beyond the window end.
+            if (MinTimeMinutes > 0 && lastPassTime != DateTime.MinValue)
             {
                 DateTime minTimeExpiration = lastPassTime.AddMinutes(MinTimeMinutes);
-                // Only return MinTime expiration if it's in the future
                 if (minTimeExpiration > DateTime.Now)
                 {
-                    expiration = minTimeExpiration;
+                    if (expiration == null || minTimeExpiration > expiration.Value)
+                    {
+                        expiration = minTimeExpiration;
+                    }
                 }
             }
 
@@ -343,6 +347,16 @@ namespace BGC.Study
                 passCount = obj.ContainsKey("passCount") ? obj["passCount"].AsInteger : 0;
             }
 
+            // Check if min time between sessions has passed (use currentTime)
+            if (lastPassTime != DateTime.MinValue && MinTimeMinutes > 0)
+            {
+                double minutesSinceLastPass = (currentTime - lastPassTime).TotalMinutes;
+                if (minutesSinceLastPass < MinTimeMinutes)
+                {
+                    return true;
+                }
+            }
+
             // Check if we have an active window using currentTime (not stale CurrentSequenceStartTime)
             bool hasActiveWindow = windowStart != DateTime.MinValue;
             if (hasActiveWindow)
@@ -379,16 +393,6 @@ namespace BGC.Study
             if (passCount >= MaxSessions)
             {
                 return true;
-            }
-
-            // Check if min time between sessions has passed (use currentTime)
-            if (lastPassTime != DateTime.MinValue && MinTimeMinutes > 0)
-            {
-                double minutesSinceLastPass = (currentTime - lastPassTime).TotalMinutes;
-                if (minutesSinceLastPass < MinTimeMinutes)
-                {
-                    return true;
-                }
             }
 
             return false;
