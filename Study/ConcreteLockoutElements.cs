@@ -278,9 +278,82 @@ namespace BGC.Study
 
         public override void ClearLockout()
         {
-            // Clear all stored state so the lockout is no longer blocking
-            // Removing state effectively expires the window on next check
-            ProtocolManager.RemoveExtensionState(StateKey);
+            if (WindowTimeMinutes <= 0 || MaxSessions <= 0)
+            {
+                ProtocolManager.RemoveExtensionState(StateKey);
+                return;
+            }
+
+            JsonObject obj = ProtocolManager.GetExtensionStateObject(StateKey);
+            if (obj == null)
+            {
+                return;
+            }
+
+            DateTime windowStart = obj.ContainsKey("windowStart")
+                ? (obj["windowStart"].AsDateTime ?? DateTime.MinValue)
+                : DateTime.MinValue;
+            DateTime lastPassTime = obj.ContainsKey("lastPassTime")
+                ? (obj["lastPassTime"].AsDateTime ?? DateTime.MinValue)
+                : DateTime.MinValue;
+            int passCount = obj.ContainsKey("passCount") ? obj["passCount"].AsInteger : 0;
+
+            if (windowStart == DateTime.MinValue)
+            {
+                // No active window — nothing to skip
+                return;
+            }
+
+            DateTime now = DateTime.Now;
+            TimeSpan timeToSkip = TimeSpan.Zero;
+
+            // Determine how much time we need to skip to clear the MinTime lockout
+            if (lastPassTime != DateTime.MinValue && MinTimeMinutes > 0)
+            {
+                DateTime minTimeExpiry = lastPassTime.AddMinutes(MinTimeMinutes);
+                if (minTimeExpiry > now)
+                {
+                    timeToSkip = minTimeExpiry - now;
+                }
+            }
+
+            // Determine how much time we need to skip to clear the MaxSessions lockout
+            if (passCount >= MaxSessions)
+            {
+                DateTime windowExpiry = windowStart.AddMinutes(WindowTimeMinutes);
+                if (windowExpiry > now)
+                {
+                    TimeSpan windowWait = windowExpiry - now;
+                    if (windowWait > timeToSkip)
+                    {
+                        timeToSkip = windowWait;
+                    }
+                }
+            }
+
+            if (timeToSkip <= TimeSpan.Zero)
+            {
+                // Not currently locked — nothing to skip
+                return;
+            }
+
+            // Shift all stored times backward by timeToSkip, simulating that
+            // the minimum required time has actually elapsed.
+            windowStart -= timeToSkip;
+
+            if (lastPassTime != DateTime.MinValue)
+            {
+                lastPassTime -= timeToSkip;
+            }
+
+            ProtocolManager.SetExtensionState(
+                StateKey,
+                new JsonValue(new JsonObject
+                {
+                    { "windowStart", windowStart },
+                    { "lastPassTime", lastPassTime },
+                    { "passCount", passCount }
+                }));
         }
 
         public override void OnLockoutCompleted(DateTime encounteredTime, DateTime completedTime)

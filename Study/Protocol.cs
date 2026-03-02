@@ -483,6 +483,16 @@ namespace BGC.Study
 
         public ProtocolStatus CheckStatus()
         {
+            // Call CheckLockout on ALL elements rather than short-circuiting on
+            // the first blocker.  Each element's CheckLockout may initialise or
+            // update persisted state (e.g. WindowLockout creates its window on
+            // first call).  Skipping an element keeps its state stale, which
+            // causes GetLockoutExpiration to return null and the cached
+            // LockoutExpiration shown on the user-list to be wrong.
+            bool anyLocked = false;
+            DateTime now = DateTime.Now;
+            IEnumerable<SequenceTime> seqTimes = ProtocolManager.SequenceTimes;
+
             foreach (LockoutElementID elementId in lockoutElements)
             {
                 LockoutElement element = elementId.Element;
@@ -492,11 +502,16 @@ namespace BGC.Study
                     continue;
                 }
 
-                if (element.CheckLockout(DateTime.Now, ProtocolManager.SequenceTimes))
+                if (element.CheckLockout(now, seqTimes))
                 {
-                    ProtocolManager.currentLockout = this;
-                    return ProtocolStatus.Locked;
+                    anyLocked = true;
                 }
+            }
+
+            if (anyLocked)
+            {
+                ProtocolManager.currentLockout = this;
+                return ProtocolStatus.Locked;
             }
 
             return ProtocolStatus.StepCompleted;
