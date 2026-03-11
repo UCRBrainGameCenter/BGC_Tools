@@ -195,8 +195,16 @@ namespace BGC.Parameters
         [DisplayInputFieldKey("RovingRadius")]
         public string RovingRadiusKey { get; set; }
 
+        [AppendSelection(
+            typeof(UniformDistribution),
+            typeof(GaussianDistribution),
+            typeof(BetaDistribution),
+            typeof(TruncatedExponentialDistribution),
+            typeof(DiscreteUniformDistribution))]
+        public IRovingDistribution Distribution { get; set; }
+
         double IRovingDoubleBehavior.GetRandomValue(Random Randomizer) =>
-            CentralValue + (RovingRadius * (2.0 * Randomizer.NextDouble() - 1.0));
+            CentralValue + (RovingRadius * (2.0 * Distribution.GetSample(Randomizer) - 1.0));
 
         double IRovingDoubleBehavior.LowerBound => CentralValue - RovingRadius;
         double IRovingDoubleBehavior.UpperBound => CentralValue + RovingRadius;
@@ -217,8 +225,17 @@ namespace BGC.Parameters
         [DisplayInputFieldKey("UpperBound")]
         public string UpperBoundKey { get; set; }
 
+        [AppendSelection(
+            typeof(UniformDistribution),
+            typeof(GaussianDistribution),
+            typeof(BetaDistribution),
+            typeof(TruncatedExponentialDistribution),
+            typeof(DiscreteUniformDistribution))]
+        public IRovingDistribution Distribution { get; set; }
+
         double IRovingDoubleBehavior.GetRandomValue(Random Randomizer) =>
-            LowerBound + ((UpperBound - LowerBound) * Randomizer.NextDouble());
+            LowerBound + ((UpperBound - LowerBound) * Distribution.GetSample(Randomizer));
+
         double IRovingDoubleBehavior.LowerBound => LowerBound;
         double IRovingDoubleBehavior.UpperBound => UpperBound;
     }
@@ -238,8 +255,16 @@ namespace BGC.Parameters
         [DisplayInputFieldKey("RovingRadialFactor")]
         public string RovingRadialFactorKey { get; set; }
 
+        [AppendSelection(
+            typeof(UniformDistribution),
+            typeof(GaussianDistribution),
+            typeof(BetaDistribution),
+            typeof(TruncatedExponentialDistribution),
+            typeof(DiscreteUniformDistribution))]
+        public IRovingDistribution Distribution { get; set; }
+
         double IRovingDoubleBehavior.GetRandomValue(Random Randomizer) =>
-            LowerBound * Math.Pow((UpperBound / LowerBound), Randomizer.NextDouble());
+            LowerBound * Math.Pow((UpperBound / LowerBound), Distribution.GetSample(Randomizer));
 
         private double LowerBound => CentralValue / RovingRadialFactor;
         private double UpperBound => CentralValue * RovingRadialFactor;
@@ -263,10 +288,168 @@ namespace BGC.Parameters
         [DisplayInputFieldKey("UpperBound")]
         public string UpperBoundKey { get; set; }
 
+        [AppendSelection(
+            typeof(UniformDistribution),
+            typeof(GaussianDistribution),
+            typeof(BetaDistribution),
+            typeof(TruncatedExponentialDistribution),
+            typeof(DiscreteUniformDistribution))]
+        public IRovingDistribution Distribution { get; set; }
+
         double IRovingDoubleBehavior.GetRandomValue(Random Randomizer) =>
-            LowerBound * Math.Pow((UpperBound / LowerBound), Randomizer.NextDouble());
+            LowerBound * Math.Pow((UpperBound / LowerBound), Distribution.GetSample(Randomizer));
+
         double IRovingDoubleBehavior.LowerBound => LowerBound;
         double IRovingDoubleBehavior.UpperBound => UpperBound;
+    }
+
+    [PropertyGroupTitle("Distribution")]
+    public interface IRovingDistribution : IPropertyGroup
+    {
+        double GetSample(Random randomizer);
+    }
+
+    [PropertyChoiceTitle("Uniform")]
+    public class UniformDistribution : StimulusPropertyGroup, IRovingDistribution
+    {
+        double IRovingDistribution.GetSample(Random randomizer) => randomizer.NextDouble();
+    }
+
+    [PropertyChoiceTitle("Gaussian")]
+    [DoubleFieldDisplay("StandardDeviations", displayTitle: "Standard Deviations", initial: 3, minimum: 0.5, maximum: 10)]
+    public class GaussianDistribution : StimulusPropertyGroup, IRovingDistribution
+    {
+        [DisplayInputField("StandardDeviations")]
+        public double StandardDeviations { get; set; }
+
+        [DisplayInputFieldKey("StandardDeviations")]
+        public string StandardDeviationsKey { get; set; }
+
+        double IRovingDistribution.GetSample(Random randomizer)
+        {
+            double sigma = 0.5 / StandardDeviations;
+            double value = CustomRandom.NormalDistribution(
+                sigma, 0.5,
+                Math.Max(double.Epsilon, randomizer.NextDouble()),
+                randomizer.NextDouble());
+            return Math.Max(0.0, Math.Min(1.0, value));
+        }
+    }
+
+    [PropertyChoiceTitle("Beta")]
+    [DoubleFieldDisplay("Alpha", displayTitle: "Alpha", initial: 2, minimum: 0.1, maximum: 100)]
+    [DoubleFieldDisplay("Beta", displayTitle: "Beta", initial: 2, minimum: 0.1, maximum: 100)]
+    public class BetaDistribution : StimulusPropertyGroup, IRovingDistribution
+    {
+        [DisplayInputField("Alpha")]
+        public double Alpha { get; set; }
+
+        [DisplayInputFieldKey("Alpha")]
+        public string AlphaKey { get; set; }
+
+        [DisplayInputField("Beta")]
+        public double Beta { get; set; }
+
+        [DisplayInputFieldKey("Beta")]
+        public string BetaKey { get; set; }
+
+        double IRovingDistribution.GetSample(Random randomizer)
+        {
+            double x = GammaSample(Alpha, randomizer);
+            double y = GammaSample(Beta, randomizer);
+
+            if (x + y == 0.0)
+            {
+                return 0.5;
+            }
+
+            return x / (x + y);
+        }
+
+        /// <summary>
+        /// Generates a Gamma-distributed sample using Marsaglia and Tsang's method.
+        /// </summary>
+        private static double GammaSample(double shape, Random randomizer)
+        {
+            if (shape < 1.0)
+            {
+                double u = Math.Max(double.Epsilon, randomizer.NextDouble());
+                return GammaSample(shape + 1.0, randomizer) * Math.Pow(u, 1.0 / shape);
+            }
+
+            double d = shape - 1.0 / 3.0;
+            double c = 1.0 / Math.Sqrt(9.0 * d);
+
+            while (true)
+            {
+                double x, v;
+                do
+                {
+                    x = CustomRandom.NormalDistribution(
+                        Math.Max(double.Epsilon, randomizer.NextDouble()),
+                        randomizer.NextDouble());
+                    v = 1.0 + c * x;
+                } while (v <= 0.0);
+
+                v = v * v * v;
+                double u = randomizer.NextDouble();
+
+                if (u < 1.0 - 0.0331 * (x * x) * (x * x))
+                {
+                    return d * v;
+                }
+
+                if (Math.Log(Math.Max(double.Epsilon, u)) < 0.5 * x * x + d * (1.0 - v + Math.Log(v)))
+                {
+                    return d * v;
+                }
+            }
+        }
+    }
+
+    [PropertyChoiceTitle("Truncated Exponential")]
+    [DoubleFieldDisplay("Lambda", displayTitle: "Lambda", initial: 3, minimum: 0.01, maximum: 50)]
+    public class TruncatedExponentialDistribution : StimulusPropertyGroup, IRovingDistribution
+    {
+        [DisplayInputField("Lambda")]
+        public double Lambda { get; set; }
+
+        [DisplayInputFieldKey("Lambda")]
+        public string LambdaKey { get; set; }
+
+        double IRovingDistribution.GetSample(Random randomizer)
+        {
+            if (Lambda < 1e-10)
+            {
+                return randomizer.NextDouble();
+            }
+
+            double u = randomizer.NextDouble();
+            double expNegLambda = Math.Exp(-Lambda);
+            return -Math.Log(1.0 - u * (1.0 - expNegLambda)) / Lambda;
+        }
+    }
+
+    [PropertyChoiceTitle("Discrete Uniform")]
+    [IntFieldDisplay("Steps", displayTitle: "Steps", initial: 2, minimum: 2, maximum: 100)]
+    public class DiscreteUniformDistribution : StimulusPropertyGroup, IRovingDistribution
+    {
+        [DisplayInputField("Steps")]
+        public int Steps { get; set; }
+
+        [DisplayInputFieldKey("Steps")]
+        public string StepsKey { get; set; }
+
+        double IRovingDistribution.GetSample(Random randomizer)
+        {
+            if (Steps <= 1)
+            {
+                return 0.5;
+            }
+
+            int k = randomizer.Next(0, Steps);
+            return k / (double)(Steps - 1);
+        }
     }
 
     [PropertyGroupTitle("Roving Behavior")]
