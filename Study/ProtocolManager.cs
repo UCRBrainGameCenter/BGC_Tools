@@ -75,6 +75,10 @@ namespace BGC.Study
 
         private static string loadedProtocolSet = "";
 
+        /// <summary>
+        /// Legacy flat PlayerData key names. Retained for migration from older data formats.
+        /// New per-track state is stored in nested JSON under ProtocolTrack.TracksDataKey.
+        /// </summary>
         public static class DataKeys
         {
             public const string SessionNumber = "SessionNumber";
@@ -98,49 +102,125 @@ namespace BGC.Study
         public static Dictionary<int, LockoutElement> lockoutElementDictionary =
             new Dictionary<int, LockoutElement>();
 
-        public static Protocol currentProtocol = null;
-        public static Session currentSession = null;
-        public static SessionElement currentSessionElement = null;
-        public static Lockout currentLockout = null;
+        #region Track Infrastructure
 
-        public static IReadOnlyList<SequenceTime> SequenceTimes
+        private static Dictionary<string, ProtocolTrack> tracks = new Dictionary<string, ProtocolTrack>();
+        private static string activeTrackKey = null;
+
+        /// <summary>
+        /// The key of the currently active track. Null when no track is loaded.
+        /// </summary>
+        public static string ActiveTrackKey => activeTrackKey;
+
+        /// <summary>
+        /// The currently active track. Null when no track is loaded.
+        /// </summary>
+        public static ProtocolTrack ActiveTrack =>
+            activeTrackKey != null && tracks.TryGetValue(activeTrackKey, out ProtocolTrack track)
+                ? track
+                : null;
+
+        /// <summary>
+        /// All loaded tracks. Empty when no protocol is loaded.
+        /// </summary>
+        public static IReadOnlyDictionary<string, ProtocolTrack> Tracks => tracks;
+
+        /// <summary>
+        /// True when multiple protocol tracks are loaded in parallel.
+        /// </summary>
+        public static bool IsParallelProtocol => tracks.Count > 1;
+
+        /// <summary>
+        /// Switches the active track. The new track key must already exist in the tracks dictionary.
+        /// </summary>
+        public static void SetActiveTrack(string trackKey)
         {
-            get
+            if (!tracks.ContainsKey(trackKey))
             {
-                JsonValue val = PlayerData.GetJsonValue(DataKeys.SequenceTimes);
-                if (val.IsJsonArray)
-                {
-                    List<SequenceTime> times = new();
-                    foreach (JsonValue v in val.AsJsonArray)
-                    {
-                        times.Add(new SequenceTime(v.AsJsonObject));
-                    }
-                    return times;
-                }
-                return new List<SequenceTime>();
+                Debug.LogError($"SetActiveTrack: Track \"{trackKey}\" does not exist.");
+                return;
             }
+
+            activeTrackKey = trackKey;
         }
 
-        public static void AddSequenceTime(SequenceTime sequenceTime)
+        /// <summary>
+        /// Sets up a single track for the given protocol key, creating it if it doesn't exist.
+        /// Migrates legacy flat PlayerData keys on first use.
+        /// </summary>
+        private static void EnsureSingleTrack(string protocolKey)
         {
-            JsonValue val = PlayerData.GetJsonValue(DataKeys.SequenceTimes);
-            JsonArray arr;
-            if (val.IsJsonArray)
+            if (!tracks.ContainsKey(protocolKey))
             {
-                arr = val.AsJsonArray;
+                tracks.Clear();
+                ProtocolTrack track = new ProtocolTrack(protocolKey);
+                track.MigrateFromFlatKeys();
+                tracks[protocolKey] = track;
             }
-            else
-            {
-                arr = new JsonArray();
-            }
-            arr.Add(sequenceTime.ToJson());
-            PlayerData.SetJsonValue(DataKeys.SequenceTimes, arr);
+
+            activeTrackKey = protocolKey;
         }
+
+        #endregion
+
+        #region Delegated Properties — runtime state
+
+        public static Protocol currentProtocol
+        {
+            get => ActiveTrack?.CurrentProtocol;
+            set { if (ActiveTrack != null) ActiveTrack.CurrentProtocol = value; }
+        }
+
+        public static Session currentSession
+        {
+            get => ActiveTrack?.CurrentSession;
+            set { if (ActiveTrack != null) ActiveTrack.CurrentSession = value; }
+        }
+
+        public static SessionElement currentSessionElement
+        {
+            get => ActiveTrack?.CurrentSessionElement;
+            set { if (ActiveTrack != null) ActiveTrack.CurrentSessionElement = value; }
+        }
+
+        public static Lockout currentLockout
+        {
+            get => ActiveTrack?.CurrentLockout;
+            set { if (ActiveTrack != null) ActiveTrack.CurrentLockout = value; }
+        }
+
+        public static int nextSessionElementIndex
+        {
+            get => ActiveTrack?.NextSessionElementIndex ?? -1;
+            set { if (ActiveTrack != null) ActiveTrack.NextSessionElementIndex = value; }
+        }
+
+        /// <summary>
+        /// Set to true by CheckSequenceStatus() when it detects that SessionInProgress
+        /// was already true on disk — indicating someone force-closed during an active session.
+        /// Consumers can check this to log a force-close interruption event.
+        /// Reset to false after being read.
+        /// </summary>
+        public static bool WasForceCloseInterrupted
+        {
+            get => ActiveTrack?.WasForceCloseInterrupted ?? false;
+            set { if (ActiveTrack != null) ActiveTrack.WasForceCloseInterrupted = value; }
+        }
+
+        #endregion
+
+        #region Delegated Properties — persisted per-track state
+
+        public static IReadOnlyList<SequenceTime> SequenceTimes =>
+            ActiveTrack?.SequenceTimes ?? (IReadOnlyList<SequenceTime>)new List<SequenceTime>();
+
+        public static void AddSequenceTime(SequenceTime sequenceTime) =>
+            ActiveTrack?.AddSequenceTime(sequenceTime);
 
         public static DateTime CurrentSequenceStartTime
         {
-            get => PlayerData.GetJsonValue(DataKeys.CurrentSequenceStartTime).AsDateTime ?? DateTime.MinValue;
-            set => PlayerData.SetJsonValue(DataKeys.CurrentSequenceStartTime, value);
+            get => ActiveTrack?.CurrentSequenceStartTime ?? DateTime.MinValue;
+            set { if (ActiveTrack != null) ActiveTrack.CurrentSequenceStartTime = value; }
         }
 
         /// <summary>
@@ -150,8 +230,8 @@ namespace BGC.Study
         /// </summary>
         public static DateTime LockoutExpiration
         {
-            get => PlayerData.GetJsonValue(DataKeys.LockoutExpiration).AsDateTime ?? DateTime.MinValue;
-            set => PlayerData.SetJsonValue(DataKeys.LockoutExpiration, value);
+            get => ActiveTrack?.LockoutExpiration ?? DateTime.MinValue;
+            set { if (ActiveTrack != null) ActiveTrack.LockoutExpiration = value; }
         }
 
         /// <summary>
@@ -160,36 +240,26 @@ namespace BGC.Study
         /// </summary>
         public static bool LockoutHasBypassPassword
         {
-            get => PlayerData.GetBool(DataKeys.LockoutHasBypassPassword, false);
-            set => PlayerData.SetBool(DataKeys.LockoutHasBypassPassword, value);
+            get => ActiveTrack?.LockoutHasBypassPassword ?? false;
+            set { if (ActiveTrack != null) ActiveTrack.LockoutHasBypassPassword = value; }
         }
-
-        public static int nextSessionElementIndex = -1;
-
-        /// <summary>
-        /// Set to true by CheckSequenceStatus() when it detects that SessionInProgress
-        /// was already true on disk — indicating someone force-closed during an active session.
-        /// Consumers can check this to log a force-close interruption event.
-        /// Reset to false after being read.
-        /// </summary>
-        public static bool WasForceCloseInterrupted { get; set; } = false;
 
         public static int ElementNumber
         {
-            get => PlayerData.GetInt(DataKeys.ElementNumber, 0);
-            set => PlayerData.SetInt(DataKeys.ElementNumber, value);
+            get => ActiveTrack?.ElementNumber ?? 0;
+            set { if (ActiveTrack != null) ActiveTrack.ElementNumber = value; }
         }
 
         public static int SessionNumber
         {
-            get => PlayerData.GetInt(DataKeys.SessionNumber, 0);
-            set => PlayerData.SetInt(DataKeys.SessionNumber, value);
+            get => ActiveTrack?.SessionNumber ?? 0;
+            set { if (ActiveTrack != null) ActiveTrack.SessionNumber = value; }
         }
 
         public static int SequenceIndex
         {
-            get => PlayerData.GetInt(DataKeys.SequenceIndex, 0);
-            set => PlayerData.SetInt(DataKeys.SequenceIndex, value);
+            get => ActiveTrack?.SequenceIndex ?? 0;
+            set { if (ActiveTrack != null) ActiveTrack.SequenceIndex = value; }
         }
 
         /// <summary>
@@ -198,15 +268,17 @@ namespace BGC.Study
         /// </summary>
         private static int LastEncounteredSequenceIndex
         {
-            get => PlayerData.GetInt(DataKeys.LastEncounteredSequenceIndex, -1);
-            set => PlayerData.SetInt(DataKeys.LastEncounteredSequenceIndex, value);
+            get => ActiveTrack?.LastEncounteredSequenceIndex ?? -1;
+            set { if (ActiveTrack != null) ActiveTrack.LastEncounteredSequenceIndex = value; }
         }
 
         public static bool SessionInProgress
         {
-            get => PlayerData.GetBool(DataKeys.SessionInProgress, false);
-            set => PlayerData.SetBool(DataKeys.SessionInProgress, value);
+            get => ActiveTrack?.SessionInProgress ?? false;
+            set { if (ActiveTrack != null) ActiveTrack.SessionInProgress = value; }
         }
+
+        #endregion
 
         public delegate void MigrateProtocols(ref JsonObject protocols);
         public delegate void SessionElementOverrun();
@@ -239,13 +311,19 @@ namespace BGC.Study
 
         private static void EnsureSequenceIndexMigrated()
         {
-            JsonValue sequenceIndexValue = PlayerData.GetJsonValue(DataKeys.SequenceIndex);
-            if (sequenceIndexValue.IsInteger)
+            if (ActiveTrack == null)
             {
-                SequenceIndex = sequenceIndexValue.AsInteger;
                 return;
             }
 
+            // If SequenceIndex has been explicitly stored in the track state, use it.
+            if (ActiveTrack.HasExplicitSequenceIndex)
+            {
+                return;
+            }
+
+            // Legacy migration: derive SequenceIndex from SessionNumber for
+            // very old users who pre-date the SequenceIndex system.
             int legacySessionIndex = SessionNumber;
             int migratedIndex = GetSequenceIndexForSession(legacySessionIndex);
             SequenceIndex = migratedIndex < 0 ? 0 : migratedIndex;
@@ -500,44 +578,72 @@ namespace BGC.Study
             string protocolName,
             int protocolID)
         {
-            currentProtocol = null;
-            currentSession = null;
-            currentSessionElement = null;
-            nextSessionElementIndex = -1;
-            loadedProtocolSet = "";
-
-            LoadProtocolSet(protocolName);
-            if (protocolDictionary.ContainsKey(protocolID.ToString()))
-            {
-                currentProtocol = protocolDictionary[protocolID.ToString()];
-            }
-            else
-            {
-                Debug.LogError($"Loaded Protocol \"{loadedProtocolSet}\" does not contain requested protocolID {protocolID}.");
-                return;
-            }
+            PrepareProtocol(protocolName, protocolID.ToString());
         }
 
+        /// <summary>
+        /// Loads a protocol set and sets up a single in-memory track.
+        /// Does NOT touch PlayerData (safe for batch user creation where no user is logged in).
+        /// For full track initialization with persisted state, use TryUpdateProtocol instead.
+        /// </summary>
         public static void PrepareProtocol(
             string protocolSetName,
             string protocolKey)
         {
-            currentProtocol = null;
-            currentSession = null;
-            currentSessionElement = null;
-            nextSessionElementIndex = -1;
+            tracks.Clear();
+            activeTrackKey = null;
             loadedProtocolSet = "";
 
             LoadProtocolSet(protocolSetName);
             if (protocolDictionary.ContainsKey(protocolKey))
             {
-                currentProtocol = protocolDictionary[protocolKey];
+                // Use transient constructor — no PlayerData access
+                ProtocolTrack track = new ProtocolTrack(protocolKey, new JsonObject());
+                track.CurrentProtocol = protocolDictionary[protocolKey];
+                tracks[protocolKey] = track;
+                activeTrackKey = protocolKey;
             }
             else
             {
                 Debug.LogError($"Loaded Protocol \"{loadedProtocolSet}\" does not contain requested protocolKey {protocolKey}.");
                 return;
             }
+        }
+
+        /// <summary>
+        /// Sets up multiple in-memory protocol tracks for parallel execution.
+        /// Does NOT touch PlayerData (safe for batch user creation).
+        /// For full track initialization with persisted state, use TryUpdateParallelProtocols instead.
+        /// </summary>
+        public static void PrepareParallelProtocols(
+            string protocolSetName,
+            IEnumerable<string> protocolKeys)
+        {
+            tracks.Clear();
+            activeTrackKey = null;
+            loadedProtocolSet = "";
+
+            LoadProtocolSet(protocolSetName);
+
+            string firstKey = null;
+
+            foreach (string protocolKey in protocolKeys)
+            {
+                if (!protocolDictionary.ContainsKey(protocolKey))
+                {
+                    Debug.LogError($"Protocol set \"{loadedProtocolSet}\" does not contain protocolKey \"{protocolKey}\". Skipping.");
+                    continue;
+                }
+
+                // Use transient constructor — no PlayerData access
+                ProtocolTrack track = new ProtocolTrack(protocolKey, new JsonObject());
+                track.CurrentProtocol = protocolDictionary[protocolKey];
+                tracks[protocolKey] = track;
+
+                firstKey ??= protocolKey;
+            }
+
+            activeTrackKey = firstKey;
         }
 
         public static int GetSequenceIndexForSession(int sessionNumber)
@@ -565,9 +671,12 @@ namespace BGC.Study
             {
                 if (protocolDictionary.ContainsKey(protocolKey))
                 {
-                    currentProtocol = protocolDictionary[protocolKey];
-                    ElementNumber = sessionElementIndex;
-                    SequenceIndex = sequenceIndex;
+                    EnsureSingleTrack(protocolKey);
+                    ActiveTrack.CurrentProtocol = protocolDictionary[protocolKey];
+                    // The track's persisted state (from migration or previous runs)
+                    // is the source of truth. The sequenceIndex/sessionElementIndex
+                    // parameters are retained for API compatibility but no longer
+                    // override the track's stored values.
                     return CheckSequenceStatus();
                 }
                 else
@@ -575,6 +684,48 @@ namespace BGC.Study
                     Debug.LogError($"Loaded Protocol \"{loadedProtocolSet}\" does not contain requested protocolKey {protocolKey}.");
                     return ProtocolStatus.InvalidProtocol;
                 }
+            }
+
+            return ProtocolStatus.Uninitialized;
+        }
+
+        /// <summary>
+        /// Loads a protocol set and sets up multiple tracks for parallel execution.
+        /// Calls CheckSequenceStatus on the active track.
+        /// </summary>
+        public static ProtocolStatus TryUpdateParallelProtocols(
+            string protocolSetName,
+            IEnumerable<string> protocolKeys)
+        {
+            if (LoadProtocolSet(protocolSetName))
+            {
+                tracks.Clear();
+                string firstKey = null;
+
+                foreach (string protocolKey in protocolKeys)
+                {
+                    if (!protocolDictionary.ContainsKey(protocolKey))
+                    {
+                        Debug.LogError(
+                            $"Protocol set \"{loadedProtocolSet}\" does not contain protocolKey \"{protocolKey}\". Skipping.");
+                        continue;
+                    }
+
+                    ProtocolTrack track = new ProtocolTrack(protocolKey);
+                    track.MigrateFromFlatKeys();
+                    track.CurrentProtocol = protocolDictionary[protocolKey];
+                    tracks[protocolKey] = track;
+
+                    firstKey ??= protocolKey;
+                }
+
+                if (tracks.Count == 0)
+                {
+                    return ProtocolStatus.InvalidProtocol;
+                }
+
+                activeTrackKey = firstKey;
+                return CheckSequenceStatus();
             }
 
             return ProtocolStatus.Uninitialized;
@@ -1152,6 +1303,10 @@ namespace BGC.Study
             lockoutDictionary.Clear();
             lockoutElementDictionary.Clear();
 
+            // Clear all tracks
+            tracks.Clear();
+            activeTrackKey = null;
+
             // Clear runtime history stored in PlayerData
             ClearExtensionState();
 
@@ -1178,20 +1333,35 @@ namespace BGC.Study
             }
         }
 
+        /// <summary>
+        /// Legacy fallback: reads the extension state root from the flat PlayerData key.
+        /// Only reached when no track is loaded (ActiveTrack == null).
+        /// </summary>
         private static JsonObject GetExtensionStateRoot()
         {
             JsonValue val = PlayerData.GetJsonValue(DataKeys.ExtensionState);
             return val.IsJsonObject ? val.AsJsonObject : new JsonObject();
         }
 
-        private static void SetExtensionStateRoot(JsonObject root) =>
+        /// <summary>
+        /// Legacy fallback: writes the extension state root to the flat PlayerData key.
+        /// Only reached when no track is loaded (ActiveTrack == null).
+        /// </summary>
+        private static void SetExtensionStateRoot(JsonObject root)
+        {
             PlayerData.SetJsonValue(DataKeys.ExtensionState, root ?? new JsonObject());
+        }
 
         public static JsonValue GetExtensionState(string key)
         {
             if (string.IsNullOrWhiteSpace(key))
             {
                 return default(JsonValue);
+            }
+
+            if (ActiveTrack != null)
+            {
+                return ActiveTrack.GetExtensionState(key);
             }
 
             JsonObject root = GetExtensionStateRoot();
@@ -1211,6 +1381,12 @@ namespace BGC.Study
                 return;
             }
 
+            if (ActiveTrack != null)
+            {
+                ActiveTrack.SetExtensionState(key, value);
+                return;
+            }
+
             JsonObject root = GetExtensionStateRoot();
             root[key] = value;
             SetExtensionStateRoot(root);
@@ -1223,6 +1399,12 @@ namespace BGC.Study
                 return;
             }
 
+            if (ActiveTrack != null)
+            {
+                ActiveTrack.RemoveExtensionState(key);
+                return;
+            }
+
             JsonObject root = GetExtensionStateRoot();
             root.Remove(key);
             SetExtensionStateRoot(root);
@@ -1230,6 +1412,12 @@ namespace BGC.Study
 
         public static void ClearExtensionState(string prefix = null)
         {
+            if (ActiveTrack != null)
+            {
+                ActiveTrack.ClearExtensionState(prefix);
+                return;
+            }
+
             if (string.IsNullOrEmpty(prefix))
             {
                 SetExtensionStateRoot(new JsonObject());
