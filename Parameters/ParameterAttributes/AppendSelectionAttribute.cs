@@ -21,6 +21,12 @@ namespace BGC.Parameters
 
             this.selectionTypes = selectionTypes.Clone() as Type[];
         }
+
+        /// <summary>
+        /// Called after a default instance is built via <see cref="IPropertyGroupExtensions.Build"/>.
+        /// Override to apply custom default values to the newly constructed property group.
+        /// </summary>
+        public virtual void ApplyDefaults(IPropertyGroup builtGroup) { }
     }
     
 }

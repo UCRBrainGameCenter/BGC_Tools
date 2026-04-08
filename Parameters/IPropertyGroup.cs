@@ -1091,6 +1091,8 @@ namespace BGC.Parameters
 
             newPropertyGroup.InitializeProperties();
 
+            propertyInfo.GetAppendSelectionAttribute()?.ApplyDefaults(newPropertyGroup);
+
             return newPropertyGroup;
         }
 

@@ -203,6 +203,14 @@ namespace BGC.Parameters
             typeof(DiscreteUniformDistribution))]
         public IRovingDistribution Distribution { get; set; }
 
+        public LinearRadialRove()
+        {
+            Distribution = new UniformDistribution();
+        }
+
+        void IRovingDoubleBehavior.SetCenterValue(double centerValue) =>
+            CentralValue = centerValue;
+
         double IRovingDoubleBehavior.GetRandomValue(Random Randomizer) =>
             CentralValue + (RovingRadius * (2.0 * Distribution.GetSample(Randomizer) - 1.0));
 
@@ -233,6 +241,18 @@ namespace BGC.Parameters
             typeof(DiscreteUniformDistribution))]
         public IRovingDistribution Distribution { get; set; }
 
+        public LinearRangeRove()
+        {
+            Distribution = new UniformDistribution();
+        }
+
+        void IRovingDoubleBehavior.SetCenterValue(double centerValue)
+        {
+            double halfRange = 0.5 * (UpperBound - LowerBound);
+            LowerBound = centerValue - halfRange;
+            UpperBound = centerValue + halfRange;
+        }
+
         double IRovingDoubleBehavior.GetRandomValue(Random Randomizer) =>
             LowerBound + ((UpperBound - LowerBound) * Distribution.GetSample(Randomizer));
 
@@ -262,6 +282,14 @@ namespace BGC.Parameters
             typeof(TruncatedExponentialDistribution),
             typeof(DiscreteUniformDistribution))]
         public IRovingDistribution Distribution { get; set; }
+
+        public ExponentialRadialRove()
+        {
+            Distribution = new UniformDistribution();
+        }
+
+        void IRovingDoubleBehavior.SetCenterValue(double centerValue) =>
+            CentralValue = centerValue;
 
         double IRovingDoubleBehavior.GetRandomValue(Random Randomizer) =>
             LowerBound * Math.Pow((UpperBound / LowerBound), Distribution.GetSample(Randomizer));
@@ -295,6 +323,29 @@ namespace BGC.Parameters
             typeof(TruncatedExponentialDistribution),
             typeof(DiscreteUniformDistribution))]
         public IRovingDistribution Distribution { get; set; }
+
+        public ExponentialRangeRove()
+        {
+            Distribution = new UniformDistribution();
+        }
+
+        void IRovingDoubleBehavior.SetCenterValue(double centerValue)
+        {
+            if (LowerBound > 0.0 && UpperBound > 0.0)
+            {
+                double factor = Math.Sqrt(UpperBound / LowerBound);
+                if (!double.IsNaN(factor) && !double.IsInfinity(factor) && factor > 0.0)
+                {
+                    LowerBound = centerValue / factor;
+                    UpperBound = centerValue * factor;
+                    return;
+                }
+            }
+
+            double halfRange = 0.5 * (UpperBound - LowerBound);
+            LowerBound = Math.Max(double.Epsilon, centerValue - halfRange);
+            UpperBound = Math.Max(LowerBound + double.Epsilon, centerValue + halfRange);
+        }
 
         double IRovingDoubleBehavior.GetRandomValue(Random Randomizer) =>
             LowerBound * Math.Pow((UpperBound / LowerBound), Distribution.GetSample(Randomizer));
@@ -455,6 +506,7 @@ namespace BGC.Parameters
     [PropertyGroupTitle("Roving Behavior")]
     public interface IRovingDoubleBehavior : IPropertyGroup
     {
+        void SetCenterValue(double centerValue);
         double GetRandomValue(System.Random Randomizer);
         double LowerBound { get; }
         double UpperBound { get; }
