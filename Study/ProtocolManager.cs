@@ -200,6 +200,50 @@ namespace BGC.Study
             return ProtocolStatus.SessionReady;
         }
 
+        public static bool TryGetSession(
+            string protocolSetName,
+            string protocolKey,
+            int sessionIndex,
+            out Session session)
+        {
+            session = null;
+
+            if (!LoadProtocolSet(protocolSetName))
+            {
+                return false;
+            }
+
+            if (!protocolDictionary.TryGetValue(protocolKey, out Protocol protocol))
+            {
+                return false;
+            }
+
+            if (sessionIndex < 0 || sessionIndex >= protocol.Count)
+            {
+                return false;
+            }
+
+            session = protocol[sessionIndex];
+            return true;
+        }
+
+        public static bool TryGetSessionPassword(
+            string protocolSetName,
+            string protocolKey,
+            int sessionIndex,
+            out string password)
+        {
+            password = null;
+
+            if (!TryGetSession(protocolSetName, protocolKey, sessionIndex, out Session session))
+            {
+                return false;
+            }
+
+            password = session.GetPassword();
+            return !string.IsNullOrWhiteSpace(password);
+        }
+
         public static JsonValue GetEnvValue(string key, JsonValue defaultReturn = default(JsonValue))
         {
             if (loadedProtocolSet == "" ||
