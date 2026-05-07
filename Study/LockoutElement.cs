@@ -134,6 +134,18 @@ namespace BGC.Study
             // Override in concrete classes that have persistent state.
         }
 
+        /// <summary>
+        /// Seeds this lockout's stored expiration with an absolute DateTime, used by the
+        /// legacy-state migration to preserve a v1/v2 lockout timer that was tracked
+        /// outside the sequence system. No-op for lockouts that don't have a single
+        /// porting-friendly expiration value.
+        /// </summary>
+        public virtual void SeedExpiration(DateTime expiration)
+        {
+            // Default implementation does nothing.
+            // Override in concrete time-based classes.
+        }
+
         public static void HardClear()
         {
             nextElementID = 1;

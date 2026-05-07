@@ -87,6 +87,14 @@ namespace BGC.Study
             }));
         }
 
+        public override void SeedExpiration(DateTime expiration)
+        {
+            ProtocolManager.SetExtensionState(StateKey, new JsonValue(new JsonObject
+            {
+                { "expiration", expiration }
+            }));
+        }
+
         public override bool CheckLockout(DateTime currentTime, IEnumerable<SequenceTime> sequenceTimes)
         {
             if (TimeMinutes <= 0)
