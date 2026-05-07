@@ -161,6 +161,22 @@ namespace BGC.Study
             activeTrackKey = protocolKey;
         }
 
+        /// <summary>
+        /// Creates an in-memory ProtocolTrack that is NOT backed by PlayerData and makes
+        /// it the active track. Replaces any currently loaded tracks.
+        /// Intended for unit tests and callers that have populated the protocol/lockout/
+        /// session dictionaries directly and just need a place for runtime/extension state
+        /// to live without persisting it.
+        /// </summary>
+        public static ProtocolTrack CreateTransientTrack(string trackKey)
+        {
+            tracks.Clear();
+            ProtocolTrack track = new ProtocolTrack(trackKey, new JsonObject());
+            tracks[trackKey] = track;
+            activeTrackKey = trackKey;
+            return track;
+        }
+
         #endregion
 
         #region Delegated Properties — runtime state
@@ -285,10 +301,17 @@ namespace BGC.Study
         public delegate void PrepareNextElement(bool resuming);
         public delegate SessionElement ParseSessionElement(JsonObject sessionElement);
 
+        // Returns the absolute expiration DateTime stored under a host-app-specific
+        // legacy lockout key (e.g. BGCScience.LockoutRelease in the BGCScience build),
+        // or null if the user has no legacy lockout state to port. The implementation
+        // is expected to clear the source key after returning so this is one-shot.
+        public delegate DateTime? ConsumeLegacyLockoutExpiration();
+
         private static SessionElementOverrun sessionElementOverrun = null;
         private static PrepareNextElement prepareNextElement = null;
         private static MigrateProtocols migrateProtocols = null;
         private static ParseSessionElement parseSessionElement = null;
+        private static ConsumeLegacyLockoutExpiration consumeLegacyLockoutExpiration = null;
 
         private static int GetSessionOrdinalAtSequenceIndex(int sequenceIndex)
         {
@@ -322,10 +345,48 @@ namespace BGC.Study
                 return;
             }
 
-            // Legacy migration: derive SequenceIndex from SessionNumber for
-            // very old users who pre-date the SequenceIndex system.
+            // Legacy migration: derive SequenceIndex from SessionNumber for very old users
+            // who pre-date the SequenceIndex system. SessionNumber == K means the user has
+            // fully completed K sessions (indices 0..K-1) and was either about to start or
+            // was mid-session in the Kth one. The legacy app's EndSessionElement set
+            // SessionInProgress=false and ElementNumber=0 between sessions, and
+            // ExecuteNextElement set SessionInProgress=true while inside a session.
             int legacySessionIndex = SessionNumber;
-            int migratedIndex = GetSequenceIndexForSession(legacySessionIndex);
+
+            int migratedIndex;
+            if (SessionInProgress)
+            {
+                // Resume mid-session at the Kth session itself — the user already passed
+                // any pre-session lockouts.
+                migratedIndex = GetSequenceIndexForSession(legacySessionIndex);
+            }
+            else if (legacySessionIndex <= 0)
+            {
+                // No completed sessions; land at the start of the sequence so any gates
+                // before the first session still apply.
+                migratedIndex = 0;
+            }
+            else
+            {
+                // Between sessions: land at the first sequence element after the (K-1)th
+                // session, so any lockouts gating session K (e.g. PasswordLockouts the
+                // migration created from envVals) are still encountered. Landing on the
+                // Kth session directly would silently skip those gates.
+                int previousSessionIndex = GetSequenceIndexForSession(legacySessionIndex - 1);
+                migratedIndex = previousSessionIndex < 0 ? 0 : previousSessionIndex + 1;
+
+                // Port any legacy time-based lockout timer (e.g. BGCScience.LockoutRelease)
+                // onto the migrated FixedTimeLockouts at this position. Without this the
+                // FixedTimeLockout would compute a fresh "now + TimeMinutes" expiration on
+                // first encounter, locking the user out for an unintended additional period
+                // even though they'd already waited it out in the legacy app.
+                DateTime? legacyExpiration = consumeLegacyLockoutExpiration?.Invoke();
+                if (legacyExpiration.HasValue && legacyExpiration.Value > DateTime.MinValue)
+                {
+                    SeedLegacyTimeLockoutsAt(migratedIndex, legacyExpiration.Value);
+                }
+            }
+
             SequenceIndex = migratedIndex < 0 ? 0 : migratedIndex;
         }
 
@@ -661,11 +722,17 @@ namespace BGC.Study
             return -1;
         }
                 
+        // Pass as sequenceIndex / sessionElementIndex to TryUpdateProtocol when you want to
+        // resume from PlayerData rather than jump to a specific position. Required for
+        // legacy users with no stored SequenceIndex: writing the default-0 from the
+        // SequenceIndex getter would clobber the migration in CheckSequenceStatus.
+        public const int UseStoredIndex = -1;
+
         public static ProtocolStatus TryUpdateProtocol(
             string protocolSetName,
             string protocolKey,
-            int sequenceIndex,
-            int sessionElementIndex = 0)
+            int sequenceIndex = UseStoredIndex,
+            int sessionElementIndex = UseStoredIndex)
         {
             if (LoadProtocolSet(protocolSetName))
             {
@@ -673,10 +740,21 @@ namespace BGC.Study
                 {
                     EnsureSingleTrack(protocolKey);
                     ActiveTrack.CurrentProtocol = protocolDictionary[protocolKey];
-                    // The track's persisted state (from migration or previous runs)
-                    // is the source of truth. The sequenceIndex/sessionElementIndex
-                    // parameters are retained for API compatibility but no longer
-                    // override the track's stored values.
+
+                    // The track's persisted state (from MigrateFromFlatKeys or previous
+                    // runs) is the source of truth — callers that don't have a specific
+                    // jump target should pass UseStoredIndex (the default) and let
+                    // CheckSequenceStatus resume from the track. Callers that DO want to
+                    // jump (e.g. the EditSession dialogs) pass explicit indices, which
+                    // overwrite the track's stored values via the property setters.
+                    if (sessionElementIndex != UseStoredIndex)
+                    {
+                        ElementNumber = sessionElementIndex;
+                    }
+                    if (sequenceIndex != UseStoredIndex)
+                    {
+                        SequenceIndex = sequenceIndex;
+                    }
                     return CheckSequenceStatus();
                 }
                 else
@@ -834,12 +912,47 @@ namespace BGC.Study
             SessionElementOverrun sessionElementOverrun,
             PrepareNextElement prepareNextElement,
             ParseSessionElement parseSessionElement,
-            MigrateProtocols migrateProtocols)
+            MigrateProtocols migrateProtocols,
+            ConsumeLegacyLockoutExpiration consumeLegacyLockoutExpiration = null)
         {
             ProtocolManager.sessionElementOverrun = sessionElementOverrun;
             ProtocolManager.prepareNextElement = prepareNextElement;
             ProtocolManager.parseSessionElement = parseSessionElement;
             ProtocolManager.migrateProtocols = migrateProtocols;
+            ProtocolManager.consumeLegacyLockoutExpiration = consumeLegacyLockoutExpiration;
+        }
+
+        /// <summary>
+        /// Walks forward through the contiguous block of Lockout sequence elements
+        /// starting at <paramref name="sequenceIndex"/>, stopping at the first Session
+        /// or end of sequence, and calls <see cref="LockoutElement.SeedExpiration"/>
+        /// on every element with an absolute expiration of <paramref name="expiration"/>.
+        /// Used by the legacy-state migration to port a v1/v2 lockout timer onto the
+        /// migrated sequence-based time lockouts.
+        /// </summary>
+        public static void SeedLegacyTimeLockoutsAt(int sequenceIndex, DateTime expiration)
+        {
+            if (currentProtocol == null || sequenceIndex < 0)
+            {
+                return;
+            }
+
+            for (int i = sequenceIndex; i < currentProtocol.sequences.Count; i++)
+            {
+                SequenceElement seq = currentProtocol.sequences[i];
+                if (seq.type == SequenceType.Session)
+                {
+                    return;
+                }
+
+                if (seq.type == SequenceType.Lockout && seq.Lockout != null)
+                {
+                    foreach (LockoutElementID elementId in seq.Lockout)
+                    {
+                        elementId.Element?.SeedExpiration(expiration);
+                    }
+                }
+            }
         }
 
         public static async Task<ProtocolStatus> ExecuteNextElement(bool resuming = false)
