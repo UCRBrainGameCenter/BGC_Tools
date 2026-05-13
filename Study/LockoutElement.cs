@@ -135,6 +135,19 @@ namespace BGC.Study
         }
 
         /// <summary>
+        /// Marks this element's auth requirement as satisfied for the current
+        /// encounter, without escalating to a full ClearLockout. Currently only
+        /// PasswordLockout implements this — entering one PasswordLockout's
+        /// password should not bypass other elements (e.g. a co-located time
+        /// lockout) in the same Lockout container.
+        /// </summary>
+        public virtual void Acknowledge()
+        {
+            // Default implementation does nothing.
+            // Override in elements that have a satisfiable auth state.
+        }
+
+        /// <summary>
         /// Seeds this lockout's stored expiration with an absolute DateTime, used by the
         /// legacy-state migration to preserve a v1/v2 lockout timer that was tracked
         /// outside the sequence system. No-op for lockouts that don't have a single

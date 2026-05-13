@@ -36,20 +36,19 @@ namespace BGC.Study
                 return null;
             }
 
-            // Check for stored state (persisted across app restarts)
+            // Stored state — including DateTime.MinValue (the cleared-by-Skip
+            // sentinel) — is authoritative. Falling back to "now + TimeMinutes"
+            // when state.expiration == MinValue would surface a phantom future
+            // lockout for a user whose lockout was already admin-skipped.
             JsonObject state = ProtocolManager.GetExtensionStateObject(StateKey);
             if (state != null && state.ContainsKey("expiration"))
             {
-                DateTime storedExpiration = state["expiration"].AsDateTime ?? DateTime.MinValue;
-                if (storedExpiration > DateTime.MinValue)
-                {
-                    return storedExpiration;
-                }
+                return state["expiration"].AsDateTime ?? DateTime.MinValue;
             }
 
-            // Fallback: calculate from current time (will be stored on first CheckLockout)
-            DateTime expiration = DateTime.Now.AddMinutes(TimeMinutes);
-            return expiration;
+            // No state at all — first-encounter preview. Computed without
+            // persisting; CheckLockout writes the real expiration on first call.
+            return DateTime.Now.AddMinutes(TimeMinutes);
         }
 
         public override string GetLockoutMessage()
@@ -102,28 +101,25 @@ namespace BGC.Study
                 return false;
             }
 
-            // Check for stored state
             JsonObject state = ProtocolManager.GetExtensionStateObject(StateKey);
-            
+
             if (state != null && state.ContainsKey("expiration"))
             {
+                // State exists — honor whatever's stored.  It can be:
+                //   * a future expiration (still locked),
+                //   * an already-elapsed expiration (naturally expired — not locked),
+                //   * DateTime.MinValue, the sentinel ClearLockout writes when an
+                //     admin Skip clears the lockout (not locked, and crucially must
+                //     NOT trigger fresh re-initialisation — that's how the bug
+                //     manifested where a Skipped time lockout re-appeared after
+                //     the next CheckLockout call / app restart).
+                // In every case we DO NOT recompute "now + TimeMinutes"; that's only
+                // legitimate when there is no stored state at all (first encounter).
                 DateTime storedExpiration = state["expiration"].AsDateTime ?? DateTime.MinValue;
-                
-                if (storedExpiration > DateTime.MinValue)
-                {
-                    // If stored expiration is in the future, we're still locked
-                    if (currentTime < storedExpiration)
-                    {
-                        return true;
-                    }
-                    
-                    // Stored expiration has passed - lockout is no longer active
-                    // Don't recalculate; let it stay expired until explicitly re-encountered
-                    return false;
-                }
+                return currentTime < storedExpiration;
             }
 
-            // No stored state - this is a fresh encounter, calculate and store expiration
+            // No stored state — fresh encounter. Compute and persist the expiration.
             // Use currentTime rather than CurrentSequenceStartTime so the lockout
             // begins when first checked (i.e. after the session ends), not when the
             // previous session started.
@@ -142,6 +138,8 @@ namespace BGC.Study
         public override string ElementType => "Password";
 
         public string Password { get; private set; }
+
+        private string StateKey => $"BGC.Study.PasswordLockout:{id}";
 
         public PasswordLockout(JsonObject data) : base(data)
         {
@@ -168,8 +166,59 @@ namespace BGC.Study
 
         public override bool CheckLockout(DateTime currentTime, IEnumerable<SequenceTime> sequenceTimes)
         {
-            // Always locked if password exists. The UI handles unlocking via password entry.
-            return !string.IsNullOrEmpty(Password);
+            if (string.IsNullOrEmpty(Password))
+            {
+                return false;
+            }
+
+            // Per-element acknowledgement: once the UI has captured the correct
+            // password for THIS element, it stops blocking even if other elements
+            // in the same Lockout container are still locked.  Without this,
+            // entering one password in a Lockout that contains multiple
+            // PasswordLockouts (or a PasswordLockout alongside a FixedTimeLockout)
+            // would advance the whole container — the symptom behind the bug
+            // report that "only the first password is required."
+            JsonObject state = ProtocolManager.GetExtensionStateObject(StateKey);
+            if (state != null
+                && state.ContainsKey("acknowledged")
+                && state["acknowledged"].IsBoolean
+                && state["acknowledged"].AsBoolean)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Marks this password lockout as satisfied for the current encounter.
+        /// Persisted, so a multi-password sequence survives an app restart partway
+        /// through (the user only has to enter passwords for elements that haven't
+        /// been acknowledged yet). The flag is cleared by <see cref="OnLockoutCompleted"/>
+        /// when the surrounding Lockout container advances, so re-encountering the
+        /// same lockout (e.g. via an admin session-jump backwards) re-requires the
+        /// password.
+        /// </summary>
+        public override void Acknowledge()
+        {
+            ProtocolManager.SetExtensionState(StateKey, new JsonValue(new JsonObject
+            {
+                { "acknowledged", true }
+            }));
+        }
+
+        public override void ClearLockout()
+        {
+            // Same effect for Password lockouts — an admin "skip" should leave the
+            // element non-blocking. Implemented in terms of Acknowledge for clarity.
+            Acknowledge();
+        }
+
+        public override void OnLockoutCompleted(DateTime encounteredTime, DateTime completedTime)
+        {
+            // Drop the acknowledged flag so a later re-encounter (jump-back, dry
+            // run replay, etc.) prompts for the password again.
+            ProtocolManager.RemoveExtensionState(StateKey);
         }
     }
 

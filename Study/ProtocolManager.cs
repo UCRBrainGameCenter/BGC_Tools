@@ -107,6 +107,20 @@ namespace BGC.Study
         private static Dictionary<string, ProtocolTrack> tracks = new Dictionary<string, ProtocolTrack>();
         private static string activeTrackKey = null;
 
+        // The ProfileData instance that the current `tracks` entries were bound
+        // to. ProtocolTrack instances hold a direct JsonObject reference into
+        // PlayerData; that reference is orphaned the moment PlayerData.LogOut
+        // tears down the in-memory user data. If we don't notice and rebuild,
+        // subsequent reads will hit stale state and subsequent writes will
+        // modify a detached JSON object that PlayerData.Save() never persists.
+        //
+        // We compare *instance* identity (not UserName) because a logout+login
+        // of the same user creates a fresh UserData object; a username-only
+        // compare wouldn't catch that case, and is exactly the scenario behind
+        // bug reports like "Skip seems to work, but after re-opening the app
+        // the timelock is back".
+        private static BGC.Users.ProfileData tracksOwnerProfile = null;
+
         /// <summary>
         /// The key of the currently active track. Null when no track is loaded.
         /// </summary>
@@ -145,11 +159,33 @@ namespace BGC.Study
         }
 
         /// <summary>
+        /// Drops any cached ProtocolTrack instances whose backing JSON reference
+        /// belongs to a previous PlayerData user. Must run BEFORE every
+        /// track-construction or track-lookup path; otherwise we risk reading
+        /// stale state and (worse) writing through to an orphaned JsonObject
+        /// that PlayerData.Save() doesn't see.
+        /// </summary>
+        private static void InvalidateTracksIfUserChanged()
+        {
+            BGC.Users.ProfileData currentProfile = PlayerData.ProfileData;
+            if (ReferenceEquals(tracksOwnerProfile, currentProfile))
+            {
+                return;
+            }
+
+            tracks.Clear();
+            activeTrackKey = null;
+            tracksOwnerProfile = currentProfile;
+        }
+
+        /// <summary>
         /// Sets up a single track for the given protocol key, creating it if it doesn't exist.
         /// Migrates legacy flat PlayerData keys on first use.
         /// </summary>
         private static void EnsureSingleTrack(string protocolKey)
         {
+            InvalidateTracksIfUserChanged();
+
             if (!tracks.ContainsKey(protocolKey))
             {
                 tracks.Clear();
@@ -171,6 +207,8 @@ namespace BGC.Study
         public static ProtocolTrack CreateTransientTrack(string trackKey)
         {
             tracks.Clear();
+            // Detached from PlayerData — see PrepareProtocol(transient) for rationale.
+            tracksOwnerProfile = null;
             ProtocolTrack track = new ProtocolTrack(trackKey, new JsonObject());
             tracks[trackKey] = track;
             activeTrackKey = trackKey;
@@ -653,6 +691,11 @@ namespace BGC.Study
         {
             tracks.Clear();
             activeTrackKey = null;
+            // Transient tracks are not bound to any PlayerData user. Clear the
+            // owner so the next PlayerData-backed call (EnsureSingleTrack /
+            // TryUpdateParallelProtocols) is guaranteed to invalidate and
+            // rebuild rather than reusing this detached entry.
+            tracksOwnerProfile = null;
             loadedProtocolSet = "";
 
             LoadProtocolSet(protocolSetName);
@@ -682,6 +725,8 @@ namespace BGC.Study
         {
             tracks.Clear();
             activeTrackKey = null;
+            // Transient tracks — see PrepareProtocol(transient) for rationale.
+            tracksOwnerProfile = null;
             loadedProtocolSet = "";
 
             LoadProtocolSet(protocolSetName);
@@ -778,6 +823,7 @@ namespace BGC.Study
             if (LoadProtocolSet(protocolSetName))
             {
                 tracks.Clear();
+                tracksOwnerProfile = PlayerData.ProfileData;
                 string firstKey = null;
 
                 foreach (string protocolKey in protocolKeys)
@@ -1419,6 +1465,7 @@ namespace BGC.Study
             // Clear all tracks
             tracks.Clear();
             activeTrackKey = null;
+            tracksOwnerProfile = null;
 
             // Clear runtime history stored in PlayerData
             ClearExtensionState();
