@@ -370,6 +370,28 @@ namespace BGC.Study
             return Math.Max(0, sessionCount - 1);
         }
 
+        // Returns the number of sessions that appear strictly before sequenceIndex.
+        // Used to set SessionNumber when landing on a Lockout so that "0 sessions
+        // before the first lockout" isn't clamped to 0 and then incremented to 1.
+        private static int CountSessionsBeforeIndex(int sequenceIndex)
+        {
+            if (currentProtocol == null || sequenceIndex <= 0)
+            {
+                return 0;
+            }
+
+            int count = 0;
+            for (int i = 0; i < sequenceIndex && i < currentProtocol.sequences.Count; i++)
+            {
+                if (currentProtocol.sequences[i].type == SequenceType.Session)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
         private static void EnsureSequenceIndexMigrated()
         {
             if (ActiveTrack == null)
@@ -573,7 +595,7 @@ namespace BGC.Study
                         
                         // Update SessionNumber to reflect the number of completed sessions.
                         // At a Lockout, we've completed all sessions before this point.
-                        SessionNumber = GetSessionOrdinalAtSequenceIndex(seqIndex) + 1;
+                        SessionNumber = CountSessionsBeforeIndex(seqIndex);
                         
                         // Cache the lockout expiration for UI display (e.g., OnlineUserButton)
                         // Each LockoutElement manages its own persisted state internally
