@@ -395,7 +395,8 @@ namespace BGC.UI.Dialogs
             string bodyText,
             ModalInputCallback inputCallback,
             ModalButtonCallback buttonCallback = null,
-            InputField.ContentType inputType = InputField.ContentType.Alphanumeric) =>
+            InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
+            string initialText = null) =>
                 ShowInputModalHelper(
                     mode: mode,
                     headerText: headerText,
@@ -404,7 +405,8 @@ namespace BGC.UI.Dialogs
                     buttonCallback: buttonCallback,
                     inputType: inputType,
                     closeImmediately: true,
-                    awaitingMessage: null);
+                    awaitingMessage: null,
+                    initialText: initialText);
         
         /// <summary>
         /// Show the modal dialog in the indicated mode, and await on the async callback when it receives a response
@@ -484,7 +486,8 @@ namespace BGC.UI.Dialogs
             ModalButtonCallbackAsync buttonCallbackAsync = null,
             InputField.ContentType inputType = InputField.ContentType.Alphanumeric,
             bool closeImmediately = true,
-            string awaitingMessage = null)
+            string awaitingMessage = null,
+            string initialText = null)
         {
             Debug.Assert(
                 condition: mode == Mode.InputAccept || mode == Mode.InputConfirmCancel,
@@ -508,7 +511,10 @@ namespace BGC.UI.Dialogs
             instance.inputCallbackAsync = inputCallbackAsync;
 
             instance.primaryInputField.contentType = inputType;
-            
+            // Seed the field AFTER SetMode (which clears it). Useful for "pre-fill with a
+            // suggested name" flows; null/empty leaves the field blank.
+            if (!string.IsNullOrEmpty(initialText)) instance.primaryInputField.text = initialText;
+
             //Set flag for closing modal and message for waiting on await
             instance.closeImmediately = closeImmediately;
             instance.awaitingMessage = awaitingMessage;
