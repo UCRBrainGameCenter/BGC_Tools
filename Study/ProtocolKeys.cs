@@ -6,6 +6,7 @@ namespace BGC.Study
     {
         //Attributes
         public const string Version = "Version";
+        public const string TrackHubSceneName = "TrackHubSceneName";
 
         //Arrays
         public const string Protocols = "Protocols";
