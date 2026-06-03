@@ -144,6 +144,15 @@ namespace BGC.Study
         /// </summary>
         public static bool IsParallelProtocol => tracks.Count > 1;
 
+        public const string DefaultTrackHubSceneName = "TrackHubScene";
+
+        /// <summary>
+        /// Scene name loaded for <see cref="MenuManager.WindowState.TrackHub"/>. Set from the
+        /// optional top-level "TrackHubSceneName" field of the protocol-set JSON; falls back to
+        /// <see cref="DefaultTrackHubSceneName"/> when the field is absent.
+        /// </summary>
+        public static string TrackHubSceneName { get; private set; } = DefaultTrackHubSceneName;
+
         /// <summary>
         /// Switches the active track. The new track key must already exist in the tracks dictionary.
         /// </summary>
@@ -1244,6 +1253,7 @@ namespace BGC.Study
                 createJson: () => new JsonObject()
                 {
                     { ProtocolKeys.Version, protocolDataVersion },
+                    { ProtocolKeys.TrackHubSceneName, TrackHubSceneName },
                     { ProtocolKeys.Protocols, SerializeProtocols() },
                     { ProtocolKeys.Sessions, SerializeSessions() },
                     { ProtocolKeys.Lockouts, SerializeLockouts() },
@@ -1278,6 +1288,10 @@ namespace BGC.Study
                 {
                     migrateProtocols?.Invoke(ref jsonProtocols);
 
+                    TrackHubSceneName = jsonProtocols.ContainsKey(ProtocolKeys.TrackHubSceneName)
+                        ? jsonProtocols[ProtocolKeys.TrackHubSceneName]
+                        : DefaultTrackHubSceneName;
+
                     DeserializeProtocols(jsonProtocols[ProtocolKeys.Protocols]);
                     DeserializeSessions(jsonProtocols[ProtocolKeys.Sessions]);
                     if (jsonProtocols.ContainsKey(ProtocolKeys.Lockouts))
@@ -1293,6 +1307,7 @@ namespace BGC.Study
                 failCallback: () =>
                 {
                     loadedProtocolSet = "";
+                    TrackHubSceneName = DefaultTrackHubSceneName;
                     protocolDictionary.Clear();
                     sessionDictionary.Clear();
                     sessionElementDictionary.Clear();
