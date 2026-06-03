@@ -5,6 +5,7 @@ using UnityEngine;
 using LightJson;
 using BGC.IO;
 using BGC.Localization;
+using BGC.Study;
 using BGC.Utility;
 using UnityEngine.SocialPlatforms;
 
@@ -61,26 +62,216 @@ namespace BGC.Users
             GlobalData.Serialize();
         }
 
-        public static bool HasKey(string key) => ProfileData.HasKey(key);
-        public static void RemoveKey(string key) => ProfileData.RemoveKey(key);
+        public static bool HasKey(string key)
+        {
+            JsonObject c = GetTrackUserStateOrNull(key);
+            if (c != null) return c.ContainsKey(key);
+            return ProfileData.HasKey(key);
+        }
 
-        public static void SetInt(string key, int value) => ProfileData.SetInt(key, value);
-        public static void SetBool(string key, bool value) => ProfileData.SetBool(key, value);
-        public static void SetString(string key, string value) => ProfileData.SetString(key, value);
-        public static void SetFloat(string key, float value) => ProfileData.SetFloat(key, value);
-        public static void SetDouble(string key, double value) => ProfileData.SetDouble(key, value);
-        public static void SetJsonValue(string key, JsonValue value) => ProfileData.SetJsonValue(key, value);
-        public static void SetJsonArray(string key, JsonArray value) => ProfileData.SetJsonArray(key, value);
+        public static void RemoveKey(string key)
+        {
+            JsonObject c = GetTrackUserStateOrNull(key);
+            if (c != null) { c.Remove(key); return; }
+            ProfileData.RemoveKey(key);
+        }
 
-        public static int GetInt(string key, int defaultReturn = 0) => ProfileData.GetInt(key, defaultReturn);
-        public static bool GetBool(string key, bool defaultReturn = false) => ProfileData.GetBool(key, defaultReturn);
-        public static string GetString(string key, string defaultReturn = "") => ProfileData.GetString(key, defaultReturn);
-        public static float GetFloat(string key, float defaultReturn = 0f) => ProfileData.GetFloat(key, defaultReturn);
-        public static double GetDouble(string key, double defaultReturn = 0.0) => ProfileData.GetDouble(key, defaultReturn);
-        public static JsonValue GetJsonValue(string key, JsonValue defaultReturn = default(JsonValue)) => ProfileData.GetJsonValue(key, defaultReturn);
-        public static JsonArray GetJsonArray(string key, JsonArray defaultReturn = default(JsonArray)) => ProfileData.GetJsonArray(key, defaultReturn);
+        public static void SetInt(string key, int value)
+        {
+            JsonObject c = GetTrackUserStateOrNull(key);
+            if (c != null) { c[key] = value; return; }
+            ProfileData.SetInt(key, value);
+        }
+
+        public static void SetBool(string key, bool value)
+        {
+            JsonObject c = GetTrackUserStateOrNull(key);
+            if (c != null) { c[key] = value; return; }
+            ProfileData.SetBool(key, value);
+        }
+
+        public static void SetString(string key, string value)
+        {
+            JsonObject c = GetTrackUserStateOrNull(key);
+            if (c != null) { c[key] = value; return; }
+            ProfileData.SetString(key, value);
+        }
+
+        public static void SetFloat(string key, float value)
+        {
+            JsonObject c = GetTrackUserStateOrNull(key);
+            if (c != null) { c[key] = value; return; }
+            ProfileData.SetFloat(key, value);
+        }
+
+        public static void SetDouble(string key, double value)
+        {
+            JsonObject c = GetTrackUserStateOrNull(key);
+            if (c != null) { c[key] = value; return; }
+            ProfileData.SetDouble(key, value);
+        }
+
+        public static void SetJsonValue(string key, JsonValue value)
+        {
+            JsonObject c = GetTrackUserStateOrNull(key);
+            if (c != null) { c[key] = value; return; }
+            ProfileData.SetJsonValue(key, value);
+        }
+
+        public static void SetJsonArray(string key, JsonArray value)
+        {
+            JsonObject c = GetTrackUserStateOrNull(key);
+            if (c != null) { c[key] = value; return; }
+            ProfileData.SetJsonArray(key, value);
+        }
+
+        public static int GetInt(string key, int defaultReturn = 0)
+        {
+            JsonObject c = GetTrackUserStateOrNull(key);
+            if (c != null)
+            {
+                return c.ContainsKey(key) && c[key].IsInteger ? c[key].AsInteger : defaultReturn;
+            }
+            return ProfileData.GetInt(key, defaultReturn);
+        }
+
+        public static bool GetBool(string key, bool defaultReturn = false)
+        {
+            JsonObject c = GetTrackUserStateOrNull(key);
+            if (c != null)
+            {
+                return c.ContainsKey(key) && c[key].IsBoolean ? c[key].AsBoolean : defaultReturn;
+            }
+            return ProfileData.GetBool(key, defaultReturn);
+        }
+
+        public static string GetString(string key, string defaultReturn = "")
+        {
+            JsonObject c = GetTrackUserStateOrNull(key);
+            if (c != null)
+            {
+                return c.ContainsKey(key) && c[key].IsString ? c[key].AsString : defaultReturn;
+            }
+            return ProfileData.GetString(key, defaultReturn);
+        }
+
+        public static float GetFloat(string key, float defaultReturn = 0f)
+        {
+            JsonObject c = GetTrackUserStateOrNull(key);
+            if (c != null)
+            {
+                return c.ContainsKey(key) && c[key].IsNumber ? (float)c[key].AsNumber : defaultReturn;
+            }
+            return ProfileData.GetFloat(key, defaultReturn);
+        }
+
+        public static double GetDouble(string key, double defaultReturn = 0.0)
+        {
+            JsonObject c = GetTrackUserStateOrNull(key);
+            if (c != null)
+            {
+                return c.ContainsKey(key) && c[key].IsNumber ? c[key].AsNumber : defaultReturn;
+            }
+            return ProfileData.GetDouble(key, defaultReturn);
+        }
+
+        public static JsonValue GetJsonValue(string key, JsonValue defaultReturn = default(JsonValue))
+        {
+            JsonObject c = GetTrackUserStateOrNull(key);
+            if (c != null)
+            {
+                return c.ContainsKey(key) ? c[key] : defaultReturn;
+            }
+            return ProfileData.GetJsonValue(key, defaultReturn);
+        }
+
+        public static JsonArray GetJsonArray(string key, JsonArray defaultReturn = default(JsonArray))
+        {
+            JsonObject c = GetTrackUserStateOrNull(key);
+            if (c != null)
+            {
+                return c.ContainsKey(key) && c[key].IsJsonArray ? c[key].AsJsonArray : defaultReturn;
+            }
+            return ProfileData.GetJsonArray(key, defaultReturn);
+        }
 
         #endregion Convenience Properties
+
+        #region Per-Track User-State Routing
+
+        // Keys that always read/write at the flat user-data root regardless of active track.
+        // These are system-owned and used by BGCScience / ProtocolManager / Localization.
+        // Routing them into a track's UserState would break the system reading them back.
+        private static readonly HashSet<string> systemKeys = new HashSet<string>(StringComparer.Ordinal)
+        {
+            // BGCScience.Keys
+            "StudyName", "Lockout", "SessionCount", "Password",
+            "ProtocolSet", "ProtocolKey", "ProtocolKeys",
+            "AllDownloaded", "PushLogs", "Organization", "Study",
+            "ServerCode", "HasUserBatteries", "ConditionFileName", "ProtocolFileName",
+            // ProtocolManager.DataKeys (legacy fallbacks; modern path uses ActiveTrack)
+            "SessionNumber", "ElementNumber", "SessionInProgress", "SequenceTimes",
+            "CurrentSequenceStartTime", "SequenceIndex", "LockoutExpiration",
+            "LockoutHasBypassPassword", "LastEncounteredSequenceIndex",
+            // Localization
+            "Language",
+        };
+
+        private static bool IsSystemKey(string key)
+        {
+            if (key == null) return true;
+            // Any "ProtocolManager.*" key (covers ProtocolTrack.TracksDataKey and
+            // ProtocolManager.ExtensionState by convention).
+            if (key.StartsWith("ProtocolManager.", StringComparison.Ordinal)) return true;
+            return systemKeys.Contains(key);
+        }
+
+        /// <summary>
+        /// Returns the per-track UserState JsonObject for the active parallel-protocol track,
+        /// creating it on demand. Returns null (meaning "use the flat root via ProfileData")
+        /// when:
+        ///  - the key is a known system key (must stay at root for BGCScience/ProtocolManager)
+        ///  - the user is not running a parallel protocol
+        ///  - no active track is set
+        /// Mutations to the returned JsonObject propagate to disk on the next PlayerData.Save()
+        /// because we never copy — we hand out the same reference ProtocolTrack mounts at
+        /// "ProtocolManager.Tracks".<trackKey>.UserState (sibling to ExtensionState).
+        /// </summary>
+        private static JsonObject GetTrackUserStateOrNull(string key)
+        {
+            if (IsSystemKey(key)) return null;
+            if (!ProtocolManager.IsParallelProtocol) return null;
+
+            string trackKey = ProtocolManager.ActiveTrackKey;
+            if (string.IsNullOrEmpty(trackKey)) return null;
+
+            JsonValue tracksVal = ProfileData.GetJsonValue(ProtocolTrack.TracksDataKey);
+            JsonObject tracksRoot;
+            if (tracksVal.IsJsonObject)
+            {
+                tracksRoot = tracksVal.AsJsonObject;
+            }
+            else
+            {
+                tracksRoot = new JsonObject();
+                ProfileData.SetJsonValue(ProtocolTrack.TracksDataKey, tracksRoot);
+            }
+
+            if (!tracksRoot.ContainsKey(trackKey) || !tracksRoot[trackKey].IsJsonObject)
+            {
+                tracksRoot[trackKey] = new JsonObject();
+            }
+            JsonObject trackObj = tracksRoot[trackKey];
+
+            const string userStateKey = "UserState";
+            if (!trackObj.ContainsKey(userStateKey) || !trackObj[userStateKey].IsJsonObject)
+            {
+                trackObj[userStateKey] = new JsonObject();
+            }
+            return trackObj[userStateKey];
+        }
+
+        #endregion Per-Track User-State Routing
 
         /// <summary> Load all usernames </summary>
         public static void DeserializeUsers()
