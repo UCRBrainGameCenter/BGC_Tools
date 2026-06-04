@@ -53,7 +53,12 @@ namespace BGC.Study
 
         /// <summary>
         /// Ensures the Tracks root and this track's sub-object exist in PlayerData.
-        /// Returns a direct reference to the track's JsonObject.
+        /// Returns a direct reference to the track's JsonObject. On first creation
+        /// the track is seeded with a deep-clone of every root key (except the
+        /// Tracks meta-key itself) so that subsequent track-routed reads see the
+        /// snapshot of root state at track-creation time. Existing tracks are
+        /// backfilled in <see cref="BackfillRootKeysIntoTrack"/> from the
+        /// ProtocolManager setup paths after all tracks have been loaded.
         /// </summary>
         private static JsonObject EnsureTrackState(string trackKey)
         {
@@ -76,8 +81,60 @@ namespace BGC.Study
             }
 
             JsonObject trackState = new JsonObject();
+            BackfillRootKeysIntoTrack(trackState);
             root[trackKey] = trackState;
             return trackState;
+        }
+
+        /// <summary>
+        /// Copies any root user-data key (except the Tracks meta-key) that the track
+        /// is missing into <paramref name="trackState"/>, deep-cloning the value so
+        /// the track's copy can diverge without affecting root. Idempotent — keys
+        /// the track already owns are left alone (track-specific values must not be
+        /// overwritten by root state once divergence has begun).
+        /// </summary>
+        internal static void BackfillRootKeysIntoTrack(JsonObject trackState)
+        {
+            JsonObject root = PlayerData.ProfileData.UserDicts;
+            if (root == null) return;
+
+            foreach (KeyValuePair<string, JsonValue> kvp in root)
+            {
+                if (kvp.Key == TracksDataKey) continue;
+                if (trackState.ContainsKey(kvp.Key)) continue;
+                trackState[kvp.Key] = DeepClone(kvp.Value);
+            }
+        }
+
+        /// <summary>
+        /// Recursive value-deep-clone for LightJson. Primitive types (string,
+        /// number, bool, null) are value-semantic in JsonValue, so they pass through
+        /// unchanged; only JsonObject and JsonArray need to be cloned to avoid
+        /// aliasing the reference.
+        /// </summary>
+        internal static JsonValue DeepClone(JsonValue value)
+        {
+            if (value.IsJsonObject)
+            {
+                JsonObject src = value.AsJsonObject;
+                JsonObject dst = new JsonObject();
+                foreach (KeyValuePair<string, JsonValue> kvp in src)
+                {
+                    dst[kvp.Key] = DeepClone(kvp.Value);
+                }
+                return dst;
+            }
+            if (value.IsJsonArray)
+            {
+                JsonArray src = value.AsJsonArray;
+                JsonArray dst = new JsonArray();
+                foreach (JsonValue item in src)
+                {
+                    dst.Add(DeepClone(item));
+                }
+                return dst;
+            }
+            return value;
         }
 
         #region Persisted Properties

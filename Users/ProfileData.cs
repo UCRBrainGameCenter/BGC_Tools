@@ -14,6 +14,15 @@ namespace BGC.Users
 
         private JsonObject userData = new JsonObject();
 
+        /// <summary>
+        /// Direct reference to the flat root JsonObject (serialized under the
+        /// "UserDicts" JSON key). Exposed for write-through and deep-copy callers
+        /// (PlayerData, ProtocolTrack) that need to iterate or mutate the root
+        /// outside the normal typed-key API. In-place mutations are preserved by
+        /// the next <see cref="Serialize"/> call.
+        /// </summary>
+        public JsonObject UserDicts => userData;
+
         private const int userDataSerializationVersion = 1;
 
         public ProfileData(string userName, string loggingName)
