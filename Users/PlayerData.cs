@@ -147,8 +147,14 @@ namespace BGC.Users
             if (IsMetaKey(key)) { ProfileData.SetJsonValue(key, value); return; }
 
             JsonObject active = ActiveTrackJsonOrNull();
-            if (active != null) { active[key] = value; return; }
+            if (active != null)
+            {
+                UnityEngine.Debug.Log($"[TrackDbg] SetJsonValue(\"{key}\") -> active track \"{ProtocolManager.ActiveTrackKey}\"");
+                active[key] = value;
+                return;
+            }
 
+            UnityEngine.Debug.Log($"[TrackDbg] SetJsonValue(\"{key}\") -> NO active track, write-through to root + {System.Linq.Enumerable.Count(EnumerateTrackJsonObjects())} tracks");
             ProfileData.SetJsonValue(key, value);
             // Deep-clone for each track so tracks can independently mutate JsonObject/Array values
             foreach (JsonObject track in EnumerateTrackJsonObjects())

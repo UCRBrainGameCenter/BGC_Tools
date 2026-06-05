@@ -162,6 +162,7 @@ namespace BGC.Study
         {
             if (trackKey == null)
             {
+                Debug.Log($"[TrackDbg] SetActiveTrack(null) — clearing (was \"{activeTrackKey}\")");
                 activeTrackKey = null;
                 return;
             }
@@ -172,6 +173,7 @@ namespace BGC.Study
                 return;
             }
 
+            Debug.Log($"[TrackDbg] SetActiveTrack(\"{trackKey}\") (was \"{activeTrackKey}\")");
             activeTrackKey = trackKey;
         }
 
@@ -183,6 +185,7 @@ namespace BGC.Study
         /// </summary>
         public static void ClearActiveTrack()
         {
+            Debug.Log($"[TrackDbg] ClearActiveTrack() — was \"{activeTrackKey}\"");
             activeTrackKey = null;
         }
 
@@ -201,6 +204,7 @@ namespace BGC.Study
                 return;
             }
 
+            Debug.Log($"[TrackDbg] InvalidateTracksIfUserChanged — profile changed, clearing tracks & activeTrackKey (was \"{activeTrackKey}\")");
             tracks.Clear();
             activeTrackKey = null;
             tracksOwnerProfile = currentProfile;
@@ -335,7 +339,18 @@ namespace BGC.Study
         public static int SessionNumber
         {
             get => ActiveTrack?.SessionNumber ?? 0;
-            set { if (ActiveTrack != null) ActiveTrack.SessionNumber = value; }
+            set
+            {
+                if (ActiveTrack != null)
+                {
+                    Debug.Log($"[TrackDbg] SessionNumber = {value} -> routed into track \"{activeTrackKey}\"");
+                    ActiveTrack.SessionNumber = value;
+                }
+                else
+                {
+                    Debug.LogError($"[TrackDbg] SessionNumber = {value} DROPPED — ActiveTrack is null (activeTrackKey=\"{activeTrackKey}\", tracks.Count={tracks.Count})");
+                }
+            }
         }
 
         public static int SequenceIndex
