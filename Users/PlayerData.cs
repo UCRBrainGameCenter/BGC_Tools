@@ -27,6 +27,13 @@ namespace BGC.Users
         /// <summary> Profile Data of the current user.  Or default if none are logged in. </summary>
         public static ProfileData ProfileData => _currentUserData as ProfileData ?? DefaultData;
 
+        /// <summary>
+        /// The currently-logged-in user (or null). Used by <see cref="ProfileData.RoutingActive"/>
+        /// so only the current user's profile routes per active track — never DefaultData/GlobalData
+        /// or a transient non-current UserData instance.
+        /// </summary>
+        internal static UserData CurrentUserOrNull => _currentUserData;
+
         /// <summary>Returns the language the user is using.</summary>
         public static LocalizationSystem.Language Language
         {
@@ -62,262 +69,37 @@ namespace BGC.Users
             GlobalData.Serialize();
         }
 
-        public static bool HasKey(string key)
-        {
-            if (IsMetaKey(key)) return ProfileData.HasKey(key);
+        // The per-track routing now lives in ProfileData's instance accessors (so it is transparent:
+        // PlayerData.X and PlayerData.ProfileData.X resolve identically). These statics are thin
+        // delegations to the current profile.
+        public static bool HasKey(string key) => ProfileData.HasKey(key);
+        public static void RemoveKey(string key) => ProfileData.RemoveKey(key);
 
-            JsonObject active = ActiveTrackJsonOrNull();
-            if (active != null) return active.ContainsKey(key);
+        public static void SetInt(string key, int value) => ProfileData.SetInt(key, value);
+        public static void SetBool(string key, bool value) => ProfileData.SetBool(key, value);
+        public static void SetString(string key, string value) => ProfileData.SetString(key, value);
+        public static void SetFloat(string key, float value) => ProfileData.SetFloat(key, value);
+        public static void SetDouble(string key, double value) => ProfileData.SetDouble(key, value);
+        public static void SetJsonValue(string key, JsonValue value) => ProfileData.SetJsonValue(key, value);
+        public static void SetJsonArray(string key, JsonArray value) => ProfileData.SetJsonArray(key, value);
 
-            return ProfileData.HasKey(key);
-        }
-
-        public static void RemoveKey(string key)
-        {
-            if (IsMetaKey(key)) { ProfileData.RemoveKey(key); return; }
-
-            JsonObject active = ActiveTrackJsonOrNull();
-            if (active != null) { active.Remove(key); return; }
-
-            // Write-through delete: root + every track
-            ProfileData.RemoveKey(key);
-            foreach (JsonObject track in EnumerateTrackJsonObjects())
-            {
-                if (track.ContainsKey(key)) track.Remove(key);
-            }
-        }
-
-        public static void SetInt(string key, int value)
-        {
-            if (IsMetaKey(key)) { ProfileData.SetInt(key, value); return; }
-
-            JsonObject active = ActiveTrackJsonOrNull();
-            if (active != null) { active[key] = value; return; }
-
-            ProfileData.SetInt(key, value);
-            foreach (JsonObject track in EnumerateTrackJsonObjects()) track[key] = value;
-        }
-
-        public static void SetBool(string key, bool value)
-        {
-            if (IsMetaKey(key)) { ProfileData.SetBool(key, value); return; }
-
-            JsonObject active = ActiveTrackJsonOrNull();
-            if (active != null) { active[key] = value; return; }
-
-            ProfileData.SetBool(key, value);
-            foreach (JsonObject track in EnumerateTrackJsonObjects()) track[key] = value;
-        }
-
-        public static void SetString(string key, string value)
-        {
-            if (IsMetaKey(key)) { ProfileData.SetString(key, value); return; }
-
-            JsonObject active = ActiveTrackJsonOrNull();
-            if (active != null) { active[key] = value; return; }
-
-            ProfileData.SetString(key, value);
-            foreach (JsonObject track in EnumerateTrackJsonObjects()) track[key] = value;
-        }
-
-        public static void SetFloat(string key, float value)
-        {
-            if (IsMetaKey(key)) { ProfileData.SetFloat(key, value); return; }
-
-            JsonObject active = ActiveTrackJsonOrNull();
-            if (active != null) { active[key] = value; return; }
-
-            ProfileData.SetFloat(key, value);
-            foreach (JsonObject track in EnumerateTrackJsonObjects()) track[key] = value;
-        }
-
-        public static void SetDouble(string key, double value)
-        {
-            if (IsMetaKey(key)) { ProfileData.SetDouble(key, value); return; }
-
-            JsonObject active = ActiveTrackJsonOrNull();
-            if (active != null) { active[key] = value; return; }
-
-            ProfileData.SetDouble(key, value);
-            foreach (JsonObject track in EnumerateTrackJsonObjects()) track[key] = value;
-        }
-
-        public static void SetJsonValue(string key, JsonValue value)
-        {
-            if (IsMetaKey(key)) { ProfileData.SetJsonValue(key, value); return; }
-
-            JsonObject active = ActiveTrackJsonOrNull();
-            if (active != null)
-            {
-                UnityEngine.Debug.Log($"[TrackDbg] SetJsonValue(\"{key}\") -> active track \"{ProtocolManager.ActiveTrackKey}\"");
-                active[key] = value;
-                return;
-            }
-
-            UnityEngine.Debug.Log($"[TrackDbg] SetJsonValue(\"{key}\") -> NO active track, write-through to root + {System.Linq.Enumerable.Count(EnumerateTrackJsonObjects())} tracks");
-            ProfileData.SetJsonValue(key, value);
-            // Deep-clone for each track so tracks can independently mutate JsonObject/Array values
-            foreach (JsonObject track in EnumerateTrackJsonObjects())
-            {
-                track[key] = ProtocolTrack.DeepClone(value);
-            }
-        }
-
-        public static void SetJsonArray(string key, JsonArray value)
-        {
-            if (IsMetaKey(key)) { ProfileData.SetJsonArray(key, value); return; }
-
-            JsonObject active = ActiveTrackJsonOrNull();
-            if (active != null) { active[key] = value; return; }
-
-            ProfileData.SetJsonArray(key, value);
-            foreach (JsonObject track in EnumerateTrackJsonObjects())
-            {
-                track[key] = ProtocolTrack.DeepClone(value);
-            }
-        }
-
-        public static int GetInt(string key, int defaultReturn = 0)
-        {
-            if (IsMetaKey(key)) return ProfileData.GetInt(key, defaultReturn);
-
-            JsonObject active = ActiveTrackJsonOrNull();
-            if (active != null)
-            {
-                return active.ContainsKey(key) && active[key].IsInteger ? active[key].AsInteger : defaultReturn;
-            }
-            return ProfileData.GetInt(key, defaultReturn);
-        }
-
-        public static bool GetBool(string key, bool defaultReturn = false)
-        {
-            if (IsMetaKey(key)) return ProfileData.GetBool(key, defaultReturn);
-
-            JsonObject active = ActiveTrackJsonOrNull();
-            if (active != null)
-            {
-                return active.ContainsKey(key) && active[key].IsBoolean ? active[key].AsBoolean : defaultReturn;
-            }
-            return ProfileData.GetBool(key, defaultReturn);
-        }
-
-        public static string GetString(string key, string defaultReturn = "")
-        {
-            if (IsMetaKey(key)) return ProfileData.GetString(key, defaultReturn);
-
-            JsonObject active = ActiveTrackJsonOrNull();
-            if (active != null)
-            {
-                return active.ContainsKey(key) && active[key].IsString ? active[key].AsString : defaultReturn;
-            }
-            return ProfileData.GetString(key, defaultReturn);
-        }
-
-        public static float GetFloat(string key, float defaultReturn = 0f)
-        {
-            if (IsMetaKey(key)) return ProfileData.GetFloat(key, defaultReturn);
-
-            JsonObject active = ActiveTrackJsonOrNull();
-            if (active != null)
-            {
-                return active.ContainsKey(key) && active[key].IsNumber ? (float)active[key].AsNumber : defaultReturn;
-            }
-            return ProfileData.GetFloat(key, defaultReturn);
-        }
-
-        public static double GetDouble(string key, double defaultReturn = 0.0)
-        {
-            if (IsMetaKey(key)) return ProfileData.GetDouble(key, defaultReturn);
-
-            JsonObject active = ActiveTrackJsonOrNull();
-            if (active != null)
-            {
-                return active.ContainsKey(key) && active[key].IsNumber ? active[key].AsNumber : defaultReturn;
-            }
-            return ProfileData.GetDouble(key, defaultReturn);
-        }
-
-        public static JsonValue GetJsonValue(string key, JsonValue defaultReturn = default(JsonValue))
-        {
-            if (IsMetaKey(key)) return ProfileData.GetJsonValue(key, defaultReturn);
-
-            JsonObject active = ActiveTrackJsonOrNull();
-            if (active != null)
-            {
-                return active.ContainsKey(key) ? active[key] : defaultReturn;
-            }
-            return ProfileData.GetJsonValue(key, defaultReturn);
-        }
-
-        public static JsonArray GetJsonArray(string key, JsonArray defaultReturn = default(JsonArray))
-        {
-            if (IsMetaKey(key)) return ProfileData.GetJsonArray(key, defaultReturn);
-
-            JsonObject active = ActiveTrackJsonOrNull();
-            if (active != null)
-            {
-                return active.ContainsKey(key) && active[key].IsJsonArray ? active[key].AsJsonArray : defaultReturn;
-            }
-            return ProfileData.GetJsonArray(key, defaultReturn);
-        }
+        public static int GetInt(string key, int defaultReturn = 0) => ProfileData.GetInt(key, defaultReturn);
+        public static bool GetBool(string key, bool defaultReturn = false) => ProfileData.GetBool(key, defaultReturn);
+        public static string GetString(string key, string defaultReturn = "") => ProfileData.GetString(key, defaultReturn);
+        public static float GetFloat(string key, float defaultReturn = 0f) => ProfileData.GetFloat(key, defaultReturn);
+        public static double GetDouble(string key, double defaultReturn = 0.0) => ProfileData.GetDouble(key, defaultReturn);
+        public static JsonValue GetJsonValue(string key, JsonValue defaultReturn = default(JsonValue)) => ProfileData.GetJsonValue(key, defaultReturn);
+        public static JsonArray GetJsonArray(string key, JsonArray defaultReturn = default(JsonArray)) => ProfileData.GetJsonArray(key, defaultReturn);
 
         #endregion Convenience Properties
 
         #region Per-Track Branched Routing
 
         /// <summary>
-        /// Meta-keys that always read/write at the flat root regardless of active track.
-        /// Currently the entire "ProtocolManager.*" prefix — these are the keys the routing
-        /// itself reads (e.g. "ProtocolManager.Tracks") so they can't be routed without
-        /// recursion. There is no per-key blocklist beyond this prefix; system keys
-        /// (BGCScience.Keys.*, Localization "Language", etc.) live inside each track's
-        /// JsonObject as deep-clones of root and stay in sync via write-through.
-        /// </summary>
-        private static bool IsMetaKey(string key)
-        {
-            return key != null && key.StartsWith("ProtocolManager.", StringComparison.Ordinal);
-        }
-
-        /// <summary>
-        /// Returns the JsonObject for the currently-active track inside
-        /// "ProtocolManager.Tracks", or null when no track is active or the track entry
-        /// isn't present. Never auto-creates: tracks are created by
-        /// <see cref="ProtocolTrack.EnsureTrackState"/>, which seeds them via deep-copy
-        /// from root. Lazily creating a bare track here would skip that seed.
-        /// </summary>
-        private static JsonObject ActiveTrackJsonOrNull()
-        {
-            string trackKey = ProtocolManager.ActiveTrackKey;
-            if (string.IsNullOrEmpty(trackKey)) return null;
-
-            JsonValue val = ProfileData.GetJsonValue(ProtocolTrack.TracksDataKey);
-            if (!val.IsJsonObject) return null;
-
-            JsonObject tracksRoot = val.AsJsonObject;
-            if (!tracksRoot.ContainsKey(trackKey) || !tracksRoot[trackKey].IsJsonObject) return null;
-
-            return tracksRoot[trackKey].AsJsonObject;
-        }
-
-        /// <summary>
-        /// Yields every track's JsonObject under "ProtocolManager.Tracks". Used by the
-        /// no-active-track write-through path to fan a Set out to every track.
-        /// </summary>
-        private static IEnumerable<JsonObject> EnumerateTrackJsonObjects()
-        {
-            JsonValue val = ProfileData.GetJsonValue(ProtocolTrack.TracksDataKey);
-            if (!val.IsJsonObject) yield break;
-
-            foreach (KeyValuePair<string, JsonValue> kvp in val.AsJsonObject)
-            {
-                if (kvp.Value.IsJsonObject) yield return kvp.Value.AsJsonObject;
-            }
-        }
-
-        /// <summary>
         /// Locates a specific track's JsonObject by key for the …ForTrack API. Never
         /// auto-creates: callers are expected to enumerate <see cref="ProtocolManager.Tracks"/>
-        /// for valid track keys first. Logs an error and returns null on miss.
+        /// for valid track keys first. Logs an error and returns null on miss. Reads the raw
+        /// root (<see cref="ProfileData.UserDicts"/>) directly so it is unaffected by routing.
         /// </summary>
         private static JsonObject ExistingTrackJsonOrLogError(string trackKey, string caller)
         {
@@ -327,14 +109,14 @@ namespace BGC.Users
                 return null;
             }
 
-            JsonValue val = ProfileData.GetJsonValue(ProtocolTrack.TracksDataKey);
-            if (!val.IsJsonObject)
+            JsonObject root = ProfileData.UserDicts;
+            if (!root.ContainsKey(ProtocolTrack.TracksDataKey) || !root[ProtocolTrack.TracksDataKey].IsJsonObject)
             {
                 Debug.LogError($"PlayerData.{caller}: no tracks loaded (\"{ProtocolTrack.TracksDataKey}\" missing).");
                 return null;
             }
 
-            JsonObject tracksRoot = val.AsJsonObject;
+            JsonObject tracksRoot = root[ProtocolTrack.TracksDataKey].AsJsonObject;
             if (!tracksRoot.ContainsKey(trackKey) || !tracksRoot[trackKey].IsJsonObject)
             {
                 Debug.LogError($"PlayerData.{caller}: track \"{trackKey}\" does not exist.");
