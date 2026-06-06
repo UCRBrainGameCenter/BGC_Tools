@@ -233,6 +233,45 @@ namespace BGC.Study
 
         private string StateKey => $"BGC.Study.WindowLockout:{id}";
 
+        // Sequence index of the lockout instance most recently counted toward the
+        // window, or -1 if none. Used by CheckLockout to count each instance once.
+        private int ReadLastCountedIndex()
+        {
+            JsonObject obj = ProtocolManager.GetExtensionStateObject(StateKey);
+            return obj != null && obj.ContainsKey("lastCountedIndex")
+                ? obj["lastCountedIndex"].AsInteger
+                : -1;
+        }
+
+        // Start time of the most recently completed session — the first session of the
+        // window being opened. Anchoring windowStart here (rather than "now", the moment
+        // this gate happens to be evaluated) makes "N sessions within T minutes" measure
+        // from when that session actually began. It also self-corrects a stale gate: if
+        // the app was quit between the session and this lockout, the recovered start may
+        // already be more than WindowTime ago, so the window opens already-expired
+        // instead of granting a fresh full window long after the session ran. Falls back
+        // to <paramref name="fallback"/> when no session has been recorded yet.
+        private static DateTime MostRecentSessionStart(
+            IEnumerable<SequenceTime> sequenceTimes, DateTime fallback)
+        {
+            DateTime start = fallback;
+            DateTime latestCompleted = DateTime.MinValue;
+
+            if (sequenceTimes != null)
+            {
+                foreach (SequenceTime st in sequenceTimes)
+                {
+                    if (st.type == SequenceType.Session && st.completedTime >= latestCompleted)
+                    {
+                        latestCompleted = st.completedTime;
+                        start = st.encounteredTime;
+                    }
+                }
+            }
+
+            return start;
+        }
+
         public WindowLockout(JsonObject data) : base(data)
         {
             if (data.ContainsKey(ProtocolKeys.LockoutElement.WindowTime))
@@ -335,81 +374,20 @@ namespace BGC.Study
 
         public override void ClearLockout()
         {
-            if (WindowTimeMinutes <= 0 || MaxSessions <= 0)
-            {
-                ProtocolManager.RemoveExtensionState(StateKey);
-                return;
-            }
-
-            JsonObject obj = ProtocolManager.GetExtensionStateObject(StateKey);
-            if (obj == null)
-            {
-                return;
-            }
-
-            DateTime windowStart = obj.ContainsKey("windowStart")
-                ? (obj["windowStart"].AsDateTime ?? DateTime.MinValue)
-                : DateTime.MinValue;
-            DateTime lastPassTime = obj.ContainsKey("lastPassTime")
-                ? (obj["lastPassTime"].AsDateTime ?? DateTime.MinValue)
-                : DateTime.MinValue;
-            int passCount = obj.ContainsKey("passCount") ? obj["passCount"].AsInteger : 0;
-
-            if (windowStart == DateTime.MinValue)
-            {
-                // No active window — nothing to skip
-                return;
-            }
-
-            DateTime now = DateTime.Now;
-            TimeSpan timeToSkip = TimeSpan.Zero;
-
-            // Determine how much time we need to skip to clear the MinTime lockout
-            if (lastPassTime != DateTime.MinValue && MinTimeMinutes > 0)
-            {
-                DateTime minTimeExpiry = lastPassTime.AddMinutes(MinTimeMinutes);
-                if (minTimeExpiry > now)
-                {
-                    timeToSkip = minTimeExpiry - now;
-                }
-            }
-
-            // Determine how much time we need to skip to clear the MaxSessions lockout
-            if (passCount >= MaxSessions)
-            {
-                DateTime windowExpiry = windowStart.AddMinutes(WindowTimeMinutes);
-                if (windowExpiry > now)
-                {
-                    TimeSpan windowWait = windowExpiry - now;
-                    if (windowWait > timeToSkip)
-                    {
-                        timeToSkip = windowWait;
-                    }
-                }
-            }
-
-            if (timeToSkip <= TimeSpan.Zero)
-            {
-                // Not currently locked — nothing to skip
-                return;
-            }
-
-            // Shift all stored times backward by timeToSkip, simulating that
-            // the minimum required time has actually elapsed.
-            windowStart -= timeToSkip;
-
-            if (lastPassTime != DateTime.MinValue)
-            {
-                lastPassTime -= timeToSkip;
-            }
+            // Admin skip: drop the current window and the min-time gate so this lockout
+            // no longer blocks. Preserve lastCountedIndex so re-polling the *current*
+            // position does not immediately re-count and re-lock — the next NEW
+            // encounter (the following lockout instance) opens a fresh window.
+            int lastCountedIndex = ReadLastCountedIndex();
 
             ProtocolManager.SetExtensionState(
                 StateKey,
                 new JsonValue(new JsonObject
                 {
-                    { "windowStart", windowStart },
-                    { "lastPassTime", lastPassTime },
-                    { "passCount", passCount }
+                    { "windowStart", DateTime.MinValue },
+                    { "lastPassTime", DateTime.MinValue },
+                    { "passCount", 0 },
+                    { "lastCountedIndex", lastCountedIndex }
                 }));
         }
 
@@ -420,32 +398,21 @@ namespace BGC.Study
                 return;
             }
 
+            // The window count is maintained in CheckLockout (incremented once when each
+            // lockout instance is first encountered). Completion only records when this
+            // gate was passed, so MinTime can enforce a gap before the next session.
             JsonObject obj = ProtocolManager.GetExtensionStateObject(StateKey);
 
             DateTime windowStart = DateTime.MinValue;
-            DateTime lastPassTime = DateTime.MinValue;
             int passCount = 0;
+            int lastCountedIndex = -1;
 
             if (obj != null)
             {
                 windowStart = obj.ContainsKey("windowStart") ? (obj["windowStart"].AsDateTime ?? DateTime.MinValue) : DateTime.MinValue;
-                lastPassTime = obj.ContainsKey("lastPassTime") ? (obj["lastPassTime"].AsDateTime ?? DateTime.MinValue) : DateTime.MinValue;
                 passCount = obj.ContainsKey("passCount") ? obj["passCount"].AsInteger : 0;
+                lastCountedIndex = obj.ContainsKey("lastCountedIndex") ? obj["lastCountedIndex"].AsInteger : -1;
             }
-
-            // Check if the window has expired using completedTime (the actual current time)
-            DateTime windowEnd = windowStart.AddMinutes(WindowTimeMinutes);
-            if (windowStart == DateTime.MinValue || completedTime >= windowEnd)
-            {
-                // Use completedTime (DateTime.Now) rather than encounteredTime
-                // (which comes from CurrentSequenceStartTime and may be stale).
-                // This is consistent with CheckLockout() which uses currentTime.
-                windowStart = completedTime;
-                lastPassTime = DateTime.MinValue;
-                passCount = 0;
-            }
-
-            int newPassCount = passCount + 1;
 
             ProtocolManager.SetExtensionState(
                 StateKey,
@@ -453,7 +420,8 @@ namespace BGC.Study
                 {
                     { "windowStart", windowStart },
                     { "lastPassTime", completedTime },
-                    { "passCount", newPassCount }
+                    { "passCount", passCount },
+                    { "lastCountedIndex", lastCountedIndex }
                 }));
         }
 
@@ -468,42 +436,39 @@ namespace BGC.Study
 
             DateTime windowStart = DateTime.MinValue;
             DateTime lastPassTime = DateTime.MinValue;
-            int passCount = 0;
+            int count = 0;
+            int lastCountedIndex = -1;
 
             if (obj != null)
             {
                 windowStart = obj.ContainsKey("windowStart") ? (obj["windowStart"].AsDateTime ?? DateTime.MinValue) : DateTime.MinValue;
                 lastPassTime = obj.ContainsKey("lastPassTime") ? (obj["lastPassTime"].AsDateTime ?? DateTime.MinValue) : DateTime.MinValue;
-                passCount = obj.ContainsKey("passCount") ? obj["passCount"].AsInteger : 0;
+                count = obj.ContainsKey("passCount") ? obj["passCount"].AsInteger : 0;
+                lastCountedIndex = obj.ContainsKey("lastCountedIndex") ? obj["lastCountedIndex"].AsInteger : -1;
             }
 
-            // Check if min time between sessions has passed (use currentTime)
-            if (lastPassTime != DateTime.MinValue && MinTimeMinutes > 0)
+            // Count this lockout instance ONCE, the first time it is encountered at this
+            // sequence position. The same lockout element repeats at many positions
+            // (between every pair of sessions); each position is one instance toward the
+            // window's limit. CheckLockout is polled repeatedly within a single encounter
+            // (status refreshes, hub re-renders), so dedupe on the active SequenceIndex.
+            // When the window has expired (or never opened) a fresh window starts here and
+            // the count resets — exactly the "window expires -> count resets to 0" rule.
+            int currentIndex = ProtocolManager.SequenceIndex;
+            if (currentIndex != lastCountedIndex)
             {
-                double minutesSinceLastPass = (currentTime - lastPassTime).TotalMinutes;
-                if (minutesSinceLastPass < MinTimeMinutes)
+                bool windowExpired = windowStart == DateTime.MinValue
+                    || currentTime >= windowStart.AddMinutes(WindowTimeMinutes);
+                if (windowExpired)
                 {
-                    return true;
+                    // Anchor the new window to the start of the session that opened it,
+                    // not to "now" (when this gate is reached). See MostRecentSessionStart.
+                    windowStart = MostRecentSessionStart(sequenceTimes, currentTime);
+                    count = 0;
                 }
-            }
 
-            // Check if we have an active window using currentTime (not stale CurrentSequenceStartTime)
-            bool hasActiveWindow = windowStart != DateTime.MinValue;
-            if (hasActiveWindow)
-            {
-                DateTime windowEnd = windowStart.AddMinutes(WindowTimeMinutes);
-                if (currentTime >= windowEnd)
-                {
-                    hasActiveWindow = false;
-                }
-            }
-
-            // If no active window, start a new one and we're not locked
-            if (!hasActiveWindow)
-            {
-                windowStart = currentTime;
-                lastPassTime = DateTime.MinValue;
-                passCount = 0;
+                count++;
+                lastCountedIndex = currentIndex;
 
                 ProtocolManager.SetExtensionState(
                     StateKey,
@@ -511,16 +476,25 @@ namespace BGC.Study
                     {
                         { "windowStart", windowStart },
                         { "lastPassTime", lastPassTime },
-                        { "passCount", passCount }
+                        { "passCount", count },
+                        { "lastCountedIndex", lastCountedIndex }
                     }));
-
-                return false;
             }
 
-            // Check if we've already reached the max sessions limit for this window.
-            // passCount is incremented by OnLockoutCompleted each time this gate is
-            // passed through, so it already reflects completed passes.
-            if (passCount >= MaxSessions)
+            // Minimum time between consecutive sessions.
+            if (lastPassTime != DateTime.MinValue && MinTimeMinutes > 0)
+            {
+                if ((currentTime - lastPassTime).TotalMinutes < MinTimeMinutes)
+                {
+                    return true;
+                }
+            }
+
+            // Window limit: locked once this window has counted MaxSessions instances and
+            // the window has not yet elapsed.
+            if (windowStart != DateTime.MinValue
+                && currentTime < windowStart.AddMinutes(WindowTimeMinutes)
+                && count >= MaxSessions)
             {
                 return true;
             }
