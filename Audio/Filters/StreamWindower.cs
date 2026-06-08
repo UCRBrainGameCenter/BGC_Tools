@@ -65,7 +65,7 @@ namespace BGC.Audio.Filters
             {
                 //Requested smoothing samples exceeded remaining stream length
                 int totalSmoothingSamples = openingSmoothingSamples + closingSmoothingSamples;
-                int excessSamples = ChannelSamples - totalSmoothingSamples;
+                int excessSamples = totalSmoothingSamples - ChannelSamples;
 
                 //Allocate reduced smoothing samples based on requested percentage
                 openingSmoothingSamples -= (int)Math.Round(
