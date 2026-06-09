@@ -188,12 +188,10 @@ namespace BGC.Users
             JsonObject active = ActiveTrackJsonOrNull();
             if (active != null)
             {
-                Debug.Log($"[TrackDbg] SetJsonValue(\"{key}\") -> active track \"{ProtocolManager.ActiveTrackKey}\"");
                 RawSetJsonValue(active, key, value);
                 return;
             }
 
-            Debug.Log($"[TrackDbg] SetJsonValue(\"{key}\") -> NO active track, write-through to root + tracks");
             RawSetJsonValue(userData, key, value);
             // Deep-clone per track so tracks can independently mutate JsonObject/Array values.
             foreach (JsonObject track in EnumerateTrackJsonObjects())

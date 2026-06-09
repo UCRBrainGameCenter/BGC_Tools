@@ -121,15 +121,6 @@ namespace BGC.Study
         // the timelock is back".
         private static BGC.Users.ProfileData tracksOwnerProfile = null;
 
-        // [TrackDbg] TEMPORARY: make [TrackDbg] logs single-line so a full session/battery
-        // trace fits in one capture. Suppresses stack traces for Log-level only (Warnings/
-        // Errors keep theirs). Remove with the rest of the [TrackDbg] instrumentation.
-        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]
-        private static void TrackDbgSuppressLogStackTraces()
-        {
-            Application.SetStackTraceLogType(LogType.Log, StackTraceLogType.None);
-        }
-
         /// <summary>
         /// The key of the currently active track. Null when no track is loaded.
         /// </summary>
@@ -171,7 +162,6 @@ namespace BGC.Study
         {
             if (trackKey == null)
             {
-                Debug.Log($"[TrackDbg] SetActiveTrack(null) — clearing (was \"{activeTrackKey}\")");
                 activeTrackKey = null;
                 return;
             }
@@ -182,7 +172,6 @@ namespace BGC.Study
                 return;
             }
 
-            Debug.Log($"[TrackDbg] SetActiveTrack(\"{trackKey}\") (was \"{activeTrackKey}\")");
             activeTrackKey = trackKey;
         }
 
@@ -194,7 +183,6 @@ namespace BGC.Study
         /// </summary>
         public static void ClearActiveTrack()
         {
-            Debug.Log($"[TrackDbg] ClearActiveTrack() — was \"{activeTrackKey}\"");
             activeTrackKey = null;
         }
 
@@ -213,7 +201,6 @@ namespace BGC.Study
                 return;
             }
 
-            Debug.Log($"[TrackDbg] InvalidateTracksIfUserChanged — profile changed, clearing tracks & activeTrackKey (was \"{activeTrackKey}\")");
             tracks.Clear();
             activeTrackKey = null;
             tracksOwnerProfile = currentProfile;
@@ -348,18 +335,7 @@ namespace BGC.Study
         public static int SessionNumber
         {
             get => ActiveTrack?.SessionNumber ?? 0;
-            set
-            {
-                if (ActiveTrack != null)
-                {
-                    Debug.Log($"[TrackDbg] SessionNumber = {value} -> routed into track \"{activeTrackKey}\"");
-                    ActiveTrack.SessionNumber = value;
-                }
-                else
-                {
-                    Debug.LogError($"[TrackDbg] SessionNumber = {value} DROPPED — ActiveTrack is null (activeTrackKey=\"{activeTrackKey}\", tracks.Count={tracks.Count})");
-                }
-            }
+            set { if (ActiveTrack != null) ActiveTrack.SessionNumber = value; }
         }
 
         public static int SequenceIndex
@@ -597,11 +573,8 @@ namespace BGC.Study
 
         public static ProtocolStatus CheckSequenceStatus()
         {
-            Debug.Log($"[TrackDbg] CheckSequenceStatus track=\"{activeTrackKey}\" seqIdx={SequenceIndex} elementNum={ElementNumber} sessionInProgress={SessionInProgress}");
-
             if (currentProtocol == null)
             {
-                Debug.Log("[TrackDbg] CheckSequenceStatus -> Uninitialized (currentProtocol null)");
                 return ProtocolStatus.Uninitialized;
             }
 
@@ -693,10 +666,8 @@ namespace BGC.Study
                     SessionNumber = GetSessionOrdinalAtSequenceIndex(seqIndex);
 
                     nextSessionElementIndex = Math.Min(ElementNumber, currentSession.Count);
-                    Debug.Log($"[TrackDbg] CheckSequenceStatus -> SessionReady seqIdx={seqIndex} sessionId={currentSession.id} sessionCount={currentSession.Count} resumeElementNum={ElementNumber} -> nextIdx={nextSessionElementIndex}");
                     if (nextSessionElementIndex >= currentSession.Count)
                     {
-                        Debug.Log("[TrackDbg] CheckSequenceStatus -> SessionElementLimitExceeded");
                         return ProtocolStatus.SessionElementLimitExceeded;
                     }
 
@@ -736,8 +707,6 @@ namespace BGC.Study
                 }
             }
 
-            Debug.Log($"[TrackDbg] AdvanceSequence track=\"{activeTrackKey}\" seqIdx {SequenceIndex} -> {SequenceIndex + 1} (markCompletion={markCompletion})");
-
             SequenceIndex = SequenceIndex + 1;
             nextSessionElementIndex = -1;
             currentSession = null;
@@ -750,7 +719,6 @@ namespace BGC.Study
             LockoutExpiration = DateTime.MinValue;
 
             ProtocolStatus result = CheckSequenceStatus();
-            Debug.Log($"[TrackDbg] AdvanceSequence -> {result}");
             return result;
         }
 
@@ -1116,19 +1084,15 @@ namespace BGC.Study
 
         public static async Task<ProtocolStatus> ExecuteNextElement(bool resuming = false)
         {
-            Debug.Log($"[TrackDbg] ExecuteNextElement(resuming={resuming}) track=\"{activeTrackKey}\" nextIdx={nextSessionElementIndex} sessionCount={currentSession?.Count ?? -1} sessionId={currentSession?.id} seqIdx={SequenceIndex} elementNum={ElementNumber}");
-
             // If session state isn't initialized, check the sequence status to determine
             // the actual protocol state (could be Locked, SessionFinished, etc.)
             if (nextSessionElementIndex == -1 || currentSession == null)
             {
-                Debug.Log($"[TrackDbg] ExecuteNextElement -> CheckSequenceStatus (uninitialized: nextIdx={nextSessionElementIndex}, currentSession={(currentSession == null ? "null" : "set")})");
                 return CheckSequenceStatus();
             }
 
             if (nextSessionElementIndex == currentSession.Count)
             {
-                Debug.Log($"[TrackDbg] ExecuteNextElement -> session complete (nextIdx==count={currentSession.Count}), AdvanceSequence");
                 SessionInProgress = false;
                 sessionElementOverrun?.Invoke();
 
@@ -1143,8 +1107,6 @@ namespace BGC.Study
             currentSessionElement?.CleanupElement();
 
             currentSessionElement = currentSession[nextSessionElementIndex];
-
-            Debug.Log($"[TrackDbg] ExecuteNextElement -> running element idx={nextSessionElementIndex} type=\"{currentSessionElement.ElementType}\"");
 
             ElementNumber = nextSessionElementIndex;
             ++nextSessionElementIndex;
