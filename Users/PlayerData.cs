@@ -5,6 +5,7 @@ using UnityEngine;
 using LightJson;
 using BGC.IO;
 using BGC.Localization;
+using BGC.Study;
 using BGC.Utility;
 using UnityEngine.SocialPlatforms;
 
@@ -25,6 +26,13 @@ namespace BGC.Users
         private static UserData _currentUserData = null;
         /// <summary> Profile Data of the current user.  Or default if none are logged in. </summary>
         public static ProfileData ProfileData => _currentUserData as ProfileData ?? DefaultData;
+
+        /// <summary>
+        /// The currently-logged-in user (or null). Used by <see cref="ProfileData.RoutingActive"/>
+        /// so only the current user's profile routes per active track — never DefaultData/GlobalData
+        /// or a transient non-current UserData instance.
+        /// </summary>
+        internal static UserData CurrentUserOrNull => _currentUserData;
 
         /// <summary>Returns the language the user is using.</summary>
         public static LocalizationSystem.Language Language
@@ -61,6 +69,9 @@ namespace BGC.Users
             GlobalData.Serialize();
         }
 
+        // The per-track routing now lives in ProfileData's instance accessors (so it is transparent:
+        // PlayerData.X and PlayerData.ProfileData.X resolve identically). These statics are thin
+        // delegations to the current profile.
         public static bool HasKey(string key) => ProfileData.HasKey(key);
         public static void RemoveKey(string key) => ProfileData.RemoveKey(key);
 
@@ -81,6 +92,161 @@ namespace BGC.Users
         public static JsonArray GetJsonArray(string key, JsonArray defaultReturn = default(JsonArray)) => ProfileData.GetJsonArray(key, defaultReturn);
 
         #endregion Convenience Properties
+
+        #region Per-Track Branched Routing
+
+        /// <summary>
+        /// Locates a specific track's JsonObject by key for the …ForTrack API. Never
+        /// auto-creates: callers are expected to enumerate <see cref="ProtocolManager.Tracks"/>
+        /// for valid track keys first. Logs an error and returns null on miss. Reads the raw
+        /// root (<see cref="ProfileData.UserDicts"/>) directly so it is unaffected by routing.
+        /// </summary>
+        private static JsonObject ExistingTrackJsonOrLogError(string trackKey, string caller)
+        {
+            if (string.IsNullOrEmpty(trackKey))
+            {
+                Debug.LogError($"PlayerData.{caller}: trackKey is null or empty.");
+                return null;
+            }
+
+            JsonObject root = ProfileData.UserDicts;
+            if (!root.ContainsKey(ProtocolTrack.TracksDataKey) || !root[ProtocolTrack.TracksDataKey].IsJsonObject)
+            {
+                Debug.LogError($"PlayerData.{caller}: no tracks loaded (\"{ProtocolTrack.TracksDataKey}\" missing).");
+                return null;
+            }
+
+            JsonObject tracksRoot = root[ProtocolTrack.TracksDataKey].AsJsonObject;
+            if (!tracksRoot.ContainsKey(trackKey) || !tracksRoot[trackKey].IsJsonObject)
+            {
+                Debug.LogError($"PlayerData.{caller}: track \"{trackKey}\" does not exist.");
+                return null;
+            }
+
+            return tracksRoot[trackKey].AsJsonObject;
+        }
+
+        #endregion Per-Track Branched Routing
+
+        #region Per-Track Explicit API (...ForTrack)
+
+        // Optional API for inspecting / mutating a specific track regardless of the
+        // current active track. Use case: TrackHub displaying every track's lockout
+        // / password / progress state without switching active track.
+        // Behavior on missing track: no-op write (with Debug.LogError) / default-return read.
+
+        public static bool HasKeyForTrack(string trackKey, string key)
+        {
+            JsonObject t = ExistingTrackJsonOrLogError(trackKey, nameof(HasKeyForTrack));
+            return t != null && t.ContainsKey(key);
+        }
+
+        public static void RemoveKeyForTrack(string trackKey, string key)
+        {
+            JsonObject t = ExistingTrackJsonOrLogError(trackKey, nameof(RemoveKeyForTrack));
+            if (t == null) return;
+            if (t.ContainsKey(key)) t.Remove(key);
+        }
+
+        public static void SetIntForTrack(string trackKey, string key, int value)
+        {
+            JsonObject t = ExistingTrackJsonOrLogError(trackKey, nameof(SetIntForTrack));
+            if (t == null) return;
+            t[key] = value;
+        }
+
+        public static void SetBoolForTrack(string trackKey, string key, bool value)
+        {
+            JsonObject t = ExistingTrackJsonOrLogError(trackKey, nameof(SetBoolForTrack));
+            if (t == null) return;
+            t[key] = value;
+        }
+
+        public static void SetStringForTrack(string trackKey, string key, string value)
+        {
+            JsonObject t = ExistingTrackJsonOrLogError(trackKey, nameof(SetStringForTrack));
+            if (t == null) return;
+            t[key] = value;
+        }
+
+        public static void SetFloatForTrack(string trackKey, string key, float value)
+        {
+            JsonObject t = ExistingTrackJsonOrLogError(trackKey, nameof(SetFloatForTrack));
+            if (t == null) return;
+            t[key] = value;
+        }
+
+        public static void SetDoubleForTrack(string trackKey, string key, double value)
+        {
+            JsonObject t = ExistingTrackJsonOrLogError(trackKey, nameof(SetDoubleForTrack));
+            if (t == null) return;
+            t[key] = value;
+        }
+
+        public static void SetJsonValueForTrack(string trackKey, string key, JsonValue value)
+        {
+            JsonObject t = ExistingTrackJsonOrLogError(trackKey, nameof(SetJsonValueForTrack));
+            if (t == null) return;
+            t[key] = value;
+        }
+
+        public static void SetJsonArrayForTrack(string trackKey, string key, JsonArray value)
+        {
+            JsonObject t = ExistingTrackJsonOrLogError(trackKey, nameof(SetJsonArrayForTrack));
+            if (t == null) return;
+            t[key] = value;
+        }
+
+        public static int GetIntForTrack(string trackKey, string key, int defaultReturn = 0)
+        {
+            JsonObject t = ExistingTrackJsonOrLogError(trackKey, nameof(GetIntForTrack));
+            if (t == null) return defaultReturn;
+            return t.ContainsKey(key) && t[key].IsInteger ? t[key].AsInteger : defaultReturn;
+        }
+
+        public static bool GetBoolForTrack(string trackKey, string key, bool defaultReturn = false)
+        {
+            JsonObject t = ExistingTrackJsonOrLogError(trackKey, nameof(GetBoolForTrack));
+            if (t == null) return defaultReturn;
+            return t.ContainsKey(key) && t[key].IsBoolean ? t[key].AsBoolean : defaultReturn;
+        }
+
+        public static string GetStringForTrack(string trackKey, string key, string defaultReturn = "")
+        {
+            JsonObject t = ExistingTrackJsonOrLogError(trackKey, nameof(GetStringForTrack));
+            if (t == null) return defaultReturn;
+            return t.ContainsKey(key) && t[key].IsString ? t[key].AsString : defaultReturn;
+        }
+
+        public static float GetFloatForTrack(string trackKey, string key, float defaultReturn = 0f)
+        {
+            JsonObject t = ExistingTrackJsonOrLogError(trackKey, nameof(GetFloatForTrack));
+            if (t == null) return defaultReturn;
+            return t.ContainsKey(key) && t[key].IsNumber ? (float)t[key].AsNumber : defaultReturn;
+        }
+
+        public static double GetDoubleForTrack(string trackKey, string key, double defaultReturn = 0.0)
+        {
+            JsonObject t = ExistingTrackJsonOrLogError(trackKey, nameof(GetDoubleForTrack));
+            if (t == null) return defaultReturn;
+            return t.ContainsKey(key) && t[key].IsNumber ? t[key].AsNumber : defaultReturn;
+        }
+
+        public static JsonValue GetJsonValueForTrack(string trackKey, string key, JsonValue defaultReturn = default(JsonValue))
+        {
+            JsonObject t = ExistingTrackJsonOrLogError(trackKey, nameof(GetJsonValueForTrack));
+            if (t == null) return defaultReturn;
+            return t.ContainsKey(key) ? t[key] : defaultReturn;
+        }
+
+        public static JsonArray GetJsonArrayForTrack(string trackKey, string key, JsonArray defaultReturn = default(JsonArray))
+        {
+            JsonObject t = ExistingTrackJsonOrLogError(trackKey, nameof(GetJsonArrayForTrack));
+            if (t == null) return defaultReturn;
+            return t.ContainsKey(key) && t[key].IsJsonArray ? t[key].AsJsonArray : defaultReturn;
+        }
+
+        #endregion Per-Track Explicit API
 
         /// <summary> Load all usernames </summary>
         public static void DeserializeUsers()

@@ -154,10 +154,18 @@ namespace BGC.Study
         public static string TrackHubSceneName { get; private set; } = DefaultTrackHubSceneName;
 
         /// <summary>
-        /// Switches the active track. The new track key must already exist in the tracks dictionary.
+        /// Switches the active track. The new track key must already exist in the
+        /// tracks dictionary; passing null clears the active track (equivalent to
+        /// <see cref="ClearActiveTrack"/>) to indicate "no session in progress".
         /// </summary>
         public static void SetActiveTrack(string trackKey)
         {
+            if (trackKey == null)
+            {
+                activeTrackKey = null;
+                return;
+            }
+
             if (!tracks.ContainsKey(trackKey))
             {
                 Debug.LogError($"SetActiveTrack: Track \"{trackKey}\" does not exist.");
@@ -165,6 +173,17 @@ namespace BGC.Study
             }
 
             activeTrackKey = trackKey;
+        }
+
+        /// <summary>
+        /// Clears the active track. Called when control returns to a hub between
+        /// sessions so PlayerData reads/writes route to the flat root (and writes
+        /// fan out via write-through) instead of routing into the previously-active
+        /// track.
+        /// </summary>
+        public static void ClearActiveTrack()
+        {
+            activeTrackKey = null;
         }
 
         /// <summary>
@@ -695,7 +714,7 @@ namespace BGC.Study
             currentLockout = null;
             SessionInProgress = false;
             ElementNumber = 0;
-            
+
             // Clear the stored lockout expiration since we're advancing past the lockout
             LockoutExpiration = DateTime.MinValue;
 
@@ -815,6 +834,7 @@ namespace BGC.Study
                 if (protocolDictionary.ContainsKey(protocolKey))
                 {
                     EnsureSingleTrack(protocolKey);
+                    BackfillRootKeysAcrossTracks();
                     ActiveTrack.CurrentProtocol = protocolDictionary[protocolKey];
 
                     // The track's persisted state (from MigrateFromFlatKeys or previous
@@ -879,11 +899,41 @@ namespace BGC.Study
                     return ProtocolStatus.InvalidProtocol;
                 }
 
+                BackfillRootKeysAcrossTracks();
                 activeTrackKey = firstKey;
-                return CheckSequenceStatus();
+                ProtocolStatus status = CheckSequenceStatus();
+                // Clear before returning so system writes the login flow performs
+                // afterwards (BGCScience.SessionCount, AllDownloaded, etc.) go via
+                // the no-active-track write-through path and land in root + every
+                // track, instead of leaking into firstKey only.
+                activeTrackKey = null;
+                return status;
             }
 
             return ProtocolStatus.Uninitialized;
+        }
+
+        /// <summary>
+        /// For every track entry under <see cref="ProtocolTrack.TracksDataKey"/>,
+        /// deep-clone any root user-data key the track is missing into it. Idempotent:
+        /// keys the track already owns are not overwritten, so per-track divergence
+        /// from prior in-track activity is preserved. Called at the end of the
+        /// protocol setup paths so tracks created by earlier code revisions get
+        /// retrofitted with the mirrored root keys the routing layer now expects.
+        /// </summary>
+        private static void BackfillRootKeysAcrossTracks()
+        {
+            JsonValue val = PlayerData.ProfileData.GetJsonValue(ProtocolTrack.TracksDataKey);
+            if (!val.IsJsonObject) return;
+            JsonObject root = val.AsJsonObject;
+
+            foreach (KeyValuePair<string, JsonValue> kvp in root)
+            {
+                if (kvp.Value.IsJsonObject)
+                {
+                    ProtocolTrack.BackfillRootKeysIntoTrack(kvp.Value.AsJsonObject);
+                }
+            }
         }
 
         public static ProtocolStatus SetSession(int session, int element = 0)
