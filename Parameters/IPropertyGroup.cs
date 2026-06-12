@@ -1001,13 +1001,9 @@ namespace BGC.Parameters
 
         public static Type GetDefaultSelectionType(this PropertyInfo info)
         {
-            foreach (AppendSelectionAttribute selectionAttribute in
-                info.GetCustomAttributes<AppendSelectionAttribute>())
+            foreach (Type type in info.GetSelectionTypes())
             {
-                foreach (Type type in selectionAttribute.selectionTypes)
-                {
-                    return type;
-                }
+                return type;
             }
 
             throw new Exception($"Failed to locate a Selection for property: {info}");
@@ -1015,8 +1011,24 @@ namespace BGC.Parameters
 
         /// <summary>
         /// Returns the valid Types for this PropertyGroup.
+        /// When the property carries an <see cref="AppendTypeProviderAttribute"/>, the provider
+        /// supplies the list; otherwise the static attribute-declared types are returned.
         /// </summary>
         public static IEnumerable<Type> GetListAdditionTypes(this PropertyInfo propertyInfo)
+        {
+            AppendTypeProviderAttribute providerAttribute =
+                propertyInfo.GetCustomAttribute<AppendTypeProviderAttribute>();
+
+            return providerAttribute != null
+                ? providerAttribute.GetProvider().GetListAdditionTypes(propertyInfo)
+                : propertyInfo.GetAttributeListAdditionTypes();
+        }
+
+        /// <summary>
+        /// Returns the Types declared via <see cref="AppendAdditionAttribute"/> only,
+        /// ignoring any <see cref="AppendTypeProviderAttribute"/> on the property.
+        /// </summary>
+        public static IEnumerable<Type> GetAttributeListAdditionTypes(this PropertyInfo propertyInfo)
         {
             foreach (AppendAdditionAttribute additionAttribute in
                 propertyInfo.GetCustomAttributes<AppendAdditionAttribute>())
@@ -1030,8 +1042,24 @@ namespace BGC.Parameters
 
         /// <summary>
         /// Returns the valid Types for this PropertyGroup.
+        /// When the property carries an <see cref="AppendTypeProviderAttribute"/>, the provider
+        /// supplies the list; otherwise the static attribute-declared types are returned.
         /// </summary>
         public static IEnumerable<Type> GetSelectionTypes(this PropertyInfo propertyInfo)
+        {
+            AppendTypeProviderAttribute providerAttribute =
+                propertyInfo.GetCustomAttribute<AppendTypeProviderAttribute>();
+
+            return providerAttribute != null
+                ? providerAttribute.GetProvider().GetSelectionTypes(propertyInfo)
+                : propertyInfo.GetAttributeSelectionTypes();
+        }
+
+        /// <summary>
+        /// Returns the Types declared via <see cref="AppendSelectionAttribute"/> only,
+        /// ignoring any <see cref="AppendTypeProviderAttribute"/> on the property.
+        /// </summary>
+        public static IEnumerable<Type> GetAttributeSelectionTypes(this PropertyInfo propertyInfo)
         {
             foreach (AppendSelectionAttribute selectionAttribute in
                 propertyInfo.GetCustomAttributes<AppendSelectionAttribute>())
