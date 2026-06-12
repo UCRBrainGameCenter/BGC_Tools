@@ -41,6 +41,22 @@ namespace BGC.Parameters.View
 
         protected virtual Type FallbackSetupMethodsClass => null;
 
+        /// <summary>
+        /// The types offered in a property-group selection dropdown, in display order.
+        /// Override to filter or reorder the user-facing choices. <paramref name="currentType"/>
+        /// is the type currently assigned to the property; overrides must keep it selectable so
+        /// existing data remains editable. This only affects dropdown construction —
+        /// deserialization always uses <see cref="PropertyGroupExtensions.GetSelectionTypes"/>.
+        /// </summary>
+        protected virtual IEnumerable<Type> GetSelectionChoiceTypes(PropertyInfo property, Type currentType) =>
+            property.GetSelectionTypes();
+
+        /// <summary>
+        /// Display title for a choice in a selection dropdown. Override to annotate titles
+        /// (e.g. deprecation markers) without affecting serialization names.
+        /// </summary>
+        protected virtual string GetSelectionChoiceTitle(Type type) => type.GetSelectionTitle();
+
         #region Interface Colors
 
         protected virtual Color PropertyGroupDropdownNormalBG { get; } = Color.white;
@@ -283,13 +299,13 @@ namespace BGC.Parameters.View
 
 
             List<Dropdown.OptionData> propertyGroupChoices = new List<Dropdown.OptionData>();
-            Type[] propertyGroupChoiceTypes = property.GetSelectionTypes().ToArray();
+            Type[] propertyGroupChoiceTypes = GetSelectionChoiceTypes(property, propertyGroup.GetType()).ToArray();
 
             int currentDataIndex = 0;
 
             foreach (Type type in propertyGroupChoiceTypes)
             {
-                propertyGroupChoices.Add(new Dropdown.OptionData(type.GetSelectionTitle()));
+                propertyGroupChoices.Add(new Dropdown.OptionData(GetSelectionChoiceTitle(type)));
 
                 if (type == propertyGroup.GetType())
                 {
@@ -561,13 +577,13 @@ namespace BGC.Parameters.View
                 //Build class-selection dropdown
 
                 List<Dropdown.OptionData> propertyGroupChoices = new List<Dropdown.OptionData>();
-                Type[] propertyGroupChoiceTypes = property.GetSelectionTypes().ToArray();
+                Type[] propertyGroupChoiceTypes = GetSelectionChoiceTypes(property, propertyGroup.GetType()).ToArray();
 
                 int currentDataIndex = 0;
 
                 foreach (Type type in propertyGroupChoiceTypes)
                 {
-                    propertyGroupChoices.Add(new Dropdown.OptionData(type.GetSelectionTitle()));
+                    propertyGroupChoices.Add(new Dropdown.OptionData(GetSelectionChoiceTitle(type)));
 
                     if (type == propertyGroup.GetType())
                     {
