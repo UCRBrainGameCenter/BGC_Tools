@@ -1,4 +1,4 @@
-﻿using BGC.IO;
+using BGC.IO;
 using BGC.Users;
 using LightJson;
 using System;
@@ -147,7 +147,7 @@ namespace BGC.Study
         public const string DefaultTrackHubSceneName = "TrackHubScene";
 
         /// <summary>
-        /// Scene name loaded for <see cref="MenuManager.WindowState.TrackHub"/>. Set from the
+        /// Scene name loaded when navigating to the track hub (MenuManager.ShowTrackHub). Set from the
         /// optional top-level "TrackHubSceneName" field of the protocol-set JSON; falls back to
         /// <see cref="DefaultTrackHubSceneName"/> when the field is absent.
         /// </summary>
