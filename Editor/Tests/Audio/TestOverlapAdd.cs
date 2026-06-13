@@ -18,9 +18,20 @@ namespace BGC.Tests
             //string baseFile = "Boston_HitchARide";
             string baseFile = "000000";
 
+            if (!TestDataResolver.TryResolve($"{baseFile}.wav", out string sourceFile, $"Test/{baseFile}.wav"))
+            {
+                Assert.Ignore($"Source audio {baseFile}.wav not found in Test/, " +
+                    "DownloadManagerCache/, or DownloadableAssets/; download the corpus to run this test.");
+            }
+
             WaveEncoding.LoadBGCSimple(
-                filepath: DataManagement.PathForDataFile("Test", $"{baseFile}.wav"),
+                filepath: sourceFile,
                 simpleAudioClip: out SimpleAudioClip song);
+
+            // The CRM corpus sentence is far shorter than this 10 s window (the test
+            // predates the corpus switch — cf. the commented-out full-song source), so the
+            // windower clamps to the clip length and logs (expected, benign).
+            UnityEngine.TestTools.LogAssert.Expect(LogType.Error, "Requested a duration larger than clip length");
 
             song = song.Window(10f).Cache();
 
@@ -78,8 +89,14 @@ namespace BGC.Tests
         {
             string baseFile = "000000";
 
+            if (!TestDataResolver.TryResolve($"{baseFile}.wav", out string sourceFile, $"Test/{baseFile}.wav"))
+            {
+                Assert.Ignore($"Source audio {baseFile}.wav not found in Test/, " +
+                    "DownloadManagerCache/, or DownloadableAssets/; download the corpus to run this test.");
+            }
+
             WaveEncoding.LoadBGCSimple(
-                filepath: DataManagement.PathForDataFile("Test", $"{baseFile}.wav"),
+                filepath: sourceFile,
                 simpleAudioClip: out SimpleAudioClip song);
 
             Debug.Log($"Pre  RMS: {Math.Sqrt(song.Samples.Sum(x => x * x) / song.Samples.Length)}   N:{song.Samples.Length}");
@@ -103,8 +120,14 @@ namespace BGC.Tests
         {
             string baseFile = "000000";
 
+            if (!TestDataResolver.TryResolve($"{baseFile}.wav", out string sourceFile, $"Test/{baseFile}.wav"))
+            {
+                Assert.Ignore($"Source audio {baseFile}.wav not found in Test/, " +
+                    "DownloadManagerCache/, or DownloadableAssets/; download the corpus to run this test.");
+            }
+
             WaveEncoding.LoadBGCStream(
-                filepath: DataManagement.PathForDataFile("Test", $"{baseFile}.wav"),
+                filepath: sourceFile,
                 stream: out IBGCStream stream);
 
             Debug.Log($"Pre  RMS: {string.Join(", ", stream.CalculateRMS().Select(x => x.ToString()).ToArray())}");

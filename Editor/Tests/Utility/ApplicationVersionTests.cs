@@ -95,11 +95,15 @@ namespace BGC.Tests
                 string[] unparsableAttempts = new string[]
                 {
                     "asdf",
-                    "asdf.asdfas.gasdfga.*",
-                    ""
+                    "asdf.asdfas.gasdfga.*"
                 };
 
                 string[] truncatingAttempts = new string[] { "0.0.0.0.9" };
+
+                //An empty/null version string is treated as a null version without an
+                //error log (a missing version is not a parse failure), so it must not
+                //be grouped with the unparsable attempts that expect a logged error.
+                Assert.IsTrue(isNull(""));
 
                 //Error Handling
                 foreach (string version in unparsableAttempts)
