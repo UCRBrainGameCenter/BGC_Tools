@@ -422,9 +422,9 @@ namespace BGC.Parameters
         // initializes field properties and applies append-selection defaults; it does NOT
         // recurse into the new group's own nested property groups, leaving them null. The
         // present-key path avoids this because it follows Build() with Deserialize(), whose
-        // Internal_RawDeserialize recursively defaults missing children. To keep "missing
-        // key" behave identically to "present but empty", we run the same recursion here on
-        // an empty object. (Internal_RawDeserialize rather than Deserialize, because the
+        // Internal_RawDeserialize recursively defaults missing children. So that a missing
+        // key behaves identically to a present-but-empty one, we run the same recursion here
+        // on an empty object. (Internal_RawDeserialize rather than Deserialize, because the
         // latter logs a spurious error for the absent "Type" field.)
         public static void ConstructNewInternalPropertyGroup(
             this IPropertyGroup container,
