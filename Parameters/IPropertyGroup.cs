@@ -418,13 +418,25 @@ namespace BGC.Parameters
             }
         }
 
+        // When a property-group key is absent we construct its default. Build() only
+        // initializes field properties and applies append-selection defaults; it does NOT
+        // recurse into the new group's own nested property groups, leaving them null. The
+        // present-key path avoids this because it follows Build() with Deserialize(), whose
+        // Internal_RawDeserialize recursively defaults missing children. To keep "missing
+        // key" behave identically to "present but empty", we run the same recursion here on
+        // an empty object. (Internal_RawDeserialize rather than Deserialize, because the
+        // latter logs a spurious error for the absent "Type" field.)
         public static void ConstructNewInternalPropertyGroup(
             this IPropertyGroup container,
-            PropertyInfo property) => property.GetDefaultSelectionType().Build(container, property);
+            PropertyInfo property) =>
+            property.GetDefaultSelectionType().Build(container, property)
+                .Internal_RawDeserialize(new JsonObject());
 
         public static void ConstructNewInlinePropertyGroup(
             this IPropertyGroup container,
-            PropertyInfo property) => property.PropertyType.Build(container, property);
+            PropertyInfo property) =>
+            property.PropertyType.Build(container, property)
+                .Internal_RawDeserialize(new JsonObject());
 
         public static void DeserializeInternalPropertyGroup(
             this IPropertyGroup container,
