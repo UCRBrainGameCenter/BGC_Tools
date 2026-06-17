@@ -63,13 +63,15 @@ namespace BGC.Audio.Filters
         {
             if (openingSmoothingSamples + closingSmoothingSamples > ChannelSamples)
             {
-                //Requested smoothing samples exceeded remaining stream length
+                //Requested smoothing samples exceeded remaining stream length.
+                //Proportionally shrink both skirts so they fill exactly the available
+                //samples, preserving the requested opening/closing ratio. This generalizes
+                //the old single-function clamp (Math.Min(smoothingSamples, ChannelSamples / 2))
+                //to asymmetric windows and is well-defined down to ChannelSamples == 0.
                 int totalSmoothingSamples = openingSmoothingSamples + closingSmoothingSamples;
-                int excessSamples = ChannelSamples - totalSmoothingSamples;
 
-                //Allocate reduced smoothing samples based on requested percentage
-                openingSmoothingSamples -= (int)Math.Round(
-                    excessSamples * (openingSmoothingSamples / (double)totalSmoothingSamples));
+                openingSmoothingSamples = (int)Math.Round(
+                    ChannelSamples * (openingSmoothingSamples / (double)totalSmoothingSamples));
                 closingSmoothingSamples = ChannelSamples - openingSmoothingSamples;
             }
 

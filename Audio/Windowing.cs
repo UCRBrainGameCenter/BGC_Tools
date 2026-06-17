@@ -25,6 +25,14 @@ namespace BGC.Audio
             Function function,
             int sampleCount)
         {
+            if (sampleCount < 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(sampleCount),
+                    sampleCount,
+                    "Half-window sample count must be non-negative.");
+            }
+
             switch (function)
             {
                 case Function.Hamming: return HammingHalfWindow(sampleCount);
@@ -45,6 +53,14 @@ namespace BGC.Audio
             Function function,
             int sampleCount)
         {
+            if (sampleCount < 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(sampleCount),
+                    sampleCount,
+                    "Half-window sample count must be non-negative.");
+            }
+
             switch (function)
             {
                 case Function.Hamming: return HammingHalfWindow64(sampleCount);
@@ -463,6 +479,13 @@ namespace BGC.Audio
 
         private static float[] HammingHalfWindow(int sampleCount)
         {
+            if (sampleCount == 1)
+            {
+                //A single-sample skirt has no ramp; treat it as fully open to avoid the
+                //divide-by-zero (Math.PI / (sampleCount - 1)) that would yield NaN.
+                return new float[] { 1f };
+            }
+
             const float alpha = 0.54f;
             const float beta = 1f - alpha;
 
@@ -480,6 +503,13 @@ namespace BGC.Audio
 
         private static float[] HannHalfWindow(int sampleCount)
         {
+            if (sampleCount == 1)
+            {
+                //A single-sample skirt has no ramp; treat it as fully open to avoid the
+                //divide-by-zero (Math.PI / (sampleCount - 1)) that would yield NaN.
+                return new float[] { 1f };
+            }
+
             const float alpha = 0.5f;
             const float beta = 1f - alpha;
 
@@ -497,6 +527,13 @@ namespace BGC.Audio
 
         private static float[] BlackmanHarrisHalfWindow(int sampleCount)
         {
+            if (sampleCount == 1)
+            {
+                //A single-sample skirt has no ramp; treat it as fully open to avoid the
+                //divide-by-zero (Math.PI / (sampleCount - 1)) that would yield NaN.
+                return new float[] { 1f };
+            }
+
             const double a0 = 0.35875;
             const double a1 = 0.48829;
             const double a2 = 0.14128;
@@ -532,6 +569,13 @@ namespace BGC.Audio
 
         private static float[] LinearHalfWindow(int sampleCount)
         {
+            if (sampleCount == 1)
+            {
+                //A single-sample skirt has no ramp; treat it as fully open to avoid the
+                //divide-by-zero (i / (sampleCount - 1)) that would yield NaN.
+                return new float[] { 1f };
+            }
+
             float[] window = new float[sampleCount];
 
             float limit = sampleCount - 1;
@@ -563,6 +607,13 @@ namespace BGC.Audio
 
         private static double[] HammingHalfWindow64(int sampleCount)
         {
+            if (sampleCount == 1)
+            {
+                //A single-sample skirt has no ramp; treat it as fully open to avoid the
+                //divide-by-zero (Math.PI / (sampleCount - 1)) that would yield NaN.
+                return new double[] { 1.0 };
+            }
+
             const double alpha = 0.54;
             const double beta = 1.0 - alpha;
 
@@ -580,6 +631,13 @@ namespace BGC.Audio
 
         private static double[] HannHalfWindow64(int sampleCount)
         {
+            if (sampleCount == 1)
+            {
+                //A single-sample skirt has no ramp; treat it as fully open to avoid the
+                //divide-by-zero (Math.PI / (sampleCount - 1)) that would yield NaN.
+                return new double[] { 1.0 };
+            }
+
             const double alpha = 0.5;
             const double beta = 1.0 - alpha;
 
@@ -597,6 +655,13 @@ namespace BGC.Audio
 
         private static double[] BlackmanHarrisHalfWindow64(int sampleCount)
         {
+            if (sampleCount == 1)
+            {
+                //A single-sample skirt has no ramp; treat it as fully open to avoid the
+                //divide-by-zero (Math.PI / (sampleCount - 1)) that would yield NaN.
+                return new double[] { 1.0 };
+            }
+
             const double a0 = 0.35875;
             const double a1 = 0.48829;
             const double a2 = 0.14128;
@@ -632,6 +697,13 @@ namespace BGC.Audio
 
         private static double[] LinearHalfWindow64(int sampleCount)
         {
+            if (sampleCount == 1)
+            {
+                //A single-sample skirt has no ramp; treat it as fully open to avoid the
+                //divide-by-zero (i / (sampleCount - 1)) that would yield NaN.
+                return new double[] { 1.0 };
+            }
+
             double[] window = new double[sampleCount];
 
             double limit = sampleCount - 1;
