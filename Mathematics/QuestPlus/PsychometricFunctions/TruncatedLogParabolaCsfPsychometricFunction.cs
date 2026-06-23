@@ -17,14 +17,18 @@ namespace BGC.Mathematics.QuestPlus.PsychometricFunctions
     /// </para>
     ///
     /// <para>
-    /// Contrast is in dB internally — the math is log-space. The contrast
-    /// threshold at a given spatial frequency f is:
+    /// Contrast is in dB internally — the math is log-space, and sensitivity /
+    /// threshold are in dB (20·log10). The contrast threshold at a given spatial
+    /// frequency f is:
     ///
     /// <code>
-    ///   logThresh(f) = -peakSensitivity_dB
-    ///                + 4 * log10(2) * ((log10(f) - log10(f_peak)) / bandwidth)^2
+    ///   logThresh_dB(f) = -peakSensitivity_dB
+    ///                   + 20 * log10(2) * ((log10(f) - log10(f_peak)) / (bandwidth * log10(2) / 2))^2
     /// </code>
     ///
+    /// where <c>bandwidth</c> is the full width at half-maximum of the log-parabola
+    /// in octaves: at |log2(f/f_peak)| = bandwidth/2 the sensitivity falls by
+    /// 20·log10(2) dB (a factor of two). It is
     /// truncated on the low-frequency side: for f &lt; f_peak the parabola
     /// is replaced by the constant -peakSensitivity_dB + lowFreqTruncation
     /// when that constant exceeds the parabola value (i.e. the low-frequency
@@ -101,11 +105,15 @@ namespace BGC.Mathematics.QuestPlus.PsychometricFunctions
 
             double logF = Math.Log10(spatialFreq);
             double logFPeak = Math.Log10(peakFreq);
-            // Log-parabola dB drop from peak. The (2 / bandwidth)^2 factor
-            // makes "bandwidth" the full width at one decade below peak;
-            // this is the conventional qCSF parametrization.
-            double octaveDelta = (logF - logFPeak) / (bandwidth / 2.0);
-            double parabolaDrop = octaveDelta * octaveDelta * 20.0 * Math.Log10(2.0);
+            // Log-parabola sensitivity drop from the peak, in dB. "bandwidth" is
+            // the full width at half-maximum in OCTAVES: at
+            // |log2(f / f_peak)| = bandwidth / 2 the sensitivity falls by
+            // 20 * log10(2) dB (a factor of two). The log10(2) factor converts the
+            // octave half-bandwidth into the log10 (decade) units of
+            // (logF - logFPeak). This is the truncated log-parabola (qCSF)
+            // parametrization, expressed in dB sensitivity.
+            double normalizedDelta = (logF - logFPeak) / (bandwidth * Math.Log10(2.0) / 2.0);
+            double parabolaDrop = normalizedDelta * normalizedDelta * 20.0 * Math.Log10(2.0);
 
             // Sensitivity in dB at this frequency (parabola form, no truncation).
             double sensitivityDb = peakSens - parabolaDrop;

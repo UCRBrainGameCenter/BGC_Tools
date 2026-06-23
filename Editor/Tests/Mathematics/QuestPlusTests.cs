@@ -522,6 +522,112 @@ namespace BGC.Tests
                 $"Consecutive repeat run of {maxRun} exceeded allowed.");
         }
 
+        // ===== CSF (truncated log-parabola / qCSF) =====
+
+        private static double[] LinGrid(double min, double max, double step)
+        {
+            List<double> v = new List<double>();
+            for (double x = min; x <= max + 1e-9; x += step) v.Add(x);
+            return v.ToArray();
+        }
+
+        /// <summary>
+        /// Pins the truncated-log-parabola CSF model's output at reference points
+        /// so the parametrization (dB log-parabola + dB-Weibull + low-frequency
+        /// truncation) cannot drift silently. There is no published QUEST+ oracle
+        /// for this model, so these values were computed from the canonical formula
+        /// and confirmed against the implementation.
+        /// </summary>
+        [Test]
+        public void Csf_TruncatedLogParabola_EvaluateMatchesReferenceValues()
+        {
+            TruncatedLogParabolaCsfPsychometricFunction pf =
+                new TruncatedLogParabolaCsfPsychometricFunction();
+
+            // params: peak_sensitivity, peak_frequency, bandwidth (octaves FWHM),
+            //         low_freq_truncation, slope, lower_asymptote, lapse_rate
+            double[] p1 = { 36, 2, 3.0, 10, 3, 0.5, 0.04 };
+            double[] p2 = { 36, 4, 3.0, 10, 3, 0.5, 0.04 };
+
+            // At the peak frequency the threshold is -peak_sensitivity dB; at
+            // threshold the dB-Weibull sits at 1 - delta - (1-gamma-delta)*e^-1.
+            Assert.AreEqual(0.790775, pf.Evaluate(new double[] { -36, 2 }, p1)[0], 1e-5);
+            // Far above threshold → ceiling (1 - lapse).
+            Assert.AreEqual(0.960000, pf.Evaluate(new double[] { -20, 2 }, p1)[0], 1e-5);
+            // Far below threshold → floor (≈ lower asymptote).
+            Assert.AreEqual(0.500116, pf.Evaluate(new double[] { -60, 2 }, p1)[0], 1e-5);
+            // Off-peak (f=4, one octave above the 2 c/deg peak), partway up the curve.
+            Assert.AreEqual(0.940333, pf.Evaluate(new double[] { -30, 4 }, p1)[0], 1e-5);
+            // Low-frequency truncation branch (f below peak): sensitivity floored at
+            // peak_sensitivity - low_freq_truncation = 26 dB → threshold -26 dB.
+            Assert.AreEqual(0.790775, pf.Evaluate(new double[] { -26, 0.5 }, p2)[0], 1e-5);
+        }
+
+        /// <summary>
+        /// End-to-end qCSF recovery: a simulated observer with a known CSF curve is
+        /// run through QUEST+ on a sane grid (contrast in dB bracketing all
+        /// thresholds; a small, non-degenerate bandwidth grid). The posterior-mean
+        /// estimates of the headline parameters — peak sensitivity and peak
+        /// frequency — recover the truth. Because no published deterministic oracle
+        /// exists for the log-parabola model, this simulated recovery is the
+        /// reference-grade test for it.
+        ///
+        /// low_freq_truncation is intentionally not asserted: it is weakly
+        /// identified and barely moves off the prior, which is expected.
+        /// </summary>
+        [Test]
+        public void Csf_SimulatedObserver_RecoversPeakSensitivityAndFrequency()
+        {
+            TruncatedLogParabolaCsfPsychometricFunction pf =
+                new TruncatedLogParabolaCsfPsychometricFunction();
+
+            // True CSF: peak sensitivity 36 dB at 2 c/deg, bandwidth 3 octaves FWHM,
+            // low-frequency truncation 10 dB; fixed slope / guess / lapse.
+            double[] truth = { 36, 2, 3.0, 10, 3, 0.5, 0.04 };
+
+            QuestPlusDimension contrast = new QuestPlusDimension("contrast", LinGrid(-60, 0, 3));
+            QuestPlusDimension sf = Dim("spatial_freq", 0.5, 1, 2, 4, 8);
+
+            QuestPlusDimension[] paramDomain =
+            {
+                new QuestPlusDimension("peak_sensitivity", LinGrid(20, 56, 2)),
+                Dim("peak_frequency", 0.5, 1, 2, 4, 8),
+                Dim("bandwidth", 1.5, 2, 2.5, 3, 3.5, 4),
+                Dim("low_freq_truncation", 0, 10, 20),
+                Dim("slope", 3),
+                Dim("lower_asymptote", 0.5),
+                Dim("lapse_rate", 0.04),
+            };
+
+            BGC.Mathematics.QuestPlus.QuestPlus q = new BGC.Mathematics.QuestPlus.QuestPlus(
+                stimDomain: new[] { contrast, sf },
+                paramDomain: paramDomain,
+                outcomeDomain: new[] { CorrectLabel, IncorrectLabel },
+                psychometricFunction: pf,
+                selectionMethod: StimSelectionMethod.MinEntropy,
+                estimationMethod: ParamEstimationMethod.Mean);
+
+            Random rng = new Random(12345);
+            double[] probs = new double[2];
+            for (int t = 0; t < 150; t++)
+            {
+                double[] stim = q.GetNextStim();
+                pf.Evaluate(stim, truth, probs);
+                int outcome = rng.NextDouble() < probs[0] ? Correct : Incorrect;
+                q.Update(stim, outcome);
+            }
+
+            double[] est = q.GetParamEstimate();
+            // Tolerances are generous relative to the observed spread (across 60
+            // seeds at this trial count, max error was ~2.6 dB peak sensitivity and
+            // ~0.03 c/deg peak frequency), so the assertion is robust to
+            // RNG-implementation differences across runtimes.
+            Assert.LessOrEqual(Math.Abs(est[0] - 36.0), 4.0,
+                $"peak_sensitivity estimate {est[0]} should recover 36 dB (±1 grid step).");
+            Assert.LessOrEqual(Math.Abs(est[1] - 2.0), 0.6,
+                $"peak_frequency estimate {est[1]} should recover 2 c/deg.");
+        }
+
         // ===== Helpers =====
 
         private static BGC.Mathematics.QuestPlus.QuestPlus BuildSimpleWeibull(
