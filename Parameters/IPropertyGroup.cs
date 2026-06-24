@@ -381,7 +381,18 @@ namespace BGC.Parameters
                 }
                 else
                 {
-                    Debug.LogError($"No Item Title Found with key: {serializationName}.  Creating Guid.");
+                    // Serialize() always writes the item title, so an absent title key means
+                    // either (a) real serialized data that predates the title field, or (b) a
+                    // group being default-constructed from an empty object -- the absent-key
+                    // path builds defaults via Internal_RawDeserialize(new JsonObject()). Only
+                    // (a) is anomalous; flagging (b) produced a false-positive error every time
+                    // an old battery omitted a now-nested titled group (and on every fresh
+                    // default construction of such a group). Suppress the error for the empty
+                    // (default-construction) case; still mint a Guid so list items stay unique.
+                    if (propertyGroupData.Count > 0)
+                    {
+                        Debug.LogError($"No Item Title Found with key: {serializationName}.  Creating Guid.");
+                    }
                     property.SetValue(container, Guid.NewGuid().ToString());
                 }
             }

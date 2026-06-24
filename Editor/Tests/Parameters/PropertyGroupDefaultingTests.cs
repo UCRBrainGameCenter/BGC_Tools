@@ -1,6 +1,7 @@
 using BGC.Parameters;
 using LightJson;
 using NUnit.Framework;
+using UnityEngine.TestTools;
 
 namespace BGC.Tests
 {
@@ -65,6 +66,54 @@ namespace BGC.Tests
                 typedRoot.Child.Grandchild,
                 "A defaulted property group's own nested [AppendSelection] child must be " +
                 "recursively defaulted, not left null.");
+        }
+
+        // ---- Item-title defaulting -----------------------------------------------------------
+        // A group carrying [PropertyGroupItemTitle] that is default-constructed (absent key ->
+        // Internal_RawDeserialize(new JsonObject())) has no serialized title. That is a normal
+        // default, not an error: Serialize() always writes the title, so a title is only ever
+        // absent for default construction or for legacy data that predates the title field.
+
+        [PropertyGroupTitle("Titled Child")]
+        private interface ITitledChild : IPropertyGroup { }
+
+        [PropertyChoiceTitle("Default Titled Child")]
+        private class TitledChild : CommonPropertyGroup, ITitledChild
+        {
+            [PropertyGroupItemTitle("ItemTitle")]
+            public string ItemTitle { get; set; }
+        }
+
+        private class TitledRoot : CommonPropertyGroup
+        {
+            [AppendSelection(typeof(TitledChild))]
+            public ITitledChild Child { get; set; }
+        }
+
+        [Test]
+        public void AbsentTitledPropertyGroupKey_DefaultsWithoutLoggingError()
+        {
+            IPropertyGroup root = new TitledRoot();
+            root.InitializeProperties();
+
+            // "Child" key absent -> default-constructed from an empty object. The child carries
+            // a [PropertyGroupItemTitle], so its title is legitimately absent. There is no
+            // LogAssert.Expect here on purpose: before the fix this logged
+            // "No Item Title Found ... Creating Guid", which the Unity test runner reports as a
+            // failure (and which surfaced in researcher logs for every old battery that omitted
+            // a now-nested titled group).
+            root.Internal_RawDeserialize(new JsonObject());
+
+            TitledChild child = (TitledChild)((TitledRoot)root).Child;
+
+            Assert.IsNotNull(
+                child,
+                "An absent nested titled property group should be default-constructed.");
+            Assert.IsFalse(
+                string.IsNullOrEmpty(child.ItemTitle),
+                "A default-constructed titled group should still receive a generated item title.");
+
+            LogAssert.NoUnexpectedReceived();
         }
     }
 }
