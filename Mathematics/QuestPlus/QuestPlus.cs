@@ -63,6 +63,16 @@ namespace BGC.Mathematics.QuestPlus
         /// <summary>Last computed expected entropy of the selected stimulus.</summary>
         public double LastEntropy { get; private set; } = double.NaN;
 
+        /// <summary>
+        /// The expected entropy computed for every candidate stimulus during the most
+        /// recent stimulus selection, in stim-domain flat-index order (length StimSize).
+        /// This is the full selection diagnostic: the chosen stimulus is the arg-min of
+        /// this vector (or, for MinNEntropy, a random draw among its N smallest entries).
+        /// Null before the first selection and after <see cref="Reset"/>. Not part of the
+        /// serialized state — it is regenerated on the next selection.
+        /// </summary>
+        public IReadOnlyList<double> LastExpectedEntropies => lastExpectedEntropies;
+
         // ---- Internals ----
 
         private readonly QuestPlusDimension[] stimDomain;
@@ -84,6 +94,10 @@ namespace BGC.Mathematics.QuestPlus
 
         private readonly List<TrialRecord> history = new List<TrialRecord>();
         private readonly Random rng;
+
+        // Expected entropy per candidate stimulus from the most recent selection
+        // (retained for diagnostics/logging; recomputed each GetNextStim* call).
+        private double[] lastExpectedEntropies;
 
         public int StimSize => stimSize;
         public int ParamSize => paramSize;
@@ -289,6 +303,7 @@ namespace BGC.Mathematics.QuestPlus
         public double[] GetNextStimWithIndex(out int stimFlatIndex)
         {
             double[] expectedEntropies = ComputeExpectedEntropies();
+            lastExpectedEntropies = expectedEntropies;
 
             switch (SelectionMethod)
             {
@@ -542,6 +557,35 @@ namespace BGC.Mathematics.QuestPlus
             return CoordsToIndex(coords, stimShape);
         }
 
+        /// <summary>
+        /// The likelihood of the given outcome across the whole parameter grid for a
+        /// fixed stimulus: <c>L(outcome | stim, θ)</c> for every θ, in parameter
+        /// flat-index order (length <see cref="ParamSize"/>). This is exactly the slice
+        /// the posterior is multiplied by in <see cref="UpdateByIndex"/>, exposed so an
+        /// independent implementation can check our psychometric-function evaluations
+        /// against its own. Values come straight from the precomputed likelihood table
+        /// (no recomputation), so they match what the engine actually used.
+        /// </summary>
+        public double[] GetLikelihoodSlice(int stimFlatIndex, int outcomeIndex)
+        {
+            if (stimFlatIndex < 0 || stimFlatIndex >= stimSize)
+            {
+                throw new ArgumentOutOfRangeException(nameof(stimFlatIndex));
+            }
+            if (outcomeIndex < 0 || outcomeIndex >= outcomeCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(outcomeIndex));
+            }
+
+            int baseIdx = (stimFlatIndex * paramSize) * outcomeCount;
+            double[] slice = new double[paramSize];
+            for (int p = 0; p < paramSize; p++)
+            {
+                slice[p] = likelihoods[baseIdx + p * outcomeCount + outcomeIndex];
+            }
+            return slice;
+        }
+
         // ---- Estimation ----
 
         /// <summary>
@@ -669,6 +713,7 @@ namespace BGC.Mathematics.QuestPlus
             Array.Copy(prior, posterior, paramSize);
             history.Clear();
             LastEntropy = double.NaN;
+            lastExpectedEntropies = null;
         }
 
         // ---- Serialization ----
