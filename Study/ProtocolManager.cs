@@ -154,6 +154,15 @@ namespace BGC.Study
         public static string TrackHubSceneName { get; private set; } = DefaultTrackHubSceneName;
 
         /// <summary>
+        /// Optional hub configuration read from the protocol-set JSON's top-level "HubConfig"
+        /// node, made available to the track-hub scene (TrackHubSceneController / TracksPresentation).
+        /// Held as the raw JSON node (purpose/schema deliberately uninterpreted for now) and
+        /// round-tripped by <see cref="SerializeAll"/> so hand-authored config is preserved.
+        /// <see cref="JsonValue.Null"/> when the field is absent (check <c>HubConfig.IsNull</c>).
+        /// </summary>
+        public static JsonValue HubConfig { get; private set; } = JsonValue.Null;
+
+        /// <summary>
         /// Switches the active track. The new track key must already exist in the
         /// tracks dictionary; passing null clears the active track (equivalent to
         /// <see cref="ClearActiveTrack"/>) to indicate "no session in progress".
@@ -1301,15 +1310,15 @@ namespace BGC.Study
             FileWriter.WriteJson(
                 path: Path.Combine(DataManagement.PathForDataDirectory(protocolDataDir), $"{loadedProtocolSet}.json"),
                 createJson: () => new JsonObject()
-                {
-                    { ProtocolKeys.Version, protocolDataVersion },
-                    { ProtocolKeys.TrackHubSceneName, TrackHubSceneName },
-                    { ProtocolKeys.Protocols, SerializeProtocols() },
-                    { ProtocolKeys.Sessions, SerializeSessions() },
-                    { ProtocolKeys.Lockouts, SerializeLockouts() },
-                    { ProtocolKeys.SessionElements, SerializeSessionElements() },
-                    { ProtocolKeys.LockoutElements, SerializeLockoutElements() }
-                },
+                    .Add(ProtocolKeys.Version, protocolDataVersion)
+                    .Add(ProtocolKeys.TrackHubSceneName, TrackHubSceneName)
+                    // Preserve the optional hub config on round-trip; omitted entirely when absent.
+                    .AddIfNotNull(ProtocolKeys.HubConfig, HubConfig)
+                    .Add(ProtocolKeys.Protocols, SerializeProtocols())
+                    .Add(ProtocolKeys.Sessions, SerializeSessions())
+                    .Add(ProtocolKeys.Lockouts, SerializeLockouts())
+                    .Add(ProtocolKeys.SessionElements, SerializeSessionElements())
+                    .Add(ProtocolKeys.LockoutElements, SerializeLockoutElements()),
                 pretty: false);
         }
 
@@ -1342,6 +1351,10 @@ namespace BGC.Study
                         ? jsonProtocols[ProtocolKeys.TrackHubSceneName]
                         : DefaultTrackHubSceneName;
 
+                    HubConfig = jsonProtocols.ContainsKey(ProtocolKeys.HubConfig)
+                        ? jsonProtocols[ProtocolKeys.HubConfig]
+                        : JsonValue.Null;
+
                     DeserializeProtocols(jsonProtocols[ProtocolKeys.Protocols]);
                     DeserializeSessions(jsonProtocols[ProtocolKeys.Sessions]);
                     if (jsonProtocols.ContainsKey(ProtocolKeys.Lockouts))
@@ -1358,6 +1371,7 @@ namespace BGC.Study
                 {
                     loadedProtocolSet = "";
                     TrackHubSceneName = DefaultTrackHubSceneName;
+                    HubConfig = JsonValue.Null;
                     protocolDictionary.Clear();
                     sessionDictionary.Clear();
                     sessionElementDictionary.Clear();
