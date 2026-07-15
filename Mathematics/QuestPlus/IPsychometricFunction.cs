@@ -63,4 +63,21 @@ namespace BGC.Mathematics.QuestPlus
         /// </summary>
         JsonObject SerializeConfig();
     }
+
+    /// <summary>
+    /// Optional add-on interface for psychometric functions that carry a revision
+    /// number. Logged into QUEST+ diagnostics so a change to a function's formula can
+    /// be detected by anyone comparing against an old log (an old log won't advertise
+    /// the new version). Kept separate from <see cref="IPsychometricFunction"/> so it
+    /// stays additive — existing functions need not implement it (consumers treat a
+    /// non-implementing function as version 0 / unversioned).
+    /// </summary>
+    public interface IVersionedPsychometricFunction
+    {
+        /// <summary>
+        /// Revision of this function's formula. Bump whenever the mathematical
+        /// definition changes so old logs are not silently misread as the new form.
+        /// </summary>
+        int FunctionVersion { get; }
+    }
 }

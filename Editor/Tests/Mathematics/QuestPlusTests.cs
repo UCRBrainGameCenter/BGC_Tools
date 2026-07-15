@@ -630,6 +630,70 @@ namespace BGC.Tests
 
         // ===== Helpers =====
 
+        // ===== Diagnostics accessors (logging support) =====
+
+        [Test]
+        public void LastExpectedEntropies_NullBeforeSelection_ThenMatchesChosen()
+        {
+            BGC.Mathematics.QuestPlus.QuestPlus q = BuildSimpleWeibull();
+
+            // No selection has run yet.
+            Assert.IsNull(q.LastExpectedEntropies);
+
+            double[] chosen = q.GetNextStimWithIndex(out int idx);
+            Assert.IsNotNull(q.LastExpectedEntropies);
+            Assert.AreEqual(q.StimSize, q.LastExpectedEntropies.Count,
+                "Expected-entropy vector should have one entry per candidate stimulus.");
+
+            // The chosen stimulus is the arg-min of the vector, and LastEntropy is that min.
+            double min = q.LastExpectedEntropies.Min();
+            Assert.AreEqual(min, q.LastExpectedEntropies[idx], 1e-12,
+                "Chosen stimulus should be the minimum-expected-entropy candidate.");
+            Assert.AreEqual(q.LastEntropy, q.LastExpectedEntropies[idx], 1e-12);
+            Assert.AreEqual(1, chosen.Length);
+
+            // Reset clears the retained vector.
+            q.Reset();
+            Assert.IsNull(q.LastExpectedEntropies);
+        }
+
+        [Test]
+        public void GetLikelihoodSlice_MatchesPsychometricEvaluate()
+        {
+            BGC.Mathematics.QuestPlus.QuestPlus q = BuildSimpleWeibull();
+            WeibullPsychometricFunction pf = new WeibullPsychometricFunction(WeibullScale.DB);
+
+            int[] shape = q.ParamDomain.Select(d => d.Length).ToArray();
+            double[] paramVals = new double[q.ParamDomain.Count];
+            double[] stimVals = new double[q.StimDomain.Count];
+            double[] probs = new double[q.OutcomeDomain.Count];
+
+            // Check a few stim points against every parameter cell, for each outcome.
+            foreach (int stimIdx in new[] { 0, q.StimSize / 2, q.StimSize - 1 })
+            {
+                stimVals[0] = q.StimDomain[0].Values[stimIdx]; // single stim dim
+                for (int outcome = 0; outcome < q.OutcomeCount; outcome++)
+                {
+                    double[] slice = q.GetLikelihoodSlice(stimIdx, outcome);
+                    Assert.AreEqual(q.ParamSize, slice.Length);
+
+                    for (int p = 0; p < q.ParamSize; p++)
+                    {
+                        // Decode flat param index (row-major, last dim fastest).
+                        int flat = p;
+                        for (int d = shape.Length - 1; d >= 0; d--)
+                        {
+                            paramVals[d] = q.ParamDomain[d].Values[flat % shape[d]];
+                            flat /= shape[d];
+                        }
+                        pf.Evaluate(stimVals, paramVals, probs);
+                        Assert.AreEqual(probs[outcome], slice[p], 1e-12,
+                            $"Likelihood slice mismatch at stim {stimIdx}, outcome {outcome}, param {p}.");
+                    }
+                }
+            }
+        }
+
         private static BGC.Mathematics.QuestPlus.QuestPlus BuildSimpleWeibull(
             ParamEstimationMethod estimation = ParamEstimationMethod.Mean,
             StimSelectionMethod selection = StimSelectionMethod.MinEntropy,

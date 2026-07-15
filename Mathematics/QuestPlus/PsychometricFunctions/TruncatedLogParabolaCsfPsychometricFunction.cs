@@ -43,9 +43,14 @@ namespace BGC.Mathematics.QuestPlus.PsychometricFunctions
     /// </code>
     /// </para>
     /// </summary>
-    public sealed class TruncatedLogParabolaCsfPsychometricFunction : IPsychometricFunction
+    public sealed class TruncatedLogParabolaCsfPsychometricFunction : IPsychometricFunction, IVersionedPsychometricFunction
     {
         public string TypeId => "truncated_log_parabola_csf";
+
+        // Revision of the formulas below. Bump if ComputeLogThresholdDb or Evaluate
+        // changes so QUEST+ logs record which form produced them (see QuestPlus_Verification.md).
+        public int FunctionVersion => 1;
+
         public int StimDimensionCount => 2;
         public int ParamDimensionCount => 7;
         public int OutcomeCount => 2;
