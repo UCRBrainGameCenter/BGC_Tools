@@ -140,6 +140,38 @@ namespace BGC.Tests
             Assert.Throws<StreamCompositionException>(() => ReadAll(stereo.Normalize(88.0)));
         }
 
+        /// <summary>
+        /// Stereo: left at its claim, right 6.02 dB above it. Each channel is judged against its
+        /// own requested level.
+        /// </summary>
+        private static IBGCStream HotRightStereo()
+        {
+            int frames = (int)(ToneDuration * 44100);
+            float[] samples = new float[2 * frames];
+            for (int i = 0; i < frames; i++)
+            {
+                float x = (float)(ToneAmplitude * Math.Sin(2.0 * Math.PI * 1000.0 * i / 44100.0));
+                samples[2 * i] = x;
+                samples[2 * i + 1] = 2f * x;
+            }
+
+            return new ClaimedRMSStream(new SimpleAudioClip(samples, channels: 2), ToneAmplitude / Math.Sqrt(2.0));
+        }
+
+        [Test]
+        public void SplitLevels_HotChannelBelowLimit_Plays()
+        {
+            // Left 90 (delivers 90), right 60 (delivers 66)
+            Assert.DoesNotThrow(() => ReadAll(HotRightStereo().Normalize((90.0, 60.0))));
+        }
+
+        [Test]
+        public void SplitLevels_HotChannelAboveLimit_IsRefused()
+        {
+            // Left 60 (delivers 60), right 88 (delivers 94)
+            Assert.Throws<StreamCompositionException>(() => ReadAll(HotRightStereo().Normalize((60.0, 88.0))));
+        }
+
         [Test]
         public void InfiniteStream_OnlyRequestIsChecked()
         {
