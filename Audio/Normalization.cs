@@ -37,12 +37,18 @@ namespace BGC.Audio
         /// can't be measured, so for them only the requested level is checked.
         /// Reads the stream once (and resets it), like <see cref="BGCStreamExtensions.CalculateRMS"/>.
         /// </summary>
+        /// <param name="channel">
+        /// The input channel whose samples play at <paramref name="requestedLevel"/>, when the
+        /// output channels have different requested levels; -1 (the default) checks every channel.
+        /// A mono input feeds every output channel, so it is always checked.
+        /// </param>
         public static void CheckDeliveredLevel(
             IBGCStream stream,
             double requestedLevel,
             double claimedRMS,
             double limit,
-            string unit)
+            string unit,
+            int channel = -1)
         {
             if (stream.ChannelSamples == int.MaxValue || stream.ChannelSamples == 0 ||
                 double.IsNaN(claimedRMS) || claimedRMS <= 0.0)
@@ -50,7 +56,10 @@ namespace BGC.Audio
                 return;
             }
 
-            double sampleRMS = stream.CalculateRMS().Where(x => !double.IsNaN(x)).DefaultIfEmpty(0.0).Max();
+            double[] channelRMS = stream.CalculateRMS().ToArray();
+            double sampleRMS = (channel >= 0 && channel < channelRMS.Length && channelRMS.Length > 1) ?
+                channelRMS[channel] :
+                channelRMS.Where(x => !double.IsNaN(x)).DefaultIfEmpty(0.0).Max();
 
             if (sampleRMS <= 0.0)
             {
@@ -704,13 +713,19 @@ namespace BGC.Audio
 
         #endregion Mono Normalizations
 
+        /// <param name="deliveredLevelChannel">
+        /// For a stereo stream whose channels have different requested levels: the channel that
+        /// plays at <paramref name="desiredLevel"/>, so the safety limit judges that channel only.
+        /// -1 (the default) judges every channel.
+        /// </param>
         public static void GetRMSScalingFactors(
             IBGCStream stream,
             double desiredLevel,
             out double scalingFactorL,
             out double scalingFactorR,
             Calibration.Source source = Calibration.Source.Custom,
-            bool safetyLimit = true)
+            bool safetyLimit = true,
+            int deliveredLevelChannel = -1)
         {
             GetAmplitudeFactors(
                 dbSPLL: desiredLevel,
@@ -751,7 +766,8 @@ namespace BGC.Audio
                     requestedLevel: desiredLevel,
                     claimedRMS: maxRMS,
                     limit: dbSafetyLimit,
-                    unit: "dB");
+                    unit: "dB",
+                    channel: deliveredLevelChannel);
             }
 
             scalingFactorL = levelFactorL / maxRMS;

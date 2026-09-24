@@ -106,15 +106,18 @@ namespace BGC.Audio.Filters
             {
                 factorsInitialized = true;
 
+                bool splitLevels = presentationLevels.levelL != presentationLevels.levelR;
+
                 Normalization.GetRMSScalingFactors(
                     stream: stream,
                     desiredLevel: presentationLevels.levelL,
                     scalingFactorL: out double tempLeftFactor,
                     scalingFactorR: out double tempRightFactor,
                     source: source,
-                    safetyLimit: safetyLimit);
+                    safetyLimit: safetyLimit,
+                    deliveredLevelChannel: splitLevels ? 0 : -1);
 
-                if (presentationLevels.levelL != presentationLevels.levelR)
+                if (splitLevels)
                 {
                     Normalization.GetRMSScalingFactors(
                         stream: stream,
@@ -122,7 +125,8 @@ namespace BGC.Audio.Filters
                         scalingFactorL: out double _,
                         scalingFactorR: out tempRightFactor,
                         source: source,
-                        safetyLimit: safetyLimit);
+                        safetyLimit: safetyLimit,
+                        deliveredLevelChannel: 1);
                 }
 
                 leftFactor = (float)tempLeftFactor;
