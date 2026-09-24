@@ -157,9 +157,14 @@ namespace BGC.Audio.Filters
         {
             Fourier.Forward(filterFD);
 
-            double factor = filterLength;
+            //Both forward transforms (filter and signal) scale by 1/fftLength and the inverse is
+            //unscaled, so every bin needs a factor of fftLength for the product to be the
+            //convolution. (It was filterLength, on the first filterLength bins only, which cut
+            //the output by about (filterLength + 1) / (2 fftLength): -12 dB for order 510.)
+            //Matches MultiConvolutionFilter.
+            double factor = fftLength;
 
-            for (int i = 0; i < filterLength; i++)
+            for (int i = 0; i < fftLength; i++)
             {
                 filterFD[i] *= factor;
             }
