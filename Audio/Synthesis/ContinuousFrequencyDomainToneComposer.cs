@@ -197,7 +197,10 @@ namespace BGC.Audio.Synthesis
         {
             if (channelRMS is null)
             {
-                double rms = carrierTones.Select(x => 0.5 * x.amplitude.MagnitudeSquared).Sum();
+                //Only carriers that Populate actually renders into each frame
+                double rms = carrierTones
+                    .Where(x => FrequencyDomain.IsRenderable(frameSize, x.frequency))
+                    .Select(x => 0.5 * x.amplitude.MagnitudeSquared).Sum();
                 channelRMS = new double[] { Sqrt(rms) };
             }
 

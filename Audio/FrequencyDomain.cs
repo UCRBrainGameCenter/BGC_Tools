@@ -33,7 +33,7 @@ namespace BGC.Audio
                 bufferSize: buffer.Length,
                 frequency: frequency);
 
-            if (bin < 1 || bin > buffer.Length / 2)
+            if (!IsRenderable(buffer.Length, frequency))
             {
                 //Skipping frequency as it's out of range
                 return;
@@ -65,6 +65,20 @@ namespace BGC.Audio
 
                 buffer[bin + N] += amplitude / (N - normalizedDeviation);
             }
+        }
+
+        /// <summary>
+        /// Whether <see cref="Populate(Complex64[], double, Complex64, int)"/> renders a carrier of
+        /// this frequency into a buffer of this size. Carriers below the first bin or above the
+        /// Nyquist bin are skipped, so they must not count toward a claimed RMS either.
+        /// </summary>
+        public static bool IsRenderable(int bufferSize, double frequency)
+        {
+            int bin = GetComplexFrequencyBin(
+                bufferSize: bufferSize,
+                frequency: frequency);
+
+            return bin >= 1 && bin <= bufferSize / 2;
         }
 
         public static double GetComplexSampleFrequency(int bufferSize, int sample) =>

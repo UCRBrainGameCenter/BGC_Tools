@@ -118,7 +118,11 @@ namespace BGC.Audio.Synthesis
                         break;
 
                     case TransformRMSBehavior.Passthrough:
-                        double rms = carrierTones.Select(x => 0.5 * x.amplitude.MagnitudeSquared).Sum();
+                        //Only carriers that Populate actually renders into the frame
+                        int frameSize = Samples.Length.CeilingToPowerOfTwo();
+                        double rms = carrierTones
+                            .Where(x => FrequencyDomain.IsRenderable(frameSize, x.frequency))
+                            .Select(x => 0.5 * x.amplitude.MagnitudeSquared).Sum();
                         channelRMS = new double[] { Math.Sqrt(rms) };
                         break;
 
