@@ -49,7 +49,12 @@ namespace BGC.Audio.Synthesis
         protected override void _Initialize()
         {
             int frameSize = Samples.Length.CeilingToPowerOfTwo();
-            double outputScalar = 2.0 / Math.Sqrt(frameSize);
+            //Populate writes A*sqrt(N) into a single (positive-frequency) bin and the inverse FFT
+            //is unscaled, so Re(ifft) is A*sqrt(N)*cos(...). Scaling by 1/sqrt(N) makes each
+            //carrier's amplitude A its peak amplitude, as in SineWave, which is what the
+            //Passthrough RMS below assumes. (It was 2/sqrt(N), copied from the Continuous
+            //composer, where the 2 compensates its Hamming overlap-add; that played +6.02 dB hot.)
+            double outputScalar = 1.0 / Math.Sqrt(frameSize);
 
             Complex64[] ifftBuffer = new Complex64[frameSize];
 
