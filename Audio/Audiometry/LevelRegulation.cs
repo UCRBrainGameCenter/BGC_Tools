@@ -78,6 +78,7 @@ namespace BGC.Audio.Audiometry
                 safetyLimit: safetyLimit);
 
             IEnumerable<double> channelRMS = stream.GetChannelRMS();
+            bool rmsMeasured = false;
 
             if (channelRMS.Any(double.IsNaN))
             {
@@ -88,6 +89,7 @@ namespace BGC.Audio.Audiometry
                 else
                 {
                     channelRMS = stream.CalculateRMS();
+                    rmsMeasured = true;
 
                     if (channelRMS.All(double.IsNaN))
                     {
@@ -97,6 +99,17 @@ namespace BGC.Audio.Audiometry
             }
 
             double maxRMS = channelRMS.Where(x => !double.IsNaN(x)).Max();
+
+            if (safetyLimit && !rmsMeasured)
+            {
+                //The claimed RMS may not match the samples, so check the level actually delivered
+                Normalization.CheckDeliveredLevel(
+                    stream: stream,
+                    requestedLevel: presentationLevelHL,
+                    claimedRMS: maxRMS,
+                    limit: dbSafetyLimit,
+                    unit: "dB HL");
+            }
 
             scalingFactorL = levelFactorL / maxRMS;
             scalingFactorR = levelFactorR / maxRMS;
