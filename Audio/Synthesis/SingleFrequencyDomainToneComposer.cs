@@ -58,16 +58,25 @@ namespace BGC.Audio.Synthesis
 
             Complex64[] ifftBuffer = new Complex64[frameSize];
 
+            //A carrier that isn't on a bin isn't periodic in the frame: it jumps where the frame
+            //wraps around, and Populate's truncated sideband series smears that jump into a
+            //transient on both sides of the wrap. Reading the output from the middle of the unused
+            //part of the frame keeps it away from the wrap. Each carrier is rotated so that it
+            //still has its specified phase at the first output sample. On-bin carriers are
+            //periodic in the frame, so their samples are unchanged.
+            int offset = (frameSize - Samples.Length) / 2;
+            double timeShift = -offset / (double)SamplingRate;
+
             foreach (ComplexCarrierTone carrierTone in carrierTones)
             {
-                FrequencyDomain.Populate(ifftBuffer, carrierTone);
+                FrequencyDomain.Populate(ifftBuffer, carrierTone.TimeShift(timeShift));
             }
 
             Fourier.Inverse(ifftBuffer);
 
             for (int i = 0; i < Samples.Length; i++)
             {
-                Samples[i] = (float)(outputScalar * ifftBuffer[i].Real);
+                Samples[i] = (float)(outputScalar * ifftBuffer[offset + i].Real);
             }
         }
 
