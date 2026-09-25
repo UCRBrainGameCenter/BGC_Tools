@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using BGC.Audio;
 using BGC.Audio.Audiometry;
@@ -212,5 +213,79 @@ namespace BGC.Tests
                 Assert.DoesNotThrow(check);
             }
         }
+
+        #region Nothing to regulate (PART-984)
+
+        /// <summary>
+        /// A stream with a zero claimed RMS (e.g. every carrier outside the renderable range) can't be
+        /// played at any level. The regulators scaled by level / 0 = infinity, replaced it by 1, and
+        /// played the stream unscaled (silence) while the requested level was logged. It must be
+        /// refused, with the safety limit engaged or not.
+        /// </summary>
+        [TestCase(true)]
+        [TestCase(false)]
+        public void NoRenderableCarrier_IsRefused(bool safetyLimit)
+        {
+            IBGCStream composer = new SingleFrequencyDomainToneComposer(
+                new[] { new ComplexCarrierTone(30_000.0, 0.1) }, ToneDuration);
+            Assert.AreEqual(0.0, composer.GetChannelRMS().First(), "Precondition: nothing is claimed");
+
+            IBGCStream normalized = composer.Normalize(50.0, safetyLimit: safetyLimit);
+            StreamCompositionException e = Assert.Throws<StreamCompositionException>(() => ReadAll(normalized));
+            StringAssert.Contains("nothing to scale", e.Message);
+        }
+
+        /// <summary> The same for a stereo stream (NormalizerFilter) and for the dB HL units' shared check </summary>
+        [Test]
+        public void ZeroClaim_StereoAndDirectCheck_AreRefused()
+        {
+            IBGCStream silentStereo = new ClaimedRMSStream(new SimpleAudioClip(new float[2 * 4410], 2), 0.0);
+            Assert.Throws<StreamCompositionException>(() => ReadAll(silentStereo.Normalize(50.0)));
+
+            foreach (double claim in new[] { 0.0, double.NaN })
+            {
+                Assert.Throws<StreamCompositionException>(() => Normalization.CheckDeliveredLevel(
+                    stream: MisclaimedTone(0.0), requestedLevel: 50.0, claimedRMS: claim,
+                    limit: LevelRegulation.dbSafetyLimit, unit: "dB HL"),
+                    $"A claimed RMS of {claim} was skipped instead of refused");
+            }
+        }
+
+        /// <summary>
+        /// Samples that aren't numbers can't be judged against the limit: refused, not skipped (the
+        /// check used to drop NaN channels and pass what remained).
+        /// </summary>
+        [Test]
+        public void NaNSamples_AreRefused()
+        {
+            float[] samples = new float[4410];
+            for (int i = 0; i < samples.Length; i++)
+            {
+                samples[i] = (float)(ToneAmplitude * Math.Cos(2.0 * Math.PI * 1000.0 * i / 44100.0));
+            }
+            samples[100] = float.NaN;
+
+            IBGCStream stream = new ClaimedRMSStream(new SimpleAudioClip(samples, 1), ToneAmplitude / Math.Sqrt(2.0));
+            StreamCompositionException e = Assert.Throws<StreamCompositionException>(() => ReadAll(stream.Normalize(50.0)));
+            StringAssert.Contains("aren't finite", e.Message);
+        }
+
+        /// <summary>
+        /// NoiseAudioClip and AnalyticNoiseStream scale their frame by rms / frame RMS: with no
+        /// renderable carrier that is rms / 0, and every sample became 0 * infinity = NaN.
+        /// </summary>
+        [Test]
+        public void NoiseWithNoRenderableCarrier_IsRefusedNotNaN()
+        {
+            NoiseAudioClip clip = new NoiseAudioClip(0.5, 0.1, 30_000.0, 40_000.0, 100,
+                NoiseAudioClip.AmplitudeDistribution.White, new Random(1));
+            Assert.Throws<StreamCompositionException>(() => ReadAll(clip));
+
+            BGC.Audio.AnalyticStreams.AnalyticNoiseStream analytic = new BGC.Audio.AnalyticStreams.AnalyticNoiseStream(
+                0.1, 30_000.0, 40_000.0, 100, BGC.Audio.AnalyticStreams.AnalyticNoiseStream.AmplitudeDistribution.White, new Random(1));
+            Assert.Throws<StreamCompositionException>(() => analytic.Initialize());
+        }
+
+        #endregion Nothing to regulate (PART-984)
     }
 }

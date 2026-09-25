@@ -88,6 +88,14 @@ namespace BGC.Audio.AnalyticStreams
 
             currentRMS = Math.Sqrt(currentRMS / fftBufferSize);
 
+            if (!(currentRMS > 0.0))
+            {
+                //rms / 0 would scale every (zero) sample to NaN
+                throw new StreamCompositionException(
+                    $"Noise from {freqLB} to {freqUB} Hz has no carrier in the renderable range " +
+                    $"(0 to {0.5 * SamplingRate} Hz), so it can't be played at its level.");
+            }
+
             double factor = rms / currentRMS;
 
             for (int i = 0; i < fftBufferSize; i++)

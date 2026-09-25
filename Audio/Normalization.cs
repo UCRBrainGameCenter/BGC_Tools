@@ -50,19 +50,29 @@ namespace BGC.Audio
             string unit,
             int channel = -1)
         {
-            if (stream.ChannelSamples == int.MaxValue || stream.ChannelSamples == 0 ||
-                double.IsNaN(claimedRMS) || claimedRMS <= 0.0)
+            if (stream.ChannelSamples == int.MaxValue || stream.ChannelSamples == 0)
             {
                 return;
             }
 
+            //A zero or NaN claim can't be regulated to any level: refuse it rather than skip the check
+            CheckRegulatable(claimedRMS, requestedLevel, unit);
+
             double[] channelRMS = stream.CalculateRMS().ToArray();
+
+            if (channelRMS.Any(x => double.IsNaN(x) || double.IsInfinity(x)))
+            {
+                throw new StreamCompositionException(
+                    $"Refused a stimulus at {requestedLevel} {unit}: its samples aren't finite numbers (NaN or infinity).");
+            }
+
             double sampleRMS = (channel >= 0 && channel < channelRMS.Length && channelRMS.Length > 1) ?
                 channelRMS[channel] :
-                channelRMS.Where(x => !double.IsNaN(x)).DefaultIfEmpty(0.0).Max();
+                channelRMS.DefaultIfEmpty(0.0).Max();
 
             if (sampleRMS <= 0.0)
             {
+                //Silence is below any limit
                 return;
             }
 
@@ -75,6 +85,26 @@ namespace BGC.Audio
                     $"Requested Level: {requestedLevel} {unit}, but the stimulus would deliver " +
                     $"{deliveredLevel:0.0} {unit} (its samples are {deliveredLevel - requestedLevel:+0.0;-0.0} dB " +
                     $"from its claimed RMS)");
+            }
+        }
+
+        /// <summary>
+        /// Throws unless <paramref name="rms"/>, the RMS a level regulator scales by, is a positive
+        /// finite number. A regulator scales by requestedLevelFactor / rms: at a zero RMS that is
+        /// infinite (which the regulators then replaced by 1, playing the stimulus unscaled, usually
+        /// silent, while logging the requested level), and a NaN RMS poisons every sample. Either
+        /// way the stimulus can't be played at the requested level, whether or not the safety limit
+        /// is engaged. A zero RMS means nothing renderable: e.g. every carrier outside 0 Hz to the
+        /// Nyquist frequency.
+        /// </summary>
+        public static void CheckRegulatable(double rms, double requestedLevel, string unit)
+        {
+            if (!(rms > 0.0) || double.IsInfinity(rms))
+            {
+                throw new StreamCompositionException(
+                    $"Can't play a stimulus at {requestedLevel} {unit}: its RMS is {rms}, so there is nothing " +
+                    $"to scale to that level. If it is synthesized, check that its frequencies lie between " +
+                    $"0 Hz and the Nyquist frequency ({0.5 * FrequencyDomain.SamplingRate} Hz).");
             }
         }
 
@@ -757,6 +787,8 @@ namespace BGC.Audio
             }
 
             double maxRMS = channelRMS.Where(x => !double.IsNaN(x)).Max();
+
+            CheckRegulatable(maxRMS, desiredLevel, "dB");
 
             if (safetyLimit && !rmsMeasured)
             {

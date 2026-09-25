@@ -100,6 +100,8 @@ namespace BGC.Audio.Audiometry
 
             double maxRMS = channelRMS.Where(x => !double.IsNaN(x)).Max();
 
+            Normalization.CheckRegulatable(maxRMS, presentationLevelHL, "dB HL");
+
             if (safetyLimit && !rmsMeasured)
             {
                 //The claimed RMS may not match the samples, so check the level actually delivered
