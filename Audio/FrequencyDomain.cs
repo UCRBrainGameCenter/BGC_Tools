@@ -52,6 +52,10 @@ namespace BGC.Audio
                 return;
             }
 
+            //An off-bin tone e^(i 2pi (bin + d) m / N) over one frame has the spectrum
+            //  X[bin + n] = e^(i pi d) sin(pi d) / (pi (d - n)),
+            //so the inverse FFT reproduces the tone at its frequency and phase, truncated to
+            //sideFreqCount terms on each side
             amplitude *= (Math.Sin(Math.PI * normalizedDeviation) / Math.PI) *
                 Complex64.FromPolarCoordinates(1.0, Math.PI * normalizedDeviation);
 
@@ -63,7 +67,7 @@ namespace BGC.Audio
                     continue;
                 }
 
-                buffer[bin + N] += amplitude / (N - normalizedDeviation);
+                buffer[bin + N] += amplitude / (normalizedDeviation - N);
             }
         }
 
@@ -96,8 +100,8 @@ namespace BGC.Audio
         public static int GetComplexFrequencyBin(int bufferSize, double frequency) =>
            (int)GetComplexFrequencySample(bufferSize, frequency);
 
-        /// <summary> Get f_Delta * T </summary>
+        /// <summary> The fractional bin offset d = f N / fs - bin, in [0, 1) </summary>
         private static double GetComplexNormalizedDeviation(int bufferSize, double frequency) =>
-            0.5 * (GetComplexFrequencySample(bufferSize, frequency) - GetComplexFrequencyBin(bufferSize, frequency));
+            GetComplexFrequencySample(bufferSize, frequency) - GetComplexFrequencyBin(bufferSize, frequency);
     }
 }
