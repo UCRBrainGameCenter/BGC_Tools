@@ -25,6 +25,9 @@ namespace BGC.Audio.Filters
 
         private int bufferIndex = 0;
         private int bufferCount = 0;
+        //The last input block was full, so the filter's tail (filterLength - 1 samples) is still
+        //in outputAccumulation and must be emitted when the input ends
+        private bool tailPending = false;
         private readonly TransformRMSBehavior rmsBehavior;
 
         public override int Channels => stream.Channels;
@@ -186,26 +189,24 @@ namespace BGC.Audio.Filters
 
                 if (read <= 0)
                 {
-                    //Done, No samples left to work with
-                    break;
+                    if (!tailPending)
+                    {
+                        //Done, No samples left to work with
+                        break;
+                    }
+
+                    //The input ended exactly on a block boundary: emit the last block's tail
+                    tailPending = false;
+                    SlideAccumulation();
+                    bufferCount = Channels * (filterLength - 1);
+
+                    samplesWritten += ReadBody(data, offset + samplesWritten, count - samplesWritten);
+                    continue;
                 }
 
-                //Slide output samples over to accumulate on the remainder
-                Array.Copy(
-                    sourceArray: outputAccumulation,
-                    sourceIndex: bufferCount,
-                    destinationArray: outputAccumulation,
-                    destinationIndex: 0,
-                    length: outputAccumulation.Length - bufferCount);
-
-                Array.Clear(
-                    array: outputAccumulation,
-                    index: outputAccumulation.Length - bufferCount,
-                    length: bufferCount);
-
-                bufferIndex = 0;
+                SlideAccumulation();
                 bufferCount = Channels * samplesPerOverlap;
-
+                tailPending = true;
 
                 if (read < inputBuffer.Length)
                 {
@@ -213,6 +214,7 @@ namespace BGC.Audio.Filters
                     //We are guaranteed to have enough room because the output buffer's
                     //length is Channels * (inputBuffer.Length + fftLength)
                     bufferCount = read + Channels * (filterLength - 1);
+                    tailPending = false;
                     //Set rest of inputBuffer to zero
                     Array.Clear(inputBuffer, read, inputBuffer.Length - read);
                 }
@@ -266,10 +268,29 @@ namespace BGC.Audio.Filters
             return samplesWritten;
         }
 
+        /// <summary> Slide the unread output samples over, to accumulate the next block on them </summary>
+        private void SlideAccumulation()
+        {
+            Array.Copy(
+                sourceArray: outputAccumulation,
+                sourceIndex: bufferCount,
+                destinationArray: outputAccumulation,
+                destinationIndex: 0,
+                length: outputAccumulation.Length - bufferCount);
+
+            Array.Clear(
+                array: outputAccumulation,
+                index: outputAccumulation.Length - bufferCount,
+                length: bufferCount);
+
+            bufferIndex = 0;
+        }
+
         private void ClearBuffers()
         {
             bufferIndex = 0;
             bufferCount = 0;
+            tailPending = false;
 
             Array.Clear(outputAccumulation, 0, outputAccumulation.Length);
             Array.Clear(inputBuffer, 0, inputBuffer.Length);
