@@ -91,13 +91,13 @@ namespace BGC.Tests
         }
 
         /// <summary>
-        /// Carriers at the edge bins (the first bin and the Nyquist bin) of a 1 s buffer, whose taper
-        /// terms fall outside [1, N/2]: still exactly the sampled tone. At Nyquist that is
-        /// A cos(pi n + phi), as without the taper.
+        /// Carriers at the edge bins (the first bin and the last below Nyquist) of a 1 s buffer,
+        /// whose taper terms fall outside [1, N/2]: still exactly the sampled tone. (A carrier on the
+        /// Nyquist bin itself isn't rendered: see <see cref="FrequencyDomain.IsRenderable"/>.)
         /// </summary>
         [TestCase(1, 0.7)]
-        [TestCase(32768, 0.0)]
-        [TestCase(32768, 1.0)]
+        [TestCase(32767, 0.0)]
+        [TestCase(32767, 1.0)]
         public void EdgeBinTone_SamplesAreTheSampledTone(int bin, double phase)
         {
             const double duration = 1.0;

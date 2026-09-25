@@ -26,6 +26,9 @@ namespace BGC.Tests
         }
 
         [TestCase(30_000.0)]   // above Nyquist
+        [TestCase(22_050.0)]   // exactly Nyquist
+        [TestCase(22_050.6)]   // above Nyquist, within one bin of it (the bin index truncates to N/2)
+        [TestCase(22_051.3)]
         [TestCase(0.1)]        // below the first bin of a 32768-sample frame (1.35 Hz)
         [TestCase(-500.0)]
         public void SingleComposer_UnrenderableCarrier_IsNotClaimed(double frequency)
@@ -58,8 +61,11 @@ namespace BGC.Tests
                 "The unrenderable carrier was counted in the claimed RMS");
         }
 
-        [TestCase(2.0, true)]       // bin 1 of a 32768-sample frame
-        [TestCase(22050.0, true)]   // the Nyquist bin itself is rendered
+        [TestCase(2.0, true)]       // bin 1 of a 32768-sample frame (1.35 Hz)
+        [TestCase(22049.9, true)]   // just below Nyquist
+        [TestCase(22050.0, false)]  // exactly Nyquist: A (-1)^n cos(phi), not the carrier (see IsRenderable)
+        [TestCase(22050.6, false)]  // above Nyquist but under fs/2 + fs/N (22051.35 Hz): the sliver the truncated bin index admitted
+        [TestCase(22051.3, false)]
         [TestCase(22060.0, false)]
         [TestCase(0.5, false)]
         public void IsRenderable_MatchesPopulate(double frequency, bool renderable)

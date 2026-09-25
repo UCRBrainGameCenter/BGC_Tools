@@ -139,16 +139,23 @@ namespace BGC.Audio
 
         /// <summary>
         /// Whether <see cref="Populate(Complex64[], double, Complex64, int)"/> renders a carrier of
-        /// this frequency into a buffer of this size. Carriers below the first bin or above the
-        /// Nyquist bin are skipped, so they must not count toward a claimed RMS either.
+        /// this frequency into a buffer of this size: from the first bin (fs / N) up to, but not
+        /// including, the Nyquist frequency (fs / 2). Other carriers are skipped, so they must not
+        /// count toward a claimed RMS either.
+        /// The test is on the exact bin position f N / fs, not its integer part: the integer part of
+        /// any f in (fs / 2, fs / 2 + fs / N) is the Nyquist bin, which would admit carriers above
+        /// Nyquist.
+        /// A carrier exactly at Nyquist is excluded too. Sampled at fs / 2, A cos(pi n + phi) =
+        /// A (-1)^n cos(phi): it can't carry its amplitude and phase independently, and its RMS is
+        /// A |cos phi|, not the A / sqrt 2 a carrier claims (silent at phi = pi / 2).
         /// </summary>
         public static bool IsRenderable(int bufferSize, double frequency)
         {
-            int bin = GetComplexFrequencyBin(
+            double binPosition = GetComplexFrequencySample(
                 bufferSize: bufferSize,
                 frequency: frequency);
 
-            return bin >= 1 && bin <= bufferSize / 2;
+            return binPosition >= 1.0 && binPosition < bufferSize / 2;
         }
 
         public static double GetComplexSampleFrequency(int bufferSize, int sample) =>
