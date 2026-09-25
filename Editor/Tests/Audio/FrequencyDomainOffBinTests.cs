@@ -123,5 +123,69 @@ namespace BGC.Tests
             Assert.Less(levels.Max() - levels.Min(), 0.05,
                 $"Levels across bin fractions: {string.Join(", ", levels.Select(x => x.ToString("F3")))} dB");
         }
+
+        /// <summary>
+        /// The untapered <see cref="FrequencyDomain.Populate(Complex64[], double, Complex64, int)"/>
+        /// itself, which FD(Continuous), STM and the noise clips use (FD(Single) now uses the
+        /// tapered variant, so the tests above can't see a regression confined to Populate). One
+        /// frame, inverse FFT, scaled by 1 / sqrt(N): mid-frame, clear of the wrap, the samples must
+        /// be A cos(2 pi f n / fs + phi) at the carrier's frequency, phase and amplitude. A sideband
+        /// sign error inverts off-bin tones; a halved offset moves them.
+        /// </summary>
+        [TestCase(0.0, 0.0)]
+        [TestCase(0.25, 0.0)]
+        [TestCase(0.5, 1.0)]
+        [TestCase(0.75, 2.0)]
+        public void UntaperedPopulate_OffBinTone_HasItsFrequencyPhaseAndAmplitude(double binFraction, double phase)
+        {
+            const double amplitude = 0.1;
+            double frequency = (1486.0 + binFraction) * SampleRate / FrameSize;
+            Complex64[] buffer = new Complex64[FrameSize];
+            FrequencyDomain.Populate(buffer, frequency, Complex64.FromPolarCoordinates(amplitude, phase));
+            Fourier.Inverse(buffer);
+
+            const int start = FrameSize / 4, count = FrameSize / 2;
+            double worst = 0.0;
+            for (int i = start; i < start + count; i++)
+            {
+                double sample = buffer[i].Real / Math.Sqrt(FrameSize);
+                worst = Math.Max(worst, Math.Abs(sample - amplitude * Math.Cos(2.0 * Math.PI * frequency * i / SampleRate + phase)));
+            }
+
+            // The truncated (+/-20-term) untapered series ripples by up to ~3% of the amplitude per
+            // sample (2.1% measured mid-frame at bin + 0.5); a sign error is ~200%, and a halved
+            // offset (d / 2 bins low) drifts the phase by pi d / 2 across this half frame
+            Assert.Less(worst / amplitude, 0.03,
+                $"Bin + {binFraction}, phase {phase}: mid-frame samples deviate from the tone by up to {worst / amplitude:E2} of its amplitude");
+        }
+
+        /// <summary>
+        /// FD(Continuous) keeps each carrier's phase (its output sample n is time n / fs), not only
+        /// its level: correlation with the intended tone after the overlap-add build-up, on and off
+        /// bin. (Its level is +0.66 dB, the known window gain; correlation ignores scale.)
+        /// </summary>
+        [TestCase(0.0, 0.0)]
+        [TestCase(0.25, 1.0)]
+        [TestCase(0.5, 2.0)]
+        [TestCase(0.75, -1.0)]
+        public void ContinuousComposer_OffBinTone_HasItsPhase(double binFraction, double phase)
+        {
+            const int frame = 2048;
+            double frequency = (46.0 + binFraction) * SampleRate / frame;
+            ContinuousFrequencyDomainToneComposer composer = new ContinuousFrequencyDomainToneComposer(
+                new[] { new ComplexCarrierTone(frequency, Complex64.FromPolarCoordinates(0.1, phase)) });
+
+            double[] x = new double[2 * frame + (int)SampleRate];
+            float[] samples = new float[x.Length];
+            composer.Read(samples, 0, samples.Length);
+            for (int i = 0; i < x.Length; i++)
+            {
+                x[i] = samples[i];
+            }
+
+            double correlation = Correlation(x, frequency, phase, 2 * frame, (int)SampleRate);
+            Assert.Greater(correlation, 0.999,
+                $"Bin + {binFraction}, phase {phase}: correlation with the intended tone {correlation:F4}");
+        }
     }
 }

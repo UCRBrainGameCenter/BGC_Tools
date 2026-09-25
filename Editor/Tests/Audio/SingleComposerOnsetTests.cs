@@ -51,14 +51,15 @@ namespace BGC.Tests
             double frequency = (Math.Floor(1000.0 * frame / SampleRate) + binFraction) * SampleRate / frame;
             float[] x = Render(duration, new ComplexCarrierTone(frequency, Complex64.FromPolarCoordinates(0.1, 1.0)));
 
-            // Relative to the middle of the buffer, so the test doesn't depend on the output scale
+            // Against the carrier's own level (A / sqrt 2), so a scale error fails too
             const int window = 2205;
             double middle = LevelDB(x, x.Length / 2 - window / 2, window, 0.1);
-            double first = LevelDB(x, 0, window, 0.1) - middle;
-            double last = LevelDB(x, x.Length - window, window, 0.1) - middle;
+            double first = LevelDB(x, 0, window, 0.1);
+            double last = LevelDB(x, x.Length - window, window, 0.1);
 
-            Assert.AreEqual(0.0, first, 0.1, $"First 50 ms at {first:+0.000;-0.000} dB re the middle");
-            Assert.AreEqual(0.0, last, 0.1, $"Last 50 ms at {last:+0.000;-0.000} dB re the middle");
+            Assert.AreEqual(0.0, middle, 0.01, $"Middle 50 ms at {middle:+0.000;-0.000} dB re the carrier");
+            Assert.AreEqual(0.0, first, 0.1, $"First 50 ms at {first:+0.000;-0.000} dB re the carrier");
+            Assert.AreEqual(0.0, last, 0.1, $"Last 50 ms at {last:+0.000;-0.000} dB re the carrier");
         }
 
         /// <summary>
@@ -187,12 +188,14 @@ namespace BGC.Tests
             double[] reference = Enumerable.Range(0, x.Length)
                 .Select(i => Math.Cos(2.0 * Math.PI * frequency * i / SampleRate + phase)).ToArray();
 
-            // Least-squares amplitude, so the test checks shape and phase, not the output scale
+            // Least-squares amplitude: shape and phase against the fitted scale, and the scale itself
+            // against the specified amplitude (0.1)
             double scale = Enumerable.Range(0, x.Length).Sum(i => x[i] * reference[i]) /
                 reference.Sum(r => r * r);
             double worst = Enumerable.Range(0, x.Length).Max(i => Math.Abs(x[i] - scale * reference[i])) / scale;
 
             Assert.Greater(scale, 0.0, "The tone came out inverted");
+            Assert.AreEqual(0.1, scale, 1e-5, "The tone's amplitude is not the specified one (output scale)");
             Assert.Less(worst, 1e-4, $"Largest deviation from the specified tone: {worst:E2} of its amplitude");
         }
     }
