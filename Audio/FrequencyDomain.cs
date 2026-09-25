@@ -72,6 +72,72 @@ namespace BGC.Audio
         }
 
         /// <summary>
+        /// Like <see cref="Populate(Complex64[], in ComplexCarrierTone, double, int)"/>, but writes the
+        /// carrier multiplied by the frame-periodic Hann window w[m] = sin^2(pi m / N), which is
+        /// zero at the frame's wrap. Divide the inverse FFT by <see cref="HannTaper"/> to recover the
+        /// carrier.
+        /// Multiplying by w convolves the spectrum with (-1/4, 1/2, -1/4), so an off-bin carrier's
+        /// sideband coefficients 1/(d - n) become -1/(2 a (a^2 - 1)), a = d - n: they decay as 1/n^3
+        /// instead of 1/n. Truncated to <paramref name="sideFreqCount"/> terms per side, the series
+        /// then leaves a ripple ~100x smaller away from the wrap. On-bin carriers get the three
+        /// kernel bins and are recovered exactly.
+        /// Terms that fall outside [1, N/2] are written to their aliased bin (index mod N) rather
+        /// than skipped: the output is the real part of the inverse FFT, which is the same either
+        /// way, so the tapered carrier is complete and dividing by the window is exact. (Skipping
+        /// them would leave carriers at the DC and Nyquist bins not exactly tapered.)
+        /// </summary>
+        public static void PopulateHannTapered(
+            Complex64[] buffer,
+            in ComplexCarrierTone carrierTone,
+            int sideFreqCount = 20)
+        {
+            if (!IsRenderable(buffer.Length, carrierTone.frequency))
+            {
+                //Skipping frequency as it's out of range
+                return;
+            }
+
+            int bin = GetComplexFrequencyBin(
+                bufferSize: buffer.Length,
+                frequency: carrierTone.frequency);
+
+            double normalizedDeviation = GetComplexNormalizedDeviation(
+                bufferSize: buffer.Length,
+                frequency: carrierTone.frequency);
+
+            Complex64 amplitude = carrierTone.amplitude * Math.Sqrt(buffer.Length);
+
+            if (normalizedDeviation == 0.0)
+            {
+                AddAliased(buffer, bin - 1, -0.25 * amplitude);
+                AddAliased(buffer, bin, 0.5 * amplitude);
+                AddAliased(buffer, bin + 1, -0.25 * amplitude);
+                return;
+            }
+
+            amplitude *= (Math.Sin(Math.PI * normalizedDeviation) / Math.PI) *
+                Complex64.FromPolarCoordinates(1.0, Math.PI * normalizedDeviation);
+
+            for (int N = -sideFreqCount; N <= sideFreqCount; N++)
+            {
+                double a = normalizedDeviation - N;
+                AddAliased(buffer, bin + N, amplitude * (-0.5 / (a * (a * a - 1.0))));
+            }
+        }
+
+        /// <summary> The frame-periodic Hann window that <see cref="PopulateHannTapered"/> applies </summary>
+        public static double HannTaper(int bufferSize, int sample)
+        {
+            double s = Math.Sin(Math.PI * sample / bufferSize);
+            return s * s;
+        }
+
+        private static void AddAliased(Complex64[] buffer, int bin, Complex64 value)
+        {
+            buffer[((bin % buffer.Length) + buffer.Length) % buffer.Length] += value;
+        }
+
+        /// <summary>
         /// Whether <see cref="Populate(Complex64[], double, Complex64, int)"/> renders a carrier of
         /// this frequency into a buffer of this size. Carriers below the first bin or above the
         /// Nyquist bin are skipped, so they must not count toward a claimed RMS either.

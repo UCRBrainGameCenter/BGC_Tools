@@ -62,6 +62,57 @@ namespace BGC.Tests
         }
 
         /// <summary>
+        /// Off-bin tones over the first and last 20 ms, and sample by sample. Away from the wrap the
+        /// untapered series still left a ripple decaying only as 1 / distance: +0.2 dB over the first
+        /// and last 20 ms of a 1 s tone, and up to 3% of the amplitude in a single sample. The
+        /// Hann-tapered synthesis leaves about 0.001 dB and 1.4e-4 of the amplitude.
+        /// </summary>
+        [TestCase(0.5, 0.5)]
+        [TestCase(1.0, 0.25)]
+        [TestCase(1.0, 0.5)]
+        [TestCase(2.0, 0.5)]
+        public void OffBinTone_First20msAndEverySample_AtTheTone(double duration, double binFraction)
+        {
+            int frame = ((int)Math.Ceiling(duration * SampleRate)).CeilingToPowerOfTwo();
+            double frequency = (Math.Floor(1000.0 * frame / SampleRate) + binFraction) * SampleRate / frame;
+            const double amplitude = 0.1;
+            const double phase = 0.3;
+            float[] x = Render(duration, new ComplexCarrierTone(frequency, Complex64.FromPolarCoordinates(amplitude, phase)));
+
+            const int window = 882;
+            double first = LevelDB(x, 0, window, amplitude);
+            double last = LevelDB(x, x.Length - window, window, amplitude);
+            double worst = Enumerable.Range(0, x.Length)
+                .Max(i => Math.Abs(x[i] - amplitude * Math.Cos(2.0 * Math.PI * frequency * i / SampleRate + phase))) / amplitude;
+
+            Assert.AreEqual(0.0, first, 0.01, $"First 20 ms at {first:+0.0000;-0.0000} dB");
+            Assert.AreEqual(0.0, last, 0.01, $"Last 20 ms at {last:+0.0000;-0.0000} dB");
+            Assert.Less(worst, 1e-3, $"Largest deviation from the tone: {worst:E2} of its amplitude");
+        }
+
+        /// <summary>
+        /// Carriers at the edge bins (the first bin and the Nyquist bin) of a 1 s buffer, whose taper
+        /// terms fall outside [1, N/2]: still exactly the sampled tone. At Nyquist that is
+        /// A cos(pi n + phi), as without the taper.
+        /// </summary>
+        [TestCase(1, 0.7)]
+        [TestCase(32768, 0.0)]
+        [TestCase(32768, 1.0)]
+        public void EdgeBinTone_SamplesAreTheSampledTone(int bin, double phase)
+        {
+            const double duration = 1.0;
+            const int frame = 65536;
+            const double amplitude = 0.1;
+            double frequency = bin * SampleRate / frame;
+            float[] x = Render(duration, new ComplexCarrierTone(frequency, Complex64.FromPolarCoordinates(amplitude, phase)));
+
+            double worst = Enumerable.Range(0, x.Length)
+                .Max(i => Math.Abs(x[i] - amplitude * Math.Cos(2.0 * Math.PI * frequency * i / SampleRate + phase))) / amplitude;
+
+            Assert.Less(worst, 1e-4, $"Largest deviation from the sampled tone: {worst:E2} of its amplitude");
+        }
+
+        /// <summary>
         /// On-bin carriers are periodic in the frame, so the read offset must leave them exactly as
         /// specified: amplitude and phase at the first sample.
         /// </summary>

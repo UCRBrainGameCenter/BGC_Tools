@@ -67,18 +67,48 @@ namespace BGC.Audio.Synthesis
             int offset = (frameSize - Samples.Length) / 2;
             double timeShift = -offset / (double)SamplingRate;
 
+            //Even away from the wrap, the truncated series leaves a ripple that decays only as
+            //1 / distance (+0.2 dB over the first and last 20 ms of a 1 s tone). Synthesizing the
+            //carriers tapered by a Hann window that is zero at the wrap makes the series converge
+            //as 1/n^3, and dividing the output by the window restores the carriers. Only worth it
+            //while the output stays clear of the wrap, where the window is small: a duration that
+            //nearly fills its frame keeps the untapered synthesis.
+            bool taper = FrequencyDomain.HannTaper(frameSize, offset) >= MinimumTaperAtOutput;
+
             foreach (ComplexCarrierTone carrierTone in carrierTones)
             {
-                FrequencyDomain.Populate(ifftBuffer, carrierTone.TimeShift(timeShift));
+                if (taper)
+                {
+                    FrequencyDomain.PopulateHannTapered(ifftBuffer, carrierTone.TimeShift(timeShift));
+                }
+                else
+                {
+                    FrequencyDomain.Populate(ifftBuffer, carrierTone.TimeShift(timeShift));
+                }
             }
 
             Fourier.Inverse(ifftBuffer);
 
             for (int i = 0; i < Samples.Length; i++)
             {
-                Samples[i] = (float)(outputScalar * ifftBuffer[offset + i].Real);
+                double sample = outputScalar * ifftBuffer[offset + i].Real;
+
+                if (taper)
+                {
+                    sample /= FrequencyDomain.HannTaper(frameSize, offset + i);
+                }
+
+                Samples[i] = (float)sample;
             }
         }
+
+        /// <summary>
+        /// The smallest Hann window value at the first output sample for which tapered synthesis is
+        /// used (sin(pi u) >= 0.05, u the output's distance from the frame wrap as a fraction of
+        /// the frame, about 1.6% of it). Below it, dividing by the window amplifies the residual
+        /// more than tapering removes, and the untapered synthesis is the better of the two.
+        /// </summary>
+        private const double MinimumTaperAtOutput = 0.05 * 0.05;
 
         public override int Read(float[] data, int offset, int count)
         {
