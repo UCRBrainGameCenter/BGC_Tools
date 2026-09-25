@@ -46,9 +46,31 @@ namespace BGC.Audio.Synthesis
             this.rmsBehavior = rmsBehavior;
         }
 
+        /// <summary>
+        /// The frame a buffer of <paramref name="sampleCount"/> samples is synthesized in: the
+        /// smallest power of two that leaves at least 1/8 of it unused, so the output (read from the
+        /// middle of the frame) stays at least N/16 from the frame's wrap on both sides. There the
+        /// Hann-tapered synthesis is within 0.01 dB of the carriers over the first and last 20 ms.
+        /// A duration that nearly filled its power-of-two frame (just under 0.743, 1.486, 2.972 s)
+        /// had no such margin: its output sat next to the wrap, where the truncated sideband series
+        /// left the onset up to -4.7 dB (first 20 ms) at an exact fill. Those durations now use the
+        /// next power of two.
+        /// </summary>
+        public static int FrameSize(int sampleCount)
+        {
+            int frameSize = sampleCount.CeilingToPowerOfTwo();
+
+            if (frameSize - sampleCount < frameSize / 8)
+            {
+                frameSize *= 2;
+            }
+
+            return frameSize;
+        }
+
         protected override void _Initialize()
         {
-            int frameSize = Samples.Length.CeilingToPowerOfTwo();
+            int frameSize = FrameSize(Samples.Length);
             //Populate writes A*sqrt(N) into a single (positive-frequency) bin and the inverse FFT
             //is unscaled, so Re(ifft) is A*sqrt(N)*cos(...). Scaling by 1/sqrt(N) makes each
             //carrier's amplitude A its peak amplitude, as in SineWave, which is what the
@@ -71,8 +93,9 @@ namespace BGC.Audio.Synthesis
             //1 / distance (+0.2 dB over the first and last 20 ms of a 1 s tone). Synthesizing the
             //carriers tapered by a Hann window that is zero at the wrap makes the series converge
             //as 1/n^3, and dividing the output by the window restores the carriers. Only worth it
-            //while the output stays clear of the wrap, where the window is small: a duration that
-            //nearly fills its frame keeps the untapered synthesis.
+            //while the output stays clear of the wrap, where the window is small. FrameSize leaves
+            //that margin for every buffer of 8 samples or more; smaller ones keep the untapered
+            //synthesis.
             bool taper = FrequencyDomain.HannTaper(frameSize, offset) >= MinimumTaperAtOutput;
 
             foreach (ComplexCarrierTone carrierTone in carrierTones)
@@ -158,7 +181,7 @@ namespace BGC.Audio.Synthesis
 
                     case TransformRMSBehavior.Passthrough:
                         //Only carriers that Populate actually renders into the frame
-                        int frameSize = Samples.Length.CeilingToPowerOfTwo();
+                        int frameSize = FrameSize(Samples.Length);
                         double rms = carrierTones
                             .Where(x => FrequencyDomain.IsRenderable(frameSize, x.frequency))
                             .Select(x => 0.5 * x.amplitude.MagnitudeSquared).Sum();

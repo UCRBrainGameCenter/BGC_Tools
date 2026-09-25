@@ -91,6 +91,64 @@ namespace BGC.Tests
         }
 
         /// <summary>
+        /// Durations that nearly fill their power-of-two frame, measured against the ideal tone at its
+        /// absolute amplitude. With the output next to the frame's wrap (independent review, report 14:
+        /// 63448, 64000 and 65536 samples in a 65536 frame) the first 20 ms were -0.12, +0.69 and
+        /// -4.75 dB. <see cref="SingleFrequencyDomainToneComposer.FrameSize"/> now leaves a margin.
+        /// </summary>
+        [TestCase(63448, 0.5)]
+        [TestCase(64000, 0.5)]
+        [TestCase(65536, 0.5)]
+        [TestCase(65536, 0.25)]
+        [TestCase(32700, 0.5)]
+        [TestCase(131000, 0.75)]
+        public void OffBinTone_NearlyFillingItsFrame_First20msAndEverySample_AtTheTone(int sampleCount, double binFraction)
+        {
+            // Off-bin relative to the frame the composer actually uses
+            int frame = SingleFrequencyDomainToneComposer.FrameSize(sampleCount);
+            double frequency = (Math.Floor(1000.0 * frame / SampleRate) + binFraction) * SampleRate / frame;
+            const double amplitude = 0.1;
+            const double phase = 0.3;
+
+            SingleFrequencyDomainToneComposer composer = new SingleFrequencyDomainToneComposer(
+                new[] { new ComplexCarrierTone(frequency, Complex64.FromPolarCoordinates(amplitude, phase)) }, sampleCount);
+            float[] x = new float[composer.ChannelSamples];
+            composer.Read(x, 0, x.Length);
+
+            const int window = 882;
+            double first = LevelDB(x, 0, window, amplitude);
+            double last = LevelDB(x, x.Length - window, window, amplitude);
+            double worst = Enumerable.Range(0, x.Length)
+                .Max(i => Math.Abs(x[i] - amplitude * Math.Cos(2.0 * Math.PI * frequency * i / SampleRate + phase))) / amplitude;
+
+            Assert.AreEqual(0.0, first, 0.01, $"{sampleCount} samples (frame {frame}): first 20 ms at {first:+0.0000;-0.0000} dB");
+            Assert.AreEqual(0.0, last, 0.01, $"{sampleCount} samples (frame {frame}): last 20 ms at {last:+0.0000;-0.0000} dB");
+            Assert.Less(worst, 1e-3, $"Largest deviation from the tone: {worst:E2} of its amplitude");
+        }
+
+        /// <summary>
+        /// The claim must count exactly the carriers the frame renders. A 0.5 Hz carrier is below
+        /// the first bin of a 65536 frame (0.67 Hz) but renderable in the 131072 frame a
+        /// 65536-sample buffer now uses; the claim has to use the same frame.
+        /// </summary>
+        [Test]
+        public void Claim_UsesTheFrameTheSamplesAreRenderedIn()
+        {
+            const int sampleCount = 65536;
+            ComplexCarrierTone low = new ComplexCarrierTone(0.5, new Complex64(0.1, 0.0));
+            SingleFrequencyDomainToneComposer composer = new SingleFrequencyDomainToneComposer(new[] { low }, sampleCount);
+
+            float[] x = new float[sampleCount];
+            composer.Read(x, 0, x.Length);
+            double sampleRMS = Math.Sqrt(x.Sum(v => v * (double)v) / x.Length);
+            bool renderable = FrequencyDomain.IsRenderable(SingleFrequencyDomainToneComposer.FrameSize(sampleCount), low.frequency);
+
+            Assert.IsTrue(renderable, "Precondition: 0.5 Hz is renderable in the composer's frame");
+            Assert.Greater(sampleRMS, 0.01, "The carrier was not rendered");
+            Assert.AreEqual(0.1 / Math.Sqrt(2.0), composer.GetChannelRMS().First(), 1e-12, "The rendered carrier was not claimed");
+        }
+
+        /// <summary>
         /// Carriers at the edge bins (the first bin and the last below Nyquist) of a 1 s buffer,
         /// whose taper terms fall outside [1, N/2]: still exactly the sampled tone. (A carrier on the
         /// Nyquist bin itself isn't rendered: see <see cref="FrequencyDomain.IsRenderable"/>.)
