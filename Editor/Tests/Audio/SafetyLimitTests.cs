@@ -308,10 +308,40 @@ namespace BGC.Tests
         }
 
         /// <summary>
+        /// A regulated stream's claimed RMS is the regulated level even when it is read before the
+        /// stream's first Read. NormalizerFilter and NormalizerMonoFilter computed their factors on
+        /// initialization but not in GetChannelRMS, so a claim read first was 0, and it was cached:
+        /// it stayed 0 after the stream played. A regulator composed on top is not affected
+        /// (initialization reaches inner streams first); a caller that reads the claim directly is.
+        /// Mono and stereo inner regulators.
+        /// </summary>
+        [TestCase(1)]
+        [TestCase(2)]
+        public void RegulatedClaim_ReadBeforeTheFirstRead_IsTheRegulatedRMS(int channels)
+        {
+            IBGCStream Tone()
+            {
+                IBGCStream tone = new SineWave(ToneAmplitude, 1000.0).Truncate(totalDuration: ToneDuration);
+                return channels == 2 ? tone.UpChannel(2) : tone;
+            }
+
+            IBGCStream claimedFirst = Tone().Normalize(50.0);
+            double claimBeforeRead = claimedFirst.GetChannelRMS().Max();
+
+            IBGCStream readFirst = Tone().Normalize(50.0);
+            float[] samples = new float[2 * 22050];
+            readFirst.Read(samples, 0, samples.Length);
+            double sampleRMS = Math.Sqrt(samples.Where((x, i) => i % 2 == 0).Average(x => x * (double)x));
+
+            Assert.AreEqual(sampleRMS, claimBeforeRead, 1e-4 * sampleRMS, "A claim read before the first Read");
+            Assert.AreEqual(sampleRMS, readFirst.GetChannelRMS().Max(), 1e-4 * sampleRMS, "A claim read after it");
+        }
+
+        /// <summary>
         /// A regulator applied to an already regulated stream (a collection-level Level Regulator over
-        /// stimuli with their own) sets the level. The inner NormalizerFilter claimed RMS 0 until its
-        /// first Read, so the outer regulator's factor was level / 0: before the zero-claim refusal it
-        /// became 1 and the outer request was silently ignored; after it, the stream was refused.
+        /// stimuli with their own) sets the level. Regression coverage; initialization reaches the
+        /// inner regulator first, so this passed before 51aeb9c too (the "outer regulator ignored"
+        /// scenario in 51aeb9c's message needs a claim read before the first Read, above).
         /// Mono and stereo inner regulators.
         /// </summary>
         [TestCase(1)]
