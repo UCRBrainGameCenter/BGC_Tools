@@ -286,6 +286,32 @@ namespace BGC.Tests
             Assert.Throws<StreamCompositionException>(() => analytic.Initialize());
         }
 
+        /// <summary>
+        /// A regulator applied to an already regulated stream (a collection-level Level Regulator over
+        /// stimuli with their own) sets the level. The inner NormalizerFilter claimed RMS 0 until its
+        /// first Read, so the outer regulator's factor was level / 0: before the zero-claim refusal it
+        /// became 1 and the outer request was silently ignored; after it, the stream was refused.
+        /// Mono and stereo inner regulators.
+        /// </summary>
+        [TestCase(1)]
+        [TestCase(2)]
+        public void StackedRegulators_TheOuterSetsTheLevel(int channels)
+        {
+            IBGCStream Tone()
+            {
+                IBGCStream tone = new SineWave(ToneAmplitude, 1000.0).Truncate(totalDuration: ToneDuration);
+                return channels == 2 ? tone.UpChannel(2) : tone;
+            }
+
+            float[] stacked = new float[2 * 22050];
+            float[] single = new float[2 * 22050];
+            Tone().Normalize(50.0).Normalize(60.0).Read(stacked, 0, stacked.Length);
+            Tone().Normalize(60.0).Read(single, 0, single.Length);
+
+            Assert.AreEqual(Math.Sqrt(single.Average(x => x * (double)x)), Math.Sqrt(stacked.Average(x => x * (double)x)), 1e-6,
+                "The outer regulator didn't set the level");
+        }
+
         #endregion Nothing to regulate (PART-984)
     }
 }

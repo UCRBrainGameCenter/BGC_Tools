@@ -172,6 +172,13 @@ namespace BGC.Audio.Filters
         {
             if (channelRMS == null)
             {
+                //The factors are computed on initialization: before it they are 0, and the claim
+                //would be 0 (a regulator downstream then had nothing to scale)
+                if (!initialized)
+                {
+                    Initialize();
+                }
+
                 double[] innerRMS = stream.GetChannelRMS().ToArray();
                 innerRMS[0] *= Math.Abs(leftFactor);
                 innerRMS[1] *= Math.Abs(rightFactor);
