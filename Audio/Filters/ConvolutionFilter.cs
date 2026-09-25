@@ -56,7 +56,8 @@ namespace BGC.Audio.Filters
             }
             else
             {
-                ChannelSamples = filterLength + stream.ChannelSamples - 1;
+                //The full convolution of an empty input is empty (it emits nothing)
+                ChannelSamples = stream.ChannelSamples == 0 ? 0 : filterLength + stream.ChannelSamples - 1;
                 TotalSamples = Channels * ChannelSamples;
             }
 
@@ -96,7 +97,8 @@ namespace BGC.Audio.Filters
             }
             else
             {
-                ChannelSamples = filterLength + stream.ChannelSamples - 1;
+                //The full convolution of an empty input is empty (it emits nothing)
+                ChannelSamples = stream.ChannelSamples == 0 ? 0 : filterLength + stream.ChannelSamples - 1;
                 TotalSamples = Channels * ChannelSamples;
             }
 
@@ -141,7 +143,8 @@ namespace BGC.Audio.Filters
             }
             else
             {
-                ChannelSamples = filterLength + stream.ChannelSamples - 1;
+                //The full convolution of an empty input is empty (it emits nothing)
+                ChannelSamples = stream.ChannelSamples == 0 ? 0 : filterLength + stream.ChannelSamples - 1;
                 TotalSamples = Channels * ChannelSamples;
             }
 

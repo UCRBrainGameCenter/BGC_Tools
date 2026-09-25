@@ -96,5 +96,22 @@ namespace BGC.Tests
                 Assert.LessOrEqual(worst, 1e-4 * peak, $"Channel {channel}: largest error {worst:E3} (peak {peak:F4})");
             }
         }
+
+        /// <summary>
+        /// An empty input convolves to an empty output. Both filters reported L - 1 samples for it
+        /// and emitted none (report 14).
+        /// </summary>
+        [Test]
+        public void EmptyInput_ReportsAndEmitsNothing()
+        {
+            IBGCStream single = new SimpleAudioClip(new float[0], channels: 1).Convolve(RandomFilter(511, 2));
+            IBGCStream multi = new SimpleAudioClip(new float[0], channels: 1).MultiConvolve(RandomFilter(31, 3), RandomFilter(31, 4));
+
+            foreach (IBGCStream convolved in new[] { single, multi })
+            {
+                Assert.AreEqual(0, convolved.ChannelSamples, "Reported length");
+                Assert.AreEqual(0, ReadToEnd(convolved).Length, "Emitted samples");
+            }
+        }
     }
 }

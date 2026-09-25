@@ -78,14 +78,17 @@ namespace BGC.Audio.Synthesis
 
             Fourier.Inverse(fftBuffer);
 
+            //The level of the samples the clip returns (the first _channelSamples of the frame), which
+            //is what it claims. The whole padded frame's RMS differs from it by the realization of the
+            //cropped part and its onset.
             double currentRMS = 0.0;
 
-            for (int i = 0; i < fftBufferSize; i++)
+            for (int i = 0; i < _channelSamples; i++)
             {
                 currentRMS += fftBuffer[i].Real * fftBuffer[i].Real;
             }
 
-            currentRMS = Math.Sqrt(currentRMS / fftBufferSize);
+            currentRMS = Math.Sqrt(currentRMS / _channelSamples);
 
             if (!(currentRMS > 0.0))
             {

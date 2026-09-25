@@ -287,6 +287,27 @@ namespace BGC.Tests
         }
 
         /// <summary>
+        /// NoiseAudioClip claims the RMS it was asked for, so the samples it returns must have it. It
+        /// normalized its whole power-of-two frame instead of the crop it returns (report 14), so
+        /// each token's level differed from its claim by the crop's realization.
+        /// </summary>
+        [Test]
+        public void NoiseAudioClip_ReturnedSamples_HaveTheClaimedRMS()
+        {
+            for (int seed = 0; seed < 10; seed++)
+            {
+                NoiseAudioClip clip = new NoiseAudioClip(0.5, 0.1, 100.0, 10000.0, 4000,
+                    NoiseAudioClip.AmplitudeDistribution.White, new Random(seed));
+                float[] x = new float[clip.ChannelSamples];
+                clip.Read(x, 0, x.Length);
+                double rms = Math.Sqrt(x.Average(v => v * (double)v));
+
+                Assert.AreEqual(0.0, 20.0 * Math.Log10(rms / clip.GetChannelRMS().First()), 1e-4,
+                    $"Seed {seed}: returned samples re claim");
+            }
+        }
+
+        /// <summary>
         /// A regulator applied to an already regulated stream (a collection-level Level Regulator over
         /// stimuli with their own) sets the level. The inner NormalizerFilter claimed RMS 0 until its
         /// first Read, so the outer regulator's factor was level / 0: before the zero-claim refusal it
