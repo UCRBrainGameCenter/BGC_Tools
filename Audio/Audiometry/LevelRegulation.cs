@@ -95,6 +95,13 @@ namespace BGC.Audio.Audiometry
                     {
                         throw new StreamCompositionException("Unable to calculate the RMS of stream.");
                     }
+
+                    if (channelRMS.Any(x => double.IsNaN(x) || double.IsInfinity(x)))
+                    {
+                        //One channel's samples aren't numbers: dropping it would play them (PART-984)
+                        throw new StreamCompositionException(
+                            "Can't regulate a stimulus whose samples aren't finite numbers (NaN or infinity).");
+                    }
                 }
             }
 

@@ -271,6 +271,28 @@ namespace BGC.Tests
         }
 
         /// <summary>
+        /// A stream whose claim is unknown (NaN) is measured. If one channel's samples are finite and
+        /// the other's aren't, the regulators used to drop the NaN channel, regulate by the other,
+        /// and skip the delivered-level check (the RMS was measured), so the NaN samples played
+        /// (second independent review). Refused now, in dB SPL.
+        /// </summary>
+        [Test]
+        public void UnknownClaim_MeasuredNaNInOneChannel_IsRefused()
+        {
+            float[] samples = new float[2 * 4410];
+            for (int i = 0; i < samples.Length; i += 2)
+            {
+                samples[i] = (float)(ToneAmplitude * Math.Cos(2.0 * Math.PI * 1000.0 * i / 2 / 44100.0));
+                samples[i + 1] = samples[i];
+            }
+            samples[201] = float.NaN;
+
+            IBGCStream stream = new ClaimedRMSStream(new SimpleAudioClip(samples, 2), double.NaN);
+            StreamCompositionException e = Assert.Throws<StreamCompositionException>(() => ReadAll(stream.Normalize(50.0)));
+            StringAssert.Contains("aren't finite", e.Message);
+        }
+
+        /// <summary>
         /// NoiseAudioClip and AnalyticNoiseStream scale their frame by rms / frame RMS: with no
         /// renderable carrier that is rms / 0, and every sample became 0 * infinity = NaN.
         /// </summary>

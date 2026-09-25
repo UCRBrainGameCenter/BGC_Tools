@@ -141,11 +141,13 @@ namespace BGC.Tests
 
             float[] x = new float[sampleCount];
             composer.Read(x, 0, x.Length);
-            double sampleRMS = Math.Sqrt(x.Sum(v => v * (double)v) / x.Length);
             bool renderable = FrequencyDomain.IsRenderable(SingleFrequencyDomainToneComposer.FrameSize(sampleCount), low.frequency);
+            // The samples are the carrier itself (0.74 of a cycle, so its RMS isn't A / sqrt 2)
+            double worst = Enumerable.Range(0, x.Length)
+                .Max(i => Math.Abs(x[i] - 0.1 * Math.Cos(2.0 * Math.PI * low.frequency * i / SampleRate)));
 
             Assert.IsTrue(renderable, "Precondition: 0.5 Hz is renderable in the composer's frame");
-            Assert.Greater(sampleRMS, 0.01, "The carrier was not rendered");
+            Assert.Less(worst, 1e-4, $"The samples deviate from the carrier by up to {worst:E2}");
             Assert.AreEqual(0.1 / Math.Sqrt(2.0), composer.GetChannelRMS().First(), 1e-12, "The rendered carrier was not claimed");
         }
 
