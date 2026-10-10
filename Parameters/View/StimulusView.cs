@@ -124,7 +124,7 @@ namespace BGC.Parameters.View
                 DisplayPropertyGroupInlineAttribute inlineAttribute = property.GetCustomAttribute<DisplayPropertyGroupInlineAttribute>();
                 AppendSelectionAttribute appendSelectionAttribute = property.GetAppendSelectionAttribute();
 
-                if (displayAttribute != null && property.IsListField())
+                if (displayAttribute != null && (property.IsListField() || property.IsTupleListField()))
                 {
                     //List input field
                     SpawnListField(

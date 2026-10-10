@@ -77,3 +77,43 @@ As with scalar fields, item ranges and counts are enforced by the editor, not on
 
 A header row shows the title, the item count with its allowed range, and Add. Each item gets
 a row: number, value, ▲ ▼ (move), Copy (duplicate below), ✕ (delete).
+
+## Tuple lists
+
+For items with 2 to 4 values that each mean something, too small to deserve a property group
+(e.g. one row per difficulty level), use a list of value tuples. Each column is declared with
+its own class-level attribute, so a subclass can redeclare one to change its title, bounds or
+initial values.
+
+```csharp
+[TupleListFieldDisplay("DifficultyLevels", "Difficulty Levels", minimumCount: 1)]
+[IntTupleColumn("DifficultyLevels", 0, "MaxWallWidth", "Max Wall Width",
+    initial: new[] { 4, 3, 2, 1 })]
+[DoubleTupleColumn("DifficultyLevels", 1, "ObstacleChance", "Obstacle Chance",
+    initial: new[] { 0, 0.2, 0.4, 0.6 }, minimum: 0, maximum: 1)]
+public class MyConfig : CommonPropertyGroup
+{
+    [DisplayInputField("DifficultyLevels")]
+    public List<(int MaxWallWidth, double ObstacleChance)> DifficultyLevels { get; set; }
+}
+```
+
+- Columns: `IntTupleColumn`, `DoubleTupleColumn` (`minimum`, `maximum`, `postfix`, `newItem`),
+  `StringTupleColumn`, `BoolTupleColumn` (`newItem`). Arguments: field name, index (0 =
+  `Item1`), column name, title. Every column's `initial` must have the same length.
+- The tuple's element names (`MaxWallWidth` above) are for code only; titles and saved names
+  come from the column attributes.
+- **Saved format:** one object per row, keyed by column name:
+  `[{"MaxWallWidth":4,"ObstacleChance":0}, ...]`. A column missing from a saved row takes its
+  `newItem` value, so a column can be added later. A key that matches no column makes the
+  value unreadable (preserved as above), so renaming or removing a column never silently drops
+  data: migrate the saved data when you do.
+- **Legacy string:** set both `legacyDelimiters` (between rows) and `legacyColumnDelimiters`
+  (between columns), e.g. `"4,0; 3,0.2"`. Every row must have every column.
+- **Several old fields merged into one tuple list** need code: override the group's
+  `Deserialize`, build the new field's value from the old keys, then call `base.Deserialize`.
+  GoNoGo's `DiscriminabilityDifficultyConfig` is the example. Stage migrations
+  (`[StageMigration]`) only see top-level stages, so this also works for nested groups.
+- Not supported: mirrored tuple lists, script-variable keys.
+- The editor shows the column titles above the rows, and each row gets one value per column.
+  The info panel shows rows as `(4, 0), (3, 0.2)`.
