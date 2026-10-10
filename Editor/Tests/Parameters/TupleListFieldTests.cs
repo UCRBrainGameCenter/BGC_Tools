@@ -104,12 +104,16 @@ namespace BGC.Tests
         }
 
         [Test]
-        public void MissingColumn_TakesTheColumnsNewItemValue()
+        public void MissingColumn_IsUnparseableAndPreserved()
         {
-            // A column added after a battery was saved
+            // E.g. a column added after a battery was saved: filling in a value would run the
+            // battery with a setting nobody chose, so it needs an explicit upgrade instead
+            LogAssert.Expect(LogType.Error, new Regex("Unable to read list field \"Levels\""));
+
             TupleGroup group = LoadField("Levels", new JsonArray((JsonValue)Row(("Input", 7))));
 
-            CollectionAssert.AreEqual(new[] { (7, 0.25) }, group.Levels);
+            CollectionAssert.IsEmpty(group.Levels);
+            Assert.AreEqual("[{\"Input\":7}]", group.Serialize()["Levels"].ToString());
         }
 
         [Test]

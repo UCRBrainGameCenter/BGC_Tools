@@ -104,14 +104,15 @@ public class MyConfig : CommonPropertyGroup
 - The tuple's element names (`MaxWallWidth` above) are for code only; titles and saved names
   come from the column attributes.
 - **Saved format:** one object per row, keyed by column name:
-  `[{"MaxWallWidth":4,"ObstacleChance":0}, ...]`. A column missing from a saved row takes its
-  `newItem` value, so a column can be added later. A key that matches no column makes the
-  value unreadable (preserved as above), so renaming or removing a column never silently drops
-  data: migrate the saved data when you do.
+  `[{"MaxWallWidth":4,"ObstacleChance":0}, ...]`. A saved row missing a column, or with a key
+  that matches no column, makes the value unreadable (preserved as above): adding, renaming or
+  removing a column never silently fills in, changes or drops data. When you change the
+  columns, upgrade the saved rows explicitly (see below).
 - **Legacy string:** set both `legacyDelimiters` (between rows) and `legacyColumnDelimiters`
   (between columns), e.g. `"4,0; 3,0.2"`. Every row must have every column.
-- **Several old fields merged into one tuple list** need code: override the group's
-  `Deserialize`, build the new field's value from the old keys, then call `base.Deserialize`.
+- **Several old fields merged into one tuple list, or a column added,** need code: override the
+  group's `Deserialize`, build the new field's value from the old data on a copy of the
+  `JsonObject`, then call `base.Deserialize` with the copy.
   GoNoGo's `DiscriminabilityDifficultyConfig` is the example. Stage migrations
   (`[StageMigration]`) only see top-level stages, so this also works for nested groups.
 - Not supported: mirrored tuple lists, script-variable keys.

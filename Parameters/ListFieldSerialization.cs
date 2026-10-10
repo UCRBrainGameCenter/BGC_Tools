@@ -188,9 +188,9 @@ namespace BGC.Parameters
         }
 
         /// <summary>
-        /// Reads rows from an array of objects keyed by column name (a missing column takes the
-        /// column's new-item value; an unknown key makes the value unreadable, so a renamed or
-        /// removed column never silently drops data), or from a legacy string split into rows on
+        /// Reads rows from an array of objects keyed by column name (a missing or unknown key makes
+        /// the value unreadable, so adding, renaming or removing a column never silently changes
+        /// or drops data), or from a legacy string split into rows on
         /// legacyDelimiters and into columns on legacyColumnDelimiters (every row must have every
         /// column). Unreadable values are preserved as for other list fields.
         /// </summary>
@@ -241,11 +241,10 @@ namespace BGC.Parameters
                     {
                         TupleColumnAttribute column = layout.Columns[i];
 
-                        if (!rowData.ContainsKey(column.columnName))
-                        {
-                            items[i] = column.NewItemValue;
-                        }
-                        else if (IsItemKind(rowData[column.columnName], column.ElementType))
+                        // A missing column is not filled in: that would run with a value nobody
+                        // chose. A new column needs an explicit upgrade of the saved rows.
+                        if (rowData.ContainsKey(column.columnName) &&
+                            IsItemKind(rowData[column.columnName], column.ElementType))
                         {
                             items[i] = ReadItem(rowData[column.columnName], column.ElementType);
                         }

@@ -35,7 +35,7 @@ namespace BGC.Parameters
 
         public abstract Type ElementType { get; }
 
-        /// <summary>The value of this column in a row the user adds, and in a saved row missing the column.</summary>
+        /// <summary>The value of this column in a row the user adds.</summary>
         public abstract object NewItemValue { get; }
 
         /// <summary>This column's value in each initial row.</summary>
