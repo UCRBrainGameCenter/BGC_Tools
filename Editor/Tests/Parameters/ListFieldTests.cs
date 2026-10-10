@@ -272,6 +272,63 @@ namespace BGC.Tests
             CollectionAssert.AreEqual(new[] { 5 }, group.Ints);
         }
 
+        [Test]
+        public void IntItemsThatAreNotIntegers_AreUnparseable()
+        {
+            // AsInteger would silently load these as 1 and int.MaxValue
+            LogAssert.Expect(LogType.Error, new Regex("Unable to read list field \"Ints\""));
+            LogAssert.Expect(LogType.Error, new Regex("Unable to read list field \"Ints\""));
+            LogAssert.Expect(LogType.Error, new Regex("Unable to read list field \"Ints\""));
+
+            Assert.AreEqual("[1.5]", LoadField("Ints", new JsonArray(1.5)).Serialize()["Ints"].ToString());
+            Assert.AreEqual("[2147483648]", LoadField("Ints", new JsonArray(2147483648.0)).Serialize()["Ints"].ToString());
+            Assert.AreEqual("2.5", LoadField("Ints", 2.5).Serialize()["Ints"].ToString());
+        }
+
+        [Test]
+        public void ReusedGroup_DoesNotCarryAnUnparsedValueIntoLaterData()
+        {
+            LogAssert.Expect(LogType.Error, new Regex("Unable to read list field"));
+            ListGroup group = LoadField("Ints", "x");
+
+            // Later data without the key: the earlier unreadable value must not be saved into it
+            group.Internal_RawDeserialize(new JsonObject());
+
+            CollectionAssert.IsEmpty(group.GetUnparsedListFields());
+            Assert.AreEqual("[]", group.Serialize()["Ints"].ToString());
+        }
+
+        [Test]
+        public void ReplacingTheLoadedList_SavesTheReplacement()
+        {
+            LogAssert.Expect(LogType.Error, new Regex("Unable to read list field"));
+            ListGroup group = LoadField("Ints", "x");
+
+            group.Ints = new List<int>();
+
+            Assert.AreEqual("[]", group.Serialize()["Ints"].ToString());
+        }
+
+        [Test]
+        public void UnparsedValues_ArePreservedPerFieldAndThroughClone()
+        {
+            LogAssert.Expect(LogType.Error, new Regex("Unable to read list field \"Ints\""));
+            LogAssert.Expect(LogType.Error, new Regex("Unable to read list field \"Bools\""));
+            LogAssert.Expect(LogType.Error, new Regex("Unable to read list field \"Ints\""));
+            LogAssert.Expect(LogType.Error, new Regex("Unable to read list field \"Bools\""));
+
+            ListGroup group = Load(new JsonObject { { "Ints", "1,x" }, { "Bools", "maybe" }, { "Doubles", "2.5" } });
+            ListGroup clone = group.Clone();
+
+            foreach (ListGroup loaded in new[] { group, clone })
+            {
+                JsonObject data = loaded.Serialize();
+                Assert.AreEqual("1,x", data["Ints"].AsString);
+                Assert.AreEqual("maybe", data["Bools"].AsString);
+                Assert.AreEqual("[2.5]", data["Doubles"].ToString());
+            }
+        }
+
         // ---- Bounds are not enforced on load ------------------------------------------------
 
         [Test]
@@ -334,6 +391,32 @@ namespace BGC.Tests
 
             child.Internal_RawDeserialize(new JsonObject { { "Levels", "60, 70" } });
             CollectionAssert.AreEqual(new[] { 60, 70 }, child.Levels);
+        }
+
+        [PropertyChoiceTitle("Detached Mirror")]
+        [FieldMirrorDisplay("Words", "SharedWords", "Words")]
+        private class DetachedMirror : CommonPropertyGroup
+        {
+            [DisplayInputField("Words")]
+            public List<string> Words { get; set; }
+        }
+
+        [Test]
+        public void MirroredListReadWithoutItsParent_PreservesNonArrayValues()
+        {
+            // The concrete attribute (and its delimiters) is unknown without the parent, so
+            // "a,b" must not silently become ["a,b"]
+            LogAssert.Expect(LogType.Error, new Regex("its list attribute could not be found"));
+
+            DetachedMirror group = new DetachedMirror();
+            group.Internal_RawDeserialize(new JsonObject { { "Words", "a,b" } });
+
+            CollectionAssert.IsEmpty(group.Words);
+            Assert.AreEqual("a,b", group.Serialize()["Words"].AsString);
+
+            // An array is unambiguous and still reads
+            group.Internal_RawDeserialize(new JsonObject { { "Words", new JsonArray("a", "b") } });
+            CollectionAssert.AreEqual(new[] { "a", "b" }, group.Words);
         }
 
         // ---- Declaration contract -----------------------------------------------------------

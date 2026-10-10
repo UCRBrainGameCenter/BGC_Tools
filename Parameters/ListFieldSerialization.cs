@@ -34,8 +34,15 @@ namespace BGC.Parameters
     /// </summary>
     public static class ListFieldSerialization
     {
-        private static readonly ConditionalWeakTable<IPropertyGroup, Dictionary<string, JsonValue>> unparsedValues =
-            new ConditionalWeakTable<IPropertyGroup, Dictionary<string, JsonValue>>();
+        /// <summary>A saved value that could not be read, and the empty list loaded in its place.</summary>
+        private sealed class UnparsedValue
+        {
+            public JsonValue original;
+            public IList loadedList;
+        }
+
+        private static readonly ConditionalWeakTable<IPropertyGroup, Dictionary<string, UnparsedValue>> unparsedValues =
+            new ConditionalWeakTable<IPropertyGroup, Dictionary<string, UnparsedValue>>();
 
         public static bool IsSupportedElementType(Type elementType) =>
             elementType == typeof(int) ||
@@ -83,11 +90,14 @@ namespace BGC.Parameters
         {
             IList list = property.GetValue(propertyGroup) as IList;
 
-            if ((list == null || list.Count == 0) &&
-                propertyGroup.TryGetUnparsedListValue(fieldName, out JsonValue unparsed))
+            if (unparsedValues.TryGetValue(propertyGroup, out Dictionary<string, UnparsedValue> table) &&
+                table.TryGetValue(fieldName, out UnparsedValue unparsed) &&
+                ReferenceEquals(list, unparsed.loadedList) &&
+                list.Count == 0)
             {
-                // Still unedited since it failed to parse: preserve the original exactly
-                return unparsed;
+                // Still the untouched list loaded in place of an unreadable value:
+                // preserve the original exactly. Editing or replacing the list ends this.
+                return unparsed.original;
             }
 
             JsonArray array = new JsonArray();
@@ -116,15 +126,26 @@ namespace BGC.Parameters
 
             ClearUnparsedListValue(propertyGroup, fieldName);
 
-            if (!TryReadItems(value, elementType, attribute?.legacyDelimiters, list))
+            // Without the attribute (e.g. a mirrored field read before its parent is set) a
+            // non-array value cannot be read safely: its delimiters are unknown
+            bool readable = (attribute != null || value.IsJsonArray) &&
+                TryReadItems(value, elementType, attribute?.legacyDelimiters, list);
+
+            if (!readable)
             {
                 Debug.LogError(
                     $"Unable to read list field \"{fieldName}\" of {propertyGroup.GetType().Name} " +
-                    $"from {value}. It is loaded as an empty list; the original value is kept and " +
-                    $"saved unchanged until the list is edited.");
+                    $"from {value}" +
+                    (attribute == null ? " (its list attribute could not be found)" : "") +
+                    ". It is loaded as an empty list; the original value is kept and " +
+                    "saved unchanged until the list is edited.");
 
                 list.Clear();
-                GetUnparsedTable(propertyGroup)[fieldName] = value;
+                GetUnparsedTable(propertyGroup)[fieldName] = new UnparsedValue
+                {
+                    original = value,
+                    loadedList = list
+                };
             }
             else if (attribute != null && !attribute.IsCountValid(list.Count))
             {
@@ -139,7 +160,7 @@ namespace BGC.Parameters
 
         /// <summary>Field names of lists on this group (not its children) whose saved value could not be read.</summary>
         public static IEnumerable<string> GetUnparsedListFields(this IPropertyGroup propertyGroup) =>
-            unparsedValues.TryGetValue(propertyGroup, out Dictionary<string, JsonValue> table)
+            unparsedValues.TryGetValue(propertyGroup, out Dictionary<string, UnparsedValue> table)
                 ? table.Keys.ToList()
                 : Enumerable.Empty<string>();
 
@@ -149,23 +170,37 @@ namespace BGC.Parameters
             out JsonValue value)
         {
             value = JsonValue.Null;
-            return unparsedValues.TryGetValue(propertyGroup, out Dictionary<string, JsonValue> table) &&
-                table.TryGetValue(fieldName, out value);
+
+            if (unparsedValues.TryGetValue(propertyGroup, out Dictionary<string, UnparsedValue> table) &&
+                table.TryGetValue(fieldName, out UnparsedValue unparsed))
+            {
+                value = unparsed.original;
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>Call when the user edits the list, so the edited list is saved instead of the original value.</summary>
         public static void ClearUnparsedListValue(this IPropertyGroup propertyGroup, string fieldName)
         {
-            if (unparsedValues.TryGetValue(propertyGroup, out Dictionary<string, JsonValue> table))
+            if (unparsedValues.TryGetValue(propertyGroup, out Dictionary<string, UnparsedValue> table))
             {
                 table.Remove(fieldName);
             }
         }
 
         /// <summary>
+        /// Forget every unreadable value recorded for this group. Called at the start of each
+        /// deserialization, so a reused group never carries a value from earlier data.
+        /// </summary>
+        public static void ClearUnparsedListValues(this IPropertyGroup propertyGroup) =>
+            unparsedValues.Remove(propertyGroup);
+
+        /// <summary>
         /// Declaration errors for list fields on a property-group type: a List&lt;T&gt; input field
-        /// must have an unsupported-free item type, a list attribute of the same item type (or a
-        /// mirror), no input key (script variables are scalars), and a setter. A list attribute
+        /// must have a supported item type, a list attribute of the same item type (or a mirror),
+        /// no input key (script variables are scalars), and a setter. A list attribute
         /// must not be attached to a non-list property. Empty when the type is well formed.
         /// </summary>
         public static IEnumerable<string> GetListFieldDeclarationErrors(Type propertyGroupType)
@@ -231,8 +266,8 @@ namespace BGC.Parameters
             }
         }
 
-        private static Dictionary<string, JsonValue> GetUnparsedTable(IPropertyGroup propertyGroup) =>
-            unparsedValues.GetValue(propertyGroup, _ => new Dictionary<string, JsonValue>());
+        private static Dictionary<string, UnparsedValue> GetUnparsedTable(IPropertyGroup propertyGroup) =>
+            unparsedValues.GetValue(propertyGroup, _ => new Dictionary<string, UnparsedValue>());
 
         private static JsonValue SerializeItem(Type elementType, object item)
         {
@@ -303,7 +338,13 @@ namespace BGC.Parameters
 
         private static bool IsItemKind(JsonValue value, Type elementType)
         {
-            if (elementType == typeof(int) || elementType == typeof(double))
+            if (elementType == typeof(int))
+            {
+                // Not IsNumber: AsInteger would silently truncate 1.5 or clamp 2147483648
+                return value.IsInteger;
+            }
+
+            if (elementType == typeof(double))
             {
                 return value.IsNumber;
             }

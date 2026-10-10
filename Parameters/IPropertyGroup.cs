@@ -247,6 +247,9 @@ namespace BGC.Parameters
 
         public static void Internal_RawDeserialize(this IPropertyGroup container, JsonObject propertyGroupData)
         {
+            //Unreadable list values from any earlier data must not carry over
+            container.ClearUnparsedListValues();
+
             //Deserialize Property Groups
             foreach (PropertyInfo property in container.GetPropertyGroupProperties())
             {

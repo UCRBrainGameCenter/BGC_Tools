@@ -90,6 +90,11 @@ namespace BGC.Parameters.View
             private readonly Button addButton;
             private readonly List<GameObject> rows = new List<GameObject>();
 
+            // Destroy() is deferred to the end of the frame, so replaced rows stay live until then.
+            // Each row's callbacks carry the generation they were built in and do nothing once
+            // a rebuild has replaced them, so a late event cannot act on a stale index.
+            private int generation;
+
             private WidgetFactory WidgetFactory => view.widgetFactory;
             private IList List => (IList)property.GetValue(propertyGroup);
 
@@ -130,12 +135,14 @@ namespace BGC.Parameters.View
                 addButton = WidgetFactory.CreateButtonWidget(
                     parent: controls,
                     text: "Add",
-                    onClick: () => Edit(list => list.Add(attribute.NewItemValue)),
+                    onClick: () => Edit(generation, list => list.Add(attribute.NewItemValue)),
                     index: 1).GetComponent<Button>();
             }
 
             public void Rebuild()
             {
+                generation++;
+
                 foreach (GameObject row in rows)
                 {
                     Object.Destroy(row);
@@ -203,15 +210,17 @@ namespace BGC.Parameters.View
                     alignment: TextAnchor.MiddleRight,
                     index: 0);
 
-                SpawnItemValueWidget(row, list, index);
+                int rowGeneration = generation;
 
-                SpawnRowButton(row, 2, "▲", index > 0,
+                SpawnItemValueWidget(row, list, index, rowGeneration);
+
+                SpawnRowButton(row, rowGeneration, 2, "▲", index > 0,
                     l => Swap(l, index, index - 1));
-                SpawnRowButton(row, 3, "▼", index < list.Count - 1,
+                SpawnRowButton(row, rowGeneration, 3, "▼", index < list.Count - 1,
                     l => Swap(l, index, index + 1));
-                SpawnRowButton(row, 4, "Copy", list.Count < attribute.maximumCount,
+                SpawnRowButton(row, rowGeneration, 4, "Copy", list.Count < attribute.maximumCount,
                     l => l.Insert(index + 1, l[index]));
-                SpawnRowButton(row, 5, "✕", list.Count > attribute.minimumCount,
+                SpawnRowButton(row, rowGeneration, 5, "✕", list.Count > attribute.minimumCount,
                     l => l.RemoveAt(index),
                     WidgetFactory.ButtonFormattingOptions.Config_DeleteButton);
 
@@ -220,6 +229,7 @@ namespace BGC.Parameters.View
 
             private void SpawnRowButton(
                 GameObject row,
+                int rowGeneration,
                 int slot,
                 string text,
                 bool interactable,
@@ -229,14 +239,14 @@ namespace BGC.Parameters.View
                 Button button = WidgetFactory.CreateButtonWidget(
                     parent: row,
                     text: text,
-                    onClick: () => Edit(edit),
+                    onClick: () => Edit(rowGeneration, edit),
                     buttonOptions: options,
                     index: slot).GetComponent<Button>();
 
                 button.interactable = interactable;
             }
 
-            private void SpawnItemValueWidget(GameObject row, IList list, int index)
+            private void SpawnItemValueWidget(GameObject row, IList list, int index, int rowGeneration)
             {
                 switch (attribute)
                 {
@@ -249,10 +259,15 @@ namespace BGC.Parameters.View
                             contentType: InputField.ContentType.IntegerNumber,
                             newOnEndEdit: (input, inputField) =>
                             {
+                                if (rowGeneration != generation)
+                                {
+                                    return;
+                                }
+
                                 if (int.TryParse(input, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value))
                                 {
                                     value = GeneralMath.Clamp(value, intAttribute.minimum, intAttribute.maximum);
-                                    SetItem(index, value);
+                                    SetItem(rowGeneration, index, value);
                                 }
 
                                 //Show what was stored: the clamped value, or the old one if unparseable
@@ -270,10 +285,15 @@ namespace BGC.Parameters.View
                             contentType: InputField.ContentType.DecimalNumber,
                             newOnEndEdit: (input, inputField) =>
                             {
+                                if (rowGeneration != generation)
+                                {
+                                    return;
+                                }
+
                                 if (double.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
                                 {
                                     value = GeneralMath.Clamp(value, doubleAttribute.minimum, doubleAttribute.maximum);
-                                    SetItem(index, value);
+                                    SetItem(rowGeneration, index, value);
                                 }
 
                                 inputField.text = FormatDouble(List[index]);
@@ -287,7 +307,7 @@ namespace BGC.Parameters.View
                             formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_ValueEntry,
                             text: list[index] as string ?? "",
                             contentType: InputField.ContentType.Standard,
-                            onEndEdit: input => SetItem(index, input?.Trim()?.Replace("\r", "") ?? ""),
+                            onEndEdit: input => SetItem(rowGeneration, index, input?.Trim()?.Replace("\r", "") ?? ""),
                             index: 1);
                         break;
 
@@ -295,7 +315,7 @@ namespace BGC.Parameters.View
                         WidgetFactory.CreateToggleWidget(
                             parent: row,
                             value: Convert.ToBoolean(list[index]),
-                            onValueChanged: value => SetItem(index, value),
+                            onValueChanged: value => SetItem(rowGeneration, index, value),
                             index: 1);
                         break;
 
@@ -305,15 +325,25 @@ namespace BGC.Parameters.View
                 }
             }
 
-            private void SetItem(int index, object value)
+            private void SetItem(int rowGeneration, int index, object value)
             {
+                if (rowGeneration != generation)
+                {
+                    return;
+                }
+
                 List[index] = value;
                 propertyGroup.ClearUnparsedListValue(fieldName);
                 UpdateSummary();
             }
 
-            private void Edit(Action<IList> edit)
+            private void Edit(int rowGeneration, Action<IList> edit)
             {
+                if (rowGeneration != generation)
+                {
+                    return;
+                }
+
                 edit(List);
                 propertyGroup.ClearUnparsedListValue(fieldName);
                 Rebuild();
