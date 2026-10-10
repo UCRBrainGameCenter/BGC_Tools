@@ -233,12 +233,14 @@ namespace BGC.Parameters.View
                             return;
                         }
 
+                        //Names cannot contain '.'; a name that is blank without them uses the type's title
+                        title = title?.Replace(".", "").Trim();
                         if (string.IsNullOrEmpty(title))
                         {
-                            title = types[selectionIndex].GetSelectionTitle();
+                            title = types[selectionIndex].GetSelectionTitle().Replace(".", "");
                         }
 
-                        title = GetUniqueListItemName(title.Replace(".", ""), list);
+                        title = GetUniqueListItemName(title, list);
                         types[selectionIndex].Build(title, owner, list);
                         Rebuild();
                     },
@@ -278,6 +280,39 @@ namespace BGC.Parameters.View
             private void Copy(int index)
             {
                 IPropertyGroup source = (IPropertyGroup)list[index];
+                int requestGeneration = generation;
+
+                // Controller assignments for controlled parameters are kept outside the item (e.g.
+                // on the assessment), so a copy cannot take them along: say so before copying
+                bool hasControlledParameters = source.GetAll<IControlled>().Any();
+
+                if (!hasControlledParameters)
+                {
+                    InsertCopy(index, source);
+                    return;
+                }
+
+                ModalDialog.ShowCustomSimpleModal(
+                    headerText: "Copy",
+                    bodyText: $"\"{source.GetItemTitle()}\" has controlled parameters. The copy keeps every " +
+                        "setting except their controller settings, which start at their defaults: " +
+                        "set them on the copy afterwards.",
+                    buttonALabel: "Copy",
+                    buttonBLabel: "Cancel",
+                    buttonCLabel: null,
+                    callback: response =>
+                    {
+                        if (response == ModalDialog.Response.A &&
+                            requestGeneration == generation &&
+                            list.Contains(source))
+                        {
+                            InsertCopy(list.IndexOf(source), source);
+                        }
+                    });
+            }
+
+            private void InsertCopy(int index, IPropertyGroup source)
+            {
                 IPropertyGroup copy = source.CloneOrphanListItem(property);
                 if (copy == null)
                 {

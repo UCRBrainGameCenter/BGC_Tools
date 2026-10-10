@@ -1179,8 +1179,8 @@ namespace BGC.Parameters.View
                 int length = indexOfClose - indexInside;
 
                 //Make sure there are contents
-                //This would reject "TestFile ()"
-                if (length > 0)
+                //This would reject "TestFile ()", and "(2)" with no " (" before it
+                if (indexOfOpen >= 0 && length > 0)
                 {
                     string valueString = name.Substring(indexInside, length);
 
