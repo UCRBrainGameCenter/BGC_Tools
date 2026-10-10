@@ -167,6 +167,12 @@ namespace BGC.Parameters
                             propertyGroupData.Add(att.fieldName, property.GetValue(propertyGroup).ToString());
                             break;
                         }
+                        if (property.IsListField())
+                        {
+                            propertyGroupData.Add(att.fieldName,
+                                ListFieldSerialization.SerializeListField(propertyGroup, property, att.fieldName));
+                            break;
+                        }
                         Debug.LogError($"Unsupported datatype ({property.PropertyType.Name}) for variable {property.Name}");
                         break;
                 }
@@ -363,6 +369,12 @@ namespace BGC.Parameters
                             {
                                 property.SetValue(container,
                                     Enum.Parse(property.PropertyType, propertyGroupData[fieldName].AsString));
+                                break;
+                            }
+                            if (property.IsListField())
+                            {
+                                ListFieldSerialization.DeserializeListField(
+                                    container, property, fieldName, propertyGroupData[fieldName]);
                                 break;
                             }
                             Debug.LogError($"Unsupported datatype ({property.PropertyType.Name}) for variable {property.Name}");
