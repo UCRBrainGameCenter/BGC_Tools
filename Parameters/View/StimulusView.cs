@@ -23,7 +23,7 @@ namespace BGC.Parameters.View
         MAX
     }
 
-    public abstract class StimulusView : MonoBehaviour
+    public abstract partial class StimulusView : MonoBehaviour
     {
         [Header("Engine References")]
         [SerializeField]
@@ -124,7 +124,15 @@ namespace BGC.Parameters.View
                 DisplayPropertyGroupInlineAttribute inlineAttribute = property.GetCustomAttribute<DisplayPropertyGroupInlineAttribute>();
                 AppendSelectionAttribute appendSelectionAttribute = property.GetAppendSelectionAttribute();
 
-                if (displayAttribute != null)
+                if (displayAttribute != null && property.IsListField())
+                {
+                    //List input field
+                    SpawnListField(
+                        propertyGroup: propertyContainer,
+                        property: property,
+                        parentTransform: parentTransform);
+                }
+                else if (displayAttribute != null)
                 {
                     //Input field
                     GameObject baseWidget = widgetFactory.GetContainerWidget(
