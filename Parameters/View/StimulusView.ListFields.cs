@@ -16,10 +16,11 @@ namespace BGC.Parameters.View
     /// Editor for list input fields: List&lt;T&gt; (see <see cref="ListFieldDisplayAttribute"/>) and
     /// tuple lists, List&lt;(T1, T2[, T3[, T4]])&gt; (see <see cref="TupleListFieldDisplayAttribute"/>).
     ///
-    /// A header row (title, item count with its allowed range, Add) is followed by one row per
-    /// item: [index] [value] [Up] [Down] [Copy] [Delete]. A tuple row puts one value per column in
-    /// the value slot, under a row of column titles. Rows are ordinary 60px option rows placed
-    /// directly in the property frame, so they line up with the scalar fields around them.
+    /// The field is a panel (StimulusView.ListPanels.cs): a dark header bar with its title and its
+    /// item count (with the allowed range), then one row per item: [index] [value] [Up] [Down]
+    /// [Copy] [Delete], then "+ Add" below the items, where a new item appears. A tuple row puts
+    /// one value per column in the value slot, under a row of column titles. Rows are ordinary
+    /// 60px option rows.
     ///
     /// Every structural edit (add, move, copy, delete) rebuilds this field's item rows itself,
     /// so the index each row acts on is always current. It does not depend on the property
@@ -56,20 +57,15 @@ namespace BGC.Parameters.View
                 ? TupleListLayout.Get(propertyGroup, property)
                 : null;
 
-            GameObject header = widgetFactory.GetContainerWidget(
-                config: WidgetFactory.ContainerConfig.Config_Normal_Even,
-                parent: parentTransform.gameObject,
-                slots: 2);
-
-            LayoutElement layoutElement = header.AddComponent<LayoutElement>();
-            layoutElement.minHeight = 60;
+            SpawnListPanel(parentTransform, out GameObject header, out GameObject body);
 
             if (attribute == null || (property.IsTupleListField() && layout == null))
             {
-                widgetFactory.CreateLabelWidget(
-                    parent: header,
-                    text: "NULL",
-                    alignment: TextAnchor.MiddleLeft);
+                SizeListWidget(widgetFactory.CreateLabelWidget(
+                        parent: header,
+                        text: "NULL",
+                        alignment: TextAnchor.MiddleLeft),
+                    0f, flexible: true).GetComponent<Text>().color = ListHeaderText;
                 return;
             }
 
@@ -78,7 +74,7 @@ namespace BGC.Parameters.View
                 property.SetValue(propertyGroup, layout != null ? layout.CreateInitialList() : attribute.GetInitialValue());
             }
 
-            new ListFieldEditor(this, propertyGroup, property, attribute, layout, header, parentTransform).Rebuild();
+            new ListFieldEditor(this, propertyGroup, property, attribute, layout, header, body.transform).Rebuild();
         }
 
         /// <summary>What a value cell edits: its type, its range and its postfix.</summary>
@@ -132,10 +128,10 @@ namespace BGC.Parameters.View
             private readonly ListFieldDisplayAttribute attribute;
             private readonly TupleListLayout layout;
             private readonly string fieldName;
-            private readonly GameObject header;
             private readonly Transform parentTransform;
             private readonly Text summary;
             private readonly Color summaryColor;
+            private readonly GameObject addBar;
             private readonly Button addButton;
             private readonly List<GameObject> rows = new List<GameObject>();
 
@@ -146,6 +142,8 @@ namespace BGC.Parameters.View
 
             private WidgetFactory WidgetFactory => view.widgetFactory;
             private IList List => (IList)property.GetValue(propertyGroup);
+
+            private const float SummaryWidth = 500f;
 
             public ListFieldEditor(
                 StimulusView view,
@@ -161,33 +159,28 @@ namespace BGC.Parameters.View
                 this.property = property;
                 this.attribute = attribute;
                 this.layout = layout;
-                this.header = header;
                 this.parentTransform = parentTransform;
                 fieldName = property.GetInputFieldName();
 
-                WidgetFactory.CreateLabelWidget(
-                    parent: header,
-                    text: $"{attribute.displayTitle}:",
-                    alignment: TextAnchor.MiddleLeft);
+                SizeListWidget(WidgetFactory.CreateLabelWidget(
+                        parent: header,
+                        text: attribute.displayTitle,
+                        alignment: TextAnchor.MiddleLeft),
+                    0f, flexible: true).GetComponent<Text>().color = view.ListHeaderText;
 
-                GameObject controls = WidgetFactory.GetContainerWidget(
-                    config: WidgetFactory.ContainerConfig.Config_Normal_Even,
-                    parent: header,
-                    slots: 2,
-                    siblingIndex: 1,
-                    parentSlots: 2);
+                summary = SizeListWidget(WidgetFactory.CreateLabelWidget(
+                        parent: header,
+                        alignment: TextAnchor.MiddleRight),
+                    SummaryWidth).GetComponent<Text>();
+                summaryColor = view.ListHeaderText;
 
-                summary = WidgetFactory.CreateLabelWidget(
-                    parent: controls,
-                    alignment: TextAnchor.MiddleLeft,
-                    index: 0).GetComponent<Text>();
-                summaryColor = summary.color;
-
-                addButton = WidgetFactory.CreateButtonWidget(
-                    parent: controls,
-                    text: "Add",
-                    onClick: () => Edit(generation, list => list.Add(CreateNewItem())),
-                    index: 1).GetComponent<Button>();
+                //Add sits below the items, where a new item appears
+                addBar = SpawnListBar("AddBar", parentTransform, new RectOffset(0, 0, 0, 0));
+                addButton = SizeListWidget(WidgetFactory.CreateButtonWidget(
+                        parent: addBar,
+                        text: "+ Add",
+                        onClick: () => Edit(generation, list => list.Add(CreateNewItem()))),
+                    ListAddButtonWidth).GetComponent<Button>();
             }
 
             public void Rebuild()
@@ -201,7 +194,8 @@ namespace BGC.Parameters.View
                 rows.Clear();
 
                 IList list = List;
-                int siblingIndex = header.transform.GetSiblingIndex();
+                //The rows fill the panel's body from the top; the add bar follows them
+                int siblingIndex = -1;
 
                 void Place(GameObject row)
                 {
@@ -224,6 +218,7 @@ namespace BGC.Parameters.View
                     Place(SpawnItemRow(list, i));
                 }
 
+                addBar.transform.SetAsLastSibling();
                 UpdateSummary();
             }
 
@@ -468,7 +463,7 @@ namespace BGC.Parameters.View
                     ? "Unreadable"
                     : (list.Count == 1 ? "1 item" : $"{list.Count} items") + GetCountRangeText();
 
-                summary.color = unparsed || !IsListValid(list) ? view.ListFieldErrorText : summaryColor;
+                summary.color = unparsed || !IsListValid(list) ? view.ListHeaderErrorText : summaryColor;
                 addButton.interactable = list.Count < attribute.maximumCount;
             }
 

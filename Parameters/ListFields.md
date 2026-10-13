@@ -75,8 +75,9 @@ As with scalar fields, item ranges and counts are enforced by the editor, not on
 
 ## Editor
 
-A header row shows the title, the item count with its allowed range, and Add. Each item gets
-a row: number, value, ▲ ▼ (move), duplicate (inserts a copy below), ✕ (delete).
+The field is a panel. Its dark header bar shows the title and the item count with its allowed
+range; "+ Add" sits below the items, where a new item appears. Each item gets a row: number,
+value, ▲ ▼ (move), duplicate (inserts a copy below), ✕ (delete).
 The duplicate button shows `WidgetFactory`'s `duplicateIcon` sprite, set on the scene's
 WidgetFactory; a scene without one shows the word "Copy".
 
