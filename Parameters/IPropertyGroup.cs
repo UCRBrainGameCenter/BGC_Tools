@@ -173,6 +173,12 @@ namespace BGC.Parameters
                                 ListFieldSerialization.SerializeListField(propertyGroup, property, att.fieldName));
                             break;
                         }
+                        if (property.IsTupleListField())
+                        {
+                            propertyGroupData.Add(att.fieldName,
+                                ListFieldSerialization.SerializeTupleListField(propertyGroup, property, att.fieldName));
+                            break;
+                        }
                         Debug.LogError($"Unsupported datatype ({property.PropertyType.Name}) for variable {property.Name}");
                         break;
                 }
@@ -377,6 +383,12 @@ namespace BGC.Parameters
                             if (property.IsListField())
                             {
                                 ListFieldSerialization.DeserializeListField(
+                                    container, property, fieldName, propertyGroupData[fieldName]);
+                                break;
+                            }
+                            if (property.IsTupleListField())
+                            {
+                                ListFieldSerialization.DeserializeTupleListField(
                                     container, property, fieldName, propertyGroupData[fieldName]);
                                 break;
                             }
@@ -1250,6 +1262,12 @@ namespace BGC.Parameters
             }
 
             object initialValue = attribute.GetInitialValue();
+
+            if (attribute is TupleListFieldDisplayAttribute)
+            {
+                //A tuple list's initial rows come from its column attributes
+                initialValue = TupleListLayout.Get(propertyGroup, property)?.CreateInitialList();
+            }
 
             if (attribute is FieldMirrorDisplayAttribute mirrored)
             {

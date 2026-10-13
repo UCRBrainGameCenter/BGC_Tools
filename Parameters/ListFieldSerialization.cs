@@ -90,14 +90,9 @@ namespace BGC.Parameters
         {
             IList list = property.GetValue(propertyGroup) as IList;
 
-            if (unparsedValues.TryGetValue(propertyGroup, out Dictionary<string, UnparsedValue> table) &&
-                table.TryGetValue(fieldName, out UnparsedValue unparsed) &&
-                ReferenceEquals(list, unparsed.loadedList) &&
-                list.Count == 0)
+            if (TryGetPreservedValue(propertyGroup, fieldName, list, out JsonValue preserved))
             {
-                // Still the untouched list loaded in place of an unreadable value:
-                // preserve the original exactly. Editing or replacing the list ends this.
-                return unparsed.original;
+                return preserved;
             }
 
             JsonArray array = new JsonArray();
@@ -133,30 +128,170 @@ namespace BGC.Parameters
 
             if (!readable)
             {
-                Debug.LogError(
-                    $"Unable to read list field \"{fieldName}\" of {propertyGroup.GetType().Name} " +
-                    $"from {value}" +
-                    (attribute == null ? " (its list attribute could not be found)" : "") +
-                    ". It is loaded as an empty list; the original value is kept and " +
-                    "saved unchanged until the list is edited.");
-
-                list.Clear();
-                GetUnparsedTable(propertyGroup)[fieldName] = new UnparsedValue
-                {
-                    original = value,
-                    loadedList = list
-                };
+                RecordUnparsed(propertyGroup, fieldName, value, list,
+                    attribute == null ? " (its list attribute could not be found)" : "");
             }
-            else if (attribute != null && !attribute.IsCountValid(list.Count))
+            else
             {
-                Debug.LogWarning(
-                    $"List field \"{fieldName}\" of {propertyGroup.GetType().Name} has {list.Count} " +
-                    $"items, outside its allowed {attribute.minimumCount} to {attribute.maximumCount}. " +
-                    $"Loaded as-is.");
+                WarnIfCountInvalid(propertyGroup, fieldName, attribute, list);
             }
 
             property.SetValue(propertyGroup, list);
         }
+
+        #region Tuple lists
+
+        /// <summary>Whether this is a List of a 2- to 4-item value tuple of int, double, string or bool.</summary>
+        public static bool IsTupleListField(this PropertyInfo property) =>
+            TupleListLayout.GetTupleRowType(property) != null;
+
+        /// <summary>Each row is written as an object keyed by its columns' names.</summary>
+        public static JsonValue SerializeTupleListField(
+            IPropertyGroup propertyGroup,
+            PropertyInfo property,
+            string fieldName)
+        {
+            IList list = property.GetValue(propertyGroup) as IList;
+
+            if (TryGetPreservedValue(propertyGroup, fieldName, list, out JsonValue preserved))
+            {
+                return preserved;
+            }
+
+            JsonArray array = new JsonArray();
+            TupleListLayout layout = TupleListLayout.Get(propertyGroup, property);
+
+            if (layout == null)
+            {
+                Debug.LogError(
+                    $"Tuple list field \"{fieldName}\" of {propertyGroup.GetType().Name} has missing or " +
+                    $"inconsistent column attributes and cannot be saved; see GetListFieldDeclarationErrors.");
+                return array;
+            }
+
+            if (list != null)
+            {
+                foreach (object row in list)
+                {
+                    JsonObject rowData = new JsonObject();
+                    for (int i = 0; i < layout.Columns.Count; i++)
+                    {
+                        rowData.Add(
+                            layout.Columns[i].columnName,
+                            SerializeItem(layout.Columns[i].ElementType, layout.GetItem(row, i)));
+                    }
+                    array.Add(rowData);
+                }
+            }
+
+            return array;
+        }
+
+        /// <summary>
+        /// Reads rows from an array of objects keyed by column name (a missing or unknown key makes
+        /// the value unreadable, so adding, renaming or removing a column never silently changes
+        /// or drops data), or from a legacy string split into rows on
+        /// legacyDelimiters and into columns on legacyColumnDelimiters (every row must have every
+        /// column). Unreadable values are preserved as for other list fields.
+        /// </summary>
+        public static void DeserializeTupleListField(
+            IPropertyGroup propertyGroup,
+            PropertyInfo property,
+            string fieldName,
+            JsonValue value)
+        {
+            TupleListLayout layout = TupleListLayout.Get(propertyGroup, property);
+            IList list = (IList)Activator.CreateInstance(property.PropertyType);
+
+            ClearUnparsedListValue(propertyGroup, fieldName);
+
+            bool readable = layout != null && TryReadRows(value, layout, list);
+
+            if (!readable)
+            {
+                RecordUnparsed(propertyGroup, fieldName, value, list,
+                    layout == null ? " (its tuple column attributes are missing or inconsistent)" : "");
+            }
+            else
+            {
+                WarnIfCountInvalid(propertyGroup, fieldName, layout.Attribute, list);
+            }
+
+            property.SetValue(propertyGroup, list);
+        }
+
+        private static bool TryReadRows(JsonValue value, TupleListLayout layout, IList list)
+        {
+            int columnCount = layout.Columns.Count;
+
+            if (value.IsJsonArray)
+            {
+                foreach (JsonValue rowValue in value.AsJsonArray)
+                {
+                    JsonObject rowData = rowValue.AsJsonObject;
+                    if (rowData == null ||
+                        ((IEnumerable<KeyValuePair<string, JsonValue>>)rowData)
+                            .Any(entry => layout.Columns.All(column => column.columnName != entry.Key)))
+                    {
+                        return false;
+                    }
+
+                    object[] items = new object[columnCount];
+                    for (int i = 0; i < columnCount; i++)
+                    {
+                        TupleColumnAttribute column = layout.Columns[i];
+
+                        // A missing column is not filled in: that would run with a value nobody
+                        // chose. A new column needs an explicit upgrade of the saved rows.
+                        if (rowData.ContainsKey(column.columnName) &&
+                            IsItemKind(rowData[column.columnName], column.ElementType))
+                        {
+                            items[i] = ReadItem(rowData[column.columnName], column.ElementType);
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+
+                    list.Add(layout.CreateRow(items));
+                }
+
+                return true;
+            }
+
+            char[] rowDelimiters = layout.Attribute.legacyDelimiters;
+            char[] columnDelimiters = layout.Attribute.legacyColumnDelimiters;
+
+            if (value.IsString && rowDelimiters != null && columnDelimiters != null)
+            {
+                foreach (string rowText in SplitLegacyString(value.AsString, rowDelimiters))
+                {
+                    string[] pieces = rowText.Split(columnDelimiters).Select(x => x.Trim()).ToArray();
+                    if (pieces.Length != columnCount)
+                    {
+                        return false;
+                    }
+
+                    object[] items = new object[columnCount];
+                    for (int i = 0; i < columnCount; i++)
+                    {
+                        if (!TryParsePiece(pieces[i], layout.Columns[i].ElementType, out items[i]))
+                        {
+                            return false;
+                        }
+                    }
+
+                    list.Add(layout.CreateRow(items));
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+
+        #endregion Tuple lists
 
         /// <summary>Field names of lists on this group (not its children) whose saved value could not be read.</summary>
         public static IEnumerable<string> GetUnparsedListFields(this IPropertyGroup propertyGroup) =>
@@ -232,15 +367,31 @@ namespace BGC.Parameters
                     continue;
                 }
 
-                if (!IsSupportedElementType(elementType))
+                if (TupleListLayout.IsValueTuple(elementType))
+                {
+                    foreach (string error in GetTupleListDeclarationErrors(
+                        propertyGroupType, property, fieldName, attribute, location))
+                    {
+                        yield return error;
+                    }
+                }
+                else if (!IsSupportedElementType(elementType))
                 {
                     yield return $"{location}: List<{elementType.Name}> is not a supported list field (int, double, string, bool).";
                     continue;
+                }
+                else if (attribute is TupleListFieldDisplayAttribute)
+                {
+                    yield return $"{location}: a tuple list attribute needs a List of value tuples.";
                 }
 
                 if (attribute == null)
                 {
                     yield return $"{location}: no FieldDisplay attribute for field \"{fieldName}\".";
+                }
+                else if (TupleListLayout.IsValueTuple(elementType) || attribute is TupleListFieldDisplayAttribute)
+                {
+                    // Reported above
                 }
                 else if (attribute is ListFieldDisplayAttribute listAttribute)
                 {
@@ -263,6 +414,144 @@ namespace BGC.Parameters
                 {
                     yield return $"{location}: list field needs a setter.";
                 }
+            }
+
+            HashSet<string> tupleFields = new HashSet<string>(propertyGroupType.GetProperties()
+                .Where(x => x.GetCustomAttribute<DisplayInputFieldAttribute>() != null &&
+                    x.GetListElementType() is Type rowType && TupleListLayout.IsValueTuple(rowType))
+                .Select(x => x.GetInputFieldName()));
+
+            foreach (string orphan in propertyGroupType.GetCustomAttributes_Deep<TupleColumnAttribute>()
+                .Select(x => x.fieldName)
+                .Distinct()
+                .Where(x => !tupleFields.Contains(x)))
+            {
+                yield return $"{propertyGroupType.FullName}: tuple columns for \"{orphan}\", which is not a tuple list field.";
+            }
+        }
+
+        private static IEnumerable<string> GetTupleListDeclarationErrors(
+            Type propertyGroupType,
+            PropertyInfo property,
+            string fieldName,
+            FieldDisplayAttribute attribute,
+            string location)
+        {
+            Type rowType = TupleListLayout.GetTupleRowType(property);
+            if (rowType == null)
+            {
+                yield return $"{location}: a tuple list needs {TupleListLayout.MinimumColumns} to " +
+                    $"{TupleListLayout.MaximumColumns} items of int, double, string or bool.";
+                yield break;
+            }
+
+            if (attribute == null)
+            {
+                // Reported by the caller
+                yield break;
+            }
+
+            if (!(attribute is TupleListFieldDisplayAttribute tupleAttribute))
+            {
+                yield return $"{location}: a tuple list needs a TupleListFieldDisplay attribute, " +
+                    $"not {attribute.GetType().Name} (mirrors are not supported).";
+                yield break;
+            }
+
+            if ((tupleAttribute.legacyDelimiters == null) != (tupleAttribute.legacyColumnDelimiters == null))
+            {
+                yield return $"{location}: set both legacyDelimiters and legacyColumnDelimiters, or neither.";
+            }
+
+            Type[] itemTypes = rowType.GetGenericArguments();
+            TupleColumnAttribute[] columns = TupleListLayout.GetColumns(propertyGroupType, fieldName);
+
+            for (int i = 0; i < itemTypes.Length; i++)
+            {
+                TupleColumnAttribute column = columns.FirstOrDefault(x => x.index == i);
+                if (column == null)
+                {
+                    yield return $"{location}: no tuple column {i}.";
+                }
+                else if (column.ElementType != itemTypes[i])
+                {
+                    yield return $"{location}: column {i} is {column.GetType().Name} but item {i + 1} is {itemTypes[i].Name}.";
+                }
+            }
+
+            foreach (TupleColumnAttribute column in columns.Where(x => x.index < 0 || x.index >= itemTypes.Length))
+            {
+                yield return $"{location}: column index {column.index} is outside the tuple's {itemTypes.Length} items.";
+            }
+
+            if (columns.Any(x => string.IsNullOrEmpty(x.columnName)) ||
+                columns.Select(x => x.columnName).Distinct().Count() != columns.Length)
+            {
+                yield return $"{location}: column names must be non-empty and unique.";
+            }
+
+            if (columns.Select(x => x.InitialValues.Length).Distinct().Count() > 1)
+            {
+                yield return $"{location}: every column needs the same number of initial values.";
+            }
+        }
+
+        /// <summary>
+        /// True when the list is still the untouched one loaded in place of an unreadable value;
+        /// then the original is saved exactly. Editing or replacing the list ends this.
+        /// </summary>
+        private static bool TryGetPreservedValue(
+            IPropertyGroup propertyGroup,
+            string fieldName,
+            IList list,
+            out JsonValue original)
+        {
+            original = JsonValue.Null;
+
+            if (unparsedValues.TryGetValue(propertyGroup, out Dictionary<string, UnparsedValue> table) &&
+                table.TryGetValue(fieldName, out UnparsedValue unparsed) &&
+                ReferenceEquals(list, unparsed.loadedList) &&
+                list.Count == 0)
+            {
+                original = unparsed.original;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static void RecordUnparsed(
+            IPropertyGroup propertyGroup,
+            string fieldName,
+            JsonValue value,
+            IList list,
+            string reason)
+        {
+            Debug.LogError(
+                $"Unable to read list field \"{fieldName}\" of {propertyGroup.GetType().Name} " +
+                $"from {value}{reason}. It is loaded as an empty list; the original value is kept and " +
+                "saved unchanged until the list is edited.");
+
+            list.Clear();
+            GetUnparsedTable(propertyGroup)[fieldName] = new UnparsedValue
+            {
+                original = value,
+                loadedList = list
+            };
+        }
+
+        private static void WarnIfCountInvalid(
+            IPropertyGroup propertyGroup,
+            string fieldName,
+            ListFieldDisplayAttribute attribute,
+            IList list)
+        {
+            if (attribute != null && !attribute.IsCountValid(list.Count))
+            {
+                Debug.LogWarning(
+                    $"List field \"{fieldName}\" of {propertyGroup.GetType().Name} has {list.Count} " +
+                    $"items, outside its allowed {attribute.minimumCount} to {attribute.maximumCount}. " +
+                    $"Loaded as-is.");
             }
         }
 

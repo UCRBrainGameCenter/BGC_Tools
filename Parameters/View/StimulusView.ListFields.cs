@@ -13,11 +13,13 @@ using Object = UnityEngine.Object;
 namespace BGC.Parameters.View
 {
     /// <summary>
-    /// Editor for List&lt;T&gt; input fields (see <see cref="ListFieldDisplayAttribute"/>).
+    /// Editor for list input fields: List&lt;T&gt; (see <see cref="ListFieldDisplayAttribute"/>) and
+    /// tuple lists, List&lt;(T1, T2[, T3[, T4]])&gt; (see <see cref="TupleListFieldDisplayAttribute"/>).
     ///
     /// The field is a panel (StimulusView.ListPanels.cs): a dark header bar with its title and its
     /// item count (with the allowed range), then one row per item: [index] [value] [Up] [Down]
-    /// [Copy] [Delete], then "+ Add" below the items, where a new item appears. Rows are ordinary
+    /// [Copy] [Delete], then "+ Add" below the items, where a new item appears. A tuple row puts
+    /// one value per column in the value slot, under a row of column titles. Rows are ordinary
     /// 60px option rows.
     ///
     /// Every structural edit (add, move, copy, delete) rebuilds this field's item rows itself,
@@ -25,9 +27,9 @@ namespace BGC.Parameters.View
     /// group's respawn callback, which is null inside list items, inline groups and controlled
     /// parameter templates.
     ///
-    /// Bounds behave as for scalar fields: typed values are clamped to the item range, and Add,
-    /// Copy and Delete are disabled at the count limits. A list loaded outside its bounds is left
-    /// as-is and its count is shown in the error color.
+    /// Bounds behave as for scalar fields: typed values are clamped to the item (or column)
+    /// range, and Add, Copy and Delete are disabled at the count limits. A list loaded outside its
+    /// bounds is left as-is and its count is shown in the error color.
     /// </summary>
     public abstract partial class StimulusView
     {
@@ -51,10 +53,13 @@ namespace BGC.Parameters.View
         {
             ListFieldDisplayAttribute attribute =
                 propertyGroup.GetListFieldAttribute(property.GetInputFieldName());
+            TupleListLayout layout = property.IsTupleListField()
+                ? TupleListLayout.Get(propertyGroup, property)
+                : null;
 
             SpawnListPanel(parentTransform, out GameObject header, out GameObject body);
 
-            if (attribute == null)
+            if (attribute == null || (property.IsTupleListField() && layout == null))
             {
                 SizeListWidget(widgetFactory.CreateLabelWidget(
                         parent: header,
@@ -66,10 +71,53 @@ namespace BGC.Parameters.View
 
             if (property.GetValue(propertyGroup) == null)
             {
-                property.SetValue(propertyGroup, attribute.GetInitialValue());
+                property.SetValue(propertyGroup, layout != null ? layout.CreateInitialList() : attribute.GetInitialValue());
             }
 
-            new ListFieldEditor(this, propertyGroup, property, attribute, header, body.transform).Rebuild();
+            new ListFieldEditor(this, propertyGroup, property, attribute, layout, header, body.transform).Rebuild();
+        }
+
+        /// <summary>What a value cell edits: its type, its range and its postfix.</summary>
+        private readonly struct ItemSpec
+        {
+            public readonly Type type;
+            public readonly double minimum;
+            public readonly double maximum;
+            public readonly string postfix;
+
+            private ItemSpec(Type type, double minimum, double maximum, string postfix)
+            {
+                this.type = type;
+                this.minimum = minimum;
+                this.maximum = maximum;
+                this.postfix = postfix ?? "";
+            }
+
+            public static ItemSpec From(ListFieldDisplayAttribute attribute)
+            {
+                switch (attribute)
+                {
+                    case IntListFieldDisplayAttribute intAttribute:
+                        return new ItemSpec(typeof(int), intAttribute.minimum, intAttribute.maximum, intAttribute.postfix);
+                    case DoubleListFieldDisplayAttribute doubleAttribute:
+                        return new ItemSpec(typeof(double), doubleAttribute.minimum, doubleAttribute.maximum, doubleAttribute.postfix);
+                    default:
+                        return new ItemSpec(attribute.ElementType, double.MinValue, double.MaxValue, "");
+                }
+            }
+
+            public static ItemSpec From(TupleColumnAttribute column)
+            {
+                switch (column)
+                {
+                    case IntTupleColumnAttribute intColumn:
+                        return new ItemSpec(typeof(int), intColumn.minimum, intColumn.maximum, intColumn.postfix);
+                    case DoubleTupleColumnAttribute doubleColumn:
+                        return new ItemSpec(typeof(double), doubleColumn.minimum, doubleColumn.maximum, doubleColumn.postfix);
+                    default:
+                        return new ItemSpec(column.ElementType, double.MinValue, double.MaxValue, column.Postfix);
+                }
+            }
         }
 
         private sealed class ListFieldEditor
@@ -78,6 +126,7 @@ namespace BGC.Parameters.View
             private readonly IPropertyGroup propertyGroup;
             private readonly PropertyInfo property;
             private readonly ListFieldDisplayAttribute attribute;
+            private readonly TupleListLayout layout;
             private readonly string fieldName;
             private readonly Transform parentTransform;
             private readonly Text summary;
@@ -101,6 +150,7 @@ namespace BGC.Parameters.View
                 IPropertyGroup propertyGroup,
                 PropertyInfo property,
                 ListFieldDisplayAttribute attribute,
+                TupleListLayout layout,
                 GameObject header,
                 Transform parentTransform)
             {
@@ -108,6 +158,7 @@ namespace BGC.Parameters.View
                 this.propertyGroup = propertyGroup;
                 this.property = property;
                 this.attribute = attribute;
+                this.layout = layout;
                 this.parentTransform = parentTransform;
                 fieldName = property.GetInputFieldName();
 
@@ -128,7 +179,7 @@ namespace BGC.Parameters.View
                 addButton = SizeListWidget(WidgetFactory.CreateButtonWidget(
                         parent: addBar,
                         text: "+ Add",
-                        onClick: () => Edit(generation, list => list.Add(attribute.NewItemValue))),
+                        onClick: () => Edit(generation, list => list.Add(CreateNewItem()))),
                     ListAddButtonWidth).GetComponent<Button>();
             }
 
@@ -146,33 +197,52 @@ namespace BGC.Parameters.View
                 //The rows fill the panel's body from the top; the add bar follows them
                 int siblingIndex = -1;
 
+                void Place(GameObject row)
+                {
+                    row.transform.SetSiblingIndex(++siblingIndex);
+                    rows.Add(row);
+                }
+
                 if (propertyGroup.TryGetUnparsedListValue(fieldName, out JsonValue original))
                 {
-                    GameObject notice = SpawnUnparsedNotice(original);
-                    notice.transform.SetSiblingIndex(++siblingIndex);
-                    rows.Add(notice);
+                    Place(SpawnUnparsedNotice(original));
+                }
+
+                if (layout != null && list.Count > 0)
+                {
+                    Place(SpawnColumnTitles());
                 }
 
                 for (int i = 0; i < list.Count; i++)
                 {
-                    GameObject row = SpawnItemRow(list, i);
-                    row.transform.SetSiblingIndex(++siblingIndex);
-                    rows.Add(row);
+                    Place(SpawnItemRow(list, i));
                 }
 
                 addBar.transform.SetAsLastSibling();
                 UpdateSummary();
             }
 
-            private GameObject SpawnUnparsedNotice(JsonValue original)
+            private object CreateNewItem() => layout != null ? layout.CreateNewRow() : attribute.NewItemValue;
+
+            private bool IsListValid(IList list) =>
+                layout != null ? layout.IsListValid(list) : attribute.IsListValid(list);
+
+            private GameObject SpawnRow(WidgetFactory.ContainerConfig config, int slots)
             {
                 GameObject row = WidgetFactory.GetContainerWidget(
-                    config: WidgetFactory.ContainerConfig.Config_Normal_Even,
+                    config: config,
                     parent: parentTransform.gameObject,
-                    slots: 1);
+                    slots: slots);
 
                 LayoutElement layoutElement = row.AddComponent<LayoutElement>();
                 layoutElement.minHeight = 60;
+
+                return row;
+            }
+
+            private GameObject SpawnUnparsedNotice(JsonValue original)
+            {
+                GameObject row = SpawnRow(WidgetFactory.ContainerConfig.Config_Normal_Even, 1);
 
                 string originalText = original.ToString();
                 if (originalText.Length > 60)
@@ -189,15 +259,34 @@ namespace BGC.Parameters.View
                 return row;
             }
 
+            // The value slot of an item row, split into one slot per tuple column
+            private GameObject SpawnCellContainer(GameObject row) =>
+                WidgetFactory.GetContainerWidget(
+                    config: WidgetFactory.ContainerConfig.Config_Normal_Even,
+                    parent: row,
+                    slots: layout.Columns.Count,
+                    siblingIndex: 1);
+
+            private GameObject SpawnColumnTitles()
+            {
+                GameObject row = SpawnRow(ListItemRowConfig, 6);
+                GameObject cells = SpawnCellContainer(row);
+
+                for (int i = 0; i < layout.Columns.Count; i++)
+                {
+                    WidgetFactory.CreateLabelWidget(
+                        parent: cells,
+                        text: layout.Columns[i].displayTitle,
+                        alignment: TextAnchor.MiddleLeft,
+                        index: i);
+                }
+
+                return row;
+            }
+
             private GameObject SpawnItemRow(IList list, int index)
             {
-                GameObject row = WidgetFactory.GetContainerWidget(
-                    config: ListItemRowConfig,
-                    parent: parentTransform.gameObject,
-                    slots: 6);
-
-                LayoutElement layoutElement = row.AddComponent<LayoutElement>();
-                layoutElement.minHeight = 60;
+                GameObject row = SpawnRow(ListItemRowConfig, 6);
 
                 WidgetFactory.CreateLabelWidget(
                     parent: row,
@@ -207,7 +296,23 @@ namespace BGC.Parameters.View
 
                 int rowGeneration = generation;
 
-                SpawnItemValueWidget(row, list, index, rowGeneration);
+                if (layout == null)
+                {
+                    SpawnValueCell(row, 1, ItemSpec.From(attribute), rowGeneration,
+                        get: () => List[index],
+                        set: value => List[index] = value);
+                }
+                else
+                {
+                    GameObject cells = SpawnCellContainer(row);
+                    for (int column = 0; column < layout.Columns.Count; column++)
+                    {
+                        int c = column;
+                        SpawnValueCell(cells, c, ItemSpec.From(layout.Columns[c]), rowGeneration,
+                            get: () => layout.GetItem(List[index], c),
+                            set: value => List[index] = layout.WithItem(List[index], c, value));
+                    }
+                }
 
                 SpawnRowButton(row, rowGeneration, 2, "▲", index > 0,
                     l => Swap(l, index, index - 1));
@@ -244,95 +349,97 @@ namespace BGC.Parameters.View
                 button.interactable = interactable;
             }
 
-            private void SpawnItemValueWidget(GameObject row, IList list, int index, int rowGeneration)
+            private void SpawnValueCell(
+                GameObject parent,
+                int slot,
+                ItemSpec spec,
+                int rowGeneration,
+                Func<object> get,
+                Action<object> set)
             {
-                switch (attribute)
+                void Set(object value)
                 {
-                    case IntListFieldDisplayAttribute intAttribute:
-                        WidgetFactory.CreateInputFieldWidget(
-                            parent: row,
-                            formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_ValueEntry,
-                            text: Convert.ToInt32(list[index]).ToString(CultureInfo.InvariantCulture),
-                            postfixText: intAttribute.postfix,
-                            contentType: InputField.ContentType.IntegerNumber,
-                            newOnEndEdit: (input, inputField) =>
-                            {
-                                if (rowGeneration != generation)
-                                {
-                                    return;
-                                }
+                    if (rowGeneration != generation)
+                    {
+                        return;
+                    }
 
-                                if (int.TryParse(input, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value))
-                                {
-                                    value = GeneralMath.Clamp(value, intAttribute.minimum, intAttribute.maximum);
-                                    SetItem(rowGeneration, index, value);
-                                }
-
-                                //Show what was stored: the clamped value, or the old one if unparseable
-                                inputField.text = Convert.ToInt32(List[index]).ToString(CultureInfo.InvariantCulture);
-                            },
-                            index: 1);
-                        break;
-
-                    case DoubleListFieldDisplayAttribute doubleAttribute:
-                        WidgetFactory.CreateInputFieldWidget(
-                            parent: row,
-                            formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_ValueEntry,
-                            text: FormatDouble(list[index]),
-                            postfixText: doubleAttribute.postfix,
-                            contentType: InputField.ContentType.DecimalNumber,
-                            newOnEndEdit: (input, inputField) =>
-                            {
-                                if (rowGeneration != generation)
-                                {
-                                    return;
-                                }
-
-                                if (double.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
-                                {
-                                    value = GeneralMath.Clamp(value, doubleAttribute.minimum, doubleAttribute.maximum);
-                                    SetItem(rowGeneration, index, value);
-                                }
-
-                                inputField.text = FormatDouble(List[index]);
-                            },
-                            index: 1);
-                        break;
-
-                    case StringListFieldDisplayAttribute _:
-                        WidgetFactory.CreateInputFieldWidget(
-                            parent: row,
-                            formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_ValueEntry,
-                            text: list[index] as string ?? "",
-                            contentType: InputField.ContentType.Standard,
-                            onEndEdit: input => SetItem(rowGeneration, index, input?.Trim()?.Replace("\r", "") ?? ""),
-                            index: 1);
-                        break;
-
-                    case BoolListFieldDisplayAttribute _:
-                        WidgetFactory.CreateToggleWidget(
-                            parent: row,
-                            value: Convert.ToBoolean(list[index]),
-                            onValueChanged: value => SetItem(rowGeneration, index, value),
-                            index: 1);
-                        break;
-
-                    default:
-                        Debug.LogError($"Unexpected list attribute: {attribute.GetType()}");
-                        break;
-                }
-            }
-
-            private void SetItem(int rowGeneration, int index, object value)
-            {
-                if (rowGeneration != generation)
-                {
-                    return;
+                    set(value);
+                    propertyGroup.ClearUnparsedListValue(fieldName);
+                    UpdateSummary();
                 }
 
-                List[index] = value;
-                propertyGroup.ClearUnparsedListValue(fieldName);
-                UpdateSummary();
+                if (spec.type == typeof(int))
+                {
+                    WidgetFactory.CreateInputFieldWidget(
+                        parent: parent,
+                        formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_ValueEntry,
+                        text: FormatInt(get()),
+                        postfixText: spec.postfix,
+                        contentType: InputField.ContentType.IntegerNumber,
+                        newOnEndEdit: (input, inputField) =>
+                        {
+                            if (rowGeneration != generation)
+                            {
+                                return;
+                            }
+
+                            if (int.TryParse(input, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value))
+                            {
+                                Set((int)GeneralMath.Clamp(value, spec.minimum, spec.maximum));
+                            }
+
+                            //Show what was stored: the clamped value, or the old one if unparseable
+                            inputField.text = FormatInt(get());
+                        },
+                        index: slot);
+                }
+                else if (spec.type == typeof(double))
+                {
+                    WidgetFactory.CreateInputFieldWidget(
+                        parent: parent,
+                        formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_ValueEntry,
+                        text: FormatDouble(get()),
+                        postfixText: spec.postfix,
+                        contentType: InputField.ContentType.DecimalNumber,
+                        newOnEndEdit: (input, inputField) =>
+                        {
+                            if (rowGeneration != generation)
+                            {
+                                return;
+                            }
+
+                            if (double.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+                            {
+                                Set(GeneralMath.Clamp(value, spec.minimum, spec.maximum));
+                            }
+
+                            inputField.text = FormatDouble(get());
+                        },
+                        index: slot);
+                }
+                else if (spec.type == typeof(string))
+                {
+                    WidgetFactory.CreateInputFieldWidget(
+                        parent: parent,
+                        formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_ValueEntry,
+                        text: get() as string ?? "",
+                        contentType: InputField.ContentType.Standard,
+                        onEndEdit: input => Set(input?.Trim()?.Replace("\r", "") ?? ""),
+                        index: slot);
+                }
+                else if (spec.type == typeof(bool))
+                {
+                    WidgetFactory.CreateToggleWidget(
+                        parent: parent,
+                        value: Convert.ToBoolean(get()),
+                        onValueChanged: value => Set(value),
+                        index: slot);
+                }
+                else
+                {
+                    Debug.LogError($"Unexpected list item type: {spec.type}");
+                }
             }
 
             private void Edit(int rowGeneration, Action<IList> edit)
@@ -356,7 +463,7 @@ namespace BGC.Parameters.View
                     ? "Unreadable"
                     : (list.Count == 1 ? "1 item" : $"{list.Count} items") + GetCountRangeText();
 
-                summary.color = unparsed || !attribute.IsListValid(list) ? view.ListHeaderErrorText : summaryColor;
+                summary.color = unparsed || !IsListValid(list) ? view.ListHeaderErrorText : summaryColor;
                 addButton.interactable = list.Count < attribute.maximumCount;
             }
 
@@ -384,6 +491,9 @@ namespace BGC.Parameters.View
 
                 return "";
             }
+
+            private static string FormatInt(object value) =>
+                Convert.ToInt32(value).ToString(CultureInfo.InvariantCulture);
 
             private static string FormatDouble(object value) =>
                 Convert.ToDouble(value).ToString("R", CultureInfo.InvariantCulture);
