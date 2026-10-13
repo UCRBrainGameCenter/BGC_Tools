@@ -74,16 +74,18 @@ namespace BGC.Parameters.View
 
             private WidgetFactory WidgetFactory => view.widgetFactory;
 
-            // Bar layout, in canvas units. Bars are as tall as the editor's other rows.
-            private const float BarHeight = 60f;
-            private const float WidgetHeight = 50f;
-            private const float NumberWidth = 40f;
+            // Bar layout, in canvas units. Bar widgets are as tall as the editor's other rows (60):
+            // shorter, and the widgets' 35pt captions no longer fit and are not drawn.
+            private const float WidgetHeight = 60f;
+            private const int BarVerticalPadding = 5;
+            private const float BarHeight = WidgetHeight + 2 * BarVerticalPadding;
+            private const float NumberWidth = 50f;
             private const float InfoWidth = 40f;
-            private const float ItemButtonWidth = 90f;
-            private const float AddButtonWidth = 200f;
+            private const float ItemButtonWidth = 120f;
+            private const float AddButtonWidth = 240f;
 
-            // The item's settings are inset from its header bar's left edge by the nested-group step
-            private const int ContentsLeftPadding = 40;
+            // The item's settings are inset from its number by the nested-group step (40)
+            private const int ContentsLeftPadding = 20 + 40;
             private const int ContentsRightPadding = 10;
 
             public PropertyGroupListEditor(
@@ -120,7 +122,7 @@ namespace BGC.Parameters.View
 
                 //Add sits below the items, where the new item appears, beside the type it adds
                 addTypes = property.GetListAdditionTypes().ToList();
-                addBar = SpawnBar("AddBar", parentTransform, new RectOffset(0, 0, 5, 5));
+                addBar = SpawnBar("AddBar", parentTransform, new RectOffset(0, 0, BarVerticalPadding, BarVerticalPadding));
 
                 if (addTypes.Count == 1)
                 {
@@ -244,7 +246,9 @@ namespace BGC.Parameters.View
                 int index,
                 int cardGeneration)
             {
-                GameObject bar = SpawnBar("ItemHeader", card.transform, new RectOffset(10, 10, 5, 5));
+                //The left padding clears the panel's rounded corner
+                GameObject bar = SpawnBar("ItemHeader", card.transform,
+                    new RectOffset(20, 10, BarVerticalPadding, BarVerticalPadding));
                 bar.transform.SetSiblingIndex(0);
 
                 Image background = bar.AddComponent<Image>();
