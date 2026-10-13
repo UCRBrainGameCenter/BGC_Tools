@@ -219,7 +219,8 @@ namespace BGC.Parameters.View
                 SpawnRowButton(row, rowGeneration, 3, "▼", index < list.Count - 1,
                     l => Swap(l, index, index + 1));
                 SpawnRowButton(row, rowGeneration, 4, "Copy", list.Count < attribute.maximumCount,
-                    l => l.Insert(index + 1, l[index]));
+                    l => l.Insert(index + 1, l[index]),
+                    icon: WidgetFactory.DuplicateIcon);
                 SpawnRowButton(row, rowGeneration, 5, "✕", list.Count > attribute.minimumCount,
                     l => l.RemoveAt(index),
                     WidgetFactory.ButtonFormattingOptions.Config_DeleteButton);
@@ -234,14 +235,16 @@ namespace BGC.Parameters.View
                 string text,
                 bool interactable,
                 Action<IList> edit,
-                WidgetFactory.ButtonFormattingOptions options = WidgetFactory.ButtonFormattingOptions.Config_ListEntry)
+                WidgetFactory.ButtonFormattingOptions options = WidgetFactory.ButtonFormattingOptions.Config_ListEntry,
+                Sprite icon = null)
             {
                 Button button = WidgetFactory.CreateButtonWidget(
                     parent: row,
                     text: text,
                     onClick: () => Edit(rowGeneration, edit),
                     buttonOptions: options,
-                    index: slot).GetComponent<Button>();
+                    index: slot,
+                    icon: icon).GetComponent<Button>();
 
                 button.interactable = interactable;
             }
