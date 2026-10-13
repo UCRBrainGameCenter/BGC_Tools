@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
@@ -22,9 +23,9 @@ namespace BGC.Parameters.View
     /// delete it; below that, indented, a Name row and (unless the list shows titles only) the
     /// item's own properties. The add bar is where a new item will appear: a type dropdown and
     /// "+ Add", or "+ Add <type>" for a list with one type. A new item is named after its type.
-    /// Changing an item's type replaces it with a new item of that type, as the dropdowns of
-    /// other property groups do: its settings are not carried over. Delete asks for
-    /// confirmation, since it discards the item's settings.
+    /// Changing an item's type replaces it with an item of that type; the item it replaced is
+    /// remembered until the editor is left, so changing back restores its settings. Only the
+    /// current item is saved. Delete asks for confirmation, since it discards the item's settings.
     ///
     /// Names follow the existing rules: not blank, unique in the list, and no '.' (names are
     /// part of the paths that controllers use).
@@ -50,12 +51,6 @@ namespace BGC.Parameters.View
             property.GetCustomAttribute<PropertyGroupTitleAttribute>()?.title ??
             Regex.Replace(property.GetGroupListSerializationName(), "(?<=[a-z])(?=[A-Z])", " ");
 
-        // Each item is a panel, lighter than the group around it, with a dark header bar (number,
-        // type, item buttons) over its settings
-        protected virtual Color ListItemPanelBG { get; } = new Color32(0xA8, 0xA8, 0xA8, 0xFF);
-        protected virtual Color ListItemHeaderBG { get; } = new Color32(0x50, 0x50, 0x50, 0xFF);
-        protected virtual Color ListItemHeaderText { get; } = Color.white;
-
         private sealed class PropertyGroupListEditor
         {
             private readonly StimulusView view;
@@ -76,15 +71,10 @@ namespace BGC.Parameters.View
 
             private WidgetFactory WidgetFactory => view.widgetFactory;
 
-            // Bar layout, in canvas units. Bar widgets are as tall as the editor's other rows (60):
-            // shorter, and the widgets' 35pt captions no longer fit and are not drawn.
-            private const float WidgetHeight = 60f;
-            private const int BarVerticalPadding = 5;
-            private const float BarHeight = WidgetHeight + 2 * BarVerticalPadding;
+            // Header bar layout, in canvas units (see StimulusView.ListPanels.cs)
             private const float NumberWidth = 50f;
             private const float InfoWidth = 40f;
             private const float ItemButtonWidth = 120f;
-            private const float AddButtonWidth = 200f;
 
             // The type (in the header bars and the add bar) has a fixed width, so the item buttons
             // line up at the right of every header
@@ -128,26 +118,27 @@ namespace BGC.Parameters.View
 
                 //Add sits below the items, where the new item appears, beside the type it adds
                 addTypes = property.GetListAdditionTypes().ToList();
-                addBar = SpawnBar("AddBar", parentTransform, new RectOffset(0, 0, BarVerticalPadding, BarVerticalPadding));
+                addBar = SpawnListBar("AddBar", parentTransform,
+                    new RectOffset(0, 0, ListBarVerticalPadding, ListBarVerticalPadding));
 
                 //It reads "+ Add [type]"
                 if (addTypes.Count == 1)
                 {
-                    Size(WidgetFactory.CreateButtonWidget(
+                    SizeListWidget(WidgetFactory.CreateButtonWidget(
                             parent: addBar,
                             text: $"+ Add {addTypes[0].GetSelectionTitle()}",
                             onClick: () => Add(addTypes[0])),
-                        AddButtonWidth + 10f + TypeWidth);
+                        ListAddButtonWidth + 10f + TypeWidth);
                 }
                 else if (addTypes.Count > 1)
                 {
-                    Size(WidgetFactory.CreateButtonWidget(
+                    SizeListWidget(WidgetFactory.CreateButtonWidget(
                             parent: addBar,
                             text: "+ Add",
                             onClick: () => Add(addTypes[addTypeDropdown.value])),
-                        AddButtonWidth);
+                        ListAddButtonWidth);
 
-                    addTypeDropdown = Size(WidgetFactory.CreateDropdownWidget(
+                    addTypeDropdown = SizeListWidget(WidgetFactory.CreateDropdownWidget(
                             parent: addBar,
                             formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_StringEntry,
                             optionList: addTypes.Select(x => x.GetSelectionTitle()).ToList()),
@@ -190,8 +181,7 @@ namespace BGC.Parameters.View
                 PropertyListItemContainer card = view.SpawnPropertyListItem();
                 card.transform.SetParent(parentTransform, false);
 
-                Image panel = card.GetComponent<Image>();
-                panel.color = view.ListItemPanelBG;
+                view.SetListBackground(card.gameObject, view.ListPanelBG);
 
                 //The type and name are shown, and edited, in the header bar and the Name row
                 card.titleBox.gameObject.SetActive(false);
@@ -199,7 +189,7 @@ namespace BGC.Parameters.View
                 VerticalLayoutGroup frameLayout = card.propertyFrame.GetComponent<VerticalLayoutGroup>();
                 frameLayout.padding = new RectOffset(ContentsLeftPadding, ContentsRightPadding, 5, 10);
 
-                SpawnHeaderBar(card, panel.sprite, item, index, cardGeneration);
+                SpawnHeaderBar(card, item, index, cardGeneration);
 
                 GameObject nameRow = WidgetFactory.GetContainerWidget(
                     config: WidgetFactory.ContainerConfig.Config_Normal_Even,
@@ -248,40 +238,32 @@ namespace BGC.Parameters.View
             /// </summary>
             private void SpawnHeaderBar(
                 PropertyListItemContainer card,
-                Sprite sprite,
                 IPropertyGroup item,
                 int index,
                 int cardGeneration)
             {
-                //The left padding clears the panel's rounded corner
-                GameObject bar = SpawnBar("ItemHeader", card.transform,
-                    new RectOffset(20, 10, BarVerticalPadding, BarVerticalPadding));
+                GameObject bar = SpawnListBar("ItemHeader", card.transform, ListHeaderPadding);
                 bar.transform.SetSiblingIndex(0);
+                view.SetListBackground(bar, view.ListHeaderBG);
 
-                Image background = bar.AddComponent<Image>();
-                background.sprite = sprite;
-                background.type = Image.Type.Sliced;
-                background.color = view.ListItemHeaderBG;
-                background.raycastTarget = false;
-
-                Size(WidgetFactory.CreateLabelWidget(
+                SizeListWidget(WidgetFactory.CreateLabelWidget(
                         parent: bar,
                         text: $"{index + 1}",
                         alignment: TextAnchor.MiddleLeft),
-                    NumberWidth).GetComponent<Text>().color = view.ListItemHeaderText;
+                    NumberWidth).GetComponent<Text>().color = view.ListHeaderText;
 
                 List<Type> types = GetItemTypes(item);
                 if (types.Count == 1)
                 {
-                    Size(WidgetFactory.CreateLabelWidget(
+                    SizeListWidget(WidgetFactory.CreateLabelWidget(
                             parent: bar,
                             text: item.GetSelectionTitle(),
                             alignment: TextAnchor.MiddleLeft),
-                        TypeWidth).GetComponent<Text>().color = view.ListItemHeaderText;
+                        TypeWidth).GetComponent<Text>().color = view.ListHeaderText;
                 }
                 else
                 {
-                    Size(WidgetFactory.CreateDropdownWidget(
+                    SizeListWidget(WidgetFactory.CreateDropdownWidget(
                             parent: bar,
                             value: types.IndexOf(item.GetType()),
                             formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_StringEntry,
@@ -302,7 +284,7 @@ namespace BGC.Parameters.View
                 card.typeLabel.text = $"{item.GetSelectionTitle()}:";
                 card.ChoiceInfoText = item.GetType().GetChoiceInfoText();
 
-                GameObject infoSlot = Size(new GameObject("InfoSlot", typeof(RectTransform)), InfoWidth);
+                GameObject infoSlot = SizeListWidget(new GameObject("InfoSlot", typeof(RectTransform)), InfoWidth);
                 infoSlot.transform.SetParent(bar.transform, false);
 
                 RectTransform infoButton = (RectTransform)card.infoButton.transform;
@@ -314,8 +296,7 @@ namespace BGC.Parameters.View
                 infoButton.sizeDelta = new Vector2(InfoWidth, InfoWidth);
 
                 //The item buttons sit at the right
-                Size(new GameObject("Spacer", typeof(RectTransform)), 0f, flexible: true)
-                    .transform.SetParent(bar.transform, false);
+                SpawnListSpacer(bar);
 
                 SpawnItemButton(bar, cardGeneration, "▲", index > 0, () => Swap(index, index - 1));
                 SpawnItemButton(bar, cardGeneration, "▼", index < list.Count - 1, () => Swap(index, index + 1));
@@ -323,49 +304,10 @@ namespace BGC.Parameters.View
                     icon: WidgetFactory.DuplicateIcon);
 
                 //Delete is set apart from the others
-                Size(new GameObject("Gap", typeof(RectTransform)), 20f).transform.SetParent(bar.transform, false);
+                SizeListWidget(new GameObject("Gap", typeof(RectTransform)), 20f).transform.SetParent(bar.transform, false);
 
                 SpawnItemButton(bar, cardGeneration, "✕", true, () => ConfirmDelete(index),
                     WidgetFactory.ButtonFormattingOptions.Config_DeleteButton);
-            }
-
-            /// <summary>A row that lays out its children left to right at the sizes Size gives them</summary>
-            private static GameObject SpawnBar(string name, Transform parent, RectOffset padding)
-            {
-                GameObject bar = new GameObject(name, typeof(RectTransform), typeof(HorizontalLayoutGroup));
-                bar.transform.SetParent(parent, false);
-
-                HorizontalLayoutGroup layout = bar.GetComponent<HorizontalLayoutGroup>();
-                layout.padding = padding;
-                layout.spacing = 10;
-                layout.childAlignment = TextAnchor.MiddleLeft;
-                layout.childControlWidth = true;
-                layout.childControlHeight = true;
-                layout.childForceExpandWidth = false;
-                layout.childForceExpandHeight = false;
-
-                LayoutElement layoutElement = bar.AddComponent<LayoutElement>();
-                layoutElement.minHeight = BarHeight;
-                layoutElement.preferredHeight = BarHeight;
-
-                return bar;
-            }
-
-            /// <summary>Fix a bar child's width (or let it take the spare width) and height</summary>
-            private static GameObject Size(GameObject widget, float width, bool flexible = false)
-            {
-                if (!widget.TryGetComponent(out LayoutElement layoutElement))
-                {
-                    layoutElement = widget.AddComponent<LayoutElement>();
-                }
-
-                layoutElement.minWidth = width;
-                layoutElement.preferredWidth = width;
-                layoutElement.flexibleWidth = flexible ? 1f : 0f;
-                layoutElement.minHeight = WidgetHeight;
-                layoutElement.preferredHeight = WidgetHeight;
-
-                return widget;
             }
 
             /// <summary>The types an item can be: the list's addition types, plus the item's own if it isn't one</summary>
@@ -389,7 +331,7 @@ namespace BGC.Parameters.View
                 WidgetFactory.ButtonFormattingOptions options = WidgetFactory.ButtonFormattingOptions.Config_ListEntry,
                 Sprite icon = null)
             {
-                Button button = Size(WidgetFactory.CreateButtonWidget(
+                Button button = SizeListWidget(WidgetFactory.CreateButtonWidget(
                         parent: bar,
                         text: text,
                         onClick: () =>
@@ -422,6 +364,11 @@ namespace BGC.Parameters.View
             private string GetDefaultItemName(Type type, IPropertyGroup replacing = null) =>
                 GetUniqueListItemName(type.GetSelectionTitle().Replace(".", ""), list, replacing);
 
+            /// <summary>
+            /// Replace an item with one of another type. The item it replaces is remembered, so
+            /// changing back restores its settings rather than starting from defaults; changing to
+            /// a type it has been before restores that one. Only the item in the list is saved.
+            /// </summary>
             private void ChangeType(int index, Type type)
             {
                 IPropertyGroup oldItem = (IPropertyGroup)list[index];
@@ -439,11 +386,60 @@ namespace BGC.Parameters.View
 
                 string name = namedAfterType ? GetDefaultItemName(type, oldItem) : oldItem.GetItemTitle();
 
+                Dictionary<Type, IPropertyGroup> alternatives = TakeOtherTypes(oldItem);
+                alternatives[oldItem.GetType()] = oldItem;
+
                 list.RemoveAt(index);
-                IPropertyGroup newItem = type.Build(name, owner, list);
-                list.RemoveAt(list.Count - 1);
-                list.Insert(index, newItem);
+
+                if (alternatives.TryGetValue(type, out IPropertyGroup newItem))
+                {
+                    alternatives.Remove(type);
+                    newItem.SetParent(owner);
+                    newItem.SetItemTitle(name);
+                    list.Insert(index, newItem);
+                }
+                else
+                {
+                    newItem = type.Build(name, owner, list);
+                    list.RemoveAt(list.Count - 1);
+                    list.Insert(index, newItem);
+                }
+
+                OtherTypes[newItem] = alternatives;
                 Rebuild();
+            }
+
+            /// <summary>
+            /// The items each list item has been changed from, by type. They are kept per list
+            /// object, which lives as long as the editor's working copy of the settings: an editor
+            /// rebuilt for the same list (e.g. after switching tabs) still has them, and they go
+            /// with that copy when the editor is left.
+            /// </summary>
+            private static readonly ConditionalWeakTable<IList, Dictionary<IPropertyGroup, Dictionary<Type, IPropertyGroup>>> otherTypesByList =
+                new ConditionalWeakTable<IList, Dictionary<IPropertyGroup, Dictionary<Type, IPropertyGroup>>>();
+
+            private Dictionary<IPropertyGroup, Dictionary<Type, IPropertyGroup>> OtherTypes =>
+                otherTypesByList.GetValue(list, _ => new Dictionary<IPropertyGroup, Dictionary<Type, IPropertyGroup>>(ReferenceComparer.Instance));
+
+            /// <summary>Remove and return the other types remembered for this item (empty if none)</summary>
+            private Dictionary<Type, IPropertyGroup> TakeOtherTypes(IPropertyGroup item)
+            {
+                if (OtherTypes.TryGetValue(item, out Dictionary<Type, IPropertyGroup> alternatives))
+                {
+                    OtherTypes.Remove(item);
+                    return alternatives;
+                }
+
+                return new Dictionary<Type, IPropertyGroup>();
+            }
+
+            /// <summary>Items are remembered by identity, whatever their Equals does</summary>
+            private sealed class ReferenceComparer : IEqualityComparer<IPropertyGroup>
+            {
+                public static readonly ReferenceComparer Instance = new ReferenceComparer();
+
+                public bool Equals(IPropertyGroup x, IPropertyGroup y) => ReferenceEquals(x, y);
+                public int GetHashCode(IPropertyGroup obj) => RuntimeHelpers.GetHashCode(obj);
             }
 
             private void Rename(IPropertyGroup item, string name)
@@ -542,6 +538,7 @@ namespace BGC.Parameters.View
                             list.Contains(item))
                         {
                             list.Remove(item);
+                            TakeOtherTypes(item);
                             Rebuild();
                         }
                     });
