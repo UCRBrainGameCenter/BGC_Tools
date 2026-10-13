@@ -72,6 +72,9 @@ namespace BGC.Parameters.View
                 WidgetFactory.ContainerConfig.Height_60px |
                 WidgetFactory.ContainerConfig.Smallness_5;
 
+            // An item's name and settings sit under its row, indented as a group's settings are under its title
+            private const int ItemContentsIndent = 30;
+
             public PropertyGroupListEditor(
                 StimulusView view,
                 IList list,
@@ -162,7 +165,7 @@ namespace BGC.Parameters.View
                 WidgetFactory.CreateLabelWidget(
                     parent: row,
                     text: $"{index + 1}",
-                    alignment: TextAnchor.MiddleRight,
+                    alignment: TextAnchor.MiddleLeft,
                     index: 0);
 
                 SpawnTypeSelector(row, card, item, index, cardGeneration);
@@ -174,9 +177,11 @@ namespace BGC.Parameters.View
                 SpawnCardButton(row, cardGeneration, 5, "✕", true, () => ConfirmDelete(index),
                     WidgetFactory.ButtonFormattingOptions.Config_DeleteButton);
 
+                GameObject contents = SpawnItemContents(card);
+
                 GameObject nameRow = WidgetFactory.GetContainerWidget(
                     config: WidgetFactory.ContainerConfig.Config_Normal_Even,
-                    parent: card.propertyFrame,
+                    parent: contents,
                     slots: 2);
 
                 layoutElement = nameRow.AddComponent<LayoutElement>();
@@ -207,12 +212,32 @@ namespace BGC.Parameters.View
                 {
                     view.VisualizePropertyGroup(
                         propertyContainer: item,
-                        parentTransform: card.propertyFrame.transform,
+                        parentTransform: contents.transform,
                         respawnPropertyGroupCallback: null,
                         spawningBehavior: SpawningBehavior.NestedInternal);
                 }
 
                 return card.gameObject;
+            }
+
+            /// <summary>An indented frame in the card, laid out like the card's own frame</summary>
+            private static GameObject SpawnItemContents(PropertyListItemContainer card)
+            {
+                VerticalLayoutGroup frameLayout = card.propertyFrame.GetComponent<VerticalLayoutGroup>();
+
+                GameObject contents = new GameObject("ItemContents", typeof(RectTransform), typeof(VerticalLayoutGroup));
+                contents.transform.SetParent(card.propertyFrame.transform, false);
+
+                VerticalLayoutGroup layout = contents.GetComponent<VerticalLayoutGroup>();
+                layout.padding = new RectOffset(ItemContentsIndent, 0, 0, 0);
+                layout.spacing = frameLayout.spacing;
+                layout.childAlignment = frameLayout.childAlignment;
+                layout.childControlWidth = frameLayout.childControlWidth;
+                layout.childControlHeight = frameLayout.childControlHeight;
+                layout.childForceExpandWidth = frameLayout.childForceExpandWidth;
+                layout.childForceExpandHeight = frameLayout.childForceExpandHeight;
+
+                return contents;
             }
 
             /// <summary>The types an item can be: the list's addition types, plus the item's own if it isn't one</summary>
