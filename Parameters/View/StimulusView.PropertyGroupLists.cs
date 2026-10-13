@@ -16,13 +16,15 @@ namespace BGC.Parameters.View
     /// Editor for [PropertyGroupList] lists of property groups, in the same style as the list-field
     /// editor (StimulusView.ListFields.cs).
     ///
-    /// A header row (title, item count, Add) is followed by one card per item: a row with its
-    /// number, a dropdown to change its type, and buttons to move, duplicate or delete it; a row
-    /// to rename it; then (unless the list shows titles only) the item's own properties.
-    /// Add appends an item of the first listed type, named after the type. Changing an item's
-    /// type replaces it with a new item of that type, as the dropdowns of other property groups
-    /// do: its settings are not carried over. Delete asks for confirmation, since it discards
-    /// the item's settings.
+    /// A header row (title, item count) is followed by one panel per item, then an add bar.
+    /// Each panel has a darker header bar with the item's number, a dropdown to change its type,
+    /// its type's info button, and buttons to move it up or down, duplicate it or (set apart)
+    /// delete it; below that, indented, a Name row and (unless the list shows titles only) the
+    /// item's own properties. The add bar is where a new item will appear: a type dropdown and
+    /// "+ Add", or "+ Add <type>" for a list with one type. A new item is named after its type.
+    /// Changing an item's type replaces it with a new item of that type, as the dropdowns of
+    /// other property groups do: its settings are not carried over. Delete asks for
+    /// confirmation, since it discards the item's settings.
     ///
     /// Names follow the existing rules: not blank, unique in the list, and no '.' (names are
     /// part of the paths that controllers use).
@@ -48,6 +50,10 @@ namespace BGC.Parameters.View
             property.GetCustomAttribute<PropertyGroupTitleAttribute>()?.title ??
             Regex.Replace(property.GetGroupListSerializationName(), "(?<=[a-z])(?=[A-Z])", " ");
 
+        // Each item is a panel: a darker header bar (number, type, item buttons) over its settings
+        protected virtual Color ListItemPanelBG { get; } = new Color32(0xA0, 0xA0, 0xA0, 0xFF);
+        protected virtual Color ListItemHeaderBG { get; } = new Color32(0x7A, 0x7A, 0x7A, 0xFF);
+
         private sealed class PropertyGroupListEditor
         {
             private readonly StimulusView view;
@@ -58,6 +64,9 @@ namespace BGC.Parameters.View
             private readonly bool shallow;
             private readonly GameObject header;
             private readonly Text summary;
+            private readonly GameObject addBar;
+            private readonly Dropdown addTypeDropdown;
+            private readonly List<Type> addTypes;
             private readonly List<GameObject> cards = new List<GameObject>();
 
             // See ListFieldEditor: replaced cards stay live until the end of the frame
@@ -65,16 +74,17 @@ namespace BGC.Parameters.View
 
             private WidgetFactory WidgetFactory => view.widgetFactory;
 
-            // The type dropdown and its info button share the row's wide slot
-            private const WidgetFactory.ContainerConfig TypeSelectorConfig =
-                WidgetFactory.ContainerConfig.Small_Element_1 |
-                WidgetFactory.ContainerConfig.Spacing_Internal |
-                WidgetFactory.ContainerConfig.Height_60px |
-                WidgetFactory.ContainerConfig.Smallness_5;
+            // Bar layout, in canvas units. Bars are as tall as the editor's other rows.
+            private const float BarHeight = 60f;
+            private const float WidgetHeight = 50f;
+            private const float NumberWidth = 40f;
+            private const float InfoWidth = 40f;
+            private const float ItemButtonWidth = 90f;
+            private const float AddButtonWidth = 200f;
 
-            // An item's name and settings sit under its row, indented as a nested group's settings are
-            // (by its frame's padding)
-            private const int ItemContentsIndent = 40;
+            // The item's settings are inset from its header bar's left edge by the nested-group step
+            private const int ContentsLeftPadding = 40;
+            private const int ContentsRightPadding = 10;
 
             public PropertyGroupListEditor(
                 StimulusView view,
@@ -104,23 +114,40 @@ namespace BGC.Parameters.View
                     text: $"{GetPropertyGroupListTitle(property)}:",
                     alignment: TextAnchor.MiddleLeft);
 
-                GameObject controls = WidgetFactory.GetContainerWidget(
-                    config: WidgetFactory.ContainerConfig.Config_Normal_Even,
-                    parent: header,
-                    slots: 2,
-                    siblingIndex: 1,
-                    parentSlots: 2);
-
                 summary = WidgetFactory.CreateLabelWidget(
-                    parent: controls,
-                    alignment: TextAnchor.MiddleLeft,
-                    index: 0).GetComponent<Text>();
+                    parent: header,
+                    alignment: TextAnchor.MiddleLeft).GetComponent<Text>();
 
-                WidgetFactory.CreateButtonWidget(
-                    parent: controls,
-                    text: "Add",
-                    onClick: Add,
-                    index: 1);
+                //Add sits below the items, where the new item appears, beside the type it adds
+                addTypes = property.GetListAdditionTypes().ToList();
+                addBar = SpawnBar("AddBar", parentTransform, new RectOffset(0, 0, 5, 5));
+
+                if (addTypes.Count == 1)
+                {
+                    Size(WidgetFactory.CreateButtonWidget(
+                            parent: addBar,
+                            text: $"+ Add {addTypes[0].GetSelectionTitle()}",
+                            onClick: () => Add(addTypes[0])),
+                        AddButtonWidth, flexible: true);
+                }
+                else if (addTypes.Count > 1)
+                {
+                    addTypeDropdown = Size(WidgetFactory.CreateDropdownWidget(
+                            parent: addBar,
+                            formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_StringEntry,
+                            optionList: addTypes.Select(x => x.GetSelectionTitle()).ToList()),
+                        0f, flexible: true).GetComponent<Dropdown>();
+
+                    Size(WidgetFactory.CreateButtonWidget(
+                            parent: addBar,
+                            text: "+ Add",
+                            onClick: () => Add(addTypes[addTypeDropdown.value])),
+                        AddButtonWidth);
+                }
+                else
+                {
+                    addBar.SetActive(false);
+                }
             }
 
             public void Rebuild()
@@ -141,6 +168,8 @@ namespace BGC.Parameters.View
                     cards.Add(card);
                 }
 
+                addBar.transform.SetSiblingIndex(++siblingIndex);
+
                 summary.text = list.Count == 1 ? "1 item" : $"{list.Count} items";
             }
 
@@ -152,40 +181,23 @@ namespace BGC.Parameters.View
                 PropertyListItemContainer card = view.SpawnPropertyListItem();
                 card.transform.SetParent(parentTransform, false);
 
-                //The type and name are shown, and edited, in the rows below
+                Image panel = card.GetComponent<Image>();
+                panel.color = view.ListItemPanelBG;
+
+                //The type and name are shown, and edited, in the header bar and the Name row
                 card.titleBox.gameObject.SetActive(false);
 
-                GameObject row = WidgetFactory.GetContainerWidget(
-                    config: ListItemRowConfig,
-                    parent: card.propertyFrame,
-                    slots: 6);
+                VerticalLayoutGroup frameLayout = card.propertyFrame.GetComponent<VerticalLayoutGroup>();
+                frameLayout.padding = new RectOffset(ContentsLeftPadding, ContentsRightPadding, 5, 10);
 
-                LayoutElement layoutElement = row.AddComponent<LayoutElement>();
-                layoutElement.minHeight = 60;
-
-                WidgetFactory.CreateLabelWidget(
-                    parent: row,
-                    text: $"{index + 1}",
-                    alignment: TextAnchor.MiddleLeft,
-                    index: 0);
-
-                SpawnTypeSelector(row, card, item, index, cardGeneration);
-
-                SpawnCardButton(row, cardGeneration, 2, "▲", index > 0, () => Swap(index, index - 1));
-                SpawnCardButton(row, cardGeneration, 3, "▼", index < list.Count - 1, () => Swap(index, index + 1));
-                SpawnCardButton(row, cardGeneration, 4, "Copy", true, () => Copy(index),
-                    icon: WidgetFactory.DuplicateIcon);
-                SpawnCardButton(row, cardGeneration, 5, "✕", true, () => ConfirmDelete(index),
-                    WidgetFactory.ButtonFormattingOptions.Config_DeleteButton);
-
-                GameObject contents = SpawnItemContents(card);
+                SpawnHeaderBar(card, panel.sprite, item, index, cardGeneration);
 
                 GameObject nameRow = WidgetFactory.GetContainerWidget(
                     config: WidgetFactory.ContainerConfig.Config_Normal_Even,
-                    parent: contents,
+                    parent: card.propertyFrame,
                     slots: 2);
 
-                layoutElement = nameRow.AddComponent<LayoutElement>();
+                LayoutElement layoutElement = nameRow.AddComponent<LayoutElement>();
                 layoutElement.minHeight = 60;
 
                 WidgetFactory.CreateLabelWidget(
@@ -213,7 +225,7 @@ namespace BGC.Parameters.View
                 {
                     view.VisualizePropertyGroup(
                         propertyContainer: item,
-                        parentTransform: contents.transform,
+                        parentTransform: card.propertyFrame.transform,
                         respawnPropertyGroupCallback: null,
                         spawningBehavior: SpawningBehavior.NestedInternal);
                 }
@@ -221,30 +233,130 @@ namespace BGC.Parameters.View
                 return card.gameObject;
             }
 
-            /// <summary>An indented frame in the card, laid out like the card's own frame</summary>
-            private static GameObject SpawnItemContents(PropertyListItemContainer card)
+            /// <summary>
+            /// The card's header bar: number, type (a dropdown, or a label if the list has one type),
+            /// the type's info button, then move up, move down, duplicate and, set apart, delete.
+            /// </summary>
+            private void SpawnHeaderBar(
+                PropertyListItemContainer card,
+                Sprite sprite,
+                IPropertyGroup item,
+                int index,
+                int cardGeneration)
             {
-                VerticalLayoutGroup frameLayout = card.propertyFrame.GetComponent<VerticalLayoutGroup>();
+                GameObject bar = SpawnBar("ItemHeader", card.transform, new RectOffset(10, 10, 5, 5));
+                bar.transform.SetSiblingIndex(0);
 
-                GameObject contents = new GameObject("ItemContents", typeof(RectTransform), typeof(VerticalLayoutGroup));
-                contents.transform.SetParent(card.propertyFrame.transform, false);
+                Image background = bar.AddComponent<Image>();
+                background.sprite = sprite;
+                background.type = Image.Type.Sliced;
+                background.color = view.ListItemHeaderBG;
+                background.raycastTarget = false;
 
-                VerticalLayoutGroup layout = contents.GetComponent<VerticalLayoutGroup>();
-                layout.padding = new RectOffset(ItemContentsIndent, 0, 0, 0);
-                layout.spacing = frameLayout.spacing;
-                layout.childAlignment = frameLayout.childAlignment;
-                layout.childControlWidth = frameLayout.childControlWidth;
-                layout.childControlHeight = frameLayout.childControlHeight;
-                layout.childForceExpandWidth = frameLayout.childForceExpandWidth;
-                layout.childForceExpandHeight = frameLayout.childForceExpandHeight;
+                Size(WidgetFactory.CreateLabelWidget(
+                        parent: bar,
+                        text: $"{index + 1}",
+                        alignment: TextAnchor.MiddleLeft),
+                    NumberWidth);
 
-                return contents;
+                List<Type> types = GetItemTypes(item);
+                if (types.Count == 1)
+                {
+                    Size(WidgetFactory.CreateLabelWidget(
+                            parent: bar,
+                            text: item.GetSelectionTitle(),
+                            alignment: TextAnchor.MiddleLeft),
+                        0f, flexible: true);
+                }
+                else
+                {
+                    Size(WidgetFactory.CreateDropdownWidget(
+                            parent: bar,
+                            value: types.IndexOf(item.GetType()),
+                            formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_StringEntry,
+                            onValueChanged: (int value) =>
+                            {
+                                if (cardGeneration == generation)
+                                {
+                                    ChangeType(index, types[value]);
+                                }
+                            },
+                            optionList: types.Select(x => x.GetSelectionTitle()).ToList()),
+                        0f, flexible: true);
+                }
+
+                //The card's own (round) info button moves beside the type; it shows itself only for
+                //documented types, and its message is titled with the type label. Its slot is kept
+                //either way so the types line up from card to card.
+                card.typeLabel.text = $"{item.GetSelectionTitle()}:";
+                card.ChoiceInfoText = item.GetType().GetChoiceInfoText();
+
+                GameObject infoSlot = Size(new GameObject("InfoSlot", typeof(RectTransform)), InfoWidth);
+                infoSlot.transform.SetParent(bar.transform, false);
+
+                RectTransform infoButton = (RectTransform)card.infoButton.transform;
+                infoButton.SetParent(infoSlot.transform, false);
+                infoButton.anchorMin = new Vector2(0.5f, 0.5f);
+                infoButton.anchorMax = new Vector2(0.5f, 0.5f);
+                infoButton.pivot = new Vector2(0.5f, 0.5f);
+                infoButton.anchoredPosition = Vector2.zero;
+                infoButton.sizeDelta = new Vector2(InfoWidth, InfoWidth);
+
+                SpawnItemButton(bar, cardGeneration, "▲", index > 0, () => Swap(index, index - 1));
+                SpawnItemButton(bar, cardGeneration, "▼", index < list.Count - 1, () => Swap(index, index + 1));
+                SpawnItemButton(bar, cardGeneration, "Copy", true, () => Copy(index),
+                    icon: WidgetFactory.DuplicateIcon);
+
+                //Delete is set apart from the others
+                Size(new GameObject("Gap", typeof(RectTransform)), 20f).transform.SetParent(bar.transform, false);
+
+                SpawnItemButton(bar, cardGeneration, "✕", true, () => ConfirmDelete(index),
+                    WidgetFactory.ButtonFormattingOptions.Config_DeleteButton);
+            }
+
+            /// <summary>A row that lays out its children left to right at the sizes Size gives them</summary>
+            private static GameObject SpawnBar(string name, Transform parent, RectOffset padding)
+            {
+                GameObject bar = new GameObject(name, typeof(RectTransform), typeof(HorizontalLayoutGroup));
+                bar.transform.SetParent(parent, false);
+
+                HorizontalLayoutGroup layout = bar.GetComponent<HorizontalLayoutGroup>();
+                layout.padding = padding;
+                layout.spacing = 10;
+                layout.childAlignment = TextAnchor.MiddleLeft;
+                layout.childControlWidth = true;
+                layout.childControlHeight = true;
+                layout.childForceExpandWidth = false;
+                layout.childForceExpandHeight = false;
+
+                LayoutElement layoutElement = bar.AddComponent<LayoutElement>();
+                layoutElement.minHeight = BarHeight;
+                layoutElement.preferredHeight = BarHeight;
+
+                return bar;
+            }
+
+            /// <summary>Fix a bar child's width (or let it take the spare width) and height</summary>
+            private static GameObject Size(GameObject widget, float width, bool flexible = false)
+            {
+                if (!widget.TryGetComponent(out LayoutElement layoutElement))
+                {
+                    layoutElement = widget.AddComponent<LayoutElement>();
+                }
+
+                layoutElement.minWidth = width;
+                layoutElement.preferredWidth = width;
+                layoutElement.flexibleWidth = flexible ? 1f : 0f;
+                layoutElement.minHeight = WidgetHeight;
+                layoutElement.preferredHeight = WidgetHeight;
+
+                return widget;
             }
 
             /// <summary>The types an item can be: the list's addition types, plus the item's own if it isn't one</summary>
             private List<Type> GetItemTypes(IPropertyGroup item)
             {
-                List<Type> types = property.GetListAdditionTypes().ToList();
+                List<Type> types = addTypes.ToList();
                 if (!types.Contains(item.GetType()))
                 {
                     types.Add(item.GetType());
@@ -253,102 +365,34 @@ namespace BGC.Parameters.View
                 return types;
             }
 
-            private void SpawnTypeSelector(
-                GameObject row,
-                PropertyListItemContainer card,
-                IPropertyGroup item,
-                int index,
-                int cardGeneration)
-            {
-                List<Type> types = GetItemTypes(item);
-
-                GameObject selector = WidgetFactory.GetContainerWidget(
-                    config: TypeSelectorConfig,
-                    parent: row,
-                    slots: 2,
-                    siblingIndex: 1,
-                    parentSlots: 6);
-
-                if (types.Count == 1)
-                {
-                    WidgetFactory.CreateLabelWidget(
-                        parent: selector,
-                        text: item.GetSelectionTitle(),
-                        alignment: TextAnchor.MiddleLeft,
-                        index: 0);
-                }
-                else
-                {
-                    WidgetFactory.CreateDropdownWidget(
-                        parent: selector,
-                        value: types.IndexOf(item.GetType()),
-                        formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_StringEntry,
-                        onValueChanged: (int value) =>
-                        {
-                            if (cardGeneration == generation)
-                            {
-                                ChangeType(index, types[value]);
-                            }
-                        },
-                        optionList: types.Select(x => x.GetSelectionTitle()).ToList(),
-                        index: 0);
-                }
-
-                //The card's own (round) info button moves next to the dropdown; it shows itself
-                //only for documented types, and its message is titled with the type label
-                card.typeLabel.text = $"{item.GetSelectionTitle()}:";
-                card.ChoiceInfoText = item.GetType().GetChoiceInfoText();
-
-                GameObject infoSlot = WidgetFactory.GetContainerWidget(
-                    config: WidgetFactory.ContainerConfig.Config_Normal_Even,
-                    parent: selector,
-                    siblingIndex: 1,
-                    parentSlots: 2);
-
-                RectTransform infoButton = (RectTransform)card.infoButton.transform;
-                infoButton.SetParent(infoSlot.transform, false);
-                infoButton.anchorMin = new Vector2(0f, 0.5f);
-                infoButton.anchorMax = new Vector2(0f, 0.5f);
-                infoButton.pivot = new Vector2(0f, 0.5f);
-                infoButton.anchoredPosition = Vector2.zero;
-                infoButton.sizeDelta = new Vector2(40f, 40f);
-            }
-
-            private void SpawnCardButton(
-                GameObject row,
+            private void SpawnItemButton(
+                GameObject bar,
                 int cardGeneration,
-                int slot,
                 string text,
                 bool interactable,
                 Action action,
                 WidgetFactory.ButtonFormattingOptions options = WidgetFactory.ButtonFormattingOptions.Config_ListEntry,
                 Sprite icon = null)
             {
-                Button button = WidgetFactory.CreateButtonWidget(
-                    parent: row,
-                    text: text,
-                    onClick: () =>
-                    {
-                        if (cardGeneration == generation)
+                Button button = Size(WidgetFactory.CreateButtonWidget(
+                        parent: bar,
+                        text: text,
+                        onClick: () =>
                         {
-                            action();
-                        }
-                    },
-                    buttonOptions: options,
-                    index: slot,
-                    icon: icon).GetComponent<Button>();
+                            if (cardGeneration == generation)
+                            {
+                                action();
+                            }
+                        },
+                        buttonOptions: options,
+                        icon: icon),
+                    ItemButtonWidth).GetComponent<Button>();
 
                 button.interactable = interactable;
             }
 
-            private void Add()
+            private void Add(Type type)
             {
-                Type type = property.GetListAdditionTypes().FirstOrDefault();
-                if (type == null)
-                {
-                    return;
-                }
-
                 type.Build(GetDefaultItemName(type), owner, list);
                 Rebuild();
             }
