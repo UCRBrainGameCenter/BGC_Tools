@@ -34,6 +34,12 @@ namespace BGC.Parameters.View
         /// <summary>The icon for a duplicate button, or null if this scene doesn't set one</summary>
         public Sprite DuplicateIcon => duplicateIcon;
 
+        [SerializeField]
+        private Sprite panelSprite = null;
+
+        /// <summary>The (sliced) background of the list editors' panels and header bars, or null if this scene doesn't set one</summary>
+        public Sprite PanelSprite => panelSprite;
+
         #region Interface Colors
 
         protected virtual Color InternalTextNormal { get; } = Color.black;
