@@ -50,9 +50,11 @@ namespace BGC.Parameters.View
             property.GetCustomAttribute<PropertyGroupTitleAttribute>()?.title ??
             Regex.Replace(property.GetGroupListSerializationName(), "(?<=[a-z])(?=[A-Z])", " ");
 
-        // Each item is a panel: a darker header bar (number, type, item buttons) over its settings
-        protected virtual Color ListItemPanelBG { get; } = new Color32(0xA0, 0xA0, 0xA0, 0xFF);
-        protected virtual Color ListItemHeaderBG { get; } = new Color32(0x7A, 0x7A, 0x7A, 0xFF);
+        // Each item is a panel, lighter than the group around it, with a dark header bar (number,
+        // type, item buttons) over its settings
+        protected virtual Color ListItemPanelBG { get; } = new Color32(0xA8, 0xA8, 0xA8, 0xFF);
+        protected virtual Color ListItemHeaderBG { get; } = new Color32(0x50, 0x50, 0x50, 0xFF);
+        protected virtual Color ListItemHeaderText { get; } = Color.white;
 
         private sealed class PropertyGroupListEditor
         {
@@ -82,7 +84,11 @@ namespace BGC.Parameters.View
             private const float NumberWidth = 50f;
             private const float InfoWidth = 40f;
             private const float ItemButtonWidth = 120f;
-            private const float AddButtonWidth = 240f;
+            private const float AddButtonWidth = 200f;
+
+            // The type (in the header bars and the add bar) has a fixed width, so the item buttons
+            // line up at the right of every header
+            private const float TypeWidth = 600f;
 
             // The item's settings are inset from its number by the nested-group step (40)
             private const int ContentsLeftPadding = 20 + 40;
@@ -124,27 +130,28 @@ namespace BGC.Parameters.View
                 addTypes = property.GetListAdditionTypes().ToList();
                 addBar = SpawnBar("AddBar", parentTransform, new RectOffset(0, 0, BarVerticalPadding, BarVerticalPadding));
 
+                //It reads "+ Add [type]"
                 if (addTypes.Count == 1)
                 {
                     Size(WidgetFactory.CreateButtonWidget(
                             parent: addBar,
                             text: $"+ Add {addTypes[0].GetSelectionTitle()}",
                             onClick: () => Add(addTypes[0])),
-                        AddButtonWidth, flexible: true);
+                        AddButtonWidth + 10f + TypeWidth);
                 }
                 else if (addTypes.Count > 1)
                 {
-                    addTypeDropdown = Size(WidgetFactory.CreateDropdownWidget(
-                            parent: addBar,
-                            formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_StringEntry,
-                            optionList: addTypes.Select(x => x.GetSelectionTitle()).ToList()),
-                        0f, flexible: true).GetComponent<Dropdown>();
-
                     Size(WidgetFactory.CreateButtonWidget(
                             parent: addBar,
                             text: "+ Add",
                             onClick: () => Add(addTypes[addTypeDropdown.value])),
                         AddButtonWidth);
+
+                    addTypeDropdown = Size(WidgetFactory.CreateDropdownWidget(
+                            parent: addBar,
+                            formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_StringEntry,
+                            optionList: addTypes.Select(x => x.GetSelectionTitle()).ToList()),
+                        TypeWidth).GetComponent<Dropdown>();
                 }
                 else
                 {
@@ -261,7 +268,7 @@ namespace BGC.Parameters.View
                         parent: bar,
                         text: $"{index + 1}",
                         alignment: TextAnchor.MiddleLeft),
-                    NumberWidth);
+                    NumberWidth).GetComponent<Text>().color = view.ListItemHeaderText;
 
                 List<Type> types = GetItemTypes(item);
                 if (types.Count == 1)
@@ -270,7 +277,7 @@ namespace BGC.Parameters.View
                             parent: bar,
                             text: item.GetSelectionTitle(),
                             alignment: TextAnchor.MiddleLeft),
-                        0f, flexible: true);
+                        TypeWidth).GetComponent<Text>().color = view.ListItemHeaderText;
                 }
                 else
                 {
@@ -286,7 +293,7 @@ namespace BGC.Parameters.View
                                 }
                             },
                             optionList: types.Select(x => x.GetSelectionTitle()).ToList()),
-                        0f, flexible: true);
+                        TypeWidth);
                 }
 
                 //The card's own (round) info button moves beside the type; it shows itself only for
@@ -305,6 +312,10 @@ namespace BGC.Parameters.View
                 infoButton.pivot = new Vector2(0.5f, 0.5f);
                 infoButton.anchoredPosition = Vector2.zero;
                 infoButton.sizeDelta = new Vector2(InfoWidth, InfoWidth);
+
+                //The item buttons sit at the right
+                Size(new GameObject("Spacer", typeof(RectTransform)), 0f, flexible: true)
+                    .transform.SetParent(bar.transform, false);
 
                 SpawnItemButton(bar, cardGeneration, "▲", index > 0, () => Swap(index, index - 1));
                 SpawnItemButton(bar, cardGeneration, "▼", index < list.Count - 1, () => Swap(index, index + 1));
