@@ -98,7 +98,10 @@ namespace BGC.Parameters.View
             IPropertyGroup propertyContainer,
             Transform parentTransform,
             Action respawnPropertyGroupCallback,
-            SpawningBehavior spawningBehavior = SpawningBehavior.PropertyFrame)
+            SpawningBehavior spawningBehavior = SpawningBehavior.PropertyFrame,
+            string postfixOverride = "",
+            double minimumOverride = double.MinValue,
+            double maximumOverride = double.MaxValue)
         {
             foreach (PropertyInfo property in propertyContainer.GetType().GetSortedProperties())
             {
@@ -127,7 +130,10 @@ namespace BGC.Parameters.View
                             propertyGroup: propertyContainer,
                             property: property,
                             baseWidget: baseWidget,
-                            respawnPropertyGroupCallback: respawnPropertyGroupCallback);
+                            respawnPropertyGroupCallback: respawnPropertyGroupCallback,
+                            postfixOverride: postfixOverride,
+                            minimumOverride: minimumOverride,
+                            maximumOverride: maximumOverride);
                     }
                     else
                     {
@@ -135,7 +141,10 @@ namespace BGC.Parameters.View
                             propertyGroup: propertyContainer,
                             valueProperty: property,
                             keyProperty: keyProperty,
-                            baseWidget: baseWidget);
+                            baseWidget: baseWidget,
+                            postfixOverride: postfixOverride,
+                            minimumOverride: minimumOverride,
+                            maximumOverride: maximumOverride);
                     }
                 }
                 else if (outputKeyAttribute != null)
@@ -230,6 +239,7 @@ namespace BGC.Parameters.View
                     {
                         //Construct a new instance from first selection
                         propertyGroup = property.GetDefaultSelectionType().Build(propertyContainer, property);
+                        appendSelectionAttribute.PostBuildInitialize(propertyGroup);
                     }
 
                     if (propertyGroup == null)
@@ -243,12 +253,27 @@ namespace BGC.Parameters.View
                     if (property.PropertyType.ToString().Equals("Stimuli.StimulusCollection"))
                         spawnBehavior = SpawningBehavior.ShallowPropertyFrame;
 
+                    // Propagate postfix/min/max: use the nested attribute's own value when set,
+                    // otherwise fall through from the parent's override.
+                    string nestedPostfix = !string.IsNullOrEmpty(appendSelectionAttribute.Postfix)
+                        ? appendSelectionAttribute.Postfix
+                        : postfixOverride;
+                    double nestedMin = appendSelectionAttribute.Minimum != double.MinValue
+                        ? appendSelectionAttribute.Minimum
+                        : minimumOverride;
+                    double nestedMax = appendSelectionAttribute.Maximum != double.MaxValue
+                        ? appendSelectionAttribute.Maximum
+                        : maximumOverride;
+
                     SpawnPropertyGroup(
                         propertyGroup: propertyGroup,
                         property: property,
                         propertyContainer: propertyContainer,
                         parentTransform: parentTransform,
-                        spawningBehavior: spawnBehavior);
+                        spawningBehavior: spawnBehavior,
+                        postfixOverride: nestedPostfix,
+                        minimumOverride: nestedMin,
+                        maximumOverride: nestedMax);
                 }
             }
         }
@@ -506,7 +531,10 @@ namespace BGC.Parameters.View
             PropertyInfo property,
             IPropertyGroup propertyContainer,
             Transform parentTransform,
-            SpawningBehavior spawningBehavior)
+            SpawningBehavior spawningBehavior,
+            string postfixOverride = "",
+            double minimumOverride = double.MinValue,
+            double maximumOverride = double.MaxValue)
         {
             PropertyGroupContainer propertyGroupContainer = null;
             string titlePostFix = "";
@@ -576,6 +604,11 @@ namespace BGC.Parameters.View
                 }
 
                 string title = property.GetGroupTitle();
+                AppendSelectionAttribute appendAttr = property.GetAppendSelectionAttribute();
+                if (!string.IsNullOrEmpty(appendAttr?.DisplayTitle))
+                {
+                    title = appendAttr.DisplayTitle;
+                }
 
                 propertyGroupContainer.transform.SetParent(parentTransform, false);
                 propertyGroupContainer.label.text = $"{title}{titlePostFix}";
@@ -604,6 +637,7 @@ namespace BGC.Parameters.View
                 propertyGroupContainer.options.onValueChanged.AddListener((int index) =>
                 {
                     IPropertyGroup newPropertyGroup = propertyGroupChoiceTypes[index].Build(propertyContainer, property);
+                    appendAttr?.PostBuildInitialize(newPropertyGroup);
 
                     if (shallow)
                     {
@@ -615,7 +649,10 @@ namespace BGC.Parameters.View
                             propertyGroup: newPropertyGroup,
                             container: propertyGroupContainer.propertyFrame.transform,
                             protectedWidget: propertyGroupContainer.titleBox,
-                            spawningBehavior: childSpawningBehavior);
+                            spawningBehavior: childSpawningBehavior,
+                            postfixOverride: postfixOverride,
+                            minimumOverride: minimumOverride,
+                            maximumOverride: maximumOverride);
                     }
 
                     propertyGroupContainer.ChoiceInfoText = newPropertyGroup.GetType().GetChoiceInfoText();
@@ -662,7 +699,10 @@ namespace BGC.Parameters.View
                     propertyGroup: propertyGroup,
                     container: propertyGroupContainer.propertyFrame.transform,
                     protectedWidget: propertyGroupContainer.titleBox,
-                    spawningBehavior: childSpawningBehavior);
+                    spawningBehavior: childSpawningBehavior,
+                    postfixOverride: postfixOverride,
+                    minimumOverride: minimumOverride,
+                    maximumOverride: maximumOverride);
             }
         }
 
@@ -670,7 +710,10 @@ namespace BGC.Parameters.View
             IPropertyGroup propertyGroup,
             Transform container,
             Transform protectedWidget,
-            SpawningBehavior spawningBehavior)
+            SpawningBehavior spawningBehavior,
+            string postfixOverride = "",
+            double minimumOverride = double.MinValue,
+            double maximumOverride = double.MaxValue)
         {
             //Clear
             foreach (Transform t in container)
@@ -684,8 +727,11 @@ namespace BGC.Parameters.View
             VisualizePropertyGroup(
                 propertyContainer: propertyGroup,
                 parentTransform: container,
-                respawnPropertyGroupCallback: () => SpawnPropertyWidgets(propertyGroup, container, protectedWidget, spawningBehavior),
-                spawningBehavior: spawningBehavior);
+                respawnPropertyGroupCallback: () => SpawnPropertyWidgets(propertyGroup, container, protectedWidget, spawningBehavior, postfixOverride, minimumOverride, maximumOverride),
+                spawningBehavior: spawningBehavior,
+                postfixOverride: postfixOverride,
+                minimumOverride: minimumOverride,
+                maximumOverride: maximumOverride);
         }
 
         protected void SpawnParameterTemplateWidgets(
@@ -750,7 +796,10 @@ namespace BGC.Parameters.View
             IPropertyGroup propertyGroup,
             PropertyInfo valueProperty,
             PropertyInfo keyProperty,
-            GameObject baseWidget)
+            GameObject baseWidget,
+            string postfixOverride = "",
+            double minimumOverride = double.MinValue,
+            double maximumOverride = double.MaxValue)
         {
             string propertyLabel = valueProperty.GetInputFieldName();
 
@@ -775,7 +824,10 @@ namespace BGC.Parameters.View
                 property: valueProperty,
                 attribute: attribute,
                 baseWidget: baseWidget,
-                respawnPropertyGroupCallback: null);
+                respawnPropertyGroupCallback: null,
+                postfixOverride: postfixOverride,
+                minimumOverride: minimumOverride,
+                maximumOverride: maximumOverride);
 
             GameObject keyWidget = widgetFactory.CreateInputFieldWidget(
                 parent: baseWidget,
@@ -846,7 +898,10 @@ namespace BGC.Parameters.View
             IPropertyGroup propertyGroup,
             PropertyInfo property,
             GameObject baseWidget,
-            Action respawnPropertyGroupCallback)
+            Action respawnPropertyGroupCallback,
+            string postfixOverride = "",
+            double minimumOverride = double.MinValue,
+            double maximumOverride = double.MaxValue)
         {
             string propertyLabel = property.GetInputFieldName();
 
@@ -905,7 +960,10 @@ namespace BGC.Parameters.View
                     property: property,
                     attribute: attribute,
                     baseWidget: baseWidget,
-                    respawnPropertyGroupCallback: respawnPropertyGroupCallback);
+                    respawnPropertyGroupCallback: respawnPropertyGroupCallback,
+                    postfixOverride: postfixOverride,
+                    minimumOverride: minimumOverride,
+                    maximumOverride: maximumOverride);
             }
         }
 
@@ -915,27 +973,34 @@ namespace BGC.Parameters.View
             FieldDisplayAttribute attribute,
             GameObject baseWidget,
             Action respawnPropertyGroupCallback,
-            IPropertyGroup concretePropertyGroup = null)
+            IPropertyGroup concretePropertyGroup = null,
+            string postfixOverride = "",
+            double minimumOverride = double.MinValue,
+            double maximumOverride = double.MaxValue)
         {
             switch (attribute)
             {
                 case DoubleFieldDisplayAttribute doubleAtt:
+                    string doublePostfix = !string.IsNullOrEmpty(doubleAtt.postfix) ? doubleAtt.postfix : (doubleAtt.unitless ? "" : postfixOverride);
+                    double effectiveDoubleMin = doubleAtt.unitless ? doubleAtt.minimum : Math.Max(doubleAtt.minimum, minimumOverride);
+                    double effectiveDoubleMax = doubleAtt.unitless ? doubleAtt.maximum : Math.Min(doubleAtt.maximum, maximumOverride);
                     return widgetFactory.CreateInputFieldWidget(
                         parent: baseWidget,
                         formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_ValueEntry,
                         text: Convert.ToSingle(property.GetValue(owningPropertyGroup)),
-                        postfixText: doubleAtt.postfix,
+                        postfixText: doublePostfix,
                         contentType: InputField.ContentType.DecimalNumber,
                         newOnEndEdit: (string input, InputField inputField) =>
-                            SubmitDouble(owningPropertyGroup, property, doubleAtt, inputField, input),
+                            SubmitDouble(owningPropertyGroup, property, doubleAtt, inputField, input, effectiveDoubleMin, effectiveDoubleMax),
                         index: 1);
 
                 case IntFieldDisplayAttribute intAtt:
+                    string intPostfix = !string.IsNullOrEmpty(intAtt.postfix) ? intAtt.postfix : postfixOverride;
                     return widgetFactory.CreateInputFieldWidget(
                         parent: baseWidget,
                         formattingOptions: WidgetFactory.EditorWidgetFormattingOptions.Config_ValueEntry,
                         text: Convert.ToInt32(property.GetValue(owningPropertyGroup)),
-                        postfixText: intAtt.postfix,
+                        postfixText: intPostfix,
                         contentType: InputField.ContentType.IntegerNumber,
                         newOnEndEdit: (string input, InputField inputField) =>
                             SubmitInt(owningPropertyGroup, property, intAtt, inputField, input),
@@ -1156,7 +1221,10 @@ namespace BGC.Parameters.View
                         attribute: concreteAttribute,
                         baseWidget: baseWidget,
                         respawnPropertyGroupCallback: respawnPropertyGroupCallback,
-                        concretePropertyGroup: matchingConcretePropertyGroup);
+                        concretePropertyGroup: matchingConcretePropertyGroup,
+                        postfixOverride: postfixOverride,
+                        minimumOverride: minimumOverride,
+                        maximumOverride: maximumOverride);
 
                 default:
                     Debug.LogError($"Unexpected PropertyType: {property.PropertyType}");
@@ -1179,10 +1247,14 @@ namespace BGC.Parameters.View
             PropertyInfo property,
             DoubleFieldDisplayAttribute doubleAtt,
             InputField inputField,
-            string value)
+            string value,
+            double effectiveMin = double.MinValue,
+            double effectiveMax = double.MaxValue)
         {
             double oldValue = double.Parse(value);
-            double newValue = GeneralMath.Clamp(oldValue, doubleAtt.minimum, doubleAtt.maximum);
+            double min = effectiveMin == double.MinValue ? doubleAtt.minimum : effectiveMin;
+            double max = effectiveMax == double.MaxValue ? doubleAtt.maximum : effectiveMax;
+            double newValue = GeneralMath.Clamp(oldValue, min, max);
 
             if (newValue != oldValue)
             {

@@ -610,9 +610,21 @@ namespace BGC.Parameters
         /// First, check for local title override
         /// Then fallback on interface default title attribute
         /// </summary>
-        public static PropertyGroupTitleAttribute GetGroupAttribute(this PropertyInfo propertyInfo) =>
-            propertyInfo.GetCustomAttribute<PropertyGroupTitleAttribute>() ??
-            propertyInfo.PropertyType.GetGroupAttribute();
+        public static PropertyGroupTitleAttribute GetGroupAttribute(this PropertyInfo propertyInfo)
+        {
+            PropertyGroupTitleAttribute localAttr = propertyInfo.GetCustomAttribute<PropertyGroupTitleAttribute>();
+            if (localAttr != null) return localAttr;
+
+            // If an AppendSelectionAttribute (e.g. ValueSourceSelectionAttribute) carries a
+            // DisplayTitle, use it as both the display and serialization key so that multiple
+            // properties of the same interface type on one class each get a unique JSON key
+            // without requiring a redundant [PropertyGroupTitle] on every property.
+            AppendSelectionAttribute appendAttr = propertyInfo.GetAppendSelectionAttribute();
+            if (appendAttr != null && !string.IsNullOrEmpty(appendAttr.DisplayTitle))
+                return new PropertyGroupTitleAttribute(appendAttr.DisplayTitle);
+
+            return propertyInfo.PropertyType.GetGroupAttribute();
+        }
 
         /// <summary>
         /// First, check for local info attribute override
