@@ -21,8 +21,8 @@ namespace BGC.Parameters.View
         private const int ListBarVerticalPadding = 5;
         private const float ListBarHeight = ListWidgetHeight + 2 * ListBarVerticalPadding;
 
-        // A header bar's left padding clears the panel's rounded corner
-        private static RectOffset ListHeaderPadding => new RectOffset(20, 10, ListBarVerticalPadding, ListBarVerticalPadding);
+        // A header bar's side padding clears the panel's rounded corners
+        private static RectOffset ListHeaderPadding => new RectOffset(20, 20, ListBarVerticalPadding, ListBarVerticalPadding);
         private const float ListAddButtonWidth = 200f;
 
         /// <summary>A panel in parent; returns its header bar and its body (where its rows go)</summary>
