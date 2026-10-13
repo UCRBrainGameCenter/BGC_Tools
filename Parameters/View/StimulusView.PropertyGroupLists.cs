@@ -72,8 +72,9 @@ namespace BGC.Parameters.View
                 WidgetFactory.ContainerConfig.Height_60px |
                 WidgetFactory.ContainerConfig.Smallness_5;
 
-            // An item's name and settings sit under its row, indented as a group's settings are under its title
-            private const int ItemContentsIndent = 30;
+            // An item's name and settings sit under its row, indented as a nested group's settings are
+            // (by its frame's padding)
+            private const int ItemContentsIndent = 40;
 
             public PropertyGroupListEditor(
                 StimulusView view,
