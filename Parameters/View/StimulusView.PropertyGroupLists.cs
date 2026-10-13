@@ -176,7 +176,8 @@ namespace BGC.Parameters.View
 
                 SpawnCardButton(row, cardGeneration, 2, "▲", index > 0, () => Swap(index, index - 1));
                 SpawnCardButton(row, cardGeneration, 3, "▼", index < list.Count - 1, () => Swap(index, index + 1));
-                SpawnCardButton(row, cardGeneration, 4, "Copy", true, () => Copy(index));
+                SpawnCardButton(row, cardGeneration, 4, "Copy", true, () => Copy(index),
+                    icon: WidgetFactory.DuplicateIcon);
                 SpawnCardButton(row, cardGeneration, 5, "✕", true, () => ConfirmDelete(index),
                     WidgetFactory.ButtonFormattingOptions.Config_DeleteButton);
 
@@ -199,7 +200,8 @@ namespace BGC.Parameters.View
                 string text,
                 bool interactable,
                 Action action,
-                WidgetFactory.ButtonFormattingOptions options = WidgetFactory.ButtonFormattingOptions.Config_ListEntry)
+                WidgetFactory.ButtonFormattingOptions options = WidgetFactory.ButtonFormattingOptions.Config_ListEntry,
+                Sprite icon = null)
             {
                 Button button = WidgetFactory.CreateButtonWidget(
                     parent: row,
@@ -212,7 +214,8 @@ namespace BGC.Parameters.View
                         }
                     },
                     buttonOptions: options,
-                    index: slot).GetComponent<Button>();
+                    index: slot,
+                    icon: icon).GetComponent<Button>();
 
                 button.interactable = interactable;
             }
