@@ -148,7 +148,7 @@ namespace BGC.Parameters.View
                 PropertyListItemContainer card = view.SpawnPropertyListItem();
                 card.transform.SetParent(parentTransform, false);
 
-                //The type, name and info button are shown, and edited, in the rows below
+                //The type and name are shown, and edited, in the rows below
                 card.titleBox.gameObject.SetActive(false);
 
                 GameObject row = WidgetFactory.GetContainerWidget(
@@ -165,7 +165,7 @@ namespace BGC.Parameters.View
                     alignment: TextAnchor.MiddleRight,
                     index: 0);
 
-                SpawnTypeSelector(row, item, index, cardGeneration);
+                SpawnTypeSelector(row, card, item, index, cardGeneration);
 
                 SpawnCardButton(row, cardGeneration, 2, "▲", index > 0, () => Swap(index, index - 1));
                 SpawnCardButton(row, cardGeneration, 3, "▼", index < list.Count - 1, () => Swap(index, index + 1));
@@ -227,7 +227,12 @@ namespace BGC.Parameters.View
                 return types;
             }
 
-            private void SpawnTypeSelector(GameObject row, IPropertyGroup item, int index, int cardGeneration)
+            private void SpawnTypeSelector(
+                GameObject row,
+                PropertyListItemContainer card,
+                IPropertyGroup item,
+                int index,
+                int cardGeneration)
             {
                 List<Type> types = GetItemTypes(item);
 
@@ -263,18 +268,24 @@ namespace BGC.Parameters.View
                         index: 0);
                 }
 
-                string choiceInfo = item.GetType().GetChoiceInfoText();
-                if (!string.IsNullOrEmpty(choiceInfo))
-                {
-                    WidgetFactory.CreateButtonWidget(
-                        parent: selector,
-                        text: "?",
-                        onClick: () => ModalDialog.ShowSimpleModal(
-                            mode: ModalDialog.Mode.Accept,
-                            headerText: "Info",
-                            bodyText: $"{item.GetSelectionTitle()}:\n{choiceInfo}"),
-                        index: 1);
-                }
+                //The card's own (round) info button moves next to the dropdown; it shows itself
+                //only for documented types, and its message is titled with the type label
+                card.typeLabel.text = $"{item.GetSelectionTitle()}:";
+                card.ChoiceInfoText = item.GetType().GetChoiceInfoText();
+
+                GameObject infoSlot = WidgetFactory.GetContainerWidget(
+                    config: WidgetFactory.ContainerConfig.Config_Normal_Even,
+                    parent: selector,
+                    siblingIndex: 1,
+                    parentSlots: 2);
+
+                RectTransform infoButton = (RectTransform)card.infoButton.transform;
+                infoButton.SetParent(infoSlot.transform, false);
+                infoButton.anchorMin = new Vector2(0f, 0.5f);
+                infoButton.anchorMax = new Vector2(0f, 0.5f);
+                infoButton.pivot = new Vector2(0f, 0.5f);
+                infoButton.anchoredPosition = Vector2.zero;
+                infoButton.sizeDelta = new Vector2(40f, 40f);
             }
 
             private void SpawnCardButton(
