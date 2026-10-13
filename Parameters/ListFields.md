@@ -69,11 +69,13 @@ never silently given different values. Tasks that must not run in this state can
 As with scalar fields, item ranges and counts are enforced by the editor, not on load:
 
 - Typed values are clamped to `minimum`..`maximum`.
-- Add and Copy are disabled at `maximumCount`, Delete at `minimumCount`.
+- Add and duplicate are disabled at `maximumCount`, Delete at `minimumCount`.
 - A battery that loads with too many or too few items keeps them; a warning is logged and the
   editor shows the count in red. `ListFieldDisplayAttribute.IsListValid` reports it.
 
 ## Editor
 
 A header row shows the title, the item count with its allowed range, and Add. Each item gets
-a row: number, value, ▲ ▼ (move), Copy (duplicate below), ✕ (delete).
+a row: number, value, ▲ ▼ (move), duplicate (inserts a copy below), ✕ (delete).
+The duplicate button shows `WidgetFactory`'s `duplicateIcon` sprite, set on the scene's
+WidgetFactory; a scene without one shows the word "Copy".
