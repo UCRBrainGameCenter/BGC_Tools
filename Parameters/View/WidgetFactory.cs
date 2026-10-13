@@ -27,6 +27,19 @@ namespace BGC.Parameters.View
         [SerializeField]
         private GameObject inputFieldPrefab = null;
 
+        [Header("Icons")]
+        [SerializeField]
+        private Sprite duplicateIcon = null;
+
+        /// <summary>The icon for a duplicate button, or null if this scene doesn't set one</summary>
+        public Sprite DuplicateIcon => duplicateIcon;
+
+        [SerializeField]
+        private Sprite panelSprite = null;
+
+        /// <summary>The (sliced) background of the list editors' panels and header bars, or null if this scene doesn't set one</summary>
+        public Sprite PanelSprite => panelSprite;
+
         #region Interface Colors
 
         protected virtual Color InternalTextNormal { get; } = Color.black;
@@ -543,7 +556,8 @@ namespace BGC.Parameters.View
             ButtonFormattingOptions buttonOptions = ButtonFormattingOptions.None,
             ContainerConfig configOverride = ContainerConfig.Submissive,
             int index = -1,
-            int slots = -1)
+            int slots = -1,
+            Sprite icon = null)
         {
             GameObject buttonWidget = GameObject.Instantiate(optionButtonPrefab);
 
@@ -570,6 +584,25 @@ namespace BGC.Parameters.View
             }
             Text textElement = buttonWidget.GetComponentInChildren<Text>();
             textElement.text = text.ToString();
+
+            if (icon != null)
+            {
+                //The icon replaces the text, and takes the text's color
+                GameObject iconObject = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+                RectTransform iconTransform = iconObject.GetComponent<RectTransform>();
+                iconTransform.SetParent(buttonWidget.transform, false);
+                iconTransform.anchorMin = new Vector2(0.2f, 0.2f);
+                iconTransform.anchorMax = new Vector2(0.8f, 0.8f);
+                iconTransform.sizeDelta = Vector2.zero;
+
+                Image iconImage = iconObject.GetComponent<Image>();
+                iconImage.sprite = icon;
+                iconImage.preserveAspect = true;
+                iconImage.raycastTarget = false;
+                iconImage.color = textElement.color;
+
+                textElement.text = "";
+            }
 
             return buttonWidget;
         }
