@@ -17,8 +17,10 @@ namespace BGC.Parameters.View
     /// Editor for [PropertyGroupList] lists of property groups, in the same style as the list-field
     /// editor (StimulusView.ListFields.cs).
     ///
-    /// A header row (title, item count) is followed by one panel per item, then an add bar.
-    /// Each panel has a darker header bar with the item's number, a dropdown to change its type,
+    /// The list is a panel, like a list field's (StimulusView.ListPanels.cs): a dark header bar
+    /// with its title and item count, then one (lighter) panel per item, then an add bar, so it
+    /// is framed even when empty. Each item's panel has a header bar with its number, a dropdown
+    /// to change its type,
     /// its type's info button, and buttons to move it up or down, duplicate it or (set apart)
     /// delete it; below that, indented, a Name row and (unless the list shows titles only) the
     /// item's own properties. The add bar is where a new item will appear: a type dropdown and
@@ -51,6 +53,10 @@ namespace BGC.Parameters.View
             property.GetCustomAttribute<PropertyGroupTitleAttribute>()?.title ??
             Regex.Replace(property.GetGroupListSerializationName(), "(?<=[a-z])(?=[A-Z])", " ");
 
+        // An item's panel sits inside the list's panel, a step lighter, with a lighter header bar
+        protected virtual Color ListItemPanelBG { get; } = new Color32(0xC0, 0xC0, 0xC0, 0xFF);
+        protected virtual Color ListItemHeaderBG { get; } = new Color32(0x6E, 0x6E, 0x6E, 0xFF);
+
         private sealed class PropertyGroupListEditor
         {
             private readonly StimulusView view;
@@ -59,7 +65,6 @@ namespace BGC.Parameters.View
             private readonly IPropertyGroup owner;
             private readonly Transform parentTransform;
             private readonly bool shallow;
-            private readonly GameObject header;
             private readonly Text summary;
             private readonly GameObject addBar;
             private readonly Dropdown addTypeDropdown;
@@ -75,6 +80,7 @@ namespace BGC.Parameters.View
             private const float NumberWidth = 50f;
             private const float InfoWidth = 40f;
             private const float ItemButtonWidth = 120f;
+            private const float SummaryWidth = 500f;
 
             // The type (in the header bars and the add bar) has a fixed width, so the item buttons
             // line up at the right of every header
@@ -96,30 +102,27 @@ namespace BGC.Parameters.View
                 this.list = list;
                 this.property = property;
                 this.owner = owner;
-                this.parentTransform = parentTransform;
                 this.shallow = shallow;
 
-                header = WidgetFactory.GetContainerWidget(
-                    config: WidgetFactory.ContainerConfig.Config_Normal_Even,
-                    parent: parentTransform.gameObject,
-                    slots: 2);
+                //The item panels and the add bar go in the list panel's body
+                view.SpawnListPanel(parentTransform, out GameObject header, out GameObject body);
+                this.parentTransform = body.transform;
 
-                LayoutElement layoutElement = header.AddComponent<LayoutElement>();
-                layoutElement.minHeight = 60;
+                SizeListWidget(WidgetFactory.CreateLabelWidget(
+                        parent: header,
+                        text: GetPropertyGroupListTitle(property),
+                        alignment: TextAnchor.MiddleLeft),
+                    0f, flexible: true).GetComponent<Text>().color = view.ListHeaderText;
 
-                WidgetFactory.CreateLabelWidget(
-                    parent: header,
-                    text: $"{GetPropertyGroupListTitle(property)}:",
-                    alignment: TextAnchor.MiddleLeft);
-
-                summary = WidgetFactory.CreateLabelWidget(
-                    parent: header,
-                    alignment: TextAnchor.MiddleLeft).GetComponent<Text>();
+                summary = SizeListWidget(WidgetFactory.CreateLabelWidget(
+                        parent: header,
+                        alignment: TextAnchor.MiddleRight),
+                    SummaryWidth).GetComponent<Text>();
+                summary.color = view.ListHeaderText;
 
                 //Add sits below the items, where the new item appears, beside the type it adds
                 addTypes = property.GetListAdditionTypes().ToList();
-                addBar = SpawnListBar("AddBar", parentTransform,
-                    new RectOffset(0, 0, ListBarVerticalPadding, ListBarVerticalPadding));
+                addBar = SpawnListBar("AddBar", this.parentTransform, new RectOffset(0, 0, 0, 0));
 
                 //It reads "+ Add [type]"
                 if (addTypes.Count == 1)
@@ -160,7 +163,8 @@ namespace BGC.Parameters.View
                 }
                 cards.Clear();
 
-                int siblingIndex = header.transform.GetSiblingIndex();
+                //The item panels fill the list panel's body from the top; the add bar follows them
+                int siblingIndex = -1;
                 for (int i = 0; i < list.Count; i++)
                 {
                     GameObject card = SpawnCard(i);
@@ -168,7 +172,7 @@ namespace BGC.Parameters.View
                     cards.Add(card);
                 }
 
-                addBar.transform.SetSiblingIndex(++siblingIndex);
+                addBar.transform.SetAsLastSibling();
 
                 summary.text = list.Count == 1 ? "1 item" : $"{list.Count} items";
             }
@@ -181,7 +185,7 @@ namespace BGC.Parameters.View
                 PropertyListItemContainer card = view.SpawnPropertyListItem();
                 card.transform.SetParent(parentTransform, false);
 
-                view.SetListBackground(card.gameObject, view.ListPanelBG);
+                view.SetListBackground(card.gameObject, view.ListItemPanelBG);
 
                 //The type and name are shown, and edited, in the header bar and the Name row
                 card.titleBox.gameObject.SetActive(false);
@@ -244,7 +248,7 @@ namespace BGC.Parameters.View
             {
                 GameObject bar = SpawnListBar("ItemHeader", card.transform, ListHeaderPadding);
                 bar.transform.SetSiblingIndex(0);
-                view.SetListBackground(bar, view.ListHeaderBG);
+                view.SetListBackground(bar, view.ListItemHeaderBG);
 
                 SizeListWidget(WidgetFactory.CreateLabelWidget(
                         parent: bar,
