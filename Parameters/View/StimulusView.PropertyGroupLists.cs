@@ -404,6 +404,12 @@ namespace BGC.Parameters.View
                     ItemButtonWidth).GetComponent<Button>();
 
                 button.interactable = interactable;
+
+                //The button's own disabled tint is translucent, which barely shows on the dark header
+                if (!interactable)
+                {
+                    button.gameObject.AddComponent<CanvasGroup>().alpha = 0.3f;
+                }
             }
 
             private void Add(Type type)
