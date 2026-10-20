@@ -35,6 +35,7 @@ namespace BGC.Audio.Synthesis
         private readonly int frequencyCount;
 
         private Complex64[] fftBuffer = null;
+        private float[] samples = null;
 
         private int position = 0;
 
@@ -65,27 +66,54 @@ namespace BGC.Audio.Synthesis
 
         protected override void _Initialize()
         {
-            int fftBufferSize = _channelSamples.CeilingToPowerOfTwo();
+            //Read clear of the frame's wrap-around, as STMAudioClip and the FD(Single) composer: the
+            //first and last 20 ms of a token were -0.5 dB (the truncated sideband series' transient)
+            //until 2026-10. A frame with at least 1/8 unused, the output from the middle of the
+            //unused part, each carrier time-shifted to keep its phase at the first output sample,
+            //Hann-tapered synthesis divided out.
+            int fftBufferSize = SingleFrequencyDomainToneComposer.FrameSize(_channelSamples);
+            int outputOffset = (fftBufferSize - _channelSamples) / 2;
+            double timeShift = -outputOffset / (double)SamplingRate;
+            bool taper = FrequencyDomain.HannTaper(fftBufferSize, outputOffset) >= SingleFrequencyDomainToneComposer.MinimumTaperAtOutput;
             fftBuffer = new Complex64[fftBufferSize];
 
             foreach (ComplexCarrierTone carrierTone in CreateSideBands(freqLB, freqUB, frequencyCount, distribution))
             {
-                FrequencyDomain.Populate(
-                    buffer: fftBuffer,
-                    frequency: carrierTone.frequency,
-                    amplitude: carrierTone.amplitude);
+                ComplexCarrierTone shifted = carrierTone.TimeShift(timeShift);
+                if (taper)
+                {
+                    FrequencyDomain.PopulateHannTapered(fftBuffer, shifted);
+                }
+                else
+                {
+                    FrequencyDomain.Populate(
+                        buffer: fftBuffer,
+                        frequency: shifted.frequency,
+                        amplitude: shifted.amplitude);
+                }
             }
 
             Fourier.Inverse(fftBuffer);
 
-            //The level of the samples the clip returns (the first _channelSamples of the frame), which
-            //is what it claims. The whole padded frame's RMS differs from it by the realization of the
-            //cropped part and its onset.
+            samples = new float[_channelSamples];
+            for (int i = 0; i < _channelSamples; i++)
+            {
+                double sample = fftBuffer[outputOffset + i].Real;
+                if (taper)
+                {
+                    sample /= FrequencyDomain.HannTaper(fftBufferSize, outputOffset + i);
+                }
+                samples[i] = (float)sample;
+            }
+
+            fftBuffer = null;
+
+            //The level of the samples the clip returns, which is what it claims
             double currentRMS = 0.0;
 
             for (int i = 0; i < _channelSamples; i++)
             {
-                currentRMS += fftBuffer[i].Real * fftBuffer[i].Real;
+                currentRMS += (double)samples[i] * samples[i];
             }
 
             currentRMS = Math.Sqrt(currentRMS / _channelSamples);
@@ -98,11 +126,11 @@ namespace BGC.Audio.Synthesis
                     $"(0 to {0.5 * SamplingRate} Hz), so it can't be played at its level.");
             }
 
-            double factor = rms / currentRMS;
+            float factor = (float)(rms / currentRMS);
 
-            for (int i = 0; i < fftBufferSize; i++)
+            for (int i = 0; i < _channelSamples; i++)
             {
-                fftBuffer[i] *= factor;
+                samples[i] *= factor;
             }
         }
 
@@ -117,10 +145,7 @@ namespace BGC.Audio.Synthesis
 
             int samplesToRead = Math.Min(count, _channelSamples - position);
 
-            for (int i = 0; i < samplesToRead; i++)
-            {
-                data[offset + i] = (float)fftBuffer[position + i].Real;
-            }
+            Array.Copy(samples, position, data, offset, samplesToRead);
 
             position += samplesToRead;
 

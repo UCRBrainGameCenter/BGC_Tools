@@ -131,7 +131,7 @@ namespace BGC.Audio.Synthesis
         /// the frame, about 1.6% of it). Below it, dividing by the window amplifies the residual
         /// more than tapering removes, and the untapered synthesis is the better of the two.
         /// </summary>
-        private const double MinimumTaperAtOutput = 0.05 * 0.05;
+        public const double MinimumTaperAtOutput = 0.05 * 0.05;
 
         public override int Read(float[] data, int offset, int count)
         {
