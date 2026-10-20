@@ -167,6 +167,18 @@ namespace BGC.Parameters
                             propertyGroupData.Add(att.fieldName, property.GetValue(propertyGroup).ToString());
                             break;
                         }
+                        if (property.IsListField())
+                        {
+                            propertyGroupData.Add(att.fieldName,
+                                ListFieldSerialization.SerializeListField(propertyGroup, property, att.fieldName));
+                            break;
+                        }
+                        if (property.IsTupleListField())
+                        {
+                            propertyGroupData.Add(att.fieldName,
+                                ListFieldSerialization.SerializeTupleListField(propertyGroup, property, att.fieldName));
+                            break;
+                        }
                         Debug.LogError($"Unsupported datatype ({property.PropertyType.Name}) for variable {property.Name}");
                         break;
                 }
@@ -241,6 +253,9 @@ namespace BGC.Parameters
 
         public static void Internal_RawDeserialize(this IPropertyGroup container, JsonObject propertyGroupData)
         {
+            //Unreadable list values from any earlier data must not carry over
+            container.ClearUnparsedListValues();
+
             //Deserialize Property Groups
             foreach (PropertyInfo property in container.GetPropertyGroupProperties())
             {
@@ -363,6 +378,18 @@ namespace BGC.Parameters
                             {
                                 property.SetValue(container,
                                     Enum.Parse(property.PropertyType, propertyGroupData[fieldName].AsString));
+                                break;
+                            }
+                            if (property.IsListField())
+                            {
+                                ListFieldSerialization.DeserializeListField(
+                                    container, property, fieldName, propertyGroupData[fieldName]);
+                                break;
+                            }
+                            if (property.IsTupleListField())
+                            {
+                                ListFieldSerialization.DeserializeTupleListField(
+                                    container, property, fieldName, propertyGroupData[fieldName]);
                                 break;
                             }
                             Debug.LogError($"Unsupported datatype ({property.PropertyType.Name}) for variable {property.Name}");
@@ -1235,6 +1262,12 @@ namespace BGC.Parameters
             }
 
             object initialValue = attribute.GetInitialValue();
+
+            if (attribute is TupleListFieldDisplayAttribute)
+            {
+                //A tuple list's initial rows come from its column attributes
+                initialValue = TupleListLayout.Get(propertyGroup, property)?.CreateInitialList();
+            }
 
             if (attribute is FieldMirrorDisplayAttribute mirrored)
             {

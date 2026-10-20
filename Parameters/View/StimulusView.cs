@@ -23,7 +23,7 @@ namespace BGC.Parameters.View
         MAX
     }
 
-    public abstract class StimulusView : MonoBehaviour
+    public abstract partial class StimulusView : MonoBehaviour
     {
         [Header("Engine References")]
         [SerializeField]
@@ -124,7 +124,15 @@ namespace BGC.Parameters.View
                 DisplayPropertyGroupInlineAttribute inlineAttribute = property.GetCustomAttribute<DisplayPropertyGroupInlineAttribute>();
                 AppendSelectionAttribute appendSelectionAttribute = property.GetAppendSelectionAttribute();
 
-                if (displayAttribute != null)
+                if (displayAttribute != null && (property.IsListField() || property.IsTupleListField()))
+                {
+                    //List input field
+                    SpawnListField(
+                        propertyGroup: propertyContainer,
+                        property: property,
+                        parentTransform: parentTransform);
+                }
+                else if (displayAttribute != null)
                 {
                     //Input field
                     GameObject baseWidget = widgetFactory.GetContainerWidget(
@@ -254,9 +262,9 @@ namespace BGC.Parameters.View
                         continue;
                     }
 
-                    //TODO that's very hacky, needs to change
+                    //Groups whose items are edited elsewhere show their lists as titles only
                     SpawningBehavior spawnBehavior = spawningBehavior;
-                    if (property.PropertyType.ToString().Equals("Stimuli.StimulusCollection"))
+                    if (property.PropertyType.GetCustomAttribute<DisplayListTitlesOnlyAttribute>() != null)
                         spawnBehavior = SpawningBehavior.ShallowPropertyFrame;
 
                     SpawnPropertyGroup(
@@ -370,150 +378,12 @@ namespace BGC.Parameters.View
 
             if (rendered)
             {
-                //Display Add and Edit buttons at the top
-
-                //Render list of FIXED children
-                //If it's Shallow, print only names and Add/Edit Buttons
-                //If it's Full, Print names (No class Dropdown) and all internal properties
-                GameObject baseWidget = widgetFactory.GetContainerWidget(
-                    config: WidgetFactory.ContainerConfig.Config_Normal_Even,
-                    parent: parentTransform.gameObject,
-                    slots: 4);
-
-                LayoutElement layoutElement = baseWidget.AddComponent<LayoutElement>();
-                layoutElement.minHeight = 60;
-
-                widgetFactory.CreateButtonWidget(
-                    parent: baseWidget,
-                    text: "Add",
-                    onClick: () =>
-                    {
-                        List<Type> types = property.GetListAdditionTypes().ToList();
-
-                        ModalDialog.ShowDropdownInputModal(
-                            headerText: "Add",
-                            primaryBodyText: "Select Item to Add",
-                            secondaryBodyText: "Name of item to Add",
-                            dropdownOptions: types.Select(x => x.GetSelectionTitle()),
-                            inputCallback: (ModalDialog.Response response, int selectionIndex, string title) =>
-                            {
-                                if (response != ModalDialog.Response.Confirm)
-                                {
-                                    return;
-                                }
-
-                                if (string.IsNullOrEmpty(title))
-                                {
-                                    title = types[selectionIndex].GetSelectionTitle();
-                                }
-
-                                title = GetUniqueListItemName(title, propertyGroupList);
-
-                                IPropertyGroup newPropertyGroup = types[selectionIndex].Build(title, propertyContainer, propertyGroupList);
-
-                                if (shallow)
-                                {
-                                    PropertyListItemContainer propertyListItemContainer = SpawnPropertyListItem();
-
-                                    propertyListItemContainer.transform.SetParent(parentTransform, false);
-                                    propertyListItemContainer.typeLabel.text = $"{newPropertyGroup.GetSelectionTitle()}:";
-                                    propertyListItemContainer.nameLabel.text = newPropertyGroup.GetItemTitle();
-                                    propertyListItemContainer.ChoiceInfoText = newPropertyGroup.GetType().GetChoiceInfoText();
-                                }
-                                else
-                                {
-                                    PropertyListItemContainer propertyListItemContainer = SpawnPropertyListItem();
-
-                                    propertyListItemContainer.transform.SetParent(parentTransform, false);
-                                    propertyListItemContainer.typeLabel.text = $"{newPropertyGroup.GetSelectionTitle()}:";
-                                    propertyListItemContainer.nameLabel.text = newPropertyGroup.GetItemTitle();
-                                    propertyListItemContainer.ChoiceInfoText = newPropertyGroup.GetType().GetChoiceInfoText();
-
-                                    VisualizePropertyGroup(
-                                        propertyContainer: newPropertyGroup,
-                                        parentTransform: propertyListItemContainer.propertyFrame.transform,
-                                        respawnPropertyGroupCallback: null,
-                                        spawningBehavior: SpawningBehavior.NestedInternal);
-                                }
-                            },
-                            inputType: InputField.ContentType.Standard);
-                    },
-                    index: 2);
-
-                widgetFactory.CreateButtonWidget(
-                    parent: baseWidget,
-                    text: "Edit",
-                    onClick: () => ModalListDialog.ShowListEditModal(
-                        headerText: "Edit",
-                        itemList: propertyGroupList,
-                        nameTranslator: ListItemNameTranslator,
-                        nameValidator: ListItemNameValidator,
-                        nameUpdater: ListItemNameUpdater,
-                        callback: _ =>
-                        {
-                            //Refresh items
-                            foreach (Transform t in parentTransform)
-                            {
-                                if (t.gameObject.GetComponent<PropertyListItemContainer>() == null)
-                                {
-                                    //Only destroy PropertyListItems
-                                    continue;
-                                }
-
-                                GameObject.Destroy(t.gameObject);
-                            }
-
-                            RenderAllListItems(
-                                shallow: shallow,
-                                propertyGroupList: propertyGroupList,
-                                parentTransform: parentTransform);
-                        },
-                        inputType: InputField.ContentType.Standard),
-                    index: 3);
-
-                RenderAllListItems(
-                    shallow: shallow,
+                SpawnPropertyGroupListEditor(
                     propertyGroupList: propertyGroupList,
-                    parentTransform: parentTransform);
-            }
-        }
-
-        private void RenderAllListItems(
-            bool shallow,
-            IList propertyGroupList,
-            Transform parentTransform)
-        {
-            if (shallow)
-            {
-                //Shallow renderings only go one layer deep
-                foreach (IPropertyGroup propertyGroup in propertyGroupList)
-                {
-                    PropertyListItemContainer propertyListItemContainer = SpawnPropertyListItem();
-
-                    propertyListItemContainer.transform.SetParent(parentTransform, false);
-                    propertyListItemContainer.typeLabel.text = $"{propertyGroup.GetSelectionTitle()}:";
-                    propertyListItemContainer.nameLabel.text = propertyGroup.GetItemTitle();
-                    propertyListItemContainer.ChoiceInfoText = propertyGroup.GetType().GetChoiceInfoText();
-                }
-            }
-            else
-            {
-                //Full renderings recursively render children
-                foreach (IPropertyGroup propertyGroup in propertyGroupList)
-                {
-                    PropertyListItemContainer propertyListItemContainer = SpawnPropertyListItem();
-
-                    propertyListItemContainer.transform.SetParent(parentTransform, false);
-                    propertyListItemContainer.typeLabel.text = $"{propertyGroup.GetSelectionTitle()}:";
-                    propertyListItemContainer.nameLabel.text = propertyGroup.GetItemTitle();
-                    propertyListItemContainer.ChoiceInfoText = propertyGroup.GetType().GetChoiceInfoText();
-
-                    VisualizePropertyGroup(
-                        propertyContainer: propertyGroup,
-                        parentTransform: propertyListItemContainer.propertyFrame.transform,
-                        respawnPropertyGroupCallback: null,
-                        spawningBehavior: SpawningBehavior.NestedInternal);
-                }
+                    property: property,
+                    propertyContainer: propertyContainer,
+                    parentTransform: parentTransform,
+                    shallow: shallow);
             }
         }
 
@@ -1309,8 +1179,8 @@ namespace BGC.Parameters.View
                 int length = indexOfClose - indexInside;
 
                 //Make sure there are contents
-                //This would reject "TestFile ()"
-                if (length > 0)
+                //This would reject "TestFile ()", and "(2)" with no " (" before it
+                if (indexOfOpen >= 0 && length > 0)
                 {
                     string valueString = name.Substring(indexInside, length);
 
@@ -1331,27 +1201,6 @@ namespace BGC.Parameters.View
                     return $"{name} ({modifier})";
                 }
             }
-        }
-
-        private static bool ListItemNameValidator(object group, string name)
-        {
-            if (name.Contains("."))
-            {
-                //No periods in titles
-                return false;
-            }
-
-            return true;
-        }
-
-        private static void ListItemNameUpdater(object group, string name)
-        {
-            (group as IPropertyGroup).SetItemTitle(name);
-        }
-
-        private static string ListItemNameTranslator(object group)
-        {
-            return (group as IPropertyGroup).GetItemTitle();
         }
 
         #endregion Helper Methods

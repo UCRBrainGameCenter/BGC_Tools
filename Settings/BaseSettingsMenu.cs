@@ -320,7 +320,7 @@ namespace BGC.Settings
 
                     valueDropdown.ClearOptions();
                     valueDropdown.AddOptions(editSetting.GetValueList());
-                    valueDropdown.value = ((IntSetting)editSetting).GetCurrentValue();
+                    valueDropdown.value = editSetting.GetDropdownIndex();
                     valueDropdown.RefreshShownValue();
                     break;
 
@@ -569,7 +569,9 @@ namespace BGC.Settings
             string defaultVal,
             Func<string, string> translator = null,
             string maskerName = "",
-            Func<SettingBase, bool> maskingEvaluator = null)
+            Func<SettingBase, bool> maskingEvaluator = null,
+            Func<IReadOnlyList<string>> dropdownOptions = null,
+            Func<string, string> optionLabel = null)
         {
             SettingBase newSetting = new StrSetting(
                 scope,
@@ -577,7 +579,9 @@ namespace BGC.Settings
                 label,
                 name,
                 defaultVal,
-                translator: translator);
+                translator: translator,
+                dropdownOptions: dropdownOptions,
+                optionLabel: optionLabel);
 
             settings.Add(newSetting);
             nameSettingsMap.Add(name, newSetting);
@@ -735,6 +739,11 @@ namespace BGC.Settings
 
             public virtual List<string> GetValueList() => null;
             public virtual void SetValueFromDropdown(int index) { }
+
+            /// <summary>
+            /// Index of the current value in the list most recently returned by <see cref="GetValueList"/>
+            /// </summary>
+            public virtual int GetDropdownIndex() => 0;
 
             //Clears flag as a side-effect
             public bool NameNeedsUpdate()
@@ -919,6 +928,9 @@ namespace BGC.Settings
 
                 return GetInnerValue();
             }
+
+            // The list starts at minVal, and SetValueFromDropdown stores minVal + index
+            public override int GetDropdownIndex() => GetCurrentValue() - minVal;
 
             public int GetInnerValue()
             {
@@ -1163,16 +1175,30 @@ namespace BGC.Settings
         protected class StrSetting : SettingBase
         {
             private readonly Func<string, string> translator;
+            private readonly Func<IReadOnlyList<string>> dropdownOptions;
+            private readonly Func<string, string> optionLabel;
+
+            /// <summary>The values shown the last time the dropdown opened, so a selection maps to what was shown</summary>
+            private readonly List<string> shownOptions = new List<string>();
 
             public override SettingType SettingType => SettingType.String;
 
+            /// <param name="dropdownOptions">
+            /// When set, the setting is edited with a dropdown of these values instead of a text field. Called each
+            /// time the dropdown opens, so the list can change at runtime (e.g. connected devices). The stored value
+            /// is the option string itself, not its position. A current value missing from the list is still shown
+            /// (first), so it can be seen and replaced. Options should be non-empty: an empty value is never applied.
+            /// </param>
+            /// <param name="optionLabel">Optional display text for an option value in the dropdown.</param>
             public StrSetting(
                 SettingScope scope,
                 SettingProtection protectionLevel,
                 string label,
                 string name,
                 string defaultVal = "",
-                Func<string, string> translator = null)
+                Func<string, string> translator = null,
+                Func<IReadOnlyList<string>> dropdownOptions = null,
+                Func<string, string> optionLabel = null)
                 : base(
                     scope: scope,
                     protectionLevel: protectionLevel,
@@ -1181,6 +1207,49 @@ namespace BGC.Settings
             {
                 this.defaultVal = defaultVal;
                 this.translator = translator;
+                this.dropdownOptions = dropdownOptions;
+                this.optionLabel = optionLabel;
+            }
+
+            public override List<string> GetValueList()
+            {
+                shownOptions.Clear();
+                string current = GetValue();
+                if (dropdownOptions != null)
+                {
+                    foreach (string option in dropdownOptions() ?? Array.Empty<string>())
+                    {
+                        if (!string.IsNullOrEmpty(option) && !shownOptions.Contains(option))
+                        {
+                            shownOptions.Add(option);
+                        }
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(current) && !shownOptions.Contains(current))
+                {
+                    shownOptions.Insert(0, current);
+                }
+
+                List<string> labels = new List<string>(shownOptions.Count);
+                foreach (string option in shownOptions)
+                {
+                    labels.Add(optionLabel != null ? optionLabel(option) : option);
+                }
+                return labels;
+            }
+
+            public override int GetDropdownIndex() => Math.Max(0, shownOptions.IndexOf(GetValue()));
+
+            public override void SetValueFromDropdown(int index)
+            {
+                if (index < 0 || index >= shownOptions.Count)
+                {
+                    return;
+                }
+
+                string newValue = shownOptions[index];
+                TryValue(ref newValue);
             }
 
             public string defaultVal;
@@ -1209,7 +1278,7 @@ namespace BGC.Settings
 
             public override UIState EditButtonPressed()
             {
-                return UIState.EnterValue;
+                return dropdownOptions != null ? UIState.SelectValue : UIState.EnterValue;
             }
 
             public override string GetValue()
