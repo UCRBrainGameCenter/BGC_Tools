@@ -22,7 +22,7 @@ namespace BGC.Audio.Filters
         private readonly AudiometricCalibration.CalibrationSet calibrationSet;
         private readonly double calibrationFrequency;
         private readonly AudiometricCalibration.Source source;
-        private readonly bool safetyLimit;
+        private readonly SafetyLimitMode safetyLimit;
 
         private const int BUFFER_SIZE = 512;
         private readonly float[] buffer = new float[BUFFER_SIZE];
@@ -44,7 +44,30 @@ namespace BGC.Audio.Filters
             this.calibrationSet = calibrationSet;
             this.calibrationFrequency = calibrationFrequency;
 
-            this.safetyLimit = safetyLimit;
+            this.safetyLimit = SafetyLimit.ModeFor(safetyLimit);
+            source = AudiometricCalibration.Source.Custom;
+            factorsInitialized = false;
+        }
+
+        /// <summary> Scales to <paramref name="presentationLevelHL"/> dB HL with the safety limit applied per <paramref name="mode"/> </summary>
+        public AudiometricMonoRegulatorFilter(
+            IBGCStream stream,
+            double presentationLevelHL,
+            AudiometricCalibration.CalibrationSet calibrationSet,
+            double calibrationFrequency,
+            SafetyLimitMode mode)
+            : base(stream)
+        {
+            if (stream.Channels != 1)
+            {
+                throw new StreamCompositionException("AudiometricMonoRegulatorFilter inner stream must have one channel.");
+            }
+
+            this.presentationLevelHL = presentationLevelHL;
+            this.calibrationSet = calibrationSet;
+            this.calibrationFrequency = calibrationFrequency;
+
+            safetyLimit = mode;
             source = AudiometricCalibration.Source.Custom;
             factorsInitialized = false;
         }
@@ -63,7 +86,7 @@ namespace BGC.Audio.Filters
                     scalingFactorL: out double tempLeftFactor,
                     scalingFactorR: out double tempRightFactor,
                     source: source,
-                    safetyLimit: safetyLimit);
+                    mode: safetyLimit);
 
                 leftFactor = (float)tempLeftFactor;
                 rightFactor = (float)tempRightFactor;

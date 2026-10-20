@@ -386,5 +386,140 @@ namespace BGC.Tests
         }
 
         #endregion Nothing to regulate (PART-984)
+        #region Modes: refuse, clamp, allow (2026-10)
+
+        private static float[] ReadSamples(IBGCStream stream)
+        {
+            List<float> samples = new List<float>();
+            float[] buffer = new float[4096];
+            int read;
+            while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                samples.AddRange(buffer.Take(read));
+            }
+            return samples.ToArray();
+        }
+
+        private static double RmsDB(float[] samples) => 20.0 * Math.Log10(Math.Sqrt(samples.Average(x => x * (double)x)));
+
+        /// <summary> Runs <paramref name="action"/> with a capturing reporter installed, and returns what it reported </summary>
+        private static List<SafetyLimitEvent> Capture(Action action)
+        {
+            List<SafetyLimitEvent> events = new List<SafetyLimitEvent>();
+            Action<SafetyLimitEvent> saved = SafetyLimit.EventReporter;
+            SafetyLimit.EventReporter = events.Add;
+            try
+            {
+                action();
+            }
+            finally
+            {
+                SafetyLimit.EventReporter = saved;
+            }
+            return events;
+        }
+
+        /// <summary> The samples of an accurately claimed tone played at <paramref name="level"/> with the limit off: the reference for "at the limit" </summary>
+        private static float[] Reference(double level) => ReadSamples(MisclaimedTone(0.0).Normalize(level, SafetyLimitMode.Off));
+
+        [Test]
+        public void ModeFor_MapsTheHistoricalBool()
+        {
+            Assert.AreEqual(SafetyLimitMode.Refuse, SafetyLimit.ModeFor(true));
+            Assert.AreEqual(SafetyLimitMode.Off, SafetyLimit.ModeFor(false));
+        }
+
+        /// <summary>
+        /// Clamp: samples that would deliver more than the limit play at the limit instead, and
+        /// the event says what would have played and by how much it was turned down.
+        /// </summary>
+        [TestCase(85.0)]
+        [TestCase(90.0)]
+        public void Clamp_DeliveredAboveLimit_PlaysAtTheLimit(double requested)
+        {
+            double excess = 20.0 * Math.Log10(2.0);
+            float[] clamped = null;
+            List<SafetyLimitEvent> events = Capture(() => clamped = ReadSamples(MisclaimedTone(excess).Normalize(requested, SafetyLimitMode.Clamp)));
+
+            Assert.AreEqual(RmsDB(Reference(90.0)), RmsDB(clamped), 1e-3, "The clamped stream doesn't play at the limit");
+            Assert.AreEqual(1, events.Count, "One event per clamped stream");
+            Assert.AreEqual("Delivered", events[0].Check);
+            Assert.AreEqual(SafetyLimitMode.Clamp, events[0].Mode);
+            Assert.AreEqual(requested, events[0].RequestedLevel, 1e-9);
+            Assert.AreEqual(requested + excess, events[0].DeliveredLevel, 1e-6);
+            Assert.AreEqual(90.0, events[0].AppliedLevel, 1e-9);
+            Assert.AreEqual(requested + excess - 90.0, events[0].AttenuationDB, 1e-6);
+            StringAssert.Contains("clamped to 90 dB", events[0].Message);
+        }
+
+        [Test]
+        public void Clamp_RequestAboveLimit_PlaysAtTheLimit()
+        {
+            float[] clamped = null;
+            List<SafetyLimitEvent> events = Capture(() => clamped = ReadSamples(MisclaimedTone(0.0).Normalize(95.0, SafetyLimitMode.Clamp)));
+
+            Assert.AreEqual(RmsDB(Reference(90.0)), RmsDB(clamped), 1e-3, "A 95 dB request under Clamp doesn't play at 90");
+            Assert.AreEqual(1, events.Count);
+            Assert.AreEqual("Request", events[0].Check);
+            Assert.AreEqual(5.0, events[0].AttenuationDB, 1e-9);
+        }
+
+        [Test]
+        public void Clamp_WithinLimit_IsUntouchedAndSilent()
+        {
+            float[] played = null;
+            List<SafetyLimitEvent> events = Capture(() => played = ReadSamples(MisclaimedTone(0.0).Normalize(80.0, SafetyLimitMode.Clamp)));
+
+            Assert.AreEqual(RmsDB(Reference(80.0)), RmsDB(played), 1e-9, "Clamp changed a stream within the limit");
+            Assert.IsEmpty(events, "An event was reported for a stream within the limit");
+        }
+
+        /// <summary> Clamp with dichotic levels: only the ear above the limit is turned down </summary>
+        [Test]
+        public void Clamp_DichoticRequest_ClampsOnlyTheHotEar()
+        {
+            IBGCStream stereo = MisclaimedTone(0.0).UpChannel(2);
+            float[] played = null;
+            List<SafetyLimitEvent> events = Capture(() => played = ReadSamples(stereo.Normalize((95.0, 60.0), SafetyLimitMode.Clamp)));
+
+            float[] left = played.Where((x, i) => i % 2 == 0).ToArray();
+            float[] right = played.Where((x, i) => i % 2 == 1).ToArray();
+            float[] reference90 = Reference(90.0).Where((x, i) => i % 2 == 0).ToArray();
+            float[] reference60 = Reference(60.0).Where((x, i) => i % 2 == 0).ToArray();
+
+            Assert.AreEqual(RmsDB(reference90), RmsDB(left), 1e-3, "The left ear (95 requested) isn't at the limit");
+            Assert.AreEqual(RmsDB(reference60), RmsDB(right), 1e-3, "The right ear (60 requested) changed");
+            Assert.AreEqual(1, events.Count);
+            Assert.AreEqual(0, events[0].Channel, "The event names the left ear");
+        }
+
+        /// <summary> Off: the stream plays as requested, and the exceedance is reported anyway </summary>
+        [Test]
+        public void Off_PlaysAsRequestedAndReports()
+        {
+            double excess = 20.0 * Math.Log10(2.0);
+            float[] played = null;
+            List<SafetyLimitEvent> events = Capture(() => played = ReadSamples(MisclaimedTone(excess).Normalize(88.0, SafetyLimitMode.Off)));
+
+            Assert.AreEqual(RmsDB(Reference(88.0 + excess)), RmsDB(played), 1e-3, "Off changed the level");
+            Assert.AreEqual(1, events.Count, "Off must still report the exceedance when a reporter is installed");
+            Assert.AreEqual(SafetyLimitMode.Off, events[0].Mode);
+            Assert.AreEqual(events[0].DeliveredLevel, events[0].AppliedLevel, 1e-9);
+            Assert.AreEqual(0.0, events[0].AttenuationDB, 1e-9);
+        }
+
+        /// <summary> Refuse (the historical bool true): the event is reported, then the exception thrown </summary>
+        [Test]
+        public void Refuse_ReportsThenThrows()
+        {
+            List<SafetyLimitEvent> events = Capture(() =>
+                Assert.Throws<StreamCompositionException>(() => ReadAll(MisclaimedTone(20.0 * Math.Log10(2.0)).Normalize(88.0, SafetyLimitMode.Refuse))));
+
+            Assert.AreEqual(1, events.Count);
+            Assert.IsTrue(events[0].Refused);
+            Assert.IsTrue(double.IsNaN(events[0].AppliedLevel), "A refused stream has no applied level");
+        }
+
+        #endregion Modes: refuse, clamp, allow (2026-10)
     }
 }

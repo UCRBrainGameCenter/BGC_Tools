@@ -19,7 +19,7 @@ namespace BGC.Audio.Filters
         private readonly (double levelL, double levelR) presentationLevels;
 
         private readonly Calibration.Source source;
-        private readonly bool safetyLimit;
+        private readonly SafetyLimitMode safetyLimit;
 
         private const int BUFFER_SIZE = 512;
         private readonly float[] buffer = new float[BUFFER_SIZE];
@@ -41,8 +41,46 @@ namespace BGC.Audio.Filters
             factorsInitialized = true;
 
             //Doesn't matter, we bypass the normalizer.
-            safetyLimit = false;
+            safetyLimit = SafetyLimitMode.Off;
             source = Calibration.Source.MAX;
+        }
+
+        /// <summary> Scales to <paramref name="presentationLevel"/> dB SPL with the safety limit applied per <paramref name="mode"/> </summary>
+        public NormalizerFilter(
+            IBGCStream stream,
+            double presentationLevel,
+            SafetyLimitMode mode)
+            : base(stream)
+        {
+            if (stream.Channels != 2)
+            {
+                throw new StreamCompositionException("NormalizerFilter inner stream must have two channels.");
+            }
+
+            presentationLevels = (presentationLevel, presentationLevel);
+            factorsInitialized = false;
+
+            source = Calibration.Source.Custom;
+            safetyLimit = mode;
+        }
+
+        /// <summary> Scales to the dichotic levels with the safety limit applied per <paramref name="mode"/> </summary>
+        public NormalizerFilter(
+            IBGCStream stream,
+            (double levelL, double levelR) presentationLevel,
+            SafetyLimitMode mode)
+            : base(stream)
+        {
+            if (stream.Channels != 2)
+            {
+                throw new StreamCompositionException("NormalizerFilter inner stream must have two channels.");
+            }
+
+            presentationLevels = presentationLevel;
+            factorsInitialized = false;
+
+            source = Calibration.Source.Custom;
+            safetyLimit = mode;
         }
 
         public NormalizerFilter(
@@ -60,7 +98,7 @@ namespace BGC.Audio.Filters
             factorsInitialized = false;
 
             source = Calibration.Source.Custom;
-            this.safetyLimit = safetyLimit;
+            this.safetyLimit = SafetyLimit.ModeFor(safetyLimit);
         }
 
         public NormalizerFilter(
@@ -78,7 +116,7 @@ namespace BGC.Audio.Filters
             factorsInitialized = false;
 
             source = Calibration.Source.Custom;
-            this.safetyLimit = safetyLimit;
+            this.safetyLimit = SafetyLimit.ModeFor(safetyLimit);
         }
 
         public NormalizerFilter(
@@ -97,7 +135,7 @@ namespace BGC.Audio.Filters
             factorsInitialized = false;
 
             this.source = source;
-            this.safetyLimit = safetyLimit;
+            this.safetyLimit = SafetyLimit.ModeFor(safetyLimit);
         }
 
         protected override void _Initialize()
@@ -114,7 +152,7 @@ namespace BGC.Audio.Filters
                     scalingFactorL: out double tempLeftFactor,
                     scalingFactorR: out double tempRightFactor,
                     source: source,
-                    safetyLimit: safetyLimit,
+                    mode: safetyLimit,
                     deliveredLevelChannel: splitLevels ? 0 : -1);
 
                 if (splitLevels)
@@ -125,7 +163,7 @@ namespace BGC.Audio.Filters
                         scalingFactorL: out double _,
                         scalingFactorR: out tempRightFactor,
                         source: source,
-                        safetyLimit: safetyLimit,
+                        mode: safetyLimit,
                         deliveredLevelChannel: 1);
                 }
 
