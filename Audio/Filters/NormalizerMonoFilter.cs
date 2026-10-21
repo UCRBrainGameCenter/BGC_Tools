@@ -115,15 +115,20 @@ namespace BGC.Audio.Filters
             {
                 factorsInitialized = true;
 
+                //With different levels per ear, each ear's request is resolved on its own and a
+                //safety-limit event names the ear (the mono input feeds both)
+                bool splitLevels = presentationLevels.levelL != presentationLevels.levelR;
+
                 Normalization.GetRMSScalingFactors(
                     stream: stream,
                     desiredLevel: presentationLevels.levelL,
                     scalingFactorL: out double tempLeftFactor,
                     scalingFactorR: out double tempRightFactor,
                     source: Calibration.Source.Custom,
-                    mode: safetyLimit);
+                    mode: safetyLimit,
+                    deliveredLevelChannel: splitLevels ? 0 : -1);
 
-                if (presentationLevels.levelL != presentationLevels.levelR)
+                if (splitLevels)
                 {
                     Normalization.GetRMSScalingFactors(
                         stream: stream,
@@ -131,7 +136,8 @@ namespace BGC.Audio.Filters
                         scalingFactorL: out double _,
                         scalingFactorR: out tempRightFactor,
                         source: Calibration.Source.Custom,
-                        mode: safetyLimit);
+                        mode: safetyLimit,
+                        deliveredLevelChannel: 1);
                 }
 
                 leftFactor = (float)tempLeftFactor;

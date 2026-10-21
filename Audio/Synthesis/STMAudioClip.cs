@@ -134,6 +134,13 @@ namespace BGC.Audio.Synthesis
             double timeShift = -outputOffset / (double)SamplingRate;
             bool taper = FrequencyDomain.HannTaper(fftBufferSize, outputOffset) >= SingleFrequencyDomainToneComposer.MinimumTaperAtOutput;
 
+            //This clip never divided out the inverse FFT's sqrt(N), so its raw amplitude is
+            //A * sqrt(frame size). Keep that convention at the frame size it always used (the next
+            //power of two above the sample count), so a frame that FrameSize doubles for its wrap
+            //margin doesn't raise the raw gain by 3.01 dB: it matters where an unregulated STM is
+            //mixed with another stimulus before a collection-level regulator.
+            double gainCorrection = Math.Sqrt(_channelSamples.CeilingToPowerOfTwo() / (double)fftBufferSize);
+
             fftBuffer = new Complex64[fftBufferSize];
 
             sideBandAmplitudes.Clear();
@@ -170,7 +177,7 @@ namespace BGC.Audio.Synthesis
             samples = new float[_channelSamples];
             for (int i = 0; i < _channelSamples; i++)
             {
-                double sample = fftBuffer[outputOffset + i].Real;
+                double sample = gainCorrection * fftBuffer[outputOffset + i].Real;
                 if (taper)
                 {
                     sample /= FrequencyDomain.HannTaper(fftBufferSize, outputOffset + i);

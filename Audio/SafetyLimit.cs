@@ -89,49 +89,68 @@ namespace BGC.Audio
                 return deliveredLevel;
             }
 
+            double applied = mode == SafetyLimitMode.Clamp ? limit : mode == SafetyLimitMode.Off ? deliveredLevel : double.NaN;
+            SafetyLimitEvent reported = Report(mode, check, unit, limit, requestedLevel, deliveredLevel, applied, channel, detail);
+
+            if (mode == SafetyLimitMode.Refuse)
+            {
+                throw new StreamCompositionException(reported.Message);
+            }
+
+            return applied;
+        }
+
+        /// <summary>
+        /// Reports one exceedance with the level that will actually play (<paramref name="appliedLevel"/>:
+        /// NaN when refused), for callers that decide the attenuation themselves, e.g. a trial whose
+        /// ears share one scale. Builds the message, invokes the reporter, returns the event.
+        /// </summary>
+        public static SafetyLimitEvent Report(
+            SafetyLimitMode mode,
+            string check,
+            string unit,
+            double limit,
+            double requestedLevel,
+            double deliveredLevel,
+            double appliedLevel,
+            int channel,
+            string detail)
+        {
             string ear = channel == 0 ? " in the left ear" : channel == 1 ? " in the right ear" : "";
-            double applied;
             string message;
 
             switch (mode)
             {
                 case SafetyLimitMode.Clamp:
-                    applied = limit;
                     message = $"Safety limit: {check} check, the stimulus would deliver {deliveredLevel:0.0} {unit}{ear}; " +
-                        $"clamped to {limit} {unit} ({deliveredLevel - limit:0.0} dB attenuation). {detail}";
+                        $"turned down to {appliedLevel:0.0} {unit} ({deliveredLevel - appliedLevel:0.0} dB attenuation). {detail}";
                     break;
 
                 case SafetyLimitMode.Off:
-                    applied = deliveredLevel;
                     message = $"Safety limit disengaged: {check} check, the stimulus plays at {deliveredLevel:0.0} {unit}{ear}, " +
                         $"above the {limit} {unit} limit. {detail}";
                     break;
 
                 default:
-                    applied = double.NaN;
                     message = $"Tried to exceed safety limit of {limit}{unit} without disengaging safety. {detail}";
                     break;
             }
 
-            EventReporter?.Invoke(new SafetyLimitEvent
+            SafetyLimitEvent limitEvent = new SafetyLimitEvent
             {
                 Check = check,
                 Unit = unit,
                 Limit = limit,
                 RequestedLevel = requestedLevel,
                 DeliveredLevel = deliveredLevel,
-                AppliedLevel = applied,
+                AppliedLevel = appliedLevel,
                 Mode = mode,
                 Channel = channel,
                 Message = message
-            });
+            };
 
-            if (mode == SafetyLimitMode.Refuse)
-            {
-                throw new StreamCompositionException(message);
-            }
-
-            return applied;
+            EventReporter?.Invoke(limitEvent);
+            return limitEvent;
         }
     }
 }

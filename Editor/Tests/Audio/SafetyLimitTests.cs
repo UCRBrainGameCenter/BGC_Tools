@@ -449,7 +449,7 @@ namespace BGC.Tests
             Assert.AreEqual(requested + excess, events[0].DeliveredLevel, 1e-6);
             Assert.AreEqual(90.0, events[0].AppliedLevel, 1e-9);
             Assert.AreEqual(requested + excess - 90.0, events[0].AttenuationDB, 1e-6);
-            StringAssert.Contains("clamped to 90 dB", events[0].Message);
+            StringAssert.Contains("turned down to 90.0 dB", events[0].Message);
         }
 
         [Test]
@@ -489,6 +489,21 @@ namespace BGC.Tests
 
             Assert.AreEqual(RmsDB(reference90), RmsDB(left), 1e-3, "The left ear (95 requested) isn't at the limit");
             Assert.AreEqual(RmsDB(reference60), RmsDB(right), 1e-3, "The right ear (60 requested) changed");
+            Assert.AreEqual(1, events.Count);
+            Assert.AreEqual(0, events[0].Channel, "The event names the left ear");
+        }
+
+        /// <summary> Clamp with dichotic levels on a mono input (the regulator up-channels it): the event names the hot ear </summary>
+        [Test]
+        public void Clamp_DichoticRequestOnMonoInput_NamesTheHotEar()
+        {
+            float[] played = null;
+            List<SafetyLimitEvent> events = Capture(() => played = ReadSamples(MisclaimedTone(0.0).Normalize((95.0, 60.0), SafetyLimitMode.Clamp)));
+
+            float[] left = played.Where((x, i) => i % 2 == 0).ToArray();
+            float[] right = played.Where((x, i) => i % 2 == 1).ToArray();
+            Assert.AreEqual(RmsDB(Reference(90.0).Where((x, i) => i % 2 == 0).ToArray()), RmsDB(left), 1e-3, "Left (95 requested) isn't at the limit");
+            Assert.AreEqual(RmsDB(Reference(60.0).Where((x, i) => i % 2 == 0).ToArray()), RmsDB(right), 1e-3, "Right (60 requested) changed");
             Assert.AreEqual(1, events.Count);
             Assert.AreEqual(0, events[0].Channel, "The event names the left ear");
         }
