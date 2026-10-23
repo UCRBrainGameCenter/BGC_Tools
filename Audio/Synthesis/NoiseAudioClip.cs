@@ -35,6 +35,7 @@ namespace BGC.Audio.Synthesis
         private readonly int frequencyCount;
 
         private Complex64[] fftBuffer = null;
+        private float[] samples = null;
 
         private int position = 0;
 
@@ -65,33 +66,71 @@ namespace BGC.Audio.Synthesis
 
         protected override void _Initialize()
         {
-            int fftBufferSize = _channelSamples.CeilingToPowerOfTwo();
+            //Read clear of the frame's wrap-around, as STMAudioClip and the FD(Single) composer: the
+            //first and last 20 ms of a token were -0.5 dB (the truncated sideband series' transient)
+            //until 2026-10. A frame with at least 1/8 unused, the output from the middle of the
+            //unused part, each carrier time-shifted to keep its phase at the first output sample,
+            //Hann-tapered synthesis divided out.
+            int fftBufferSize = SingleFrequencyDomainToneComposer.FrameSize(_channelSamples);
+            int outputOffset = (fftBufferSize - _channelSamples) / 2;
+            double timeShift = -outputOffset / (double)SamplingRate;
+            bool taper = FrequencyDomain.HannTaper(fftBufferSize, outputOffset) >= SingleFrequencyDomainToneComposer.MinimumTaperAtOutput;
             fftBuffer = new Complex64[fftBufferSize];
 
             foreach (ComplexCarrierTone carrierTone in CreateSideBands(freqLB, freqUB, frequencyCount, distribution))
             {
-                FrequencyDomain.Populate(
-                    buffer: fftBuffer,
-                    frequency: carrierTone.frequency,
-                    amplitude: carrierTone.amplitude);
+                ComplexCarrierTone shifted = carrierTone.TimeShift(timeShift);
+                if (taper)
+                {
+                    FrequencyDomain.PopulateHannTapered(fftBuffer, shifted);
+                }
+                else
+                {
+                    FrequencyDomain.Populate(
+                        buffer: fftBuffer,
+                        frequency: shifted.frequency,
+                        amplitude: shifted.amplitude);
+                }
             }
 
             Fourier.Inverse(fftBuffer);
 
-            double currentRMS = 0.0;
-
-            for (int i = 0; i < fftBufferSize; i++)
+            samples = new float[_channelSamples];
+            for (int i = 0; i < _channelSamples; i++)
             {
-                currentRMS += fftBuffer[i].Real * fftBuffer[i].Real;
+                double sample = fftBuffer[outputOffset + i].Real;
+                if (taper)
+                {
+                    sample /= FrequencyDomain.HannTaper(fftBufferSize, outputOffset + i);
+                }
+                samples[i] = (float)sample;
             }
 
-            currentRMS = Math.Sqrt(currentRMS / fftBufferSize);
+            fftBuffer = null;
 
-            double factor = rms / currentRMS;
+            //The level of the samples the clip returns, which is what it claims
+            double currentRMS = 0.0;
 
-            for (int i = 0; i < fftBufferSize; i++)
+            for (int i = 0; i < _channelSamples; i++)
             {
-                fftBuffer[i] *= factor;
+                currentRMS += (double)samples[i] * samples[i];
+            }
+
+            currentRMS = Math.Sqrt(currentRMS / _channelSamples);
+
+            if (!(currentRMS > 0.0))
+            {
+                //rms / 0 would scale every (zero) sample to NaN
+                throw new StreamCompositionException(
+                    $"Noise from {freqLB} to {freqUB} Hz has no carrier in the renderable range " +
+                    $"(0 to {0.5 * SamplingRate} Hz), so it can't be played at its level.");
+            }
+
+            float factor = (float)(rms / currentRMS);
+
+            for (int i = 0; i < _channelSamples; i++)
+            {
+                samples[i] *= factor;
             }
         }
 
@@ -106,10 +145,7 @@ namespace BGC.Audio.Synthesis
 
             int samplesToRead = Math.Min(count, _channelSamples - position);
 
-            for (int i = 0; i < samplesToRead; i++)
-            {
-                data[offset + i] = (float)fftBuffer[position + i].Real;
-            }
+            Array.Copy(samples, position, data, offset, samplesToRead);
 
             position += samplesToRead;
 

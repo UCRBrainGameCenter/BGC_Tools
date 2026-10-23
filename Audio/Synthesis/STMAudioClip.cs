@@ -50,6 +50,7 @@ namespace BGC.Audio.Synthesis
         private readonly SideBandGenerator sideBandGenerator;
 
         private Complex64[] fftBuffer = null;
+        private float[] samples = null;
 
         private int position = 0;
 
@@ -122,7 +123,23 @@ namespace BGC.Audio.Synthesis
 
         protected override void _Initialize()
         {
-            int fftBufferSize = _channelSamples.CeilingToPowerOfTwo();
+            //A single-frame synthesis read from the frame's wrap-around started with the truncated
+            //sideband series' transient (first 20 ms -0.23 dB until 2026-10). As the FD(Single)
+            //composer: a frame with at least 1/8 unused, the output read from the middle of the
+            //unused part, every component time-shifted so it keeps its phase at the first output
+            //sample, and Hann-tapered synthesis divided out, so the samples are the intended
+            //components from the first one.
+            int fftBufferSize = SingleFrequencyDomainToneComposer.FrameSize(_channelSamples);
+            int outputOffset = (fftBufferSize - _channelSamples) / 2;
+            double timeShift = -outputOffset / (double)SamplingRate;
+            bool taper = FrequencyDomain.HannTaper(fftBufferSize, outputOffset) >= SingleFrequencyDomainToneComposer.MinimumTaperAtOutput;
+
+            //This clip never divided out the inverse FFT's sqrt(N), so its raw amplitude is
+            //A * sqrt(frame size). Keep that convention at the frame size it always used (the next
+            //power of two above the sample count), so a frame that FrameSize doubles for its wrap
+            //margin doesn't raise the raw gain by 3.01 dB: it matters where an unregulated STM is
+            //mixed with another stimulus before a collection-level regulator.
+            double gainCorrection = Math.Sqrt(_channelSamples.CeilingToPowerOfTwo() / (double)fftBufferSize);
 
             fftBuffer = new Complex64[fftBufferSize];
 
@@ -140,14 +157,35 @@ namespace BGC.Audio.Synthesis
                     modulationRate: temporalModulationRate,
                     spectralPhase: spectralStartingPhase + spectralModulatorTerm * Math.Log(carrierBaseTone.frequency)))
                 {
-                    FrequencyDomain.Populate(
-                        buffer: fftBuffer,
-                        frequency: sideBand.frequency,
-                        amplitude: sideBand.amplitude);
+                    ComplexCarrierTone shifted = sideBand.TimeShift(timeShift);
+                    if (taper)
+                    {
+                        FrequencyDomain.PopulateHannTapered(fftBuffer, shifted);
+                    }
+                    else
+                    {
+                        FrequencyDomain.Populate(
+                            buffer: fftBuffer,
+                            frequency: shifted.frequency,
+                            amplitude: shifted.amplitude);
+                    }
                 }
             }
 
             Fourier.Inverse(fftBuffer);
+
+            samples = new float[_channelSamples];
+            for (int i = 0; i < _channelSamples; i++)
+            {
+                double sample = gainCorrection * fftBuffer[outputOffset + i].Real;
+                if (taper)
+                {
+                    sample /= FrequencyDomain.HannTaper(fftBufferSize, outputOffset + i);
+                }
+                samples[i] = (float)sample;
+            }
+
+            fftBuffer = null;
         }
 
 
@@ -160,10 +198,7 @@ namespace BGC.Audio.Synthesis
 
             int samplesToRead = Math.Min(count, _channelSamples - position);
 
-            for (int i = 0; i < samplesToRead; i++)
-            {
-                data[offset + i] = (float)fftBuffer[position + i].Real;
-            }
+            Array.Copy(samples, position, data, offset, samplesToRead);
 
             position += samplesToRead;
 

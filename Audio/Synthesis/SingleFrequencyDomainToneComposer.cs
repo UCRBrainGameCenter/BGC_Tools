@@ -46,25 +46,92 @@ namespace BGC.Audio.Synthesis
             this.rmsBehavior = rmsBehavior;
         }
 
+        /// <summary>
+        /// The frame a buffer of <paramref name="sampleCount"/> samples is synthesized in: the
+        /// smallest power of two that leaves at least 1/8 of it unused, so the output (read from the
+        /// middle of the frame) stays at least N/16 from the frame's wrap on both sides. There the
+        /// Hann-tapered synthesis is within 0.01 dB of the carriers over the first and last 20 ms.
+        /// A duration that nearly filled its power-of-two frame (just under 0.743, 1.486, 2.972 s)
+        /// had no such margin: its output sat next to the wrap, where the truncated sideband series
+        /// left the onset up to -4.7 dB (first 20 ms) at an exact fill. Those durations now use the
+        /// next power of two.
+        /// </summary>
+        public static int FrameSize(int sampleCount)
+        {
+            int frameSize = sampleCount.CeilingToPowerOfTwo();
+
+            if (frameSize - sampleCount < frameSize / 8)
+            {
+                frameSize *= 2;
+            }
+
+            return frameSize;
+        }
+
         protected override void _Initialize()
         {
-            int frameSize = Samples.Length.CeilingToPowerOfTwo();
-            double outputScalar = 2.0 / Math.Sqrt(frameSize);
+            int frameSize = FrameSize(Samples.Length);
+            //Populate writes A*sqrt(N) into a single (positive-frequency) bin and the inverse FFT
+            //is unscaled, so Re(ifft) is A*sqrt(N)*cos(...). Scaling by 1/sqrt(N) makes each
+            //carrier's amplitude A its peak amplitude, as in SineWave, which is what the
+            //Passthrough RMS below assumes. (It was 2/sqrt(N), copied from the Continuous
+            //composer, where the 2 compensates its Hamming overlap-add; that played +6.02 dB hot.)
+            double outputScalar = 1.0 / Math.Sqrt(frameSize);
 
             Complex64[] ifftBuffer = new Complex64[frameSize];
 
+            //A carrier that isn't on a bin isn't periodic in the frame: it jumps where the frame
+            //wraps around, and Populate's truncated sideband series smears that jump into a
+            //transient on both sides of the wrap. Reading the output from the middle of the unused
+            //part of the frame keeps it away from the wrap. Each carrier is rotated so that it
+            //still has its specified phase at the first output sample. On-bin carriers are
+            //periodic in the frame, so their samples are unchanged.
+            int offset = (frameSize - Samples.Length) / 2;
+            double timeShift = -offset / (double)SamplingRate;
+
+            //Even away from the wrap, the truncated series leaves a ripple that decays only as
+            //1 / distance (+0.2 dB over the first and last 20 ms of a 1 s tone). Synthesizing the
+            //carriers tapered by a Hann window that is zero at the wrap makes the series converge
+            //as 1/n^3, and dividing the output by the window restores the carriers. Only worth it
+            //while the output stays clear of the wrap, where the window is small. FrameSize leaves
+            //that margin for every buffer of 8 samples or more; smaller ones keep the untapered
+            //synthesis.
+            bool taper = FrequencyDomain.HannTaper(frameSize, offset) >= MinimumTaperAtOutput;
+
             foreach (ComplexCarrierTone carrierTone in carrierTones)
             {
-                FrequencyDomain.Populate(ifftBuffer, carrierTone);
+                if (taper)
+                {
+                    FrequencyDomain.PopulateHannTapered(ifftBuffer, carrierTone.TimeShift(timeShift));
+                }
+                else
+                {
+                    FrequencyDomain.Populate(ifftBuffer, carrierTone.TimeShift(timeShift));
+                }
             }
 
             Fourier.Inverse(ifftBuffer);
 
             for (int i = 0; i < Samples.Length; i++)
             {
-                Samples[i] = (float)(outputScalar * ifftBuffer[i].Real);
+                double sample = outputScalar * ifftBuffer[offset + i].Real;
+
+                if (taper)
+                {
+                    sample /= FrequencyDomain.HannTaper(frameSize, offset + i);
+                }
+
+                Samples[i] = (float)sample;
             }
         }
+
+        /// <summary>
+        /// The smallest Hann window value at the first output sample for which tapered synthesis is
+        /// used (sin(pi u) >= 0.05, u the output's distance from the frame wrap as a fraction of
+        /// the frame, about 1.6% of it). Below it, dividing by the window amplifies the residual
+        /// more than tapering removes, and the untapered synthesis is the better of the two.
+        /// </summary>
+        public const double MinimumTaperAtOutput = 0.05 * 0.05;
 
         public override int Read(float[] data, int offset, int count)
         {
@@ -113,7 +180,11 @@ namespace BGC.Audio.Synthesis
                         break;
 
                     case TransformRMSBehavior.Passthrough:
-                        double rms = carrierTones.Select(x => 0.5 * x.amplitude.MagnitudeSquared).Sum();
+                        //Only carriers that Populate actually renders into the frame
+                        int frameSize = FrameSize(Samples.Length);
+                        double rms = carrierTones
+                            .Where(x => FrequencyDomain.IsRenderable(frameSize, x.frequency))
+                            .Select(x => 0.5 * x.amplitude.MagnitudeSquared).Sum();
                         channelRMS = new double[] { Math.Sqrt(rms) };
                         break;
 

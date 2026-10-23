@@ -21,6 +21,162 @@ namespace BGC.Audio
 
         public const double dbSafetyLimit = 90.0;
 
+        /// <summary>
+        /// How far, in dB, the delivered level may exceed the safety limit before a stream is
+        /// refused. Absorbs sub-0.1 dB differences between a stream's claimed RMS and its samples
+        /// (e.g. a finite sine that isn't a whole number of periods).
+        /// </summary>
+        public const double deliveredLevelTolerance = 0.1;
+
+        /// <summary>
+        /// Throws if <paramref name="stream"/>, scaled so that its claimed RMS
+        /// (<paramref name="claimedRMS"/>) plays at <paramref name="requestedLevel"/>, would
+        /// actually deliver more than <paramref name="limit"/>.
+        /// The delivered level is computed from the stream's own samples: each channel plays at
+        /// requestedLevel + 20 log10(sampleRMS / claimedRMS), for any calibration. Infinite streams
+        /// can't be measured, so for them only the requested level is checked.
+        /// Reads the stream once (and resets it), like <see cref="BGCStreamExtensions.CalculateRMS"/>.
+        /// </summary>
+        /// <param name="channel">
+        /// The input channel whose samples play at <paramref name="requestedLevel"/>, when the
+        /// output channels have different requested levels; -1 (the default) checks every channel.
+        /// A mono input feeds every output channel, so it is always checked.
+        /// </param>
+        public static void CheckDeliveredLevel(
+            IBGCStream stream,
+            double requestedLevel,
+            double claimedRMS,
+            double limit,
+            string unit,
+            int channel = -1)
+        {
+            if (TryMeasureDeliveredLevel(stream, requestedLevel, claimedRMS, unit, channel, out double deliveredLevel, out int measuredChannel))
+            {
+                SafetyLimit.Resolve(
+                    mode: SafetyLimitMode.Refuse,
+                    check: "Delivered",
+                    unit: unit,
+                    limit: limit,
+                    tolerance: deliveredLevelTolerance,
+                    requestedLevel: requestedLevel,
+                    deliveredLevel: deliveredLevel,
+                    channel: measuredChannel,
+                    detail: DeliveredDetail(requestedLevel, deliveredLevel, unit));
+            }
+        }
+
+        /// <summary>
+        /// The level <paramref name="stream"/> would deliver when scaled so that its claimed RMS
+        /// plays at <paramref name="requestedLevel"/>: requestedLevel + 20 log10(sampleRMS / claimedRMS),
+        /// from the stream's own samples (read once and reset). False when it can't be measured: an
+        /// infinite or empty stream, or silence. Throws for a zero or NaN claim, and for samples that
+        /// aren't finite (PART-984).
+        /// </summary>
+        /// <param name="channel">
+        /// The input channel that plays at <paramref name="requestedLevel"/>; -1 measures the loudest.
+        /// A mono input feeds every output channel, so it is always measured.
+        /// </param>
+        /// <param name="measuredChannel">
+        /// The channel <paramref name="deliveredLevel"/> describes: <paramref name="channel"/>, or
+        /// for -1 the loudest channel of a stereo stream whose channels differ, else -1 (every channel)
+        /// </param>
+        public static bool TryMeasureDeliveredLevel(
+            IBGCStream stream,
+            double requestedLevel,
+            double claimedRMS,
+            string unit,
+            int channel,
+            out double deliveredLevel,
+            out int measuredChannel)
+        {
+            deliveredLevel = double.NaN;
+            measuredChannel = channel;
+
+            if (stream.ChannelSamples == int.MaxValue || stream.ChannelSamples == 0)
+            {
+                return false;
+            }
+
+            //A zero or NaN claim can't be regulated to any level: refuse it rather than skip the check
+            CheckRegulatable(claimedRMS, requestedLevel, unit);
+
+            double[] channelRMS = stream.CalculateRMS().ToArray();
+
+            if (channelRMS.Any(x => double.IsNaN(x) || double.IsInfinity(x)))
+            {
+                throw new StreamCompositionException(
+                    $"Refused a stimulus at {requestedLevel} {unit}: its samples aren't finite numbers (NaN or infinity).");
+            }
+
+            double sampleRMS = (channel >= 0 && channel < channelRMS.Length && channelRMS.Length > 1) ?
+                channelRMS[channel] :
+                channelRMS.DefaultIfEmpty(0.0).Max();
+
+            if (channel < 0 && channelRMS.Length == 2 &&
+                !(Math.Abs(20.0 * Math.Log10(channelRMS[0] / channelRMS[1])) < 0.01))
+            {
+                //The channels share one scale: the loudest one is the level that reaches the limit
+                measuredChannel = channelRMS[0] > channelRMS[1] ? 0 : 1;
+            }
+
+            if (sampleRMS <= 0.0)
+            {
+                //Silence is below any limit
+                return false;
+            }
+
+            deliveredLevel = requestedLevel + 20.0 * Math.Log10(sampleRMS / claimedRMS);
+            return true;
+        }
+
+        /// <summary> The message's account of a delivered-level exceedance </summary>
+        public static string DeliveredDetail(double requestedLevel, double deliveredLevel, string unit) =>
+            $"Requested Level: {requestedLevel} {unit}, but the stimulus would deliver " +
+            $"{deliveredLevel:0.0} {unit} (its samples are {deliveredLevel - requestedLevel:+0.0;-0.0} dB " +
+            $"from its claimed RMS)";
+
+        /// <summary>
+        /// Applies <paramref name="mode"/> to a requested pair of levels: a request above the
+        /// limit is refused, clamped to the limit, or allowed (and reported in every case).
+        /// </summary>
+        public static (double levelL, double levelR) ResolveRequest(
+            SafetyLimitMode mode,
+            string unit,
+            double levelL,
+            double levelR)
+        {
+            if (levelL == levelR)
+            {
+                double level = SafetyLimit.Resolve(mode, "Request", unit, dbSafetyLimit, 0.0, levelL, levelL, -1,
+                    $"Requested Level: {levelL} {unit}");
+                return (level, level);
+            }
+
+            return (
+                SafetyLimit.Resolve(mode, "Request", unit, dbSafetyLimit, 0.0, levelL, levelL, 0, $"Requested Level: {levelL} {unit}"),
+                SafetyLimit.Resolve(mode, "Request", unit, dbSafetyLimit, 0.0, levelR, levelR, 1, $"Requested Level: {levelR} {unit}"));
+        }
+
+        /// <summary>
+        /// Throws unless <paramref name="rms"/>, the RMS a level regulator scales by, is a positive
+        /// finite number. A regulator scales by requestedLevelFactor / rms: at a zero RMS that is
+        /// infinite (which the regulators then replaced by 1, playing the stimulus unscaled, usually
+        /// silent, while logging the requested level), and a NaN RMS poisons every sample. Either
+        /// way the stimulus can't be played at the requested level, whether or not the safety limit
+        /// is engaged. A zero RMS means nothing renderable: e.g. every carrier outside 0 Hz to the
+        /// Nyquist frequency.
+        /// </summary>
+        public static void CheckRegulatable(double rms, double requestedLevel, string unit)
+        {
+            if (!(rms > 0.0) || double.IsInfinity(rms))
+            {
+                throw new StreamCompositionException(
+                    $"Can't play a stimulus at {requestedLevel} {unit}: its RMS is {rms}, so there is nothing " +
+                    $"to scale to that level. If it is synthesized, check that its frequencies lie between " +
+                    $"0 Hz and the Nyquist frequency ({0.5 * FrequencyDomain.SamplingRate} Hz).");
+            }
+        }
+
         public static void GetAmplitudeFactors(
             double dbSPLL,
             double dbSPLR,
@@ -35,6 +191,26 @@ namespace BGC.Audio
                     $"Tried to exceed safety limit of 90dB without disengaging safety. " +
                     $"Requested Level: {Math.Max(dbSPLL, dbSPLR)} dB");
             }
+
+            (factorL, factorR) = Calibration.GetLevelFactors(
+                levelL: dbSPLL,
+                levelR: dbSPLR,
+                source: source);
+        }
+
+        /// <summary>
+        /// As above, with a request above the limit refused, clamped to the limit or allowed per
+        /// <paramref name="mode"/> (and reported through <see cref="SafetyLimit.EventReporter"/>).
+        /// </summary>
+        public static void GetAmplitudeFactors(
+            double dbSPLL,
+            double dbSPLR,
+            out double factorL,
+            out double factorR,
+            Calibration.Source source,
+            SafetyLimitMode mode)
+        {
+            (dbSPLL, dbSPLR) = ResolveRequest(mode, "dB", dbSPLL, dbSPLR);
 
             (factorL, factorR) = Calibration.GetLevelFactors(
                 levelL: dbSPLL,
@@ -656,23 +832,64 @@ namespace BGC.Audio
 
         #endregion Mono Normalizations
 
+        /// <param name="deliveredLevelChannel">
+        /// For a stereo stream whose channels have different requested levels: the channel that
+        /// plays at <paramref name="desiredLevel"/>, so the safety limit judges that channel only.
+        /// -1 (the default) judges every channel.
+        /// </param>
         public static void GetRMSScalingFactors(
             IBGCStream stream,
             double desiredLevel,
             out double scalingFactorL,
             out double scalingFactorR,
             Calibration.Source source = Calibration.Source.Custom,
-            bool safetyLimit = true)
+            bool safetyLimit = true,
+            int deliveredLevelChannel = -1)
         {
+            GetRMSScalingFactors(
+                stream: stream,
+                desiredLevel: desiredLevel,
+                scalingFactorL: out scalingFactorL,
+                scalingFactorR: out scalingFactorR,
+                source: source,
+                mode: SafetyLimit.ModeFor(safetyLimit),
+                deliveredLevelChannel: deliveredLevelChannel);
+        }
+
+        /// <summary>
+        /// The scaling factors that play <paramref name="stream"/> at <paramref name="desiredLevel"/>,
+        /// with the safety limit applied per <paramref name="mode"/>: a request above the limit, or
+        /// samples that would deliver more than the limit (+0.1 dB) at that request, are refused,
+        /// turned down to the limit, or allowed, and reported either way. Under Off the delivered
+        /// level is measured only when a reporter is installed, and a request above the limit is
+        /// reported once, with the level its samples deliver.
+        /// </summary>
+        public static void GetRMSScalingFactors(
+            IBGCStream stream,
+            double desiredLevel,
+            out double scalingFactorL,
+            out double scalingFactorR,
+            Calibration.Source source,
+            SafetyLimitMode mode,
+            int deliveredLevelChannel = -1)
+        {
+            //The request itself: refused, clamped to the limit, or allowed. Allowed above the limit,
+            //it is reported below, once the level its samples deliver is known.
+            bool allowedAboveLimit = mode == SafetyLimitMode.Off && desiredLevel > dbSafetyLimit;
+            double level = allowedAboveLimit ? desiredLevel :
+                SafetyLimit.Resolve(mode, "Request", "dB", dbSafetyLimit, 0.0, desiredLevel, desiredLevel,
+                    deliveredLevelChannel, $"Requested Level: {desiredLevel} dB");
+
             GetAmplitudeFactors(
-                dbSPLL: desiredLevel,
-                dbSPLR: desiredLevel,
+                dbSPLL: level,
+                dbSPLR: level,
                 factorL: out double levelFactorL,
                 factorR: out double levelFactorR,
                 source: source,
-                safetyLimit: safetyLimit);
+                safetyLimit: false);
 
             IEnumerable<double> channelRMS = stream.GetChannelRMS();
+            bool rmsMeasured = false;
 
             if (channelRMS.Any(double.IsNaN))
             {
@@ -683,18 +900,69 @@ namespace BGC.Audio
                 else
                 {
                     channelRMS = stream.CalculateRMS();
+                    rmsMeasured = true;
 
                     if (channelRMS.All(double.IsNaN))
                     {
                         throw new StreamCompositionException("Unable to calculate the RMS of stream.");
+                    }
+
+                    if (channelRMS.Any(x => double.IsNaN(x) || double.IsInfinity(x)))
+                    {
+                        //One channel's samples aren't numbers: dropping it would play them (PART-984)
+                        throw new StreamCompositionException(
+                            "Can't regulate a stimulus whose samples aren't finite numbers (NaN or infinity).");
                     }
                 }
             }
 
             double maxRMS = channelRMS.Where(x => !double.IsNaN(x)).Max();
 
-            scalingFactorL = levelFactorL / maxRMS;
-            scalingFactorR = levelFactorR / maxRMS;
+            CheckRegulatable(maxRMS, level, "dB");
+
+            //The claimed RMS may not match the samples, so check the level actually delivered.
+            //Samples that would play above the limit are refused, turned down to it, or allowed.
+            double attenuation = 1.0;
+            double deliveredLevel = level;
+            int deliveredChannel = deliveredLevelChannel;
+            bool measured = !rmsMeasured && SafetyLimit.WantsMeasurement(mode) &&
+                TryMeasureDeliveredLevel(stream, level, maxRMS, "dB", deliveredLevelChannel, out deliveredLevel, out deliveredChannel);
+
+            if (!measured)
+            {
+                //Unmeasured, or measured as the claim itself: the samples deliver the request
+                deliveredLevel = level;
+                deliveredChannel = deliveredLevelChannel;
+            }
+
+            if (allowedAboveLimit)
+            {
+                //One event per stimulus: the request, with the level its samples deliver
+                SafetyLimit.Report(SafetyLimitMode.Off, "Request", "dB", dbSafetyLimit, desiredLevel, deliveredLevel,
+                    deliveredLevel, deliveredChannel, measured && Math.Abs(deliveredLevel - level) >= 0.05 ?
+                        DeliveredDetail(level, deliveredLevel, "dB") : $"Requested Level: {desiredLevel} dB");
+            }
+            else if (measured)
+            {
+                double appliedLevel = SafetyLimit.Resolve(
+                    mode: mode,
+                    check: "Delivered",
+                    unit: "dB",
+                    limit: dbSafetyLimit,
+                    tolerance: deliveredLevelTolerance,
+                    requestedLevel: level,
+                    deliveredLevel: deliveredLevel,
+                    channel: deliveredChannel,
+                    detail: DeliveredDetail(level, deliveredLevel, "dB"));
+
+                if (appliedLevel < deliveredLevel)
+                {
+                    attenuation = Math.Pow(10.0, (appliedLevel - deliveredLevel) / 20.0);
+                }
+            }
+
+            scalingFactorL = attenuation * levelFactorL / maxRMS;
+            scalingFactorR = attenuation * levelFactorR / maxRMS;
 
             //Protect against some NaN Poisoning
             if (double.IsNaN(scalingFactorL) || double.IsInfinity(scalingFactorL))

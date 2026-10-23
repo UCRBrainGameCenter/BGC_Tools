@@ -29,6 +29,7 @@ namespace BGC.Audio.Synthesis
 
         private readonly double timePerStep;
         private readonly double outputScalar;
+        private readonly double[] normalization;
 
         private readonly Complex64[] ifftBuffer;
         private readonly float[] outputAccumulation;
@@ -57,8 +58,12 @@ namespace BGC.Audio.Synthesis
 
             timePerStep = stepSize / (double)SamplingRate;
 
-            //outputScalar = 1.0 / OVERLAP_FACTOR;
-            outputScalar = 2.0 / (overlapFactor * Sqrt(frameSize));
+            //Populate writes A*sqrt(N) into a bin and the inverse FFT is unscaled, so 1/sqrt(N)
+            //makes each carrier's amplitude A its peak amplitude; the overlap-add of the window is
+            //divided out exactly below. (It was 2 / (overlapFactor * sqrt N), which assumes the
+            //windows overlap-add to overlapFactor / 2; a Hamming window sums to 0.54 * overlapFactor,
+            //so every FD(Continuous) stimulus played +0.65 dB until 2026-10.)
+            outputScalar = 1.0 / Sqrt(frameSize);
 
             ifftBuffer = new Complex64[frameSize];
             outputAccumulation = new float[frameSize];
@@ -75,6 +80,21 @@ namespace BGC.Audio.Synthesis
             for (int i = windowingSamples; i < frameSize - windowingSamples; i++)
             {
                 window[i] = 1.0;
+            }
+
+            //Exact overlap-add normalization: at each phase of the hop the windows of the
+            //overlapFactor frames that cover an output sample sum to a value that depends on the
+            //window shape (and, for windows that aren't constant-overlap-add, on the phase);
+            //dividing by that sum gives unity gain and no ripple for any window.
+            normalization = new double[stepSize];
+            for (int i = 0; i < stepSize; i++)
+            {
+                double sum = 0.0;
+                for (int k = 0; k < overlapFactor; k++)
+                {
+                    sum += window[i + k * stepSize];
+                }
+                normalization[i] = 1.0 / sum;
             }
 
             leadingFrames = -(overlapFactor - 1);
@@ -138,11 +158,11 @@ namespace BGC.Audio.Synthesis
                     frame++;
                 }
 
-                //Copy output samples to output buffer
-                Array.Copy(
-                    sourceArray: outputAccumulation,
-                    destinationArray: cachedSampleBuffer,
-                    length: stepSize);
+                //Copy output samples to output buffer, dividing out the windows' overlap-add sum
+                for (int i = 0; i < stepSize; i++)
+                {
+                    cachedSampleBuffer[i] = (float)(outputAccumulation[i] * normalization[i]);
+                }
 
                 //Slide down output accumulation
                 Array.Copy(
@@ -197,7 +217,10 @@ namespace BGC.Audio.Synthesis
         {
             if (channelRMS is null)
             {
-                double rms = carrierTones.Select(x => 0.5 * x.amplitude.MagnitudeSquared).Sum();
+                //Only carriers that Populate actually renders into each frame
+                double rms = carrierTones
+                    .Where(x => FrequencyDomain.IsRenderable(frameSize, x.frequency))
+                    .Select(x => 0.5 * x.amplitude.MagnitudeSquared).Sum();
                 channelRMS = new double[] { Sqrt(rms) };
             }
 
