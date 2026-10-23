@@ -872,6 +872,38 @@ namespace BGC.Audio
             return new StreamRepeater(stream);
         }
 
+        /// <summary>
+        /// Begins a new realization of every random source in <paramref name="stream"/> (each
+        /// <see cref="IRandomRealization"/> it reads, through its filters) and rewinds the stream,
+        /// for a loop or a replay that should play fresh noise. Reset alone replays the same noise.
+        /// </summary>
+        public static void NextRealization(this IBGCStream stream)
+        {
+            NextRealization(stream, new HashSet<IBGCStream>());
+            stream.Reset();
+        }
+
+        private static void NextRealization(IBGCStream stream, HashSet<IBGCStream> visited)
+        {
+            if (stream == null || !visited.Add(stream))
+            {
+                return;
+            }
+
+            if (stream is IRandomRealization source)
+            {
+                source.NextRealization();
+            }
+
+            if (stream is BGCFilter filter)
+            {
+                foreach (IBGCStream inner in filter.InternalStreams)
+                {
+                    NextRealization(inner, visited);
+                }
+            }
+        }
+
         public static IBGCStream CyclicalRotate(this IBGCStream stream, int sampleRotation) =>
             new CyclicalRotatorFilter(stream, sampleRotation);
         public static IBGCStream CyclicalRotate(this IBGCStream stream, double timeRotation) =>

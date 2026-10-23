@@ -56,5 +56,36 @@ namespace BGC.Tests
 
             Assert.AreEqual(0.0, difference, 0.0, "The read after Reset differs from the fresh read");
         }
+
+        /// <summary> Looped, each pass vocodes onto fresh noise (StreamRepeater asks for a new realization) </summary>
+        [Test]
+        public void Loop_VocodesOntoFreshNoiseEachPass()
+        {
+            IBGCStream vocoder = new NoiseVocoder(
+                stream: new SineWave(0.1, 1000.0).Truncate(totalDuration: 0.25),
+                freqLowerBound: 100.0,
+                freqUpperBound: 8000.0,
+                bandCount: 16,
+                fftSize: 4096,
+                overlapRatio: 4,
+                randomizer: new Random(7));
+            int pass = vocoder.TotalSamples;
+
+            float[] looped = new float[2 * pass];
+            int read = 0;
+            IBGCStream loop = vocoder.Loop();
+            while (read < looped.Length)
+            {
+                read += loop.Read(looped, read, looped.Length - read);
+            }
+
+            double difference = 0.0;
+            for (int i = 0; i < pass; i++)
+            {
+                difference = Math.Max(difference, Math.Abs(looped[i] - looped[pass + i]));
+            }
+
+            Assert.Greater(difference, 1e-3, "The second pass repeats the first pass's noise");
+        }
     }
 }

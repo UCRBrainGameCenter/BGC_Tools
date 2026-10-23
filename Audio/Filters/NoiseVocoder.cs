@@ -7,9 +7,10 @@ using BGC.Mathematics;
 namespace BGC.Audio.Filters
 {
     /// <summary>
-    /// Performs continuous Noise Vocoding on the underlying stream
+    /// Performs continuous Noise Vocoding on the underlying stream. Its noise is one realization:
+    /// Reset replays it; NextRealization (a loop) draws fresh noise.
     /// </summary>
-    public class NoiseVocoder : SimpleBGCFilter
+    public class NoiseVocoder : SimpleBGCFilter, IRandomRealization
     {
         public override int Channels => stream.Channels;
         public override int TotalSamples => stream.TotalSamples;
@@ -39,8 +40,11 @@ namespace BGC.Audio.Filters
         //The noise realization is reproducible: every read from a Reset state draws the same
         //samples, so the level a Recalculate claim measures is the level that plays (it measured
         //one realization and played another until 2026-10)
-        private readonly int noiseSeed;
+        private int noiseSeed;
         private Random noiseRandom;
+        //Seeds the realizations after the first; derived from the first seed, so building a
+        //vocoder draws from the caller's randomizer once, as before
+        private readonly Random seedSource;
 
         private readonly double[] bandFrequencies;
 
@@ -116,6 +120,7 @@ namespace BGC.Audio.Filters
             this.randomizer = randomizer ?? new Random(CustomRandom.Next());
             noiseSeed = this.randomizer.Next();
             noiseRandom = new Random(noiseSeed);
+            seedSource = new Random(~noiseSeed);
             this.rmsBehavior = rmsBehavior;
 
             bandFrequencies = GetExponentialDistribution(freqLowerBound, freqUpperBound, bandCount).ToArray();
@@ -325,6 +330,12 @@ namespace BGC.Audio.Filters
         {
             ClearBuffers();
             stream.Reset();
+        }
+
+        public void NextRealization()
+        {
+            noiseSeed = seedSource.Next();
+            Reset();
         }
 
         public override void Seek(int position)
