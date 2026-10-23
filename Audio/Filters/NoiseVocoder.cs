@@ -312,6 +312,8 @@ namespace BGC.Audio.Filters
             Array.Clear(outputAccumulation, 0, outputAccumulation.Length);
             Array.Clear(inputBuffer, 0, inputBuffer.Length);
 
+            //The whole noise buffer: its last step slides into the first frame's window
+            Array.Clear(noiseBuffer, 0, noiseBuffer.Length);
             noiseRandom = new Random(noiseSeed);
             for (int i = 0; i < overlapSize; i++)
             {

@@ -45,8 +45,12 @@ namespace BGC.Audio.Filters
             source = Calibration.Source.MAX;
         }
 
-        /// <summary> Scales to <paramref name="presentationLevel"/> dB SPL with the safety limit applied per <paramref name="mode"/> </summary>
-        public NormalizerFilter(
+        /// <summary>
+        /// Scales to <paramref name="presentationLevel"/> dB SPL with the safety limit applied per <paramref name="mode"/>.
+        /// Internal: public, a call such as (stream, 1.0, 0) would be ambiguous with the
+        /// (leftFactor, rightFactor) constructor. Callers use Normalize(level, mode).
+        /// </summary>
+        internal NormalizerFilter(
             IBGCStream stream,
             double presentationLevel,
             SafetyLimitMode mode)

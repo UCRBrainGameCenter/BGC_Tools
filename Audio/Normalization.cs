@@ -50,7 +50,7 @@ namespace BGC.Audio
             string unit,
             int channel = -1)
         {
-            if (TryMeasureDeliveredLevel(stream, requestedLevel, claimedRMS, unit, channel, out double deliveredLevel))
+            if (TryMeasureDeliveredLevel(stream, requestedLevel, claimedRMS, unit, channel, out double deliveredLevel, out int measuredChannel))
             {
                 SafetyLimit.Resolve(
                     mode: SafetyLimitMode.Refuse,
@@ -60,7 +60,7 @@ namespace BGC.Audio
                     tolerance: deliveredLevelTolerance,
                     requestedLevel: requestedLevel,
                     deliveredLevel: deliveredLevel,
-                    channel: channel,
+                    channel: measuredChannel,
                     detail: DeliveredDetail(requestedLevel, deliveredLevel, unit));
             }
         }
@@ -76,15 +76,21 @@ namespace BGC.Audio
         /// The input channel that plays at <paramref name="requestedLevel"/>; -1 measures the loudest.
         /// A mono input feeds every output channel, so it is always measured.
         /// </param>
+        /// <param name="measuredChannel">
+        /// The channel <paramref name="deliveredLevel"/> describes: <paramref name="channel"/>, or
+        /// for -1 the loudest channel of a stereo stream whose channels differ, else -1 (every channel)
+        /// </param>
         public static bool TryMeasureDeliveredLevel(
             IBGCStream stream,
             double requestedLevel,
             double claimedRMS,
             string unit,
             int channel,
-            out double deliveredLevel)
+            out double deliveredLevel,
+            out int measuredChannel)
         {
             deliveredLevel = double.NaN;
+            measuredChannel = channel;
 
             if (stream.ChannelSamples == int.MaxValue || stream.ChannelSamples == 0)
             {
@@ -105,6 +111,13 @@ namespace BGC.Audio
             double sampleRMS = (channel >= 0 && channel < channelRMS.Length && channelRMS.Length > 1) ?
                 channelRMS[channel] :
                 channelRMS.DefaultIfEmpty(0.0).Max();
+
+            if (channel < 0 && channelRMS.Length == 2 &&
+                !(Math.Abs(20.0 * Math.Log10(channelRMS[0] / channelRMS[1])) < 0.01))
+            {
+                //The channels share one scale: the loudest one is the level that reaches the limit
+                measuredChannel = channelRMS[0] > channelRMS[1] ? 0 : 1;
+            }
 
             if (sampleRMS <= 0.0)
             {
@@ -848,7 +861,8 @@ namespace BGC.Audio
         /// with the safety limit applied per <paramref name="mode"/>: a request above the limit, or
         /// samples that would deliver more than the limit (+0.1 dB) at that request, are refused,
         /// turned down to the limit, or allowed, and reported either way. Under Off the delivered
-        /// level is measured only when a reporter is installed.
+        /// level is measured only when a reporter is installed, and a request above the limit is
+        /// reported once, with the level its samples deliver.
         /// </summary>
         public static void GetRMSScalingFactors(
             IBGCStream stream,
@@ -859,9 +873,12 @@ namespace BGC.Audio
             SafetyLimitMode mode,
             int deliveredLevelChannel = -1)
         {
-            //The request itself: refused, clamped to the limit, or allowed
-            double level = SafetyLimit.Resolve(mode, "Request", "dB", dbSafetyLimit, 0.0, desiredLevel, desiredLevel,
-                deliveredLevelChannel, $"Requested Level: {desiredLevel} dB");
+            //The request itself: refused, clamped to the limit, or allowed. Allowed above the limit,
+            //it is reported below, once the level its samples deliver is known.
+            bool allowedAboveLimit = mode == SafetyLimitMode.Off && desiredLevel > dbSafetyLimit;
+            double level = allowedAboveLimit ? desiredLevel :
+                SafetyLimit.Resolve(mode, "Request", "dB", dbSafetyLimit, 0.0, desiredLevel, desiredLevel,
+                    deliveredLevelChannel, $"Requested Level: {desiredLevel} dB");
 
             GetAmplitudeFactors(
                 dbSPLL: level,
@@ -905,12 +922,27 @@ namespace BGC.Audio
 
             //The claimed RMS may not match the samples, so check the level actually delivered.
             //Samples that would play above the limit are refused, turned down to it, or allowed.
-            //Under Off a request above the limit was already reported: one event per stimulus.
             double attenuation = 1.0;
-            bool requestReported = mode == SafetyLimitMode.Off && desiredLevel > dbSafetyLimit;
+            double deliveredLevel = level;
+            int deliveredChannel = deliveredLevelChannel;
+            bool measured = !rmsMeasured && SafetyLimit.WantsMeasurement(mode) &&
+                TryMeasureDeliveredLevel(stream, level, maxRMS, "dB", deliveredLevelChannel, out deliveredLevel, out deliveredChannel);
 
-            if (!rmsMeasured && !requestReported && SafetyLimit.WantsMeasurement(mode) &&
-                TryMeasureDeliveredLevel(stream, level, maxRMS, "dB", deliveredLevelChannel, out double deliveredLevel))
+            if (!measured)
+            {
+                //Unmeasured, or measured as the claim itself: the samples deliver the request
+                deliveredLevel = level;
+                deliveredChannel = deliveredLevelChannel;
+            }
+
+            if (allowedAboveLimit)
+            {
+                //One event per stimulus: the request, with the level its samples deliver
+                SafetyLimit.Report(SafetyLimitMode.Off, "Request", "dB", dbSafetyLimit, desiredLevel, deliveredLevel,
+                    deliveredLevel, deliveredChannel, measured && Math.Abs(deliveredLevel - level) >= 0.05 ?
+                        DeliveredDetail(level, deliveredLevel, "dB") : $"Requested Level: {desiredLevel} dB");
+            }
+            else if (measured)
             {
                 double appliedLevel = SafetyLimit.Resolve(
                     mode: mode,
@@ -920,7 +952,7 @@ namespace BGC.Audio
                     tolerance: deliveredLevelTolerance,
                     requestedLevel: level,
                     deliveredLevel: deliveredLevel,
-                    channel: deliveredLevelChannel,
+                    channel: deliveredChannel,
                     detail: DeliveredDetail(level, deliveredLevel, "dB"));
 
                 if (appliedLevel < deliveredLevel)

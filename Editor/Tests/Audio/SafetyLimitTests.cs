@@ -535,6 +535,72 @@ namespace BGC.Tests
             Assert.IsTrue(double.IsNaN(events[0].AppliedLevel), "A refused stream has no applied level");
         }
 
+        /// <summary>
+        /// Off with a request above the limit: one event, carrying the level the samples deliver.
+        /// The request was reported at its nominal 95 dB and the delivered check skipped, so a
+        /// stream 6.02 dB above its claim was logged at 95 dB while it played at 101.02.
+        /// </summary>
+        [Test]
+        public void Off_RequestAboveLimit_ReportsWhatTheSamplesDeliver()
+        {
+            double excess = 20.0 * Math.Log10(2.0);
+            float[] played = null;
+            List<SafetyLimitEvent> events = Capture(() => played = ReadSamples(MisclaimedTone(excess).Normalize(95.0, SafetyLimitMode.Off)));
+
+            Assert.AreEqual(RmsDB(Reference(95.0 + excess)), RmsDB(played), 1e-3, "Off changed the level");
+            Assert.AreEqual(1, events.Count, "One event per stimulus");
+            Assert.AreEqual("Request", events[0].Check);
+            Assert.AreEqual(95.0, events[0].RequestedLevel, 1e-9);
+            Assert.AreEqual(95.0 + excess, events[0].DeliveredLevel, 1e-6, "The event doesn't carry the delivered level");
+            Assert.AreEqual(95.0 + excess, events[0].AppliedLevel, 1e-6);
+        }
+
+        /// <summary>
+        /// One request for a stereo stream whose ears differ (left 6 dB above right): the ears share
+        /// one scale, so the loud ear is the one at the limit, and the event names it. It said
+        /// "every channel", which misstated the quiet ear's level.
+        /// </summary>
+        [Test]
+        public void Clamp_StereoEarsDiffer_NamesTheLoudEar()
+        {
+            IBGCStream stereo = new NormalizerFilter(MisclaimedTone(20.0 * Math.Log10(2.0)).UpChannel(2), 1.0, 0.5);
+            float[] played = null;
+            List<SafetyLimitEvent> events = Capture(() => played = ReadSamples(stereo.Normalize(88.0, SafetyLimitMode.Clamp)));
+
+            float[] left = played.Where((x, i) => i % 2 == 0).ToArray();
+            float[] right = played.Where((x, i) => i % 2 == 1).ToArray();
+            Assert.AreEqual(RmsDB(Reference(90.0).Where((x, i) => i % 2 == 0).ToArray()), RmsDB(left), 1e-3, "The loud ear isn't at the limit");
+            Assert.AreEqual(RmsDB(left) - 20.0 * Math.Log10(2.0), RmsDB(right), 1e-3, "The ears weren't turned down together");
+            Assert.AreEqual(1, events.Count);
+            Assert.AreEqual(0, events[0].Channel, "The event doesn't name the loud (left) ear");
+            Assert.AreEqual(90.0, events[0].AppliedLevel, 1e-9);
+        }
+
+        /// <summary>
+        /// dB HL: the delivered level is judged on the calibration at the limit. A profile measured
+        /// at 20 dB attenuation for 88 dB HL and 19 dB for 90 dB HL changes 1 dB per 2 dB. A stream
+        /// 6.02 dB above its claim, requested at 88 dB HL, was judged to deliver 94.02 dB HL and
+        /// turned down 4.02 dB: 1 dB above the output the profile gives 90 dB HL. Judged on the
+        /// limit's output it delivers 95.02, and turned down by that it plays at exactly that output.
+        /// </summary>
+        [Test]
+        public void HearingLevel_DeliveredLevel_IsJudgedOnTheCalibrationAtTheLimit()
+        {
+            double excess = 20.0 * Math.Log10(2.0);
+            double factorAt88 = Math.Pow(10.0, -20.0 / 20.0);
+            double factorAt90 = Math.Pow(10.0, -19.0 / 20.0);
+
+            (double left, double right) = LevelRegulation.DeliveredLevelsAtLimit(factorAt88, factorAt88, factorAt90, factorAt90, excess);
+
+            Assert.AreEqual(95.0 + excess - 6.0, left, 1e-9);
+            Assert.AreEqual(left, right, 1e-12);
+            double output = factorAt88 * Math.Pow(10.0, excess / 20.0) * Math.Pow(10.0, (LevelRegulation.dbSafetyLimit - left) / 20.0);
+            Assert.AreEqual(factorAt90, output, 1e-12, "Turned down by the judged excess, the output isn't the profile's output at the limit");
+
+            (double linearL, double _) = LevelRegulation.DeliveredLevelsAtLimit(factorAt90 * Math.Pow(10.0, -2.0 / 20.0), 1.0, factorAt90, 1.0, excess);
+            Assert.AreEqual(88.0 + excess, linearL, 1e-9, "With 1 dB per dB the judged level isn't the request plus the excess");
+        }
+
         #endregion Modes: refuse, clamp, allow (2026-10)
     }
 }
