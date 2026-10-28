@@ -353,12 +353,24 @@ namespace BGC.Audio.Audiometry
 
         private static void UpdateCalibrationProgressFile()
         {
-            DeleteCalibrationProgressFile();
+            // Written beside the checkpoint and then moved over it, so a failed write leaves the last checkpoint
+            string pendingPath = CalibrationProgressFilePath + ".pending";
 
-            FileWriter.WriteJson(
-                path: CalibrationProgressFilePath,
+            if (FileWriter.WriteJson(
+                path: pendingPath,
                 createJson: calibrationResults.Serialize,
-                pretty: true);
+                pretty: true))
+            {
+                try
+                {
+                    System.IO.File.Copy(pendingPath, CalibrationProgressFilePath, overwrite: true);
+                    System.IO.File.Delete(pendingPath);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"Failed to update the calibration checkpoint: {ex.Message}");
+                }
+            }
         }
 
         private static void DeleteCalibrationProgressFile()
@@ -406,12 +418,26 @@ namespace BGC.Audio.Audiometry
 
         public static CalibrationProfile GetIncompleteCalibration() => incompleteCalibration;
 
-        public static void FinalizeCalibrationResults()
+        /// <summary>
+        /// Saves the completed calibration and makes it the active one. Returns false, with the previous calibration
+        /// still active and the progress checkpoint kept, when the profile could not be saved.
+        /// </summary>
+        public static bool FinalizeCalibrationResults()
         {
             if (calibrationResults == null)
             {
                 Debug.LogError("Null calibration results");
-                return;
+                return false;
+            }
+
+            string calibrationName = $"Calibration_{calibrationResults.CalibrationDate:yy_MM_dd_HH_mm_ss}.json";
+
+            if (!FileWriter.WriteJson(
+                path: DataManagement.PathForDataFile(dataDirectory, calibrationName),
+                createJson: calibrationResults.Serialize,
+                pretty: true))
+            {
+                return false;
             }
 
             customCalibration = calibrationResults;
@@ -419,12 +445,7 @@ namespace BGC.Audio.Audiometry
             incompleteCalibration = null;
             incompleteCalibrationDate = DateTime.MinValue;
 
-            currentCalibrationName = $"Calibration_{customCalibration.CalibrationDate:yy_MM_dd_HH_mm_ss}.json";
-
-            FileWriter.WriteJson(
-                path: DataManagement.PathForDataFile(dataDirectory, currentCalibrationName),
-                createJson: customCalibration.Serialize,
-                pretty: true);
+            currentCalibrationName = calibrationName;
 
             SerializeCalibrationSettings();
 
@@ -434,6 +455,8 @@ namespace BGC.Audio.Audiometry
             calibrationProfilesByDate.Add(customCalibration);
             validationResults = null;
             SortCalibrationProfilesByDate();
+
+            return true;
         }
 
         private static void SortCalibrationProfilesByDate()
