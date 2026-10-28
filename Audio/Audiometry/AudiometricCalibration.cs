@@ -82,8 +82,8 @@ namespace BGC.Audio.Audiometry
                 FileReader.ReadJsonFile(
                     path: DataManagement.PathForDataFile(systemDirectory, configFileName),
                     successCallback: DeserializeCalibrationSettings,
-                    failCallback: SerializeCalibrationSettings,
-                    fileNotFoundCallback: SerializeCalibrationSettings);
+                    failCallback: () => SerializeCalibrationSettings(),
+                    fileNotFoundCallback: () => SerializeCalibrationSettings());
 
                 // If no calibration setting was found, use the latest one
                 if (calibrationProfilesByDate.Count > 0 && customCalibration == null)
@@ -272,9 +272,12 @@ namespace BGC.Audio.Audiometry
             }
         }
 
-        public static void SerializeCalibrationSettings()
+        /// <summary>
+        /// Writes the active calibration's name and the microphone offset. Returns false when the file was not written.
+        /// </summary>
+        public static bool SerializeCalibrationSettings()
         {
-            FileWriter.WriteJson(
+            return FileWriter.WriteJson(
                 path: DataManagement.PathForDataFile(systemDirectory, configFileName),
                 createJson: () =>
                 {
@@ -363,8 +366,16 @@ namespace BGC.Audio.Audiometry
             {
                 try
                 {
-                    System.IO.File.Copy(pendingPath, CalibrationProgressFilePath, overwrite: true);
-                    System.IO.File.Delete(pendingPath);
+                    // Replace and Move swap the file in one step on the same volume, so the checkpoint is never
+                    // left half-written
+                    if (System.IO.File.Exists(CalibrationProgressFilePath))
+                    {
+                        System.IO.File.Replace(pendingPath, CalibrationProgressFilePath, null);
+                    }
+                    else
+                    {
+                        System.IO.File.Move(pendingPath, CalibrationProgressFilePath);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -420,7 +431,7 @@ namespace BGC.Audio.Audiometry
 
         /// <summary>
         /// Saves the completed calibration and makes it the active one. Returns false, with the previous calibration
-        /// still active and the progress checkpoint kept, when the profile could not be saved.
+        /// still active and the progress checkpoint kept, when the profile or the selection of it could not be saved.
         /// </summary>
         public static bool FinalizeCalibrationResults()
         {
@@ -431,12 +442,31 @@ namespace BGC.Audio.Audiometry
             }
 
             string calibrationName = $"Calibration_{calibrationResults.CalibrationDate:yy_MM_dd_HH_mm_ss}.json";
+            string previousCalibrationName = currentCalibrationName;
 
-            if (!FileWriter.WriteJson(
-                path: DataManagement.PathForDataFile(dataDirectory, calibrationName),
-                createJson: calibrationResults.Serialize,
-                pretty: true))
+            try
             {
+                if (!FileWriter.WriteJson(
+                    path: DataManagement.PathForDataFile(dataDirectory, calibrationName),
+                    createJson: calibrationResults.Serialize,
+                    pretty: true))
+                {
+                    return false;
+                }
+
+                // The settings file names the active calibration; without it a restart would restore the old one
+                currentCalibrationName = calibrationName;
+                if (!SerializeCalibrationSettings())
+                {
+                    currentCalibrationName = previousCalibrationName;
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                // FileWriter's own error reporting writes a file too, and can throw when storage is the problem
+                Debug.LogError($"Failed to save the calibration: {ex.Message}");
+                currentCalibrationName = previousCalibrationName;
                 return false;
             }
 
@@ -444,10 +474,6 @@ namespace BGC.Audio.Audiometry
             calibrationResults = null;
             incompleteCalibration = null;
             incompleteCalibrationDate = DateTime.MinValue;
-
-            currentCalibrationName = calibrationName;
-
-            SerializeCalibrationSettings();
 
             DeleteCalibrationProgressFile();
 
