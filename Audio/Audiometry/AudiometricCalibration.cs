@@ -242,6 +242,11 @@ namespace BGC.Audio.Audiometry
             SerializeCalibrationSettings();
         }
 
+        /// <summary>
+        /// The microphone calibration offset in dB, or NaN when the microphone is not calibrated
+        /// </summary>
+        public static double MicCalibrationOffset => double.IsFinite(micCalibrationOffset) ? micCalibrationOffset : double.NaN;
+
 #pragma warning disable IDE0060 // Remove unused parameter
         public static double GetCorrectedMicLevel(double power, double frequency = double.NaN)
 #pragma warning restore IDE0060 // Remove unused parameter
