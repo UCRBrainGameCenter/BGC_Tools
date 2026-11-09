@@ -38,6 +38,20 @@ namespace BGC.UI.Dialogs
 
         private static ModalDialog instance;
 
+        /// <summary>
+        /// Optional extra keys that choose Response A (Confirm / Yes / Accept), on top of the built-in
+        /// Space / Return / KeypadEnter, in every mode that already has keyboard shortcuts.
+        /// Queried each frame while a dialog is open. Null, or a null/empty result, leaves behavior unchanged.
+        /// Ignored while a text field in the dialog has focus, so they can't interrupt typing.
+        /// </summary>
+        public static Func<IReadOnlyList<KeyCode>> AdditionalConfirmKeysSource { get; set; }
+
+        /// <summary>
+        /// Optional extra keys that choose Response B (Cancel / No), on top of the built-in Escape, in every mode
+        /// where Escape already cancels. Same rules as <see cref="AdditionalConfirmKeysSource"/>.
+        /// </summary>
+        public static Func<IReadOnlyList<KeyCode>> AdditionalCancelKeysSource { get; set; }
+
         private bool closeImmediately = true;
         private string awaitingMessage = null;
         
@@ -149,7 +163,8 @@ namespace BGC.UI.Dialogs
             {
                 // Simple modal types
                 case Mode.Accept:
-                    if (NewInput.GetKeyDown(KeyCode.Space) || NewInput.GetKeyDown(KeyCode.Return) || NewInput.GetKeyDown(KeyCode.KeypadEnter))
+                    if (NewInput.GetKeyDown(KeyCode.Space) || NewInput.GetKeyDown(KeyCode.Return) || NewInput.GetKeyDown(KeyCode.KeypadEnter) ||
+                        AdditionalKeyDown(AdditionalConfirmKeysSource))
                     {
                         await HandleButtons(Response.A);
                     }
@@ -158,11 +173,14 @@ namespace BGC.UI.Dialogs
                 case Mode.DropdownInput:
                 case Mode.Dropdown:
                 case Mode.YesNo:
-                    if (NewInput.GetKeyDown(KeyCode.Space) || NewInput.GetKeyDown(KeyCode.Return) || NewInput.GetKeyDown(KeyCode.KeypadEnter))
+                    // else-if: one press answers at most one dialog. If a key counts as both confirm and cancel,
+                    // confirm wins; otherwise the cancel branch would also hit a dialog opened by the confirm callback.
+                    if (NewInput.GetKeyDown(KeyCode.Space) || NewInput.GetKeyDown(KeyCode.Return) || NewInput.GetKeyDown(KeyCode.KeypadEnter) ||
+                        AdditionalKeyDown(AdditionalConfirmKeysSource))
                     {
                         await HandleButtons(Response.A);
                     }
-                    if (NewInput.GetKeyDown(KeyCode.Escape))
+                    else if (NewInput.GetKeyDown(KeyCode.Escape) || AdditionalKeyDown(AdditionalCancelKeysSource))
                     {
                         await HandleButtons(Response.B);
                     }
@@ -170,7 +188,8 @@ namespace BGC.UI.Dialogs
 
                 // Input types
                 case Mode.InputAccept:
-                    if (NewInput.GetKeyDown(KeyCode.Return) || NewInput.GetKeyDown(KeyCode.KeypadEnter))
+                    if (NewInput.GetKeyDown(KeyCode.Return) || NewInput.GetKeyDown(KeyCode.KeypadEnter) ||
+                        AdditionalKeyDown(AdditionalConfirmKeysSource))
                     {
                         await HandleButtons(Response.A);
                     }
@@ -178,16 +197,40 @@ namespace BGC.UI.Dialogs
                 case Mode.InputConfirmCancel:
                 case Mode.InputToggleConfirmCancel:
                 case Mode.InputInputConfirmCancel:
-                    if (NewInput.GetKeyDown(KeyCode.Return) || NewInput.GetKeyDown(KeyCode.KeypadEnter))
+                    // else-if: see above
+                    if (NewInput.GetKeyDown(KeyCode.Return) || NewInput.GetKeyDown(KeyCode.KeypadEnter) ||
+                        AdditionalKeyDown(AdditionalConfirmKeysSource))
                     {
                         await HandleButtons(Response.A);
                     }
-                    if (NewInput.GetKeyDown(KeyCode.Escape))
+                    else if (NewInput.GetKeyDown(KeyCode.Escape) || AdditionalKeyDown(AdditionalCancelKeysSource))
                     {
                         await HandleButtons(Response.B);
                     }
                     break;
             }
+        }
+
+        private bool AdditionalKeyDown(Func<IReadOnlyList<KeyCode>> keysSource)
+        {
+            if (keysSource == null) return false;
+
+            // Don't let extra keys (which may be letters) fire while the user is typing in the dialog
+            if ((primaryInputField != null && primaryInputField.isFocused) ||
+                (secondaryInputField != null && secondaryInputField.isFocused))
+            {
+                return false;
+            }
+
+            IReadOnlyList<KeyCode> keys = keysSource();
+            if (keys == null) return false;
+
+            for (int i = 0; i < keys.Count; i++)
+            {
+                if (NewInput.GetKeyDown(keys[i])) return true;
+            }
+
+            return false;
         }
 
         private void SetHeaderText(string text) =>
