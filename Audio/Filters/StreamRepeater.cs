@@ -5,7 +5,8 @@ using System.Linq;
 namespace BGC.Audio.Filters
 {
     /// <summary>
-    /// Loops underling stream indefinitely.
+    /// Loops underling stream indefinitely. Each pass is a new realization of any random source
+    /// in it (IRandomRealization): a looped noise is fresh noise, not one segment repeated.
     /// </summary>
     public class StreamRepeater : SimpleBGCFilter
     {
@@ -56,7 +57,7 @@ namespace BGC.Audio.Filters
 
                     lastResetAt = remainingSamples;
 
-                    stream.Reset();
+                    stream.NextRealization();
                 }
 
                 remainingSamples -= readSamples;

@@ -5,16 +5,21 @@ using BGC.Mathematics;
 namespace BGC.Audio.Synthesis
 {
     /// <summary>
-    /// True Continuous White-Noise stream
+    /// True Continuous White-Noise stream. Its samples are one realization, drawn from a seed taken
+    /// from the randomizer at construction: Reset and Seek return to them, so a regulator that
+    /// measures the stream measures what plays. NextRealization begins fresh noise (a loop).
     /// </summary>
-    public class ContinuousWhiteNoiseStream : BGCAudioClip
+    public class ContinuousWhiteNoiseStream : BGCAudioClip, IRandomRealization
     {
         public override int Channels => 1;
 
         public override int TotalSamples => int.MaxValue;
         public override int ChannelSamples => int.MaxValue;
 
-        private readonly Random randomizer;
+        //Seeds each realization; draws only here, never from the caller's randomizer after construction
+        private readonly Random seedSource;
+        private int seed;
+        private Random randomizer;
 
         private readonly double rms;
         private readonly double factor;
@@ -26,7 +31,8 @@ namespace BGC.Audio.Synthesis
             {
                 randomizer = new Random(CustomRandom.Next());
             }
-            this.randomizer = randomizer;
+            seedSource = new Random(randomizer.Next());
+            NextRealization();
 
             rms = 1.0 / Math.Sqrt(3.0);
             factor = 1.0;
@@ -40,7 +46,8 @@ namespace BGC.Audio.Synthesis
             {
                 randomizer = new Random(CustomRandom.Next());
             }
-            this.randomizer = randomizer;
+            seedSource = new Random(randomizer.Next());
+            NextRealization();
 
             this.rms = rms;
             factor = rms * Math.Sqrt(3.0);
@@ -63,9 +70,22 @@ namespace BGC.Audio.Synthesis
             return count;
         }
 
-        public override void Reset() { }
+        public override void Reset() => randomizer = new Random(seed);
 
-        public override void Seek(int position) { }
+        public override void Seek(int position)
+        {
+            Reset();
+            for (int i = 0; i < position; i++)
+            {
+                randomizer.NextDouble();
+            }
+        }
+
+        public void NextRealization()
+        {
+            seed = seedSource.Next();
+            Reset();
+        }
 
         private IEnumerable<double> channelRMS = null;
         public override IEnumerable<double> GetChannelRMS() =>

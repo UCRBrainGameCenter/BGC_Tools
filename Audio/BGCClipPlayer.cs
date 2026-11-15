@@ -44,6 +44,16 @@ namespace BGC.Audio
         public delegate void PlaybackStopped();
         public PlaybackStopped playbackEndedNotifier;
 
+        /// <summary>
+        /// Called when reading the playing stream throws: on the calling thread when playback is
+        /// prepared (SetStream, PlayStream), or on the buffering thread during playback. Return
+        /// true to end the sound there: the rest plays as silence and playback ends as if the
+        /// stream had, notifier included. Return false, or leave it null, for the behavior without
+        /// a handler: the first read's exception reaches the caller of SetStream / PlayStream, and
+        /// a later one is logged by the buffering task.
+        /// </summary>
+        public static Func<Exception, bool> StreamErrorHandler { get; set; } = null;
+
         private enum SoundState
         {
             Playing,
@@ -337,7 +347,15 @@ namespace BGC.Audio
             IBGCStream stream,
             BufferedData buffer)
         {
-            buffer.Size = stream.Read(buffer.Samples, 0, buffer.Samples.Length);
+            try
+            {
+                buffer.Size = stream.Read(buffer.Samples, 0, buffer.Samples.Length);
+            }
+            catch (Exception e) when (StreamErrorHandler?.Invoke(e) == true)
+            {
+                //An empty buffer is the end of the stream
+                buffer.Size = 0;
+            }
             buffer.Offset = 0;
             buffer.NumChannels = stream.Channels;
         }

@@ -586,6 +586,72 @@ namespace BGC.Audio
             throw new StreamCompositionException("Cannot normalize stream of more than 2 channels");
         }
 
+        /// <summary> Scales to <paramref name="presentationLevel"/> dB SPL with the safety limit applied per <paramref name="mode"/> (refuse, clamp or allow; every exceedance reported) </summary>
+        public static IBGCStream Normalize(
+            this IBGCStream stream,
+            double presentationLevel,
+            SafetyLimitMode mode)
+        {
+            if (stream.Channels == 1)
+            {
+                return new NormalizerMonoFilter(stream, presentationLevel, mode);
+            }
+            else if (stream.Channels == 2)
+            {
+                return new NormalizerFilter(stream, presentationLevel, mode);
+            }
+
+            throw new StreamCompositionException("Cannot normalize stream of more than 2 channels");
+        }
+
+        /// <summary> Scales to the dichotic levels with the safety limit applied per <paramref name="mode"/> </summary>
+        public static IBGCStream Normalize(
+            this IBGCStream stream,
+            (double levelL, double levelR) presentationLevels,
+            SafetyLimitMode mode)
+        {
+            if (stream.Channels == 1)
+            {
+                return new NormalizerMonoFilter(stream, presentationLevels, mode);
+            }
+            else if (stream.Channels == 2)
+            {
+                return new NormalizerFilter(stream, presentationLevels, mode);
+            }
+
+            throw new StreamCompositionException("Cannot normalize stream of more than 2 channels");
+        }
+
+        /// <summary> Scales to <paramref name="presentationLevelHL"/> dB HL with the safety limit applied per <paramref name="mode"/> </summary>
+        public static IBGCStream AudiometricRegulate(
+            this IBGCStream stream,
+            double presentationLevelHL,
+            Audiometry.AudiometricCalibration.CalibrationSet calibrationSet,
+            double calibrationFrequency,
+            SafetyLimitMode mode)
+        {
+            if (stream.Channels == 2)
+            {
+                return new AudiometricRegulatorFilter(
+                    stream: stream,
+                    presentationLevelHL: presentationLevelHL,
+                    calibrationSet: calibrationSet,
+                    calibrationFrequency: calibrationFrequency,
+                    mode: mode);
+            }
+            else if (stream.Channels == 1)
+            {
+                return new AudiometricMonoRegulatorFilter(
+                    stream: stream,
+                    presentationLevelHL: presentationLevelHL,
+                    calibrationSet: calibrationSet,
+                    calibrationFrequency: calibrationFrequency,
+                    mode: mode);
+            }
+
+            throw new StreamCompositionException("Cannot normalize stream of more than 2 channels");
+        }
+
         public static IBGCStream AudiometricRegulate(
             this IBGCStream stream,
             double presentationLevelHL,
@@ -804,6 +870,38 @@ namespace BGC.Audio
         public static IBGCStream Loop(this IBGCStream stream)
         {
             return new StreamRepeater(stream);
+        }
+
+        /// <summary>
+        /// Begins a new realization of every random source in <paramref name="stream"/> (each
+        /// <see cref="IRandomRealization"/> it reads, through its filters) and rewinds the stream,
+        /// for a loop or a replay that should play fresh noise. Reset alone replays the same noise.
+        /// </summary>
+        public static void NextRealization(this IBGCStream stream)
+        {
+            NextRealization(stream, new HashSet<IBGCStream>());
+            stream.Reset();
+        }
+
+        private static void NextRealization(IBGCStream stream, HashSet<IBGCStream> visited)
+        {
+            if (stream == null || !visited.Add(stream))
+            {
+                return;
+            }
+
+            if (stream is IRandomRealization source)
+            {
+                source.NextRealization();
+            }
+
+            if (stream is BGCFilter filter)
+            {
+                foreach (IBGCStream inner in filter.InternalStreams)
+                {
+                    NextRealization(inner, visited);
+                }
+            }
         }
 
         public static IBGCStream CyclicalRotate(this IBGCStream stream, int sampleRotation) =>

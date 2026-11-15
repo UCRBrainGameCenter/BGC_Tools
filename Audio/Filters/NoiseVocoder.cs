@@ -7,9 +7,10 @@ using BGC.Mathematics;
 namespace BGC.Audio.Filters
 {
     /// <summary>
-    /// Performs continuous Noise Vocoding on the underlying stream
+    /// Performs continuous Noise Vocoding on the underlying stream. Its noise is one realization:
+    /// Reset replays it; NextRealization (a loop) draws fresh noise.
     /// </summary>
-    public class NoiseVocoder : SimpleBGCFilter
+    public class NoiseVocoder : SimpleBGCFilter, IRandomRealization
     {
         public override int Channels => stream.Channels;
         public override int TotalSamples => stream.TotalSamples;
@@ -27,11 +28,23 @@ namespace BGC.Audio.Filters
 
         private readonly Complex64[][] amplitudeBuffers;
         private readonly Complex64[][] noiseBandBuffers;
+        //Each band's contribution to the frame, summed in band order after the parallel loop: the
+        //bands used to add into one accumulation buffer from several threads at once (a data race
+        //that made the output differ run to run by about 1e-6 and up to 0.004 dB)
+        private readonly double[][] bandOutputs;
 
         private readonly double[] outputAccumulation;
         private readonly float[] cachedSampleBuffer;
 
         private readonly Random randomizer;
+        //The noise realization is reproducible: every read from a Reset state draws the same
+        //samples, so the level a Recalculate claim measures is the level that plays (it measured
+        //one realization and played another until 2026-10)
+        private int noiseSeed;
+        private Random noiseRandom;
+        //Seeds the realizations after the first; derived from the first seed, so building a
+        //vocoder draws from the caller's randomizer once, as before
+        private readonly Random seedSource;
 
         private readonly double[] bandFrequencies;
 
@@ -81,10 +94,13 @@ namespace BGC.Audio.Filters
             amplitudeBuffers = new Complex64[bandCount][];
             noiseBandBuffers = new Complex64[bandCount][];
 
+            bandOutputs = new double[bandCount][];
+
             for (int i = 0; i < bandCount; i++)
             {
                 amplitudeBuffers[i] = new Complex64[fftSize];
                 noiseBandBuffers[i] = new Complex64[fftSize];
+                bandOutputs[i] = new double[fftSize];
             }
 
             initialized = false;
@@ -102,6 +118,9 @@ namespace BGC.Audio.Filters
             }
 
             this.randomizer = randomizer ?? new Random(CustomRandom.Next());
+            noiseSeed = this.randomizer.Next();
+            noiseRandom = new Random(noiseSeed);
+            seedSource = new Random(~noiseSeed);
             this.rmsBehavior = rmsBehavior;
 
             bandFrequencies = GetExponentialDistribution(freqLowerBound, freqUpperBound, bandCount).ToArray();
@@ -111,7 +130,8 @@ namespace BGC.Audio.Filters
 
         protected override void _Initialize()
         {
-            frameLag = overlapRatio;
+            //The same state a Reset leaves: the first read and a re-read produce the same samples
+            ClearBuffers();
         }
 
         public override int Read(float[] data, int offset, int count)
@@ -156,7 +176,7 @@ namespace BGC.Audio.Filters
                 //Generate new noise
                 for (int i = 0; i < stepSize; i++)
                 {
-                    noiseBuffer[overlapSize + i] = noiseScalarA - noiseScalarB * randomizer.NextDouble();
+                    noiseBuffer[overlapSize + i] = noiseScalarA - noiseScalarB * noiseRandom.NextDouble();
                 }
 
                 //Copy in the input data
@@ -212,11 +232,22 @@ namespace BGC.Audio.Filters
                             Task.Run(() => Fourier.Inverse(amplitudeBuffer)),
                             Task.Run(() => Fourier.Inverse(noiseBandBuffer)));
 
+                        double[] bandOutput = bandOutputs[band];
                         for (int i = 0; i < amplitudeBuffer.Length; i++)
                         {
-                            outputAccumulation[i] += outputFactor * window[i] * noiseBandBuffer[i].Real * amplitudeBuffer[i].Magnitude;
+                            bandOutput[i] = outputFactor * window[i] * noiseBandBuffer[i].Real * amplitudeBuffer[i].Magnitude;
                         }
                     });
+
+                //Sum the bands in a fixed order, so the result is the same every time
+                for (int band = 0; band < bandFrequencies.Length - 1; band++)
+                {
+                    double[] bandOutput = bandOutputs[band];
+                    for (int i = 0; i < fftSize; i++)
+                    {
+                        outputAccumulation[i] += bandOutput[i];
+                    }
+                }
 
 
                 samplesHandled += read;
@@ -286,9 +317,12 @@ namespace BGC.Audio.Filters
             Array.Clear(outputAccumulation, 0, outputAccumulation.Length);
             Array.Clear(inputBuffer, 0, inputBuffer.Length);
 
+            //The whole noise buffer: its last step slides into the first frame's window
+            Array.Clear(noiseBuffer, 0, noiseBuffer.Length);
+            noiseRandom = new Random(noiseSeed);
             for (int i = 0; i < overlapSize; i++)
             {
-                noiseBuffer[i] = noiseScalarA - noiseScalarB * randomizer.NextDouble();
+                noiseBuffer[i] = noiseScalarA - noiseScalarB * noiseRandom.NextDouble();
             }
         }
 
@@ -296,6 +330,12 @@ namespace BGC.Audio.Filters
         {
             ClearBuffers();
             stream.Reset();
+        }
+
+        public void NextRealization()
+        {
+            noiseSeed = seedSource.Next();
+            Reset();
         }
 
         public override void Seek(int position)

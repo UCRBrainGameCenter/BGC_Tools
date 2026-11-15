@@ -19,7 +19,7 @@ namespace BGC.Audio.Filters
         private readonly (double levelL, double levelR) presentationLevels;
 
         private readonly Calibration.Source source;
-        private readonly bool safetyLimit;
+        private readonly SafetyLimitMode safetyLimit;
 
         private const int BUFFER_SIZE = 512;
         private readonly float[] buffer = new float[BUFFER_SIZE];
@@ -41,8 +41,50 @@ namespace BGC.Audio.Filters
             factorsInitialized = true;
 
             //Doesn't matter, we bypass the normalizer.
-            safetyLimit = false;
+            safetyLimit = SafetyLimitMode.Off;
             source = Calibration.Source.MAX;
+        }
+
+        /// <summary>
+        /// Scales to <paramref name="presentationLevel"/> dB SPL with the safety limit applied per <paramref name="mode"/>.
+        /// Internal: public, a call such as (stream, 1.0, 0) would be ambiguous with the
+        /// (leftFactor, rightFactor) constructor. Callers use Normalize(level, mode).
+        /// </summary>
+        internal NormalizerFilter(
+            IBGCStream stream,
+            double presentationLevel,
+            SafetyLimitMode mode)
+            : base(stream)
+        {
+            if (stream.Channels != 2)
+            {
+                throw new StreamCompositionException("NormalizerFilter inner stream must have two channels.");
+            }
+
+            presentationLevels = (presentationLevel, presentationLevel);
+            factorsInitialized = false;
+
+            source = Calibration.Source.Custom;
+            safetyLimit = mode;
+        }
+
+        /// <summary> Scales to the dichotic levels with the safety limit applied per <paramref name="mode"/> </summary>
+        public NormalizerFilter(
+            IBGCStream stream,
+            (double levelL, double levelR) presentationLevel,
+            SafetyLimitMode mode)
+            : base(stream)
+        {
+            if (stream.Channels != 2)
+            {
+                throw new StreamCompositionException("NormalizerFilter inner stream must have two channels.");
+            }
+
+            presentationLevels = presentationLevel;
+            factorsInitialized = false;
+
+            source = Calibration.Source.Custom;
+            safetyLimit = mode;
         }
 
         public NormalizerFilter(
@@ -60,7 +102,7 @@ namespace BGC.Audio.Filters
             factorsInitialized = false;
 
             source = Calibration.Source.Custom;
-            this.safetyLimit = safetyLimit;
+            this.safetyLimit = SafetyLimit.ModeFor(safetyLimit);
         }
 
         public NormalizerFilter(
@@ -78,7 +120,7 @@ namespace BGC.Audio.Filters
             factorsInitialized = false;
 
             source = Calibration.Source.Custom;
-            this.safetyLimit = safetyLimit;
+            this.safetyLimit = SafetyLimit.ModeFor(safetyLimit);
         }
 
         public NormalizerFilter(
@@ -97,7 +139,7 @@ namespace BGC.Audio.Filters
             factorsInitialized = false;
 
             this.source = source;
-            this.safetyLimit = safetyLimit;
+            this.safetyLimit = SafetyLimit.ModeFor(safetyLimit);
         }
 
         protected override void _Initialize()
@@ -106,15 +148,18 @@ namespace BGC.Audio.Filters
             {
                 factorsInitialized = true;
 
+                bool splitLevels = presentationLevels.levelL != presentationLevels.levelR;
+
                 Normalization.GetRMSScalingFactors(
                     stream: stream,
                     desiredLevel: presentationLevels.levelL,
                     scalingFactorL: out double tempLeftFactor,
                     scalingFactorR: out double tempRightFactor,
                     source: source,
-                    safetyLimit: safetyLimit);
+                    mode: safetyLimit,
+                    deliveredLevelChannel: splitLevels ? 0 : -1);
 
-                if (presentationLevels.levelL != presentationLevels.levelR)
+                if (splitLevels)
                 {
                     Normalization.GetRMSScalingFactors(
                         stream: stream,
@@ -122,7 +167,8 @@ namespace BGC.Audio.Filters
                         scalingFactorL: out double _,
                         scalingFactorR: out tempRightFactor,
                         source: source,
-                        safetyLimit: safetyLimit);
+                        mode: safetyLimit,
+                        deliveredLevelChannel: 1);
                 }
 
                 leftFactor = (float)tempLeftFactor;
@@ -168,6 +214,13 @@ namespace BGC.Audio.Filters
         {
             if (channelRMS == null)
             {
+                //The factors are computed on initialization: before it they are 0, and the claim
+                //would be 0 (a regulator downstream then had nothing to scale)
+                if (!initialized)
+                {
+                    Initialize();
+                }
+
                 double[] innerRMS = stream.GetChannelRMS().ToArray();
                 innerRMS[0] *= Math.Abs(leftFactor);
                 innerRMS[1] *= Math.Abs(rightFactor);

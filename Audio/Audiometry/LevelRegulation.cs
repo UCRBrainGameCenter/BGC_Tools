@@ -58,6 +58,32 @@ namespace BGC.Audio.Audiometry
                 source: source);
         }
 
+        /// <summary>
+        /// As above, with a request above 90 dB HL refused, clamped to it or allowed per
+        /// <paramref name="mode"/> (and reported through <see cref="SafetyLimit.EventReporter"/>).
+        /// </summary>
+        public static void GetAmplitudeFactors(
+            double dbHL,
+            AudiometricCalibration.CalibrationSet calibrationSet,
+            double calibrationFrequency,
+            out double factorL,
+            out double factorR,
+            AudiometricCalibration.Source source,
+            SafetyLimitMode mode)
+        {
+            dbHL = SafetyLimit.Resolve(mode, "Request", "dB HL", dbSafetyLimit, 0.0, dbHL, dbHL, -1,
+                $"Requested Level: {dbHL} dB");
+
+            GetAmplitudeFactors(
+                dbHL: dbHL,
+                calibrationSet: calibrationSet,
+                calibrationFrequency: calibrationFrequency,
+                factorL: out factorL,
+                factorR: out factorR,
+                source: source,
+                safetyLimit: false);
+        }
+
         public static void GetRMSScalingFactors(
             IBGCStream stream,
             double presentationLevelHL,
@@ -68,16 +94,54 @@ namespace BGC.Audio.Audiometry
             AudiometricCalibration.Source source = AudiometricCalibration.Source.Custom,
             bool safetyLimit = true)
         {
+            GetRMSScalingFactors(
+                stream: stream,
+                presentationLevelHL: presentationLevelHL,
+                calibrationSet: calibrationSet,
+                calibrationFrequency: calibrationFrequency,
+                scalingFactorL: out scalingFactorL,
+                scalingFactorR: out scalingFactorR,
+                source: source,
+                mode: SafetyLimit.ModeFor(safetyLimit));
+        }
+
+        /// <summary>
+        /// The scaling factors that play <paramref name="stream"/> at <paramref name="presentationLevelHL"/>,
+        /// with the 90 dB HL safety limit applied per <paramref name="mode"/>: a request above it, or
+        /// samples that would deliver more than it (+0.1 dB) at that request, are refused, turned down
+        /// to the limit, or allowed, and reported either way, as the dB SPL regulators do
+        /// (Normalization.GetRMSScalingFactors). The delivered level is judged against each ear's
+        /// calibrated 90 dB HL output, not by adding the samples' excess to the request: a profile's
+        /// attenuation is measured at several levels, so 1 dB of gain need not be 1 dB HL.
+        /// </summary>
+        public static void GetRMSScalingFactors(
+            IBGCStream stream,
+            double presentationLevelHL,
+            AudiometricCalibration.CalibrationSet calibrationSet,
+            double calibrationFrequency,
+            out double scalingFactorL,
+            out double scalingFactorR,
+            AudiometricCalibration.Source source,
+            SafetyLimitMode mode)
+        {
+            //The request itself: refused, clamped to the limit, or allowed. Allowed above the limit,
+            //it is reported below, once the level its samples deliver is known.
+            bool allowedAboveLimit = mode == SafetyLimitMode.Off && presentationLevelHL > dbSafetyLimit;
+            double level = allowedAboveLimit ? presentationLevelHL :
+                SafetyLimit.Resolve(mode, "Request", "dB HL", dbSafetyLimit, 0.0,
+                    presentationLevelHL, presentationLevelHL, -1, $"Requested Level: {presentationLevelHL} dB");
+
             GetAmplitudeFactors(
-                dbHL: presentationLevelHL,
+                dbHL: level,
                 calibrationSet: calibrationSet,
                 calibrationFrequency: calibrationFrequency,
                 factorL: out double levelFactorL,
                 factorR: out double levelFactorR,
                 source: source,
-                safetyLimit: safetyLimit);
+                safetyLimit: false);
 
             IEnumerable<double> channelRMS = stream.GetChannelRMS();
+            bool rmsMeasured = false;
 
             if (channelRMS.Any(double.IsNaN))
             {
@@ -88,18 +152,83 @@ namespace BGC.Audio.Audiometry
                 else
                 {
                     channelRMS = stream.CalculateRMS();
+                    rmsMeasured = true;
 
                     if (channelRMS.All(double.IsNaN))
                     {
                         throw new StreamCompositionException("Unable to calculate the RMS of stream.");
+                    }
+
+                    if (channelRMS.Any(x => double.IsNaN(x) || double.IsInfinity(x)))
+                    {
+                        //One channel's samples aren't numbers: dropping it would play them (PART-984)
+                        throw new StreamCompositionException(
+                            "Can't regulate a stimulus whose samples aren't finite numbers (NaN or infinity).");
                     }
                 }
             }
 
             double maxRMS = channelRMS.Where(x => !double.IsNaN(x)).Max();
 
-            scalingFactorL = levelFactorL / maxRMS;
-            scalingFactorR = levelFactorR / maxRMS;
+            Normalization.CheckRegulatable(maxRMS, level, "dB HL");
+
+            //The claimed RMS may not match the samples, so check the level actually delivered.
+            //Samples that would play above the limit are refused, turned down to it, or allowed.
+            double attenuation = 1.0;
+            double sampleLevel = level;
+            bool measured = !rmsMeasured && SafetyLimit.WantsMeasurement(mode) &&
+                Normalization.TryMeasureDeliveredLevel(stream, level, maxRMS, "dB HL", -1, out sampleLevel, out int _);
+            double excessDB = measured ? sampleLevel - level : 0.0;
+
+            if (allowedAboveLimit || measured)
+            {
+                //Each ear's output against that ear's output at the limit, in dB re the limit
+                GetAmplitudeFactors(
+                    dbHL: dbSafetyLimit,
+                    calibrationSet: calibrationSet,
+                    calibrationFrequency: calibrationFrequency,
+                    factorL: out double limitFactorL,
+                    factorR: out double limitFactorR,
+                    source: source,
+                    safetyLimit: false);
+
+                (double deliveredL, double deliveredR) = DeliveredLevelsAtLimit(
+                    levelFactorL, levelFactorR, limitFactorL, limitFactorR, excessDB);
+                double deliveredLevel = Math.Max(deliveredL, deliveredR);
+                int channel = Math.Abs(deliveredL - deliveredR) < 0.01 ? -1 : deliveredL > deliveredR ? 0 : 1;
+                string detail = $"Requested Level: {level} dB HL, but the stimulus would deliver " +
+                    $"{deliveredLevel:0.0} dB HL by the calibration at the limit (its samples are " +
+                    $"{excessDB:+0.0;-0.0} dB from its claimed RMS)";
+
+                if (allowedAboveLimit)
+                {
+                    //One event per stimulus: the request, with the level its samples deliver
+                    SafetyLimit.Report(SafetyLimitMode.Off, "Request", "dB HL", dbSafetyLimit, presentationLevelHL,
+                        deliveredLevel, deliveredLevel, channel, Math.Abs(deliveredLevel - level) >= 0.05 ?
+                            detail : $"Requested Level: {presentationLevelHL} dB");
+                }
+                else
+                {
+                    double appliedLevel = SafetyLimit.Resolve(
+                        mode: mode,
+                        check: "Delivered",
+                        unit: "dB HL",
+                        limit: dbSafetyLimit,
+                        tolerance: Normalization.deliveredLevelTolerance,
+                        requestedLevel: level,
+                        deliveredLevel: deliveredLevel,
+                        channel: channel,
+                        detail: detail);
+
+                    if (appliedLevel < deliveredLevel)
+                    {
+                        attenuation = Math.Pow(10.0, (appliedLevel - deliveredLevel) / 20.0);
+                    }
+                }
+            }
+
+            scalingFactorL = attenuation * levelFactorL / maxRMS;
+            scalingFactorR = attenuation * levelFactorR / maxRMS;
 
             //Protect against some NaN Poisoning
             if (double.IsNaN(scalingFactorL) || double.IsInfinity(scalingFactorL))
@@ -112,6 +241,22 @@ namespace BGC.Audio.Audiometry
                 scalingFactorR = 1.0;
             }
         }
+
+        /// <summary>
+        /// Each ear's delivered level in dB HL, judged on the calibration at the limit: 90 dB HL
+        /// plus how far that ear's output (its amplitude factor at the request, times the samples'
+        /// <paramref name="excessDB"/> over their claim) is above its output at 90 dB HL
+        /// (<paramref name="limitFactorL"/>, <paramref name="limitFactorR"/>). For a calibration whose
+        /// attenuation changes 1 dB per dB this is the request plus the excess.
+        /// </summary>
+        public static (double left, double right) DeliveredLevelsAtLimit(
+            double levelFactorL,
+            double levelFactorR,
+            double limitFactorL,
+            double limitFactorR,
+            double excessDB) =>
+            (dbSafetyLimit + excessDB + 20.0 * Math.Log10(levelFactorL / limitFactorL),
+             dbSafetyLimit + excessDB + 20.0 * Math.Log10(levelFactorR / limitFactorR));
 
         public static void GetRMSScalingFactors(
             float[] stereoSamples,

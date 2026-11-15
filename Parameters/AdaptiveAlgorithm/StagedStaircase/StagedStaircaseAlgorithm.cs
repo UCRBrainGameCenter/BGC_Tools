@@ -205,13 +205,17 @@ namespace BGC.Parameters.Algorithms.StagedStaircase
                 if (stepStatus == StepStatus.Success)
                 {
                     stepValue += stepDiff;
-                    correctCount = 0;
-                    incorrectCount = 0;
                 }
                 else
                 {
+                    //A failed step at Min/Max counts as a reversal
                     ++reversals;
                 }
+
+                //Reset after every step attempt, failed or not, so that a staircase pinned at a
+                //bound needs a full run of responses before it tries (and counts) again
+                correctCount = 0;
+                incorrectCount = 0;
             }
         }
 

@@ -33,7 +33,7 @@ namespace BGC.Audio
                 bufferSize: buffer.Length,
                 frequency: frequency);
 
-            if (bin < 1 || bin > buffer.Length / 2)
+            if (!IsRenderable(buffer.Length, frequency))
             {
                 //Skipping frequency as it's out of range
                 return;
@@ -52,6 +52,10 @@ namespace BGC.Audio
                 return;
             }
 
+            //An off-bin tone e^(i 2pi (bin + d) m / N) over one frame has the spectrum
+            //  X[bin + n] = e^(i pi d) sin(pi d) / (pi (d - n)),
+            //so the inverse FFT reproduces the tone at its frequency and phase, truncated to
+            //sideFreqCount terms on each side
             amplitude *= (Math.Sin(Math.PI * normalizedDeviation) / Math.PI) *
                 Complex64.FromPolarCoordinates(1.0, Math.PI * normalizedDeviation);
 
@@ -63,8 +67,95 @@ namespace BGC.Audio
                     continue;
                 }
 
-                buffer[bin + N] += amplitude / (N - normalizedDeviation);
+                buffer[bin + N] += amplitude / (normalizedDeviation - N);
             }
+        }
+
+        /// <summary>
+        /// Like <see cref="Populate(Complex64[], in ComplexCarrierTone, double, int)"/>, but writes the
+        /// carrier multiplied by the frame-periodic Hann window w[m] = sin^2(pi m / N), which is
+        /// zero at the frame's wrap. Divide the inverse FFT by <see cref="HannTaper"/> to recover the
+        /// carrier.
+        /// Multiplying by w convolves the spectrum with (-1/4, 1/2, -1/4), so an off-bin carrier's
+        /// sideband coefficients 1/(d - n) become -1/(2 a (a^2 - 1)), a = d - n: they decay as 1/n^3
+        /// instead of 1/n. Truncated to <paramref name="sideFreqCount"/> terms per side, the series
+        /// then leaves a ripple ~100x smaller away from the wrap. On-bin carriers get the three
+        /// kernel bins and are recovered exactly.
+        /// Terms that fall outside [1, N/2] are written to their aliased bin (index mod N) rather
+        /// than skipped: the output is the real part of the inverse FFT, which is the same either
+        /// way, so the tapered carrier is complete and dividing by the window is exact. (Skipping
+        /// them would leave carriers at the DC and Nyquist bins not exactly tapered.)
+        /// </summary>
+        public static void PopulateHannTapered(
+            Complex64[] buffer,
+            in ComplexCarrierTone carrierTone,
+            int sideFreqCount = 20)
+        {
+            if (!IsRenderable(buffer.Length, carrierTone.frequency))
+            {
+                //Skipping frequency as it's out of range
+                return;
+            }
+
+            int bin = GetComplexFrequencyBin(
+                bufferSize: buffer.Length,
+                frequency: carrierTone.frequency);
+
+            double normalizedDeviation = GetComplexNormalizedDeviation(
+                bufferSize: buffer.Length,
+                frequency: carrierTone.frequency);
+
+            Complex64 amplitude = carrierTone.amplitude * Math.Sqrt(buffer.Length);
+
+            if (normalizedDeviation == 0.0)
+            {
+                AddAliased(buffer, bin - 1, -0.25 * amplitude);
+                AddAliased(buffer, bin, 0.5 * amplitude);
+                AddAliased(buffer, bin + 1, -0.25 * amplitude);
+                return;
+            }
+
+            amplitude *= (Math.Sin(Math.PI * normalizedDeviation) / Math.PI) *
+                Complex64.FromPolarCoordinates(1.0, Math.PI * normalizedDeviation);
+
+            for (int N = -sideFreqCount; N <= sideFreqCount; N++)
+            {
+                double a = normalizedDeviation - N;
+                AddAliased(buffer, bin + N, amplitude * (-0.5 / (a * (a * a - 1.0))));
+            }
+        }
+
+        /// <summary> The frame-periodic Hann window that <see cref="PopulateHannTapered"/> applies </summary>
+        public static double HannTaper(int bufferSize, int sample)
+        {
+            double s = Math.Sin(Math.PI * sample / bufferSize);
+            return s * s;
+        }
+
+        private static void AddAliased(Complex64[] buffer, int bin, Complex64 value)
+        {
+            buffer[((bin % buffer.Length) + buffer.Length) % buffer.Length] += value;
+        }
+
+        /// <summary>
+        /// Whether <see cref="Populate(Complex64[], double, Complex64, int)"/> renders a carrier of
+        /// this frequency into a buffer of this size: from the first bin (fs / N) up to, but not
+        /// including, the Nyquist frequency (fs / 2). Other carriers are skipped, so they must not
+        /// count toward a claimed RMS either.
+        /// The test is on the exact bin position f N / fs, not its integer part: the integer part of
+        /// any f in (fs / 2, fs / 2 + fs / N) is the Nyquist bin, which would admit carriers above
+        /// Nyquist.
+        /// A carrier exactly at Nyquist is excluded too. Sampled at fs / 2, A cos(pi n + phi) =
+        /// A (-1)^n cos(phi): it can't carry its amplitude and phase independently, and its RMS is
+        /// A |cos phi|, not the A / sqrt 2 a carrier claims (silent at phi = pi / 2).
+        /// </summary>
+        public static bool IsRenderable(int bufferSize, double frequency)
+        {
+            double binPosition = GetComplexFrequencySample(
+                bufferSize: bufferSize,
+                frequency: frequency);
+
+            return binPosition >= 1.0 && binPosition < bufferSize / 2;
         }
 
         public static double GetComplexSampleFrequency(int bufferSize, int sample) =>
@@ -82,8 +173,8 @@ namespace BGC.Audio
         public static int GetComplexFrequencyBin(int bufferSize, double frequency) =>
            (int)GetComplexFrequencySample(bufferSize, frequency);
 
-        /// <summary> Get f_Delta * T </summary>
+        /// <summary> The fractional bin offset d = f N / fs - bin, in [0, 1) </summary>
         private static double GetComplexNormalizedDeviation(int bufferSize, double frequency) =>
-            0.5 * (GetComplexFrequencySample(bufferSize, frequency) - GetComplexFrequencyBin(bufferSize, frequency));
+            GetComplexFrequencySample(bufferSize, frequency) - GetComplexFrequencyBin(bufferSize, frequency);
     }
 }

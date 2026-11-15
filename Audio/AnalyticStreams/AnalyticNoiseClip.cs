@@ -69,11 +69,17 @@ namespace BGC.Audio.AnalyticStreams
             fftBufferSize = bufferSizeLowerBound.CeilingToPowerOfTwo();
             fftBuffer = new Complex64[fftBufferSize];
 
+            //The frame loops forever, so every carrier is snapped to the nearest bin of the frame:
+            //the frame is then exactly periodic and the loop seamless. Off-bin carriers left a
+            //transient at every loop boundary (-0.15 dB over 20 ms until 2026-10). The snap moves a
+            //carrier by at most half a bin (SamplingRate / fftBufferSize / 2), which for the
+            //MIDI noise instruments this stream serves is below a hertz.
+            double binHz = SamplingRate / fftBufferSize;
             foreach (ComplexCarrierTone carrierTone in CreateSideBands(freqLB, freqUB, frequencyCount, distribution))
             {
                 FrequencyDomain.Populate(
                     buffer: fftBuffer,
-                    frequency: carrierTone.frequency,
+                    frequency: Math.Round(carrierTone.frequency / binHz) * binHz,
                     amplitude: carrierTone.amplitude);
             }
 
@@ -87,6 +93,14 @@ namespace BGC.Audio.AnalyticStreams
             }
 
             currentRMS = Math.Sqrt(currentRMS / fftBufferSize);
+
+            if (!(currentRMS > 0.0))
+            {
+                //rms / 0 would scale every (zero) sample to NaN
+                throw new StreamCompositionException(
+                    $"Noise from {freqLB} to {freqUB} Hz has no carrier in the renderable range " +
+                    $"(0 to {0.5 * SamplingRate} Hz), so it can't be played at its level.");
+            }
 
             double factor = rms / currentRMS;
 
