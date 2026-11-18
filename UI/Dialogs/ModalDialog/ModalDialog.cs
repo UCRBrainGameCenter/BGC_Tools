@@ -52,6 +52,11 @@ namespace BGC.UI.Dialogs
         /// </summary>
         public static Func<IReadOnlyList<KeyCode>> AdditionalCancelKeysSource { get; set; }
 
+        // Frame on which the current dialog was shown. Keys aren't read on that frame: the key press that opened the
+        // dialog (e.g. a keyboard shortcut for a quit button) is still "down this frame" and would otherwise answer it
+        // immediately when it is also a confirm/cancel key.
+        private int shownFrame = -1;
+
         private bool closeImmediately = true;
         private string awaitingMessage = null;
         
@@ -159,6 +164,15 @@ namespace BGC.UI.Dialogs
         
         private async void Update()
         {
+            if (Time.frameCount != shownFrame)
+            {
+                await HandleKeyInput();
+            }
+            
+        }
+
+        private async Task HandleKeyInput()
+        {
             switch (mode)
             {
                 // Simple modal types
@@ -248,6 +262,10 @@ namespace BGC.UI.Dialogs
         private void SetMode(Mode mode)
         {
             this.mode = mode;
+
+            // EM - Every Show* path goes through SetMode, so this is where the shown frame is recorded.
+            // The only other place SetMode is called is in CloseCurrentModal, but the modal is closing anyway so it has no adverse affect.
+            shownFrame = Time.frameCount;
 
             primaryInputField.text = "";
             primaryInputField.gameObject.SetActive(
